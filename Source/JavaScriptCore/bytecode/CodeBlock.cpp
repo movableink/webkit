@@ -115,6 +115,8 @@ void CodeBlock::dumpAssumingJITType(PrintStream& out, JITCode::JITType jitType) 
     out.print(inferredName(), "#", hash(), ":[", RawPointer(this), "->", RawPointer(ownerExecutable()), ", ", jitType, codeType());
     if (codeType() == FunctionCode)
         out.print(specializationKind());
+    if (ownerExecutable()->neverInline())
+        out.print(" (NeverInline)");
     out.print("]");
 }
 

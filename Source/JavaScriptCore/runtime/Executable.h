@@ -361,6 +361,7 @@ namespace JSC {
             : ExecutableBase(vm, structure, NUM_PARAMETERS_NOT_COMPILED)
             , m_source(source)
             , m_features(isInStrictContext ? StrictModeFeature : 0)
+            , m_neverInline(false)
         {
         }
 
@@ -368,6 +369,7 @@ namespace JSC {
             : ExecutableBase(exec->vm(), structure, NUM_PARAMETERS_NOT_COMPILED)
             , m_source(source)
             , m_features(isInStrictContext ? StrictModeFeature : 0)
+            , m_neverInline(false)
         {
         }
 
@@ -388,6 +390,10 @@ namespace JSC {
         bool usesArguments() const { return m_features & ArgumentsFeature; }
         bool needsActivation() const { return m_hasCapturedVariables || m_features & (EvalFeature | WithFeature | CatchFeature); }
         bool isStrictMode() const { return m_features & StrictModeFeature; }
+        
+        void setNeverInline(bool value) { m_neverInline = value; }
+        bool neverInline() const { return m_neverInline; }
+        bool isInliningCandidate() const { return !neverInline(); }
 
         void unlinkCalls();
 
@@ -419,6 +425,7 @@ namespace JSC {
         SourceCode m_source;
         CodeFeatures m_features;
         bool m_hasCapturedVariables;
+        bool m_neverInline;
         int m_firstLine;
         int m_lastLine;
         unsigned m_startColumn;
