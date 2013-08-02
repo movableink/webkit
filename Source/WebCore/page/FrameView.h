@@ -437,9 +437,6 @@ public:
     
     void setScrollPinningBehavior(ScrollPinningBehavior);
 
-    void setResizeEventAllowed(bool resizeEventAllowed) { m_resizeEventAllowed = resizeEventAllowed; }
-    bool resizeEventAllowed() const { return m_resizeEventAllowed; }
-
 protected:
     virtual bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect);
     virtual void scrollContentsSlowPath(const IntRect& updateRect);
@@ -536,6 +533,8 @@ private:
     FrameView* parentFrameView() const;
 
     bool doLayoutWithFrameFlattening(bool allowSubtree);
+    bool frameFlatteningEnabled() const;
+    bool isFrameFlatteningValidForThisFrame() const;
 
     bool qualifiesAsVisuallyNonEmpty() const;
 
@@ -668,7 +667,6 @@ private:
     bool m_visualUpdatesAllowedByClient;
     
     ScrollPinningBehavior m_scrollPinningBehavior;
-    bool m_resizeEventAllowed;
 };
 
 inline void FrameView::incrementVisuallyNonEmptyCharacterCount(unsigned count)
