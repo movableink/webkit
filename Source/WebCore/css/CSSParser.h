@@ -319,6 +319,7 @@ public:
 
     typedef Vector<RefPtr<StyleRuleBase> > RuleList;
     StyleRuleBase* createMediaRule(MediaQuerySet*, RuleList*);
+    StyleRuleBase* createEmptyMediaRule(RuleList*);
     RuleList* createRuleList();
     StyleRuleBase* createStyleRule(Vector<OwnPtr<CSSParserSelector> >* selectors);
     StyleRuleBase* createFontFaceRule();
