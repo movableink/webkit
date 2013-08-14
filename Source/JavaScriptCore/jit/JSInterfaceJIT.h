@@ -150,6 +150,10 @@ namespace JSC {
 #elif CPU(SH4)
         static const RegisterID callFrameRegister = SH4Registers::fp;
 
+#if ENABLE(VALUE_PROFILER)
+        static const RegisterID bucketCounterRegister = SH4Registers::r8;
+#endif
+
         static const RegisterID regT0 = SH4Registers::r0;
         static const RegisterID regT1 = SH4Registers::r1;
         static const RegisterID regT2 = SH4Registers::r2;
@@ -158,7 +162,7 @@ namespace JSC {
         static const RegisterID regT5 = SH4Registers::r5;
         static const RegisterID regT6 = SH4Registers::r6;
         static const RegisterID regT7 = SH4Registers::r7;
-        static const RegisterID firstArgumentRegister =regT4;
+        static const RegisterID firstArgumentRegister = regT4;
 
         static const RegisterID returnValueRegister = SH4Registers::r0;
         static const RegisterID cachedResultRegister = SH4Registers::r0;

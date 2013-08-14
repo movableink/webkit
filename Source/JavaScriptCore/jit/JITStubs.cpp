@@ -299,7 +299,7 @@ extern "C" {
 /* code (r4), JSStack* (r5), CallFrame* (r6), void* unused1 (r7), void* unused2(sp), VM (sp)*/
 
 #define THUNK_RETURN_ADDRESS_OFFSET 56
-#define SAVED_R10_OFFSET 60
+#define SAVED_R8_OFFSET 60
 
 asm volatile (
 ".text\n"
@@ -314,11 +314,15 @@ SYMBOL_STRING(ctiTrampoline) ":" "\n"
     "mov.l r13, @-r15" "\n"
     "mov.l r11, @-r15" "\n"
     "mov.l r10, @-r15" "\n"
-    "add #-" STRINGIZE_VALUE_OF(SAVED_R10_OFFSET) ", r15" "\n"
+    "mov.l r9, @-r15" "\n"
+    "mov.l r8, @-r15" "\n"
+    "add #-" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
     "mov r6, r14" "\n"
     "jsr @r4" "\n"
     "nop" "\n"
-    "add #" STRINGIZE_VALUE_OF(SAVED_R10_OFFSET) ", r15" "\n"
+    "add #" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
+    "mov.l @r15+,r8" "\n"
+    "mov.l @r15+,r9" "\n"
     "mov.l @r15+,r10" "\n"
     "mov.l @r15+,r11" "\n"
     "mov.l @r15+,r13" "\n"
@@ -341,7 +345,9 @@ SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
     "mov.l @(r0,r12),r11" "\n"
     "jsr @r11" "\n"
     "nop" "\n"
-    "add #" STRINGIZE_VALUE_OF(SAVED_R10_OFFSET) ", r15" "\n"
+    "add #" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
+    "mov.l @r15+,r8" "\n"
+    "mov.l @r15+,r9" "\n"
     "mov.l @r15+,r10" "\n"
     "mov.l @r15+,r11" "\n"
     "mov.l @r15+,r13" "\n"
@@ -358,7 +364,9 @@ asm volatile (
 ".globl " SYMBOL_STRING(ctiOpThrowNotCaught) "\n"
 HIDE_SYMBOL(ctiOpThrowNotCaught) "\n"
 SYMBOL_STRING(ctiOpThrowNotCaught) ":" "\n"
-    "add #" STRINGIZE_VALUE_OF(SAVED_R10_OFFSET) ", r15" "\n"
+    "add #" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
+    "mov.l @r15+,r8" "\n"
+    "mov.l @r15+,r9" "\n"
     "mov.l @r15+,r10" "\n"
     "mov.l @r15+,r11" "\n"
     "mov.l @r15+,r13" "\n"
@@ -915,7 +923,7 @@ void performPlatformSpecificJITAssertions(VM* vm)
 
 #elif CPU(SH4)
     ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, thunkReturnAddress) == THUNK_RETURN_ADDRESS_OFFSET);
-    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, savedR10) == SAVED_R10_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, savedR8) == SAVED_R8_OFFSET);
 #endif
 }
 
