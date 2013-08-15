@@ -129,7 +129,7 @@ class QtPort(Port):
         #               qt
         search_paths = []
         version = self.qt_version()
-        if '5.0' in version:
+        if '5.1' in version:
             if self.get_option('webkit_test_runner'):
                 if self.operating_system() == 'mac':
                     search_paths.append('qt-5.0-mac-wk2')
