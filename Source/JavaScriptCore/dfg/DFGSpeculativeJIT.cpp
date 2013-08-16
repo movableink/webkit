@@ -3930,7 +3930,7 @@ void SpeculativeJIT::compileGetByValOnArguments(Node* node)
     // Two really lame checks.
     speculationCheck(
         Uncountable, JSValueSource(), 0,
-        m_jit.branch32(
+        m_jit.branchPtr(
             MacroAssembler::AboveOrEqual, propertyReg,
             MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_numArguments))));
     speculationCheck(
