@@ -15,6 +15,12 @@ CONFIG += staticlib
 
 RESOURCES += $$PWD/WebKit2.qrc
 
+!enable?(plugin_process):enable?(netscape_plugin_api) {
+    # NSAPI in WebKit2 requires PluginProcess,
+    # but it may have been enabled for WebKit1.
+    WEBKIT_CONFIG -= netscape_plugin_api
+}
+
 HEADERS += \
     Platform/CoreIPC/ArgumentDecoder.h \
     Platform/CoreIPC/ArgumentEncoder.h \
