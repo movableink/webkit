@@ -2333,6 +2333,7 @@ public:
     {
         RegisterID dataTempRegister = claimScratch();
 
+        m_assembler.ensureSpace(m_assembler.maxInstructionSize + 10, 2 * sizeof(uint32_t));
         dataLabel = moveWithPatch(initialRightValue, dataTempRegister);
         m_assembler.cmplRegReg(dataTempRegister, left, SH4Condition(cond));
         releaseScratch(dataTempRegister);
@@ -2350,6 +2351,7 @@ public:
         m_assembler.addlRegReg(left.base, scr);
         m_assembler.movlMemReg(scr, scr);
         RegisterID scr1 = claimScratch();
+        m_assembler.ensureSpace(m_assembler.maxInstructionSize + 10, 2 * sizeof(uint32_t));
         dataLabel = moveWithPatch(initialRightValue, scr1);
         m_assembler.cmplRegReg(scr1, scr, SH4Condition(cond));
         releaseScratch(scr);
