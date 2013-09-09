@@ -5797,7 +5797,7 @@ void Document::updateHoverActiveState(const HitTestRequest& request, Element* in
 
     Element* innerElementInDocument = innerElement;
     while (innerElementInDocument && innerElementInDocument->document() != this) {
-        innerElementInDocument->document()->updateHoverActiveState(request, innerElementInDocument);
+        innerElementInDocument->document()->updateHoverActiveState(request, innerElementInDocument, event);
         innerElementInDocument = innerElementInDocument->document()->ownerElement();
     }
 
@@ -5901,7 +5901,7 @@ void Document::updateHoverActiveState(const HitTestRequest& request, Element* in
         // Unset hovered nodes in sub frame documents if the old hovered node was a frame owner.
         if (oldHoveredElement && oldHoveredElement->isFrameOwnerElement()) {
             if (Document* contentDocument = toFrameOwnerElement(oldHoveredElement.get())->contentDocument())
-                contentDocument->updateHoverActiveState(request, 0);
+                contentDocument->updateHoverActiveState(request, 0, event);
         }
     }
 
