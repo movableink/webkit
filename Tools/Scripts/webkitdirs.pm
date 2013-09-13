@@ -56,6 +56,7 @@ BEGIN {
        &cmakeBasedPortArguments
        &cmakeBasedPortName
        &currentSVNRevision
+       &currentGitCommit
        &debugSafari
        &nmPath
        &passedConfiguration
@@ -84,6 +85,7 @@ my $xcodeSDK;
 my $configurationForVisualStudio;
 my $configurationProductDir;
 my $sourceDir;
+my $currentGitCommit;
 my $currentSVNRevision;
 my $debugger;
 my $nmPath;
@@ -497,6 +499,12 @@ sub determineCurrentSVNRevision
     return $currentSVNRevision;
 }
 
+sub determineCurrentGitCommit
+{
+    determineSourceDir();
+    $currentGitCommit = gitCommitForDirectory($sourceDir);
+    return $currentGitCommit;
+}
 
 sub chdirWebKit
 {
@@ -547,6 +555,12 @@ sub currentSVNRevision
 {
     determineCurrentSVNRevision() if not defined $currentSVNRevision;
     return $currentSVNRevision;
+}
+
+sub currentGitCommit
+{
+    determineCurrentGitCommit() if not defined $currentGitCommit;
+    return $currentGitCommit;
 }
 
 sub generateDsym()
@@ -2233,7 +2247,7 @@ sub buildQMakeProjects
     # Using build-webkit to build assumes you want a developer-build
     push @buildArgs, "CONFIG-=production_build";
 
-    my $svnRevision = currentSVNRevision();
+    my $previousGitCommit = "unknown";
     my $previousSvnRevision = "unknown";
 
     my $buildHint = "";
@@ -2241,11 +2255,28 @@ sub buildQMakeProjects
     my $pathToBuiltRevisions = File::Spec->catfile($dir, ".builtRevisions.cache");
     if (-e $pathToBuiltRevisions && open(BUILTREVISIONS, $pathToBuiltRevisions)) {
         while (<BUILTREVISIONS>) {
+            if ($_ =~ m/^GIT_COMMIT\s=\s(\w+)$/) {
+                $previousGitCommit = $1;
+            }
             if ($_ =~ m/^SVN_REVISION\s=\s(\d+)$/) {
                 $previousSvnRevision = $1;
             }
         }
         close(BUILTREVISIONS);
+    }
+
+    my $currentVersion;
+    my $previousVersion;
+    my $usingSVN;
+
+    if (isGit()) {
+        $currentVersion = currentGitCommit();
+        $previousVersion = $previousGitCommit;
+        $usingSVN = 0;
+    } else {
+        $currentVersion = currentSVNRevision();
+        $previousVersion = $previousSvnRevision;
+        $usingSVN = 1;
     }
 
     my $result = 0;
@@ -2282,12 +2313,18 @@ sub buildQMakeProjects
         $needsIncrementalBuild = 1;
     }
 
-    if ($svnRevision ne $previousSvnRevision) {
-        print "Last built revision was " . $previousSvnRevision .
-            ", now at revision $svnRevision. Full incremental build needed.\n";
+    if ($currentVersion ne $previousVersion) {
+        print "Last built version was " . $previousVersion .
+            ", now at commit $currentVersion. Full incremental build needed.\n";
         $needsIncrementalBuild = 1;
 
-        my @fileList = listOfChangedFilesBetweenRevisions(sourceDir(), $previousSvnRevision, $svnRevision);
+        my @fileList;
+
+        if ($usingSVN) {
+            @fileList = listOfChangedFilesBetweenRevisions(sourceDir(), $previousVersion, $currentVersion);
+        } else {
+            @fileList = listOfChangedFilesBetweenCommits(sourceDir(), $previousVersion, $currentVersion);
+        }
 
         foreach (@fileList) {
             if (m/\.pr[oif]$/ or
@@ -2319,7 +2356,11 @@ sub buildQMakeProjects
     if ($result eq 0) {
         # Now that the build completed successfully we can save the SVN revision
         open(BUILTREVISIONS, ">>$pathToBuiltRevisions");
-        print BUILTREVISIONS "SVN_REVISION = $svnRevision\n";
+        if ($usingSVN) {
+            print BUILTREVISIONS "SVN_REVISION = $currentVersion\n";
+        } else {
+            print BUILTREVISIONS "GIT_COMMIT = $currentVersion\n";
+        }
         close(BUILTREVISIONS);
     } elsif (!$command =~ /incremental/ && exitStatus($result)) {
         my $exitCode = exitStatus($result);

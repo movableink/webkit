@@ -62,6 +62,7 @@ BEGIN {
         &fixChangeLogPatch
         &gitBranch
         &gitdiff2svndiff
+        &gitCommitForDirectory
         &isGit
         &isGitSVN
         &isGitBranchBuild
@@ -89,6 +90,7 @@ BEGIN {
         &toWindowsLineEndings
         &gitCommitForSVNRevision
         &listOfChangedFilesBetweenRevisions
+        &listOfChangedFilesBetweenCommits
     );
     %EXPORT_TAGS = ( );
     @EXPORT_OK   = ();
@@ -415,6 +417,25 @@ sub svnRevisionForDirectory($)
     if (!defined($revision)) {
         $revision = "unknown";
         warn "Unable to determine current SVN revision in $dir";
+    }
+    return $revision;
+}
+
+sub gitCommitForDirectory($)
+{
+    my ($dir) = @_;
+    my $revision;
+
+    if (isGitDirectory($dir)) {
+        my $command = "git log -n 1 | grep commit";
+        $command = "LC_ALL=C $command" if !isWindows();
+        $command = "cd $dir && $command";
+        my $gitLog = `$command`;
+        ($revision) = ($gitLog =~ m/commit (\w+)/g);
+    }
+    if (!defined($revision)) {
+        $revision = "unknown";
+        warn "Unable to determine current git commit in $dir";
     }
     return $revision;
 }
@@ -2206,6 +2227,36 @@ sub listOfChangedFilesBetweenRevisions
 
     return @result;
 }
+
+sub listOfChangedFilesBetweenCommits
+{
+    my ($sourceDir, $firstCommit, $lastCommit) = @_;
+    my $command;
+
+    if ($firstCommit eq "unknown" or $lastCommit eq "unknown") {
+        return ();
+    }
+
+    # Some VCS functions don't work from within the build dir, so always
+    # go to the source dir first.
+    my $cwd = Cwd::getcwd();
+    chdir $sourceDir;
+
+    $command = "git diff --name-status $firstCommit..$lastCommit";
+
+    my @result = ();
+
+    if ($command) {
+        my $diffOutput = `$command`;
+        $diffOutput =~ s/^[A-Z]\s+//gm;
+        @result = split(/[\r\n]+/, $diffOutput);
+    }
+
+    chdir $cwd;
+
+    return @result;
+}
+
 
 
 1;
