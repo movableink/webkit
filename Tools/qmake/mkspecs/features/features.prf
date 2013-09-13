@@ -37,7 +37,7 @@ defineTest(detectFeatures) {
     qtHaveModule(printsupport): WEBKIT_CONFIG += have_qtprintsupport
     qtHaveModule(widgets): WEBKIT_CONFIG += have_qstyle
     qtHaveModule(testlib): WEBKIT_CONFIG += have_qttestlib
-    qtHaveModule(location): WEBKIT_CONFIG += have_qtlocation
+#    qtHaveModule(location): WEBKIT_CONFIG += have_qtlocation
     qtHaveModule(sensors): WEBKIT_CONFIG += have_qtsensors
 
     config_libxml2: WEBKIT_CONFIG += use_libxml2
