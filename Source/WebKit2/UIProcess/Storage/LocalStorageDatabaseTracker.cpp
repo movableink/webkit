@@ -232,9 +232,7 @@ void LocalStorageDatabaseTracker::updateTrackerDatabaseFromLocalStorageDatabaseF
         originsFromLocalStorageDatabaseFiles.add(originIdentifier);
     }
 
-    HashSet<String>::iterator it = origins.begin();
-    HashSet<String>::iterator end = origins.end();
-    for (; it != end; ++it) {
+    for (HashSet<String>::iterator it = origins.begin(), end = origins.end(); it != end; ++it) {
         const String& originIdentifier = *it;
         if (origins.contains(originIdentifier))
             continue;
