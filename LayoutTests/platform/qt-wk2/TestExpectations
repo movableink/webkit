@@ -909,7 +909,6 @@ compositing/absolute-position-changed-in-composited-layer.html [ ImageOnlyFailur
 compositing/culling/filter-occlusion-alpha-large.html [ ImageOnlyFailure ]
 compositing/culling/filter-occlusion-alpha.html [ ImageOnlyFailure ]
 compositing/fixed-position-scroll-offset-history-restore.html [ ImageOnlyFailure ]
-compositing/geometry/fixed-in-composited.html [ ImageOnlyFailure ]
 compositing/geometry/fixed-position-composited-page-scale-down.html [ ImageOnlyFailure ]
 compositing/geometry/fixed-position-composited-page-scale.html [ ImageOnlyFailure ]
 compositing/geometry/fixed-position-iframe-composited-page-scale-down.html [ ImageOnlyFailure ]
@@ -938,8 +937,6 @@ fast/events/scale-and-scroll-iframe-body.html [ ImageOnlyFailure ]
 fast/events/scale-and-scroll-iframe-window.html [ ImageOnlyFailure ]
 fast/multicol/newmulticol/column-rules-fixed-height.html [ Skip ]
 fast/multicol/scrolling-overflow.html [ ImageOnlyFailure ]
-http/tests/images/png-partial-load-no-alpha.html [ ImageOnlyFailure ]
-svg/custom/dasharrayOrigin.svg [ ImageOnlyFailure ]
 svg/custom/invalid-dasharray.svg [ ImageOnlyFailure ]
 transforms/3d/general/transform-origin-z-change.html [ ImageOnlyFailure ]
 compositing/absolute-position-changed-with-composited-parent-layer.html [ ImageOnlyFailure ]
@@ -1017,3 +1014,6 @@ webkit.org/b/121679 fast/regions/selection-direction.html [ Skip ]
 
 #[Qt] Tests fails after using Qt5.1.1.
 webkit.org/b/121678 fast/dom/DeviceMotion/no-page-cache.html [ Skip ]
+
+# Fails/timeout 5x2
+fast/dom/DeviceOrientation/no-page-cache.html [ Skip ]
