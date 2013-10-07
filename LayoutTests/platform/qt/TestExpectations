@@ -2747,3 +2747,21 @@ webkit.org/b/117185 fast/forms/control-clip-overflow.html [ Skip ]
 
 # Synthesized italics not supported
 fast/text/international/synthesized-italic-vertical-latin.html [ Skip ]
+
+# ============================================================================= #
+# ImageOnlyFailure on Qt 5x2
+# ============================================================================= #
+
+compositing/backface-visibility/backface-visibility-webgl.html [ Skip ]
+fast/block/float/004.html [ Skip ]
+fast/block/float/005.html [ Skip ]
+fast/block/float/006.html [ Skip ]
+fast/block/margin-collapse/030.html [ Skip ]
+fast/images/gif-loop-count.html [ Skip ]
+fast/text/whitespace/012.html [ Skip ]
+fast/text/whitespace/017.html [ Skip ]
+fast/writing-mode/table-percent-width-quirk.html [ Skip ]
+svg/as-image/image-respects-pageScaleFactor-change.html [ Skip ]
+svg/custom/use-css-no-effect-on-shadow-tree.svg [ Skip ]
+svg/hixie/error/002.xml [ Skip ]
+svg/hixie/links/002.xml [ Skip ]
