@@ -82,6 +82,7 @@ public:
     QWebElement linkElement;
     QString alternateText;
     QUrl imageUrl;
+    QUrl mediaUrl;
     QPixmap pixmap;
     bool isContentEditable;
     bool isContentSelected;
