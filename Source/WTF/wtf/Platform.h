@@ -346,6 +346,10 @@
 #define WTF_OS_ANDROID 1
 #endif
 
+#if OS(ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
+#define WTF_HAVE_ANDROID_SDK 1
+#endif
+
 /* OS(AIX) - AIX */
 #ifdef _AIX
 #define WTF_OS_AIX 1
