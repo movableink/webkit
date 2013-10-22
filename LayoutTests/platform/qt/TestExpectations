@@ -2461,7 +2461,6 @@ http/tests/security/xssAuditor/script-tag-with-invalid-url-encoding.html [ Failu
 # [Qt] REGRESSION: 2 tests started to fail with newer Qt5
 # https://bugs.webkit.org/show_bug.cgi?id=104140
 editing/selection/triple-click-in-pre.html [ Failure ]
-plugins/navigator-plugins.html [ Failure ]
 
 # [Qt] New fast/text/line-breaks-after-ideographic-comma-or-full-stop-2.html introduced in r120624 fails on ICU platforms
 # https://bugs.webkit.org/show_bug.cgi?id=89436
