@@ -172,9 +172,6 @@ editing/pasteboard/paste-noplugin.html [ Skip ]
 # [Qt][WK1] New fast/events/ime-composition-events-001.html fails after r152668.
 webkit.org/b/118722 fast/events/ime-composition-events-001.html [ Skip ]
 
-# [Qt][WK1] New js/dom/basic-weakmap.html fails after r156066.
-webkit.org/b/121680 js/dom/basic-weakmap.html [ Skip ]
-
 # ============================================================================= #
 # ImageOnlyFailure on Qt 5x2
 # ============================================================================= #

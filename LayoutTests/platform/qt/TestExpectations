@@ -711,6 +711,7 @@ editing/pasteboard/paste-xml.xhtml
 
 # [Qt] editing/pasteboard/data-transfer-items-image-png.html is failing due to DataTransferItems for image/png not being implemented
 # https://bugs.webkit.org/show_bug.cgi?id=72430
+# https://bugs.webkit.org/show_bug.cgi?id=71688
 editing/pasteboard/data-transfer-items-image-png.html
 
 # ============================================================================= #
@@ -2423,10 +2424,6 @@ webkit.org/b/104054 fast/events/touch/touch-input-element-change-documents.html
 # timeout
 fast/events/bogus-dropEffect-effectAllowed.html
 fast/forms/textfield-drag-into-disabled.html
-
-# nrwt pixel test crash
-# https://bugs.webkit.org/show_bug.cgi?id=71688
-editing/pasteboard/data-transfer-items-image-png.html
 
 # [Qt] fast/events/clear-edit-drag-state.html fails with timeout with Qt5-WK1
 # https://bugs.webkit.org/show_bug.cgi?id=76897
