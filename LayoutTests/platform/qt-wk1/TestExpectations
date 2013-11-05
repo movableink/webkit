@@ -11,7 +11,6 @@ compositing/overflow/clip-descendents.html
 compositing/overflow/overflow-scroll.html
 compositing/overflow/scrollbar-painting.html
 compositing/reflections/animation-inside-reflection.html
-compositing/tiled-layers-hidpi.html
 compositing/tiling/crash-reparent-tiled-layer.html
 compositing/tiling/huge-layer-add-remove-child.html
 compositing/tiling/huge-layer-with-layer-children-resize.html
@@ -66,7 +65,6 @@ fast/events/click-count.html
 
 # [Qt] http/tests/misc/drag-over-iframe-invalid-source-crash.html and fast/events/drag-selects-image.html fails with timeout
 # https://bugs.webkit.org/show_bug.cgi?id=73901
-fast/events/drag-selects-image.html
 fast/events/mousedown-inside-dragstart-should-not-cause-crash.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=35973
@@ -81,19 +79,7 @@ fast/url/path.html
 
 # [Qt] Tests still fail after the update to new fonts
 # https://bugs.webkit.org/show_bug.cgi?id=91610
-css3/calc/table-calcs.html
-editing/deleting/delete-block-table.html
-editing/pasteboard/paste-plaintext-user-select-none.html
-fast/canvas/canvas-strokeText-strokes-shadow.html
-fast/css/counters/counter-traverse-table-cell.html
-fast/events/onload-webkit-before-webcore.html
-fast/forms/onselect-textfield.html
-fast/frames/set-parent-src-synchronously.html
-fast/loader/subframe-removes-itself.html
-http/tests/webfont/fallback-font-while-loading.html
-svg/custom/glyph-selection-lang-attribute.svg
 svg/dom/css-transforms.xhtml
-touchadjustment/event-triggered-widgets.html
 
 # [Qt][WK1] New touchadjustment/focusout-on-touch.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=95205
@@ -149,25 +135,11 @@ webkit.org/b/95507 http/tests/notifications/legacy/window-show-on-click.html [ F
 # Newly added test fast/events/event-attribute.html fails after r147205
 webkit.org/b/113569 fast/events/event-attribute.html [ Skip ]
 
-# [Qt][WK1] REGRESSION(r148310): http/tests/ssl/ping-with-unsafe-redirect.html causes http/tests/ssl/referer-301.html to crash
-webkit.org/b/114619 http/tests/ssl/ping-with-unsafe-redirect.html [ Skip ]
-
 # [Qt] REGRESSION(r150688,r150693): http/tests/globalhistory/history-delegate-basic-refresh-redirect.html fails
 webkit.org/b/116809 http/tests/globalhistory/history-delegate-basic-refresh-redirect.html [ Skip ]
 
-# [Qt][WK1][CSS Regions]  New test fast/regions/hover-on-child-parent-different-regions.html fails
-webkit.org/b/117035 fast/regions/hover-in-region-parent-skip-inlines-anonymous.html [ Skip ]
-webkit.org/b/117035 fast/regions/hover-on-child-parent-different-regions.html [ Skip ]
-webkit.org/b/117035 fast/regions/hover-on-child-in-region.html [ Skip ]
-
-# [Qt] css3/filters/composited-during-animation-layertree.html flaky after r151110
-webkit.org/b/117336 css3/filters/composited-during-animation-layertree.html [ Skip ]
-
 # [EFL][GTK][Qt] css3/flexbox/image-percent-max-height.html ref test fail after r151997
 webkit.org/b/118126 css3/flexbox/image-percent-max-height.html [ Skip ]
-
-# SHADOW_DOM not enabled on WK1
-editing/pasteboard/paste-noplugin.html [ Skip ]
 
 # [Qt][WK1] New fast/events/ime-composition-events-001.html fails after r152668.
 webkit.org/b/118722 fast/events/ime-composition-events-001.html [ Skip ]
