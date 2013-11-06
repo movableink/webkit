@@ -106,18 +106,11 @@ compositing/video-page-visibility.html [ ImageOnlyFailure ]
 compositing/masks/masked-ancestor.html
 compositing/masks/multiple-masks.html
 compositing/masks/simple-composited-mask.html
-compositing/masks/direct-image-mask.html
-compositing/masks/mask-of-clipped-layer.html
-compositing/reflections/reflection-on-composited.html
 compositing/reflections/simple-composited-reflections.html
 compositing/reflections/nested-reflection-transformed2.html
 compositing/reflections/nested-reflection-mask-change.html
 compositing/reflections/nested-reflection-transformed.html
-compositing/reflections/reflection-ordering.html
-compositing/reflections/reflection-positioning.html
-compositing/reflections/reflection-positioning2.html
 compositing/reflections/reflection-opacity.html
-compositing/reflections/remove-add-reflection.html
 
 # There are some bugs with reflections.
 compositing/reflections/animation-inside-reflection.html
@@ -132,13 +125,6 @@ compositing/reflections/nested-reflection-size-change.html
 compositing/reflections/nested-reflection-transition.html
 compositing/reflections/load-video-in-reflection.html
 compositing/reflections/transform-inside-reflection.html
-
-# Failing compositing reftests. Result looks good, but fails with minor differencies.
-compositing/patterns/direct-pattern-compositing-contain-no-repeat.html
-compositing/patterns/direct-pattern-compositing-contain.html
-compositing/patterns/direct-pattern-compositing-cover.html
-compositing/patterns/direct-pattern-compositing-position.html
-compositing/patterns/direct-pattern-compositing-size.html
 
 # Flaky tests.
 compositing/geometry/limit-layer-bounds-fixed-positioned.html
@@ -167,13 +153,11 @@ compositing/layer-creation/spanOverlapsCanvas.html
 
 # The following tests doesnt match both expected image and text.
 compositing/geometry/ancestor-overflow-change.html
-compositing/geometry/tall-page-composited.html
 
 # We still don't accelerate plugin and video in WK2.
 compositing/plugins
 compositing/video
 compositing/layers-inside-overflow-scroll.html
-compositing/iframes/iframe-position-absolute-with-padding-percentage-crash.html
 
 # [Qt][WK2] New compositing test are failing since added in r126663.
 # webkit.org/b/95076 
@@ -199,14 +183,8 @@ webkit.org/b/112675 compositing/layer-creation/fixed-position-change-out-of-view
 # Editing tests.                                                              #
 # =========================================================================== #
 
-# It made the following test(s) timeout
-editing/selection/drag-in-iframe.html
-
 # Unskipped on Qt5, but still fail on qt-wk2 platform
 editing/input/emacs-ctrl-o.html
-
-# [WK2] [Qt] Support drag in mouse events for WebKit2 EventSender
-webkit.org/b/69946 editing/pasteboard/drag-drop-iframe-refresh-crash.html
 
 # [Qt][WK2] 2 editing tests introduced in r103073 fails
 webkit.org/b/74937 editing/input/caret-at-the-edge-of-contenteditable.html
@@ -231,9 +209,6 @@ editing/spelling/grammar.html
 
 # [Qt] Tests still fail after the update to new fonts 
 webkit.org/b/91610 editing/selection/14971.html
-
-# These tests always fail (with and without --singly). It needs investigation.
-editing/selection/caret-mode-paragraph-keys-navigation.html
 
 # [Qt][WK2] Editing/selection tests that has different results from xvfb with gpu
 # webkit.org/b/118903

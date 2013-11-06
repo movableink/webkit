@@ -144,6 +144,9 @@ webkit.org/b/118126 css3/flexbox/image-percent-max-height.html [ Skip ]
 # [Qt][WK1] New fast/events/ime-composition-events-001.html fails after r152668.
 webkit.org/b/118722 fast/events/ime-composition-events-001.html [ Skip ]
 
+# [Qt] css3/filters/composited-during-animation-layertree.html flaky after r151110	
+webkit.org/b/117336 css3/filters/composited-during-animation-layertree.html [ Skip ]
+
 # ============================================================================= #
 # ImageOnlyFailure on Qt 5x2
 # ============================================================================= #
