@@ -259,9 +259,6 @@ webkit.org/b/58337 fast/dom/StyleSheet/detached-stylesheet-without-wrapper.html
 fast/html/keygen.html
 fast/invalid/residual-style.html
 
-# [Qt][WK2] fast/inline/absolute-positioned-inline-in-centred-block.html is flaky
-webkit.org/b/67607 fast/inline/absolute-positioned-inline-in-centred-block.html
-
 # HiDPI tests require test infrastructure enhancements
 fast/hidpi
 
@@ -273,12 +270,10 @@ webkit.org/b/93231 fast/forms/range/slider-mouse-events.html
 
 # Failing tests on qt-wk2 after unskipping qt-5.0/Skipped tests, need more investigation
 fast/block/basic/020.html
-fast/history/visited-link-background-color.html
 fast/layers/layer-visibility-sublayer.html
 fast/layers/layer-visibility.html
 fast/repaint/invisible-objects.html
 fast/repaint/layer-hide-when-needs-layout.html
-fast/text/whitespace/028.html
 
 # [Qt][WK2]fast/loader/submit-form-while-parsing-2.html fails intermittently
 webkit.org/b/75950 fast/loader/submit-form-while-parsing-2.html
@@ -291,31 +286,6 @@ webkit.org/b/83575 fast/frames/iframe-window-focus.html
 
 # Size of select is different when running DRT/WTR
 fast/replaced/three-selects-break.html
-
-# [Qt][WK2] New fast/forms/number/number-spinbutton-click-in-iframe.html fails
-webkit.org/b/96634 fast/forms/number/number-spinbutton-click-in-iframe.html
-
-# Unskipped by r129252 (wk2/Skipped list), but still fail on Qt WK2
-fast/dom/Geolocation/callback-exception.html
-fast/dom/Geolocation/callback-to-deleted-context.html
-fast/dom/Geolocation/callback-to-remote-context.html
-fast/dom/Geolocation/callback-to-remote-context2.html
-fast/dom/Geolocation/multiple-requests.html
-fast/dom/Geolocation/position-string.html
-fast/dom/Geolocation/reentrant-success.html
-fast/dom/Geolocation/success-clear-watch.html
-fast/dom/Geolocation/success.html
-fast/dom/Geolocation/timeout.html
-fast/dom/Geolocation/timestamp.html
-
-# Unskipped by r129486 (wk2/Skipped list), but still fail on Qt WK2
-fast/dom/Geolocation/delayed-permission-allowed-for-multiple-requests.html
-fast/dom/Geolocation/delayed-permission-allowed.html
-fast/dom/Geolocation/error-clear-watch.html
-fast/dom/Geolocation/error.html
-fast/dom/Geolocation/maximum-age.html
-fast/dom/Geolocation/reentrant-error.html
-fast/dom/Geolocation/watch.html
 
 # [Qt][WK2] fast/events/popup-blocked-from-fake-user-gesture.html times out
 webkit.org/b/97598 fast/events/popup-blocked-from-fake-user-gesture.html
