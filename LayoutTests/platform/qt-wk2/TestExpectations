@@ -287,12 +287,6 @@ webkit.org/b/83575 fast/frames/iframe-window-focus.html
 # Size of select is different when running DRT/WTR
 fast/replaced/three-selects-break.html
 
-# [Qt][WK2] fast/events/popup-blocked-from-fake-user-gesture.html times out
-webkit.org/b/97598 fast/events/popup-blocked-from-fake-user-gesture.html
-
-# [Qt][WK2] fast/events/tabindex-focus-blur-all.html fails. (only 64 bit)
-webkit.org/b/98412 fast/events/tabindex-focus-blur-all.html
-
 # [Qt][WK2] Ruby DOM tests differ on WK1 and WK2
 # 
 fast/ruby/rubyDOM-insert-rt.html
@@ -311,9 +305,6 @@ fast/dom/shadow/wheel-event-on-input-in-shadow-dom.html
 # [Qt][WK2] New fast/events/mouse-cursor.html fails
 webkit.org/b/103122 fast/events/mouse-cursor.html
 
-# [Qt][WK2] new fast/dom/Geolocation/cached-position-iframe.html fails since it was introduced in r136164
-webkit.org/b/103876 fast/dom/Geolocation/cached-position-iframe.html
-
 # [Qt][WK2] fast/events/touch/frame-hover-update.html fails
 webkit.org/b/116668 fast/events/touch/frame-hover-update.html [ Skip ]
 
@@ -327,25 +318,13 @@ fast/css/input-search-padding.html
 fast/css/line-height.html
 fast/css/resize-corner-tracking.html
 fast/css/text-overflow-input.html
-fast/css/word-space-extra.html
 fast/dom/Document/CaretRangeFromPoint/caretRangeFromPoint-in-zoom-and-scroll.html
-fast/dom/isindex-001.html
 fast/dom/object-plugin-hides-properties.html
-fast/forms/validation-message-user-modify.html
-fast/frames/take-focus-from-iframe.html
-fast/html/details-open-javascript.html
-fast/html/details-no-summary4.html
-fast/html/details-open2.html
-fast/html/details-open4.html
-fast/lists/dynamic-marker-crash.html
 fast/repaint/renderer-destruction-by-invalidateSelection-crash.html
 fast/repaint/search-field-cancel.html
 fast/repaint/subtree-root-skipped.html
-fast/replaced/replaced-breaking-mixture.html
-fast/replaced/replaced-breaking.html
 fast/replaced/width100percent-searchfield.html
 fast/replaced/width100percent-textfield.html
-fast/transforms/transformed-focused-text-input.html
 
 # These tests always fail (with and without --singly). It needs investigation.
 fast/block/positioning/vertical-rl/fixed-positioning.html
