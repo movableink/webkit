@@ -329,9 +329,6 @@ fast/replaced/width100percent-textfield.html
 # These tests always fail (with and without --singly). It needs investigation.
 fast/block/positioning/vertical-rl/fixed-positioning.html
 fast/css/bidi-override-in-anonymous-block.html
-fast/dom/navigation-type-back-forward.html
-fast/dom/navigation-type-navigate.html
-fast/dom/navigation-type-reload.html
 fast/dom/scroll-reveal-left-overflow.html
 fast/dom/scroll-reveal-top-overflow.html
 fast/media/media-query-list-02.html
@@ -340,7 +337,6 @@ fast/media/media-query-list-04.html
 fast/media/media-query-list-05.html
 fast/media/media-query-list-06.html
 fast/media/media-query-list-07.html
-fast/media/print-restores-previous-mediatype.html
 fast/media/view-mode-media-feature.html
 platform/qt/fast/history/back-to-unreachable-url-then-forward.html
 platform/qt/fast/spatial-navigation/snav-ensure-scrolls-with-scrollbars-disabled-by-webkit.html
@@ -353,30 +349,20 @@ fast/repaint/textarea-set-disabled.html [ ImageOnlyFailure ]
 
 # [Qt][WK2] Failing fast/repaint pixel tests
 # webkit.org/b/118674
-fast/repaint/absolute-position-moved.html
-fast/repaint/caret-outside-block.html
-fast/repaint/fixed-child-move-after-scroll.html
-fast/repaint/fixed-child-of-transformed-move-after-scroll.html
-fast/repaint/fixed-in-page-scale.html
-fast/repaint/fixed-move-after-scroll.html
-fast/repaint/fixed-scale.html
-fast/repaint/fixed-scroll-simple.html
-fast/repaint/fixed-table-cell.html
-fast/repaint/fixed-table-overflow-zindex.html
-fast/repaint/fixed-table-overflow.html
-fast/repaint/fixed-tranformed.html
-fast/repaint/intermediate-layout-position-clip.html
-fast/repaint/overflow-hide.html
-fast/repaint/overflow-show.html
-fast/repaint/repaint-during-scroll.html
-fast/repaint/scroll-absolute-layer-with-reflection.html
-fast/repaint/scroll-fixed-layer-with-no-visible-content.html
-fast/repaint/scroll-fixed-layer-with-reflection.html
-fast/repaint/scroll-in-clipped-layer.html
-fast/repaint/scroll-in-fixed-layer.html
+fast/repaint/fixed-child-move-after-scroll.html [ ImageOnlyFailure ]
+fast/repaint/fixed-child-of-transformed-move-after-scroll.html [ ImageOnlyFailure ]
+fast/repaint/fixed-in-page-scale.html [ ImageOnlyFailure ]
+fast/repaint/fixed-move-after-scroll.html [ ImageOnlyFailure ]
+fast/repaint/fixed-table-cell.html [ ImageOnlyFailure ]
+fast/repaint/fixed-table-overflow-zindex.html [ ImageOnlyFailure ]
+fast/repaint/fixed-table-overflow.html [ ImageOnlyFailure ]
+fast/repaint/fixed-tranformed.html [ ImageOnlyFailure ]
+fast/repaint/intermediate-layout-position-clip.html [ ImageOnlyFailure ]
+fast/repaint/repaint-during-scroll.html [ ImageOnlyFailure ]
+fast/repaint/scroll-fixed-layer-with-no-visible-content.html [ ImageOnlyFailure ]
 fast/repaint/selection-clear.html
-fast/repaint/table-cell-collapsed-border-scroll.html
-fast/repaint/transform-translate.html
+fast/repaint/table-cell-collapsed-border-scroll.html [ ImageOnlyFailure ]
+fast/repaint/transform-translate.html [ ImageOnlyFailure ]
 
 # [GTK][Qt] Regression: This test fails after r152701 changed how unavailable plugins are handled
 webkit.org/b/118730 fast/images/object-image.html [ Skip ]
@@ -422,24 +408,13 @@ webkit.org/b/112128 fullscreen/full-screen-table-section.html [ Skip ]
 # =========================================================================== #
 
 # Qt specific results committed in r89901, but fail on Qt-WK2 platform
-http/tests/misc/object-embedding-svg-delayed-size-negotiation-2.htm
-
-# [Qt][WK2]http/tests/xmlhttprequest/workers/abort-exception-assert.html fails
-webkit.org/b/75540 http/tests/xmlhttprequest/workers/abort-exception-assert.html
-
-# [Qt][WK2] http/tests/security/xss-DENIED-xsl-document-securityOrigin.xml crashes
-webkit.org/b/80209 http/tests/security/xss-DENIED-xsl-document-securityOrigin.xml
+http/tests/misc/object-embedding-svg-delayed-size-negotiation-2.htm [ ImageOnlyFailure ]
 
 # [Qt][WK2] Failing http/tests/plugins tests after reenabled plugins
-webkit.org/b/82895 http/tests/plugins/create-v8-script-objects.html
-webkit.org/b/82895 http/tests/plugins/npapi-response-headers.html
 webkit.org/b/82895 http/tests/plugins/third-party-cookie-accept-policy.html
 
 # [Qt][WK2] New http/tests/cache/xhr-vary-header.html fails
 webkit.org/b/89278 http/tests/cache/xhr-vary-header.html
-
-# New http/tests/securitycontentSecurityPolicy/object-src-url-blocked.html introduced in r124371 fails on EFL, GTK, Qt
-webkit.org/b/92963 http/tests/security/contentSecurityPolicy/object-src-url-blocked.html
 
 # [Qt][WK2] New http/tests/security/cross-origin-plugin* tests fail
 # webkit.org/b/95935
@@ -450,8 +425,6 @@ http/tests/security/cross-origin-plugin.html
 
 # [Qt][WK2] New http/tests/security/storage-blocking* tests fails
 # webkit.org/b/96859
-http/tests/security/storage-blocking-loosened-plugin.html
-http/tests/security/storage-blocking-loosened-private-browsing-plugin.html
 http/tests/security/storage-blocking-strengthened-plugin.html
 http/tests/security/storage-blocking-strengthened-private-browsing-plugin.html
 
@@ -464,9 +437,6 @@ http/tests/security/cookies/third-party-cookie-blocking.html
 
 # [Qt][WK2] http/tests/misc/willCacheResponse-delegate-callback.html fails
 webkit.org/b/99148 http/tests/misc/willCacheResponse-delegate-callback.html
-
-# [Qt][WK2] http/tests/navigation/ping-cross-origin-from-https.html fails
-webkit.org/b/99155 http/tests/navigation/ping-cross-origin-from-https.html
 
 # User Timing is not enabled
 webkit.org/b/84893 http/tests/w3c/webperf/submission/Intel/user-timing
