@@ -179,6 +179,9 @@ webkit.org/b/101165 compositing/repaint/invalidations-on-composited-layers.html
 
 webkit.org/b/112675 compositing/layer-creation/fixed-position-change-out-of-view-in-view.html [ Skip ]
 
+# [Qt][WK2] This test crashes on the bot
+compositing/visibility/visibility-simple-video-layer.html
+
 # =========================================================================== #
 # Editing tests.                                                              #
 # =========================================================================== #
@@ -391,6 +394,9 @@ fast/text/international/unicode-bidi-plaintext-in-textarea.html
 # [GTK][Qt] Layout Test fast/sub-pixel/sub-pixel-composited-layers.html is failing
 webkit.org/b/119841 fast/sub-pixel/sub-pixel-composited-layers.html [ Skip ]
 
+# [Qt][WK2] This test crashes on the bot
+fast/frames/sandboxed-iframe-scripting-03.html
+
 # =========================================================================== #
 # Fullscreen tests.                                                          #
 # =========================================================================== #
@@ -473,9 +479,6 @@ webkit.org/b/105417 svg/text/select-textLength-spacingAndGlyphs-stretch-1.svg
 webkit.org/b/105417 svg/text/select-textLength-spacingAndGlyphs-squeeze-1.svg
 webkit.org/b/105417 svg/text/select-textLength-spacing-squeeze-3.svg
 
-# [Qt] svg/animations/animate-path-nested-transforms.html fails
-webkit.org/b/48987 svg/animations/animate-path-nested-transforms.html
-
 # Mouse-move SVG tests failing
 webkit.org/b/45475 svg/custom/mouse-move-on-svg-root-standalone.svg [ Skip ]
 
@@ -485,8 +488,6 @@ webkit.org/b/70915 svg/as-object/svg-embedded-in-html-in-iframe.html
 # flakey svg tests
 svg/custom/getscreenctm-in-scrollable-svg-area.xhtml
 svg/custom/getscreenctm-in-scrollable-div-area.xhtml
-
-svg/custom/use-events-crash.svg
 
 # =========================================================================== #
 # Unimplement features.                                                       #
@@ -674,11 +675,11 @@ printing/width-overflow.html
 
 # [Qt] Images scale differently in WK1 and WK2
 # webkit.org/b/92015
-css2.1/t090501-c414-flt-02-d-g.html
-css2.1/t090501-c414-flt-03-b-g.html
-css2.1/t090501-c414-flt-ln-01-d-g.html
-css2.1/t100304-c43-rpl-bbx-00-d-g.html
-css2.1/t100304-c43-rpl-bbx-01-d-g.html
+css2.1/t090501-c414-flt-02-d-g.html [ ImageOnlyFailure ]
+css2.1/t090501-c414-flt-03-b-g.html [ ImageOnlyFailure ]
+css2.1/t090501-c414-flt-ln-01-d-g.html [ ImageOnlyFailure ]
+css2.1/t100304-c43-rpl-bbx-00-d-g.html [ ImageOnlyFailure ]
+css2.1/t100304-c43-rpl-bbx-01-d-g.html [ ImageOnlyFailure ]
 
 # [Qt][WK2] Tests producing bad repaint rects in pixel results
 css3/filters/filter-change-repaint-composited.html [ ImageOnlyFailure ]
@@ -687,70 +688,50 @@ css3/filters/filter-repaint-composited-fallback.html [ ImageOnlyFailure ]
 
 # [Qt][WK2][PIXEL TESTS] Failing CSS2.1 pixel tests after r151205, box moved by one pixel, on some of them red is showing
 # webkit.org/b/117699
-css2.1/20110323/absolute-non-replaced-height-002.htm
-css2.1/20110323/absolute-non-replaced-width-001.htm
-css2.1/20110323/absolute-non-replaced-width-002.htm
-css2.1/20110323/absolute-non-replaced-width-003.htm
-css2.1/20110323/absolute-non-replaced-width-004.htm
-css2.1/20110323/absolute-non-replaced-width-005.htm
-css2.1/20110323/absolute-non-replaced-width-006.htm
-css2.1/20110323/absolute-non-replaced-width-007.htm
-css2.1/20110323/absolute-non-replaced-width-008.htm
-css2.1/20110323/absolute-non-replaced-width-009.htm
-css2.1/20110323/absolute-non-replaced-width-010.htm
-css2.1/20110323/absolute-non-replaced-width-011.htm
-css2.1/20110323/absolute-non-replaced-width-012.htm
-css2.1/20110323/absolute-non-replaced-width-013.htm
-css2.1/20110323/absolute-non-replaced-width-014.htm
-css2.1/20110323/absolute-non-replaced-width-016.htm
-css2.1/20110323/abspos-containing-block-initial-001.htm
-css2.1/20110323/block-non-replaced-height-005.htm
-css2.1/20110323/block-non-replaced-height-006.htm
-css2.1/20110323/block-non-replaced-width-007.htm
-css2.1/20110323/block-replaced-width-001.htm
-css2.1/20110323/float-non-replaced-width-006.htm
-css2.1/20110323/inline-block-non-replaced-width-001.htm
-css2.1/20110323/inline-block-non-replaced-width-002.htm
-css2.1/t0803-c5502-mrgn-r-01-c-a.html
-css2.1/t0803-c5504-mrgn-l-01-c-a.html
-css2.1/t0803-c5505-mrgn-01-e-a.html
-css2.1/t0803-c5505-mrgn-03-c-ag.html
-css2.1/t0804-c5506-padn-t-00-b-a.html
-css2.1/t0804-c5507-padn-r-01-c-a.html
-css2.1/t0804-c5508-ipadn-b-03-b-a.html
-css2.1/t0804-c5509-padn-l-01-b-a.html
-css2.1/t0804-c5510-padn-00-b-ag.html
-css2.1/t0804-c5510-padn-01-e-a.html
-css2.1/t0805-c5518-ibrdr-t-00-a.html
-css2.1/t0805-c5519-brdr-r-00-a.html
-css2.1/t0905-c414-flt-00-d.html
+css2.1/20110323/absolute-non-replaced-height-002.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-001.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-002.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-003.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-004.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-005.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-006.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-007.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-008.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-009.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-010.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-011.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-012.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-013.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-014.htm [ ImageOnlyFailure ]
+css2.1/20110323/absolute-non-replaced-width-016.htm [ ImageOnlyFailure ]
+css2.1/20110323/abspos-containing-block-initial-001.htm [ ImageOnlyFailure ]
+css2.1/20110323/block-non-replaced-height-005.htm [ ImageOnlyFailure ]
+css2.1/20110323/block-non-replaced-height-006.htm [ ImageOnlyFailure ]
+css2.1/20110323/block-non-replaced-width-007.htm [ ImageOnlyFailure ]
+css2.1/20110323/block-replaced-width-001.htm [ ImageOnlyFailure ]
+css2.1/20110323/float-non-replaced-width-006.htm [ ImageOnlyFailure ]
+css2.1/20110323/inline-block-non-replaced-width-001.htm [ ImageOnlyFailure ]
+css2.1/20110323/inline-block-non-replaced-width-002.htm [ ImageOnlyFailure ]
+css2.1/t0803-c5502-mrgn-r-01-c-a.html [ ImageOnlyFailure ]
+css2.1/t0803-c5504-mrgn-l-01-c-a.html [ ImageOnlyFailure ]
+css2.1/t0803-c5505-mrgn-01-e-a.html [ ImageOnlyFailure ]
+css2.1/t0803-c5505-mrgn-03-c-ag.html [ ImageOnlyFailure ]
+css2.1/t0804-c5506-padn-t-00-b-a.html [ ImageOnlyFailure ]
+css2.1/t0804-c5507-padn-r-01-c-a.html [ ImageOnlyFailure ]
+css2.1/t0804-c5508-ipadn-b-03-b-a.html [ ImageOnlyFailure ]
+css2.1/t0804-c5509-padn-l-01-b-a.html [ ImageOnlyFailure ]
+css2.1/t0804-c5510-padn-01-e-a.html [ ImageOnlyFailure ]
 
 # [Qt][WK2] Skip tests that depend on disabling accelerated compositing
 # webkit.org/b/99167
-css3/filters/effect-blur.html
 css3/filters/effect-brightness.html
-css3/filters/effect-sepia.html
-css3/filters/blur-filter-page-scroll.html
-css3/filters/blur-filter-page-scroll-self.html
-css3/filters/filter-repaint.html
-css3/filters/effect-drop-shadow.html
-css3/filters/effect-grayscale.html
-css3/filters/effect-saturate.html
-css3/filters/blur-filter-page-scroll-parents.html
-css3/filters/effect-hue-rotate.html
-css3/filters/effect-contrast.html
-css3/filters/effect-combined.html
 css3/filters/effect-brightness-clamping.html
-css3/filters/effect-opacity.html
-css3/filters/effect-invert.html
-css3/filters/null-effect-check.html
 
 css3/filters/composited-reflected.html
 css3/filters/custom/custom-filter-clamp-css-color-matrix.html
 css3/filters/custom/custom-filter-nonseparable-blend-mode-luminosity.html
 css3/filters/custom/custom-filter-unavailable-varying.html
 css3/filters/effect-drop-shadow-hw.html
-css3/filters/effect-reference.html
 css3/filters/filter-repaint-sepia.html
 
 # [Qt] Failing css3/selectors3 pixel tests
