@@ -409,6 +409,9 @@ webkit.org/b/112146 fullscreen/video-controls-drag.html [ Skip ]
 
 webkit.org/b/112128 fullscreen/full-screen-table-section.html [ Skip ]
 
+# [Qt][WK2] This test fails on the bot since commit #f63a205e734763953fbe89434ff9f25c4f65ed32
+fullscreen/full-screen-stacking-context.html
+
 # =========================================================================== #
 # HTTP tests.                                                                 #
 # =========================================================================== #
@@ -488,6 +491,9 @@ webkit.org/b/70915 svg/as-object/svg-embedded-in-html-in-iframe.html
 # flakey svg tests
 svg/custom/getscreenctm-in-scrollable-svg-area.xhtml
 svg/custom/getscreenctm-in-scrollable-div-area.xhtml
+
+# [Qt][WK2] This test fails on the bot since commit #cac779d7471ee64b8484f89ab3b805560fbff84c
+svg/custom/js-repaint-rect-on-path-with-stroke.svg
 
 # =========================================================================== #
 # Unimplement features.                                                       #
