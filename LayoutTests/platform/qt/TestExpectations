@@ -666,6 +666,9 @@ http/tests/misc/redirect-to-external-url.html
 # https://bugs.webkit.org/show_bug.cgi?id=87208
 http/tests/cookies/js-get-and-set-http-only-cookie.html
 
+# https://bugs.webkit.org/show_bug.cgi?id=109799
+webkit.org/b/90007 http/tests/security/mixedContent/insecure-audio-video-in-main-frame.html [ Skip ]
+
 # Assertion failure in MessagePort::contextDestroyed in http/tests/security/MessagePort/event-listener-context.html, usually attributed to later tests
 webkit.org/b/94458 [ Debug ] http/tests/security/MessagePort/event-listener-context.html [ Skip ]
 
@@ -1911,6 +1914,9 @@ webkit.org/b/117582 fast/flexbox/clear-overflow-before-scroll-update.html [ Skip
 
 # [Qt] fast/repaint/fixed-right-bottom-in-page-scale.html test flaky on Debug build and caused regression on the following tests after r118238. 
 webkit.org/b/118238 [ Debug ] fast/repaint/fixed-right-bottom-in-page-scale.html [ Skip ]
+
+# [Qt][WK1] fast/forms/form-submit-in-image-document.html fails
+fast/forms/form-submit-in-image-document.html [ Skip ]
 
 # ============================================================================= #
 # failing security tests
