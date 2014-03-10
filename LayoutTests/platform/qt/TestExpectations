@@ -483,8 +483,8 @@ css3/compositing/background-blend-mode-image-image.html
 css3/compositing/background-blend-mode-single-layer-no-blending.html
 
 # CSS custom filters has been disabled as they are being deprecated
-css3/filters/custom
-
+css3/filters/custom [ Skip ]
+css3/filters/custom-with-at-rule-syntax [ Skip ]
 
 # =========================================================================== #
 #       Drag and Drop Support in DRT.                                         #
