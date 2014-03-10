@@ -482,6 +482,10 @@ css3/compositing/background-blend-mode-image-color.html
 css3/compositing/background-blend-mode-image-image.html
 css3/compositing/background-blend-mode-single-layer-no-blending.html
 
+# CSS custom filters has been disabled as they are being deprecated
+css3/filters/custom
+
+
 # =========================================================================== #
 #       Drag and Drop Support in DRT.                                         #
 # =========================================================================== #
@@ -1202,39 +1206,6 @@ fast/preloader/document-write-2.html
 # ERROR: LayoutTestController::overridePreference() does not support the 'WebKitPageCacheSupportsPluginsPreferenceKey' preference
 # http://trac.webkit.org/changeset/106305
 plugins/crash-restoring-plugin-page-from-page-cache.html
-
-# ERROR: TestRunner::overridePreference() does not support the 'WebKitCSSCustomFilterEnabled' preference
-css3/filters/custom/custom-filter-shader-cache.html
-css3/filters/custom/effect-color-check.html
-css3/filters/custom/effect-custom-combined-missing.html
-css3/filters/custom/effect-custom.html
-css3/filters/custom/effect-custom-parameters.html
-css3/filters/custom/filter-repaint-custom-clipped.html
-css3/filters/custom/filter-repaint-custom-rotated.html
-css3/filters/custom/filter-repaint-custom.html
-css3/filters/custom-with-at-rule-syntax/parsing-custom-function-invalid.html
-css3/filters/custom-with-at-rule-syntax/parsing-custom-function-valid.html
-css3/filters/custom-with-at-rule-syntax/parsing-at-rule-invalid.html
-css3/filters/custom-with-at-rule-syntax/parsing-at-rule-valid.html
-css3/filters/custom-with-at-rule-syntax/parsing-src-property-invalid.html
-css3/filters/custom-with-at-rule-syntax/parsing-src-property-valid.html
-css3/filters/custom-with-at-rule-syntax/parsing-geometry-property-invalid.html
-css3/filters/custom-with-at-rule-syntax/parsing-geometry-property-valid.html
-css3/filters/custom-with-at-rule-syntax/parsing-mix-property-invalid.html
-css3/filters/custom-with-at-rule-syntax/parsing-mix-property-valid.html
-css3/filters/custom-with-at-rule-syntax/parsing-parameters-property-invalid.html
-css3/filters/custom-with-at-rule-syntax/parsing-parameters-property-valid.html
-
-# The following tests need further investigation:
-# https://bugs.webkit.org/show_bug.cgi?id=101531
-css3/filters/custom/filter-fallback-to-software.html
-css3/filters/custom/composited/custom-filter-blend-modes.html
-css3/filters/custom/custom-filter-no-element-texture-access.html
-css3/filters/custom/effect-custom-transform-parameters.html
-css3/filters/custom/custom-filter-animation.html
-css3/filters/custom/custom-filter-transforms-animation.html
-css3/filters/custom/custom-filter-blend-modes.html
-css3/filters/custom/custom-filter-array-blending.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=107118
 fast/canvas/canvas-quadratic-same-endpoint.html
