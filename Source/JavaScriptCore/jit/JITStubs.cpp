@@ -357,7 +357,7 @@ SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
     "rts" "\n"
     "nop" "\n"
     ".align 2" "\n"
-    ".L2" SYMBOL_STRING(cti_vm_throw) ":.long " SYMBOL_STRING(cti_vm_throw)"@GOT \n"
+    ".L2" SYMBOL_STRING(cti_vm_throw) ":.long " SYMBOL_STRING(cti_vm_throw) "@GOT \n"
 );
 
 asm volatile (
