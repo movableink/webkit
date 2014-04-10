@@ -20,8 +20,7 @@
 #ifndef STORAGE_LEVELDB_PORT_PORT_QT_H_
 #define STORAGE_LEVELDB_PORT_PORT_QT_H_
 
-#include <QAtomicInteger>
-#include <QAtomicPointer>
+#include <QtCore/qatomic.h>
 #include <QMutex>
 #include <QWaitCondition>
 
@@ -61,7 +60,12 @@ private:
     Mutex* m_mutex;
 };
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 3, 0)
 typedef QAtomicInteger<int> OnceType;
+#else
+typedef QAtomicInt OnceType;
+#endif
+
 #define LEVELDB_ONCE_INIT 0
 inline void InitOnce(port::OnceType* once, void (*initializer)())
 {
