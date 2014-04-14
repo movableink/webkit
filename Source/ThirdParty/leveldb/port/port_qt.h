@@ -33,6 +33,8 @@
 #ifdef Q_CC_MSVC
 #include "win/stdint.h"
 #define snprintf _snprintf
+#else
+#include <stdint.h>
 #endif
 
 namespace leveldb {
