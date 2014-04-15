@@ -516,17 +516,14 @@ editing/pasteboard/4947130.html
 editing/pasteboard/copy-standalone-image.html
 editing/pasteboard/drag-drop-dead-frame.html
 editing/pasteboard/drag-drop-input-textarea.html
-editing/pasteboard/drag-drop-input-in-svg.svg
 editing/pasteboard/drag-drop-modifies-page.html
 editing/pasteboard/drag-drop-url-text.html
-editing/pasteboard/drop-file-svg.html
 editing/pasteboard/drag-image-to-contenteditable-in-iframe.html
 editing/pasteboard/drag-selected-image-to-contenteditable.html
 editing/pasteboard/drop-link.html
 editing/pasteboard/drop-text-without-selection.html
 editing/pasteboard/emacs-ctrl-a-k-y.html
 editing/pasteboard/emacs-ctrl-k-with-move.html
-editing/pasteboard/emacs-ctrl-k-y-001.html
 editing/pasteboard/smart-drag-drop.html
 editing/pasteboard/subframe-dragndrop-1.html
 editing/pasteboard/get-data-text-plain-drop.html
@@ -575,13 +572,11 @@ fast/events/drag-and-drop-subframe-dataTransfer.html
 fast/events/drag-link.html
 fast/events/drag-text-with-clear.html
 fast/events/ondrop-text-html.html
-fast/events/drop-handler-should-not-stop-navigate.html
 fast/events/dropzone-001.html
 fast/events/dropzone-002.html
 fast/events/dropzone-003.html
 fast/events/dropzone-004.html
 fast/events/dropzone-005.html
-fast/events/drop-with-file-paths.html
 fast/events/moving-text-should-fire-drop-and-dragend-events.html
 fast/events/moving-text-should-fire-drop-and-dragend-events-2.html
 fast/events/input-element-display-none-in-dragleave-crash.html
@@ -590,8 +585,6 @@ fast/events/only-valid-drop-targets-receive-file-drop.html
 # New test added in r145195 is failing
 webkit.org/b/111853 editing/pasteboard/cleanup-on-move.html [ Skip ]
 webkit.org/b/111853 editing/pasteboard/drag-list-item.html [ Skip ]
-
-webkit.org/b/113126 editing/pasteboard/can-read-in-dragstart-event.html [ Skip ]
 
 # =========================================================================== #
 #       Failing HTTP tests.                                                   #
