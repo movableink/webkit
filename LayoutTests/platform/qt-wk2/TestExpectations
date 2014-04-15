@@ -539,6 +539,7 @@ fast/events/touch/gesture/gesture-click.html
 fast/events/touch/gesture/context-menu-on-long-press.html
 touchadjustment/touch-links-longpress.html
 # eventSender.beginDragWithFiles
+editing/pasteboard/drop-file-svg.html
 fast/dom/Window/window-postmessage-clone-frames.html
 fast/dom/Window/window-postmessage-clone.html
 fast/events/drag-file-crash.html
