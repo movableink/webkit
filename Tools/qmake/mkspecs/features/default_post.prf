@@ -158,7 +158,7 @@ contains(TEMPLATE, derived) {
     }
 }
 
-contains(QT, webkit)|contains(QT, webkitwidgets) {
+contains(QT, webkit)|contains(QT, webkitwidgets):!isEqual(MODULE, webkitwidgets): {
     # In addition to the main shared QtWebKit library we also
     # need to link to any intermediate shared libraries.
     force_static_libs_as_shared {
