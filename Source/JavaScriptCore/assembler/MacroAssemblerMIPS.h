@@ -2590,8 +2590,6 @@ public:
 
     Jump branchEqual(RegisterID rs, RegisterID rt)
     {
-        m_assembler.nop();
-        m_assembler.nop();
         m_assembler.appendJump();
         m_assembler.beq(rs, rt, 0);
         m_assembler.nop();
@@ -2601,8 +2599,6 @@ public:
 
     Jump branchNotEqual(RegisterID rs, RegisterID rt)
     {
-        m_assembler.nop();
-        m_assembler.nop();
         m_assembler.appendJump();
         m_assembler.bne(rs, rt, 0);
         m_assembler.nop();
