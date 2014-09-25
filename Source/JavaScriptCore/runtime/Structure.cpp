@@ -652,7 +652,7 @@ Structure* Structure::flattenDictionaryStructure(VM& vm, JSObject* object)
 
     // If the object had a Butterfly but after flattening/compacting we no longer have need of it,
     // we need to zero it out because the collector depends on the Structure to know the size for copying.
-    if (object->butterfly() && !this->outOfLineCapacity() && !this->hasIndexingHeader(object))
+    if (object->butterfly() && !this->outOfLineCapacity() && !hasIndexingHeader(this->indexingType()))
         object->setButterfly(vm, 0, this);
 
     return this;
