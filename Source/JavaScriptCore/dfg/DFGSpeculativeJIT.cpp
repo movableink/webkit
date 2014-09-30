@@ -3213,7 +3213,7 @@ void SpeculativeJIT::compileMakeRope(Node* node)
     for (unsigned i = 1; i < numOpGPRs; ++i) {
         m_jit.and32(JITCompiler::Address(opGPRs[i], JSString::offsetOfFlags()), scratchGPR);
         speculationCheck(
-            Uncountable, JSValueSource(), nullptr,
+            Uncountable, JSValueSource(), 0,
             m_jit.branchAdd32(
                 JITCompiler::Overflow,
                 JITCompiler::Address(opGPRs[i], JSString::offsetOfLength()), allocatorGPR));
