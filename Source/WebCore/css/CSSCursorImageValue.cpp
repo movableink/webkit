@@ -217,7 +217,7 @@ String CSSCursorImageValue::cachedImageURL()
 void CSSCursorImageValue::clearCachedImage()
 {
     detachPendingImage();
-    m_image = nullptr;
+    m_image.clear();
     m_accessedImage = false;
 }
 

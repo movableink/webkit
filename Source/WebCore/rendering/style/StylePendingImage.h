@@ -58,7 +58,7 @@ public:
     CSSImageSetValue* cssImageSetValue() const { return m_value && m_value->isImageSetValue() ? static_cast<CSSImageSetValue*>(m_value) : 0; }
 #endif
 
-    void detachFromCSSValue() { m_value = nullptr; }
+    void detachFromCSSValue() { m_value = 0; }
 
     virtual LayoutSize imageSize(const RenderObject*, float /*multiplier*/) const OVERRIDE { return LayoutSize(); }
     virtual bool imageHasRelativeWidth() const { return false; }
