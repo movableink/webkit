@@ -104,7 +104,7 @@ private:
 
     virtual CSSRule* parentRule() const OVERRIDE { return m_parentRule;  }
 
-    virtual void willMutate() OVERRIDE WARN_UNUSED_RETURN;
+    virtual bool willMutate() OVERRIDE WARN_UNUSED_RETURN;
     virtual void didMutate(MutationType) OVERRIDE;
 
     unsigned m_refCount;
