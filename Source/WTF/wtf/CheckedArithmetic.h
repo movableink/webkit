@@ -722,25 +722,6 @@ typedef Checked<uint32_t, RecordOverflow> CheckedUint32;
 typedef Checked<int64_t, RecordOverflow> CheckedInt64;
 typedef Checked<uint64_t, RecordOverflow> CheckedUint64;
 
-template<typename T, typename U>
-Checked<T, RecordOverflow> checkedSum(U value)
-{
-    return Checked<T, RecordOverflow>(value);
-}
-template<typename T, typename U, typename... Args>
-Checked<T, RecordOverflow> checkedSum(U value, Args... args)
-{
-    return Checked<T, RecordOverflow>(value) + checkedSum<T>(args...);
-}
-
-// Sometimes, you just want to check if some math would overflow - the code to do the math is
-// already in place, and you want to guard it.
-
-template<typename T, typename... Args> bool sumOverflows(Args... args)
-{
-    return checkedSum<T>(args...).hasOverflowed();
-}
-
 }
 
 using WTF::Checked;
@@ -754,7 +735,5 @@ using WTF::CheckedInt32;
 using WTF::CheckedUint32;
 using WTF::CheckedInt64;
 using WTF::CheckedUint64;
-using WTF::checkedSum;
-using WTF::sumOverflows;
 
 #endif
