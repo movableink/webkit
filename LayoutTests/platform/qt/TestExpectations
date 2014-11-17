@@ -2720,7 +2720,7 @@ fast/multicol/pagination [ Missing ]
 
 # Various missing baselines
 css3/filters/effect-reference-composite.html [ Missing ]
-css3/filters/effect-reference-composite-hq.html [ Missing ]
+css3/filters/effect-reference-composite-hw.html [ Missing ]
 svg/text/text-overflow-ellipsis-svgfont-kerning-ligatures.html [ Missing ]
 svg/filters/filter-hidden-content.svg [ Missing ]
 fast/text/text-combine-different-fonts.html [ Missing ]
@@ -2731,7 +2731,7 @@ fast/ruby/select-ruby.html [ Missing ]
 fast/inline/justify-emphasis-inline-box.html [ Missing ]
 fast/block/lineboxcontain/block-with-ideographs.xhtml [ Missing ]
 compositing/tiling/rotated-tiled-clamped.html [ Missing ]
-compositing/tiling/rotated-tiled-preserve3d.html [ Missing ]
+compositing/tiling/rotated-tiled-preserve3d-clamped.html [ Missing ]
 editing/pasteboard/emacs-ctrl-k-y-001.html [ Missing ]
 
 # ============================================================================= #
