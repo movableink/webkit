@@ -2709,6 +2709,25 @@ webkit.org/b/117185 fast/forms/control-clip-overflow.html [ Skip ]
 # Synthesized italics not supported
 fast/text/international/synthesized-italic-vertical-latin.html [ Skip ]
 
+# Multicol pagination tests are missing baselines
+fast/multicol/pagination [ Missing ]
+
+# Various missing baselines
+css3/filters/effect-reference-composite.html [ Missing ]
+css3/filters/effect-reference-composite-hq.html [ Missing ]
+svg/text/text-overflow-ellipsis-svgfont-kerning-ligatures.html [ Missing ]
+svg/filters/filter-hidden-content.svg [ Missing ]
+fast/text/text-combine-different-fonts.html [ Missing ]
+fast/regions/region-generated-content-before-after.html [ Missing ]
+fast/regions/region-dynamic-after-before.html [ Missing ]
+fast/css/font-family-pictograph.html [ Missing ]
+fast/ruby/select-ruby.html [ Missing ]
+fast/inline/justify-emphasis-inline-box.html [ Missing ]
+fast/block/lineboxcontain/block-with-ideographs.xhtml [ Missing ]
+compositing/tiling/rotated-tiled-clamped.html [ Missing ]
+compositing/tiling/rotated-tiled-preserve3d.html [ Missing ]
+editing/pasteboard/emacs-ctrl-k-y-001.html [ Missing ]
+
 # ============================================================================= #
 # ImageOnlyFailure on Qt 5x2
 # ============================================================================= #
