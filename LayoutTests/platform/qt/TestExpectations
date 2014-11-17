@@ -2734,6 +2734,10 @@ compositing/tiling/rotated-tiled-clamped.html [ Missing ]
 compositing/tiling/rotated-tiled-preserve3d-clamped.html [ Missing ]
 editing/pasteboard/emacs-ctrl-k-y-001.html [ Missing ]
 
+# Ideographic space has the wrong width in Qt
+css2.1/20110323/word-spacing-remove-space-003.htm [ Failure ]
+css2.1/20110323/word-spacing-remove-space-006.htm [ Failure ]
+
 # ============================================================================= #
 # ImageOnlyFailure on Qt 5x2
 # ============================================================================= #
