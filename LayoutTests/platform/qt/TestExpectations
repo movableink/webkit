@@ -930,6 +930,12 @@ http/tests/misc/webtiming-origins.html
 # compositing/transitions/transform-on-large-layer.html is flaky
 webkit.org/b/110099 compositing/transitions/transform-on-large-layer.html [ Skip ]
 
+svg/custom/mouse-move-on-svg-root.xhtml [ Failure Pass ]
+svg/custom/mouse-move-on-svg-container.xhtml [ Failure Pass ]
+svg/custom/use-instanceRoot-event-listeners.xhtml [ Failure Pass ]
+editing/pasteboard/smart-paste-004.html [ Failure Pass ]
+editing/deleting/smart-delete-004.html [ Failure Pass ]
+
 # =========================================================================== #
 # failing media tests
 # =========================================================================== #
