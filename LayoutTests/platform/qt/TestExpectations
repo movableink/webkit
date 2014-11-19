@@ -45,7 +45,7 @@
 # - failing tables tests
 # - Failed canvas tests from http://philip.html5.org/tests/canvas/suite/tests/
 # - failing transforms tests
-# - failing printing tests
+# - failing storage tests
 # - new tests without expected results
 # - Regressions occured after Qt version update
 # - new skipped tests yet to be sorted
@@ -114,15 +114,6 @@ fast/events/constructors/composition-event-constructor.html
 fast/events/constructors/wheel-event-constructor.html
 fast/events/constructors/keyboard-event-constructor.html
 fast/events/constructors/focus-event-constructor.html
-
-# ENABLE(INDEXED_DATABASE) is disabled.
-storage/indexeddb
-http/tests/inspector/indexeddb
-http/tests/security/cross-origin-indexeddb-allowed.html
-http/tests/security/cross-origin-indexeddb.html
-http/tests/security/cross-origin-worker-indexeddb-allowed.html
-http/tests/security/cross-origin-worker-indexeddb.html
-http/tests/security/no-indexeddb-from-sandbox.html
 
 # ENABLE(WEB_ARCHIVE) is disabled.
 svg/custom/image-with-prefix-in-webarchive.svg
@@ -1952,6 +1943,21 @@ canvas/philip/tests/2d.pattern.image.incomplete.omitted.html
 
 # fail because of missing testfonts
 transforms/2d/hindi-rotated.html
+
+# ============================================================================= #
+# failing storage tests
+# ============================================================================= #
+
+# Indexeddb tests failing after indexeddb was enabled
+storage/indexeddb/cursor-advance-workers.html [ Skip ]
+storage/indexeddb/database-quota.html [ Skip ]
+storage/indexeddb/dont-commit-on-blocked.html [ Skip ]
+storage/indexeddb/objectstore-basics-workers.html [ Skip ]
+storage/indexeddb/pending-activity-workers.html [ Skip ]
+storage/indexeddb/pending-version-change-on-exit.html [ Skip ]
+storage/indexeddb/pending-version-change-stuck-works-with-terminate.html [ Failure ]
+storage/indexeddb/pending-version-change-stuck.html [ Failure ]
+storage/indexeddb/transaction-complete-workers.html [ Skip ]
 
 # ============================================================================= #
 # new tests without expected results
