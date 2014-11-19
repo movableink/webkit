@@ -9,9 +9,9 @@ POST("123"): POST(3 bytes), Content-Type: application/xml
 PUT(""): PUT(0 bytes), Content-Type: application/xml
 PUT(null): PUT(0 bytes), Content-Type: null
 PUT("123"): PUT(3 bytes), Content-Type: application/xml
-DELETE(""): DELETE(null bytes), Content-Type: null
+DELETE(""): DELETE(0 bytes), Content-Type: application/xml
 DELETE(null): DELETE(null bytes), Content-Type: null
-DELETE("123"): DELETE(null bytes), Content-Type: null
+DELETE("123"): DELETE(3 bytes), Content-Type: application/xml
 HEAD(""): HEAD(null bytes), Content-Type: null
 HEAD(null): HEAD(null bytes), Content-Type: null
 HEAD("123"): HEAD(null bytes), Content-Type: null
