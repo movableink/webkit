@@ -598,6 +598,17 @@ bool SecurityOrigin::isSameSchemeHostPort(const SecurityOrigin* other) const
     return true;
 }
 
+bool SecurityOrigin::treatAsCORSEnabled() const
+{
+    if (m_universalAccess)
+        return true;
+
+    if (isUnique())
+        return false;
+
+    return SchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(m_protocol);
+}
+
 String SecurityOrigin::urlWithUniqueSecurityOrigin()
 {
     ASSERT(isMainThread());

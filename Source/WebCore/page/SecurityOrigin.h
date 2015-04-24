@@ -205,6 +205,8 @@ public:
     // (and whether it was set) but considering the host. It is used for postMessage.
     bool isSameSchemeHostPort(const SecurityOrigin*) const;
 
+    bool treatAsCORSEnabled() const;
+
     static String urlWithUniqueSecurityOrigin();
 
 private:
