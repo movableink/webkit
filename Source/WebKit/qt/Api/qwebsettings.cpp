@@ -267,9 +267,12 @@ void QWebSettingsPrivate::apply()
                                       global->attributes.value(QWebSettings::LocalStorageEnabled));
         settings->setLocalStorageEnabled(value);
 
-        value = attributes.value(QWebSettings::LocalContentCanAccessRemoteUrls,
+        bool universalAccess = attributes.value(QWebSettings::LocalContentCanAccessAllUrls,
+                                      global->attributes.value(QWebSettings::LocalContentCanAccessAllUrls));
+        bool remoteAccess = attributes.value(QWebSettings::LocalContentCanAccessRemoteUrls,
                                       global->attributes.value(QWebSettings::LocalContentCanAccessRemoteUrls));
-        settings->setAllowUniversalAccessFromFileURLs(value);
+        settings->setAllowUniversalAccessFromFileURLs(universalAccess && remoteAccess);
+        settings->setAllowRemoteAccessFromFileURLs(remoteAccess);
 
         value = attributes.value(QWebSettings::LocalContentCanAccessFileUrls,
                                       global->attributes.value(QWebSettings::LocalContentCanAccessFileUrls));
@@ -560,6 +563,7 @@ QWebSettings::QWebSettings()
     d->attributes.insert(QWebSettings::LocalStorageEnabled, false);
     d->attributes.insert(QWebSettings::LocalContentCanAccessRemoteUrls, false);
     d->attributes.insert(QWebSettings::LocalContentCanAccessFileUrls, true);
+    d->attributes.insert(QWebSettings::LocalContentCanAccessAllUrls, true);
     d->attributes.insert(QWebSettings::AcceleratedCompositingEnabled, true);
     d->attributes.insert(QWebSettings::WebGLEnabled, true);
     d->attributes.insert(QWebSettings::WebAudioEnabled, false);

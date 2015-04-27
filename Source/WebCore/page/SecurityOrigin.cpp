@@ -127,6 +127,7 @@ SecurityOrigin::SecurityOrigin(const KURL& url)
     , m_storageBlockingPolicy(AllowAllStorage)
     , m_enforceFilePathSeparation(false)
     , m_needsDatabaseIdentifierQuirkForFiles(false)
+    , m_deniedCORS(false)
 {
     // document.domain starts as m_host, but can be set by the DOM.
     m_domain = m_host;
@@ -153,6 +154,7 @@ SecurityOrigin::SecurityOrigin()
     , m_storageBlockingPolicy(AllowAllStorage)
     , m_enforceFilePathSeparation(false)
     , m_needsDatabaseIdentifierQuirkForFiles(false)
+    , m_deniedCORS(false)
 {
 }
 
@@ -169,6 +171,7 @@ SecurityOrigin::SecurityOrigin(const SecurityOrigin* other)
     , m_storageBlockingPolicy(other->m_storageBlockingPolicy)
     , m_enforceFilePathSeparation(other->m_enforceFilePathSeparation)
     , m_needsDatabaseIdentifierQuirkForFiles(other->m_needsDatabaseIdentifierQuirkForFiles)
+    , m_deniedCORS(other->m_deniedCORS)
 {
 }
 
@@ -442,6 +445,11 @@ void SecurityOrigin::grantUniversalAccess()
     m_universalAccess = true;
 }
 
+void SecurityOrigin::denyCrossOriginRequests()
+{
+    m_deniedCORS = true;
+}
+
 #if ENABLE(CACHE_PARTITIONING)
 String SecurityOrigin::cachePartition() const
 {
@@ -596,17 +604,6 @@ bool SecurityOrigin::isSameSchemeHostPort(const SecurityOrigin* other) const
         return false;
 
     return true;
-}
-
-bool SecurityOrigin::treatAsCORSEnabled() const
-{
-    if (m_universalAccess)
-        return true;
-
-    if (isUnique())
-        return false;
-
-    return SchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(m_protocol);
 }
 
 String SecurityOrigin::urlWithUniqueSecurityOrigin()

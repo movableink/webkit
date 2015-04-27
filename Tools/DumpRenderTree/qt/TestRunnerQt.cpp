@@ -423,7 +423,7 @@ void TestRunnerQt::evaluateInWebInspector(long callId, const QString& script)
 
 void TestRunnerQt::setAllowUniversalAccessFromFileURLs(bool enabled)
 {
-    m_drt->webPage()->settings()->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, enabled);
+    m_drt->webPage()->settings()->setAttribute(QWebSettings::LocalContentCanAccessAllUrls, enabled);
 }
 
 void TestRunnerQt::setAllowFileAccessFromFileURLs(bool enabled)

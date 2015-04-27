@@ -143,6 +143,7 @@ WebPage::WebPage(QObject* parent, DumpRenderTree* drt)
     globalSettings->setAttribute(QWebSettings::LinksIncludedInFocusChain, false);
     globalSettings->setAttribute(QWebSettings::PluginsEnabled, true);
     globalSettings->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
+    globalSettings->setAttribute(QWebSettings::LocalContentCanAccessAllUrls, true);
     globalSettings->setAttribute(QWebSettings::JavascriptEnabled, true);
     globalSettings->setAttribute(QWebSettings::PrivateBrowsingEnabled, false);
     globalSettings->setAttribute(QWebSettings::SpatialNavigationEnabled, false);
@@ -184,6 +185,7 @@ void WebPage::resetSettings()
     settings()->resetAttribute(QWebSettings::OfflineWebApplicationCacheEnabled);
     settings()->resetAttribute(QWebSettings::LocalContentCanAccessRemoteUrls);
     settings()->resetAttribute(QWebSettings::LocalContentCanAccessFileUrls);
+    settings()->resetAttribute(QWebSettings::LocalContentCanAccessAllUrls);
     settings()->resetAttribute(QWebSettings::PluginsEnabled);
     settings()->resetAttribute(QWebSettings::JavascriptCanAccessClipboard);
     settings()->resetAttribute(QWebSettings::AutoLoadImages);
