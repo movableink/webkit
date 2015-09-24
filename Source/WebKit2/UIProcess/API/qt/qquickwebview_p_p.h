@@ -121,6 +121,7 @@ public:
     bool transparentBackground() const;
     void setNavigatorQtObjectEnabled(bool);
     void updateUserScripts();
+    void updateUserStyleSheets();
     void updateSchemeDelegates();
 
     QPointF contentPos() const;
@@ -210,6 +211,7 @@ protected:
     QQmlComponent* colorChooser;
 
     QList<QUrl> userScripts;
+    QList<QUrl> userStyleSheets;
 
     bool m_betweenLoadCommitAndFirstFrame;
     bool m_useDefaultContentItemSize;
