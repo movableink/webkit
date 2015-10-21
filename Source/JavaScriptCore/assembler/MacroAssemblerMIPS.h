@@ -1017,6 +1017,32 @@ public:
         m_assembler.sb(src, addrTempRegister, 0);
     }
 
+    void store8(TrustedImm32 imm, Address address)
+    {
+        // FIXME: this code has never been tested
+
+        if (address.offset >= -32768 && address.offset <= 32767
+            && !m_fixedWidth) {
+            /*
+             * li immTemp, imm
+             * sb immTemp address.offset(address.base)
+             */
+            move(imm, immTempRegister);
+            m_assembler.sb(immTempRegister, address.base, address.offset);
+        } else {
+            /*
+             * li immTemp, imm
+             * lui addrTemp, (address.offset + 0x8000) >> 16
+             * addu addrTemp, addrTemp, address.base
+             * sb immTemp, (address.offset & 0xffff)(addrTemp)
+             */
+            move(imm, immTempRegister);
+            m_assembler.lui(addrTempRegister, (address.offset + 0x8000) >> 16);
+            m_assembler.addu(addrTempRegister, addrTempRegister, address.base);
+            m_assembler.sb(immTempRegister, addrTempRegister, address.offset);
+        }
+    }
+
     void store8(TrustedImm32 imm, void* address)
     {
         /*
@@ -1677,10 +1703,10 @@ public:
         return branchAdd32(cond, immTempRegister, dest);
     }
 
-    Jump branchAdd32(ResultCondition cond, Address address, RegisterID dest)
+    Jump branchAdd32(ResultCondition cond, Address src, RegisterID dest)
     {
-        load32(address, immTempRegister);
-        return branchAdd32(cond, immTempRegister, dest);
+        load32(src, dataTempRegister);
+        return branchAdd32(cond, dest, dataTempRegister, dest);
     }
 
     Jump branchAdd32(ResultCondition cond, RegisterID src, TrustedImm32 imm, RegisterID dest)
@@ -2857,6 +2883,11 @@ public:
     static void repatchCall(CodeLocationCall call, FunctionPtr destination)
     {
         MIPSAssembler::relinkCall(call.dataLocation(), destination.executableAddress());
+    }
+
+    void countLeadingZeros32(RegisterID src, RegisterID dest)
+    {
+        m_assembler.clz(dest, src);
     }
 
 private:
