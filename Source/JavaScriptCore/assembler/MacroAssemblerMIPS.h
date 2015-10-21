@@ -1004,6 +1004,32 @@ public:
         m_assembler.sb(src, addrTempRegister, 0);
     }
 
+    void store8(TrustedImm32 imm, Address address)
+    {
+        // FIXME: this code has never been tested
+
+        if (address.offset >= -32768 && address.offset <= 32767
+            && !m_fixedWidth) {
+            /*
+             * li immTemp, imm
+             * sb immTemp address.offset(address.base)
+             */
+            move(imm, immTempRegister);
+            m_assembler.sb(immTempRegister, address.base, address.offset);
+        } else {
+            /*
+             * li immTemp, imm
+             * lui addrTemp, (address.offset + 0x8000) >> 16
+             * addu addrTemp, addrTemp, address.base
+             * sb immTemp, (address.offset & 0xffff)(addrTemp)
+             */
+            move(imm, immTempRegister);
+            m_assembler.lui(addrTempRegister, (address.offset + 0x8000) >> 16);
+            m_assembler.addu(addrTempRegister, addrTempRegister, address.base);
+            m_assembler.sb(immTempRegister, addrTempRegister, address.offset);
+        }
+    }
+
     void store8(TrustedImm32 imm, void* address)
     {
         /*
@@ -1734,6 +1760,12 @@ public:
             return branchNotEqual(dataTempRegister, MIPSRegisters::zero);
         ASSERT(0);
         return Jump();
+    }
+
+    Jump branchAdd32(ResultCondition cond, Address src, RegisterID dest)
+    {
+        load32(src, dataTempRegister);
+        return branchAdd32(cond, dest, dataTempRegister, dest);
     }
 
     Jump branchMul32(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID dest)
@@ -2806,10 +2838,17 @@ public:
         UNREACHABLE_FOR_PLATFORM();
     }
 
+    static bool canJumpReplacePatchableBranch32WithPatch() { return false; }
+
     static CodeLocationLabel startOfPatchableBranch32WithPatchOnAddress(CodeLocationDataLabel32)
     {
         UNREACHABLE_FOR_PLATFORM();
         return CodeLocationLabel();
+    }
+
+    static void revertJumpReplacementToPatchableBranch32WithPatch(CodeLocationLabel, Address, int32_t)
+    {
+        UNREACHABLE_FOR_PLATFORM();
     }
 
     void abortWithReason(AbortReason reason)
@@ -2822,6 +2861,11 @@ public:
     {
         move(TrustedImm32(misc), MIPSRegisters::t8);
         abortWithReason(reason);
+    }
+
+    void countLeadingZeros32(RegisterID src, RegisterID dest)
+    {
+        m_assembler.clz(dest, src);
     }
 
 private:
