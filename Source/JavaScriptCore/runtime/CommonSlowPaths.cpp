@@ -426,7 +426,13 @@ SLOW_PATH_DECL(slow_path_sub)
     JSValue right = OP_C(3).jsValue();
     double a = left.toNumber(exec);
     double b = right.toNumber(exec);
+#if CPU(MIPS) && defined(__GLIBC__)
+    // on MIPS, the GLIBC version of the softfp double substraction sometimes
+    // returns impure NaNs
+    JSValue result = jsNumber(purifyNaN(a - b));
+#else
     JSValue result = jsNumber(a - b);
+#endif
     RETURN_WITH_PROFILING(result, {
         updateResultProfileForBinaryArithOp(exec, pc, result, left, right);
     });
