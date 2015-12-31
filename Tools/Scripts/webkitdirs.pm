@@ -126,6 +126,7 @@ my $iosVersion;
 my $generateDsym;
 my $isCMakeBuild;
 my $isGtk;
+my $isNix;
 my $isWinCairo;
 my $isWin64;
 my $isEfl;
@@ -440,6 +441,7 @@ sub argumentsForConfiguration()
     push(@args, '--64-bit') if (isWin64());
     push(@args, '--gtk') if isGtk();
     push(@args, '--efl') if isEfl();
+    push(@args, '--nix') if isNix();
     push(@args, '--wincairo') if isWinCairo();
     push(@args, '--inspector-frontend') if isInspectorFrontend();
     return @args;
@@ -636,7 +638,7 @@ sub executableProductDir
     my $productDirectory = productDir();
 
     my $binaryDirectory;
-    if (isEfl() || isGtk()) {
+    if (isEfl() || isGtk() || isNix()) {
         $binaryDirectory = "bin";
     } elsif (isAnyWindows()) {
         $binaryDirectory = isWin64() ? "bin64" : "bin32";
@@ -907,7 +909,7 @@ sub builtDylibPathForName
         my $extension = isDarwin() ? ".dylib" : ".so";
         return "$configurationProductDir/lib/libwebkit2gtk-4.0" . $extension;
     }
-    if (isEfl()) {
+    if (isEfl() || isNix()) {
         return "$configurationProductDir/lib/libewebkit2.so";
     }
     if (isIOSWebKit()) {
@@ -1047,6 +1049,18 @@ sub isGtk()
 {
     determineIsGtk();
     return $isGtk;
+}
+
+sub determineIsNix()
+{
+    return if defined($isNix);
+    $isNix = checkForArgumentAndRemoveFromARGV("--nix");
+}
+
+sub isNix()
+{
+    determineIsNix();
+    return $isNix;
 }
 
 # Determine if this is debian, ubuntu, linspire, or something similar.
@@ -1463,7 +1477,7 @@ sub relativeScriptsDir()
 sub launcherPath()
 {
     my $relativeScriptsPath = relativeScriptsDir();
-    if (isGtk() || isEfl()) {
+    if (isGtk() || isEfl() || isNix()) {
         return "$relativeScriptsPath/run-minibrowser";
     } elsif (isAppleWebKit()) {
         return "$relativeScriptsPath/run-safari";
@@ -1472,7 +1486,7 @@ sub launcherPath()
 
 sub launcherName()
 {
-    if (isGtk() || isEfl()) {
+    if (isGtk() || isEfl() || isNix()) {
         return "MiniBrowser";
     } elsif (isAppleMacWebKit()) {
         return "Safari";
@@ -1500,7 +1514,7 @@ sub checkRequiredSystemConfig
             print "most likely fail. The latest Xcode is available from the App Store.\n";
             print "*************************************************************\n";
         }
-    } elsif (isGtk() or isEfl() or isWindows() or isCygwin()) {
+    } elsif (isGtk() or isEfl() or isNix() or isWindows() or isCygwin()) {
         my @cmds = qw(bison gperf flex);
         my @missing = ();
         my $oldPath = $ENV{PATH};
@@ -1794,6 +1808,8 @@ sub getJhbuildPath()
         push(@jhbuildPath, "DependenciesEFL");
     } elsif (isGtk()) {
         push(@jhbuildPath, "DependenciesGTK");
+    } elsif (isNix()) {
+        push(@jhbuildPath, "DependenciesNix");
     } else {
         die "Cannot get JHBuild path for platform that isn't GTK+ or EFL.\n";
     }
@@ -1836,6 +1852,8 @@ sub wrapperPrefixIfNeeded()
             push(@prefix, "--efl");
         } elsif (isGtk()) {
             push(@prefix, "--gtk");
+        } elsif (isNix()) {
+            push(@prefix, "--nix");
         }
         push(@prefix, "run");
 
@@ -1976,8 +1994,8 @@ sub generateBuildSystemFromCMakeProject
         push @args, '-G "Visual Studio 14 2015 Win64"';
     }
 
-    # GTK+ has a production mode, but build-webkit should always use developer mode.
-    push @args, "-DDEVELOPER_MODE=ON" if isEfl() || isGtk();
+    # Some ports have production mode, but build-webkit should always use developer mode.
+    push @args, "-DDEVELOPER_MODE=ON" if isEfl() || isGtk() || isNix();
 
     # Don't warn variables which aren't used by cmake ports.
     push @args, "--no-warn-unused-cli";
@@ -2016,8 +2034,8 @@ sub buildCMakeGeneratedProject($)
     my @args = ("--build", $buildPath, "--config", $config);
     push @args, ("--", $makeArgs) if $makeArgs;
 
-    # GTK can use a build script to preserve colors and pretty-printing.
-    if (isGtk() && -e "$buildPath/build.sh") {
+    # GTK and Nix can use a build script to preserve colors and pretty-printing.
+    if ((isGtk() || isNix()) && -e "$buildPath/build.sh") {
         chdir "$buildPath" or die;
         $command = "$buildPath/build.sh";
         @args = ($makeArgs);
@@ -2079,6 +2097,7 @@ sub cmakeBasedPortName()
     return "Mac" if isAppleMacWebKit();
     return "WinCairo" if isWinCairo();
     return "AppleWin" if isAppleWinWebKit();
+    return "Nix" if isNix();
     return "";
 }
 
@@ -2090,7 +2109,7 @@ sub determineIsCMakeBuild()
 
 sub isCMakeBuild()
 {
-    if (isEfl() || isGtk() || isAnyWindows()) {
+    if (isEfl() || isGtk() || isNix() || isAnyWindows()) {
         return 1;
     }
     determineIsCMakeBuild();
