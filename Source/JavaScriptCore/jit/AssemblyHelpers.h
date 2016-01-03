@@ -447,6 +447,22 @@ public:
         return 2 * sizeof(void*);
     }
 
+    void emitFunctionPrologue()
+    {
+//        push(linkRegister);
+//        push(framePointerRegister);
+//        move(stackPointerRegister, framePointerRegister);
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    void emitFunctionEpilogue()
+    {
+//        move(framePointerRegister, stackPointerRegister);
+//        pop(framePointerRegister);
+//        pop(linkRegister);
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
     ALWAYS_INLINE void preserveReturnAddressAfterCall(RegisterID reg)
     {
         move(returnAddressRegister, reg);
