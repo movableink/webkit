@@ -70,7 +70,7 @@
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #define GCC_VERSION_AT_LEAST(major, minor, patch) (GCC_VERSION >= (major * 10000 + minor * 100 + patch))
 
-#if !GCC_VERSION_AT_LEAST(4, 9, 0)
+#if !GCC_VERSION_AT_LEAST(4, 8, 0)
 #error "Please use a newer version of GCC. WebKit requires GCC 4.9.0 or newer to compile."
 #endif
 
