@@ -59,8 +59,12 @@
 #include <sys/time.h>
 #endif
 
-#if USE(GLIB) && !PLATFORM(EFL)
+#if USE(GLIB) && !PLATFORM(EFL) && !PLATFORM(QT)
 #include <glib.h>
+#endif
+
+#if PLATFORM(QT)
+#include <QElapsedTimer>
 #endif
 
 namespace WTF {
@@ -222,7 +226,7 @@ double currentTime()
 
 #endif // USE(QUERY_PERFORMANCE_COUNTER)
 
-#elif USE(GLIB) && !PLATFORM(EFL)
+#elif USE(GLIB) && !PLATFORM(EFL) && !PLATFORM(QT)
 
 // Note: GTK on Windows will pick up the PLATFORM(WIN) implementation above which provides
 // better accuracy compared with Windows implementation of g_get_current_time:
@@ -258,6 +262,15 @@ double currentTime()
 double monotonicallyIncreasingTime()
 {
     return ecore_time_get();
+}
+
+#elif PLATFORM(QT)
+
+double monotonicallyIncreasingTime()
+{
+    ASSERT(QElapsedTimer::isMonotonic());
+    static QElapsedTimer timer;
+    return timer.nsecsElapsed() / 1.0e9;
 }
 
 #elif USE(GLIB)
