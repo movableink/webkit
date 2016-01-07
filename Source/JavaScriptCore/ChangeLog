@@ -1,5 +1,14 @@
 2016-01-07  Konstantin Tokarev  <annulen@yandex.ru>
 
+        [CMake] JSC shell sources should include JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES
+        https://bugs.webkit.org/show_bug.cgi?id=152664
+
+        Reviewed by Alex Christensen.
+
+        * shell/CMakeLists.txt:
+
+2016-01-07  Konstantin Tokarev  <annulen@yandex.ru>
+
         [mips] Replaced subi with addi in getHostCallReturnValue
         https://bugs.webkit.org/show_bug.cgi?id=152841
 
