@@ -28,6 +28,7 @@
 jscCmd="/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc"
 testRoot=/tmp/LayoutTests
 resultsRoot=`date \+/tmp/results-%Y-%m-%d-%H-%M-%S`
+noDfg=0
 
 cmdName=`basename $0`
 
@@ -35,28 +36,34 @@ usage()
 {
     echo "usage: $cmdName [[--jsc | -j] <path-to-jsc>] [[--results-dir | -r] <results-path>]"
     echo "                    [[--test-root | -t] <test-root-path>]"
+    echo "                    [--no-dfg]"
     exit 1
 }
 
-while [ $# -gt 1 ]
+while [ $# -gt 0 ]
 do
     case $1 in
     --jsc|-j)
         jscCmd=$2
+        shift 2
         ;;
     --results-dir|-r)
         resultsRoot=$2
+        shift 2
         ;;
     --test-root|-t)
         testRoot=$2
+        shift 2
+        ;;
+    --no-dfg)
+        noDfg=1
+        shift 1
         ;;
     *)
         echo "Unrecognized option \"$1\""
         usage
         ;;
     esac
-
-    shift 2
 done
 
 if [ $# -gt 0 ]
@@ -79,7 +86,14 @@ numCrashed=0
 rm -rf $resultsRoot
 rm -f jsc-tests-passed jsc-tests-failed
 
-for testHTMLFile in `(cd $testRoot && ls -1 js/*.html fast/regex/*.html)`
+if [ $noDfg = 1 ]
+then
+    allHTMLFiles=`(cd $testRoot && ls -1 js/*.html fast/regex/*.html | grep -v 'js/dfg-')`
+else
+    allHTMLFiles=`(cd $testRoot && ls -1 js/*.html fast/regex/*.html)`
+fi
+
+for testHTMLFile in $allHTMLFiles
 do
     testPassed=0
     testCrashed=0
