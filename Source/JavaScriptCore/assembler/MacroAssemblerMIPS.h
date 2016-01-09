@@ -637,11 +637,6 @@ public:
         m_assembler.xorInsn(dest, src, immTempRegister);
     }
 
-    void countLeadingZeros32(RegisterID, RegisterID)
-    {
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
     void sqrtDouble(FPRegisterID src, FPRegisterID dst)
     {
         m_assembler.sqrtd(dst, src);
