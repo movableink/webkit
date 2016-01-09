@@ -449,18 +449,16 @@ public:
 
     void emitFunctionPrologue()
     {
-//        push(linkRegister);
-//        push(framePointerRegister);
-//        move(stackPointerRegister, framePointerRegister);
-        RELEASE_ASSERT_NOT_REACHED();
+        push(returnAddressRegister);
+        push(framePointerRegister);
+        move(stackPointerRegister, framePointerRegister);
     }
 
     void emitFunctionEpilogue()
     {
-//        move(framePointerRegister, stackPointerRegister);
-//        pop(framePointerRegister);
-//        pop(linkRegister);
-        RELEASE_ASSERT_NOT_REACHED();
+        move(framePointerRegister, stackPointerRegister);
+        pop(framePointerRegister);
+        pop(returnAddressRegister);
     }
 
     ALWAYS_INLINE void preserveReturnAddressAfterCall(RegisterID reg)
