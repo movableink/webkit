@@ -102,6 +102,7 @@ use constant {
     iOS      => "iOS",
     Mac      => "Mac",
     JSCOnly  => "JSCOnly",
+    Qt       => "Qt",
     WinCairo => "WinCairo",
     Unknown  => "Unknown"
 };
@@ -450,6 +451,7 @@ sub argumentsForConfiguration()
     push(@args, '--gtk') if isGtk();
     push(@args, '--efl') if isEfl();
     push(@args, '--jsc-only') if isJSCOnly();
+    push(@args, '--qt') if isQt();
     push(@args, '--wincairo') if isWinCairo();
     push(@args, '--inspector-frontend') if isInspectorFrontend();
     return @args;
@@ -646,7 +648,7 @@ sub executableProductDir
     my $productDirectory = productDir();
 
     my $binaryDirectory;
-    if (isEfl() || isGtk() || isJSCOnly()) {
+    if (isEfl() || isGtk() || isJSCOnly() || isQt()) {
         $binaryDirectory = "bin";
     } elsif (isAnyWindows()) {
         $binaryDirectory = isWin64() ? "bin64" : "bin32";
@@ -1048,6 +1050,7 @@ sub determinePortName()
         efl => Efl,
         gtk => GTK,
         'jsc-only' => JSCOnly,
+        qt  => Qt,
         wincairo => WinCairo
     );
 
@@ -1079,6 +1082,7 @@ sub determinePortName()
                 --efl
                 --gtk
                 --jsc-only
+                --qt
             );
             die "Please specify which WebKit port to build using one of the following options:"
                 . "\n\t$portsChoice\n";
@@ -1109,6 +1113,11 @@ sub isGtk()
 sub isJSCOnly()
 {
     return portName() eq JSCOnly;
+}
+
+sub isQt()
+{
+    return portName() eq Qt;
 }
 
 # Determine if this is debian, ubuntu, linspire, or something similar.
@@ -1494,7 +1503,7 @@ sub relativeScriptsDir()
 sub launcherPath()
 {
     my $relativeScriptsPath = relativeScriptsDir();
-    if (isGtk() || isEfl()) {
+    if (isGtk() || isEfl() || isQt()) {
         return "$relativeScriptsPath/run-minibrowser";
     } elsif (isAppleWebKit()) {
         return "$relativeScriptsPath/run-safari";
@@ -1503,7 +1512,7 @@ sub launcherPath()
 
 sub launcherName()
 {
-    if (isGtk() || isEfl()) {
+    if (isGtk() || isEfl() || isQt()) {
         return "MiniBrowser";
     } elsif (isAppleMacWebKit()) {
         return "Safari";
@@ -1840,7 +1849,7 @@ sub isCachedArgumentfileOutOfDate($@)
 
 sub wrapperPrefixIfNeeded()
 {
-    if (isAnyWindows() || isJSCOnly()) {
+    if (isAnyWindows() || isJSCOnly() || isQt()) {
         return ();
     }
     if (isAppleMacWebKit()) {
@@ -1994,7 +2003,7 @@ sub generateBuildSystemFromCMakeProject
     }
 
     # Some ports have production mode, but build-webkit should always use developer mode.
-    push @args, "-DDEVELOPER_MODE=ON" if isEfl() || isGtk() || isJSCOnly();
+    push @args, "-DDEVELOPER_MODE=ON" if isEfl() || isGtk() || isJSCOnly() || isQt();
 
     # Don't warn variables which aren't used by cmake ports.
     push @args, "--no-warn-unused-cli";
@@ -2033,7 +2042,7 @@ sub buildCMakeGeneratedProject($)
     push @args, ("--", $makeArgs) if $makeArgs;
 
     # GTK and JSCOnly can use a build script to preserve colors and pretty-printing.
-    if ((isGtk() || isJSCOnly()) && -e "$buildPath/build.sh") {
+    if ((isGtk() || isJSCOnly() || isQt()) && -e "$buildPath/build.sh") {
         chdir "$buildPath" or die;
         $command = "$buildPath/build.sh";
         @args = ($makeArgs);
