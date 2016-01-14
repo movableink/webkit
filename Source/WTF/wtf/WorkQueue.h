@@ -40,6 +40,8 @@
 
 #if PLATFORM(EFL)
 #include <DispatchQueueEfl.h>
+#elif PLATFORM(QT) && !OS(DARWIN)
+#include <QSocketNotifier>
 #elif USE(GLIB)
 #include <wtf/Condition.h>
 #include <wtf/RunLoop.h>
@@ -77,6 +79,8 @@ public:
 #if PLATFORM(EFL)
     void registerSocketEventHandler(int, std::function<void ()>);
     void unregisterSocketEventHandler(int);
+#elif PLATFORM(QT)
+    QSocketNotifier* registerSocketEventHandler(int, QSocketNotifier::Type, std::function<void()>);
 #elif USE(GLIB)
     RunLoop& runLoop() const { return *m_runLoop; }
 #elif OS(DARWIN)
@@ -104,6 +108,10 @@ private:
 
 #if PLATFORM(EFL)
     RefPtr<DispatchQueue> m_dispatchQueue;
+#elif PLATFORM(QT)
+    class WorkItemQt;
+    QThread* m_workThread;
+    friend class WorkItemQt;
 #elif USE(GLIB)
     ThreadIdentifier m_workQueueThread;
     Lock m_initializeRunLoopConditionMutex;
