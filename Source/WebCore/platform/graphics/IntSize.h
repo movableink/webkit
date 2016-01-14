@@ -53,6 +53,11 @@ typedef struct _NSSize NSSize;
 
 #if PLATFORM(WIN)
 typedef struct tagSIZE SIZE;
+#elif PLATFORM(QT)
+#include <qglobal.h>
+QT_BEGIN_NAMESPACE
+class QSize;
+QT_END_NAMESPACE
 #endif
 
 namespace WebCore {
@@ -153,6 +158,11 @@ public:
 #if PLATFORM(WIN)
     IntSize(const SIZE&);
     operator SIZE() const;
+#endif
+
+#if PLATFORM(QT)
+    IntSize(const QSize&);
+    operator QSize() const;
 #endif
 
 private:
