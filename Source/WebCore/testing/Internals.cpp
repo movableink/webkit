@@ -175,6 +175,11 @@
 #include "Vibration.h"
 #endif
 
+#if PLATFORM(QT)
+#include "NetworkingContext.h"
+#include <QNetworkAccessManager>
+#endif
+
 #if ENABLE(MEDIA_STREAM)
 #include "MockMediaEndpoint.h"
 #include "MockRealtimeMediaSourceCenter.h"
@@ -418,6 +423,13 @@ void Internals::resetToConsistentState(Page* page)
     
 #if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000
     _AXSSetForceAllowWebScaling(false);
+#endif
+
+#if PLATFORM(QT)
+    if (NetworkingContext* context = page->mainFrame().loader().networkingContext()) {
+        if (QNetworkAccessManager* qnam = context->networkAccessManager())
+            qnam->clearAccessCache();
+    }
 #endif
 }
 
