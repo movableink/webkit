@@ -136,15 +136,15 @@ public:
     virtual WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&);
     virtual void dispatchShow();
 
-    virtual void dispatchDecidePolicyForResponse(FramePolicyFunction, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&);
-    virtual void dispatchDecidePolicyForNewWindowAction(FramePolicyFunction, const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<FormState>, const WTF::String&);
-    virtual void dispatchDecidePolicyForNavigationAction(FramePolicyFunction, const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<FormState>);
+    void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, FramePolicyFunction) override;
+    void dispatchDecidePolicyForNewWindowAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<FormState>, const WTF::String&, FramePolicyFunction) override;
+    void dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<FormState>, FramePolicyFunction) override;
     virtual void cancelPolicyCheck();
 
     virtual void dispatchUnableToImplementPolicy(const WebCore::ResourceError&);
 
     virtual void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) { }
-    virtual void dispatchWillSubmitForm(FramePolicyFunction, PassRefPtr<FormState>);
+    void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction) override;
 
     virtual void revertToProvisionalState(DocumentLoader*) { }
     virtual void setMainDocumentError(DocumentLoader*, const ResourceError&);
