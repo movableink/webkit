@@ -334,7 +334,7 @@ void FrameLoaderClientQt::detachedFromParent3()
 {
 }
 
-void FrameLoaderClientQt::dispatchDidHandleOnloadEvents()
+void FrameLoaderClientQt::dispatchDidDispatchOnloadEvents()
 {
     // Don't need this one.
     if (dumpFrameLoaderCallbacks)
@@ -969,7 +969,7 @@ Ref<WebCore::DocumentLoader> FrameLoaderClientQt::createDocumentLoader(const Web
     return loader;
 }
 
-void FrameLoaderClientQt::convertMainResourceLoadToDownload(WebCore::DocumentLoader* documentLoader, const WebCore::ResourceRequest& request, const WebCore::ResourceResponse&)
+void FrameLoaderClientQt::convertMainResourceLoadToDownload(DocumentLoader* documentLoader, SessionID, const ResourceRequest& request, const ResourceResponse&)
 {
     if (!m_webFrame)
         return;
@@ -1327,7 +1327,7 @@ RefPtr<Frame> FrameLoaderClientQt::createFrame(const URL& url, const String& nam
     return frameData.frame;
 }
 
-ObjectContentType FrameLoaderClientQt::objectContentType(const URL& url, const String& mimeTypeIn, bool shouldPreferPlugInsForImages)
+ObjectContentType FrameLoaderClientQt::objectContentType(const URL& url, const String& mimeTypeIn)
 {
     // qDebug()<<" ++++++++++++++++ url is "<<url.string()<<", mime = "<<mimeTypeIn;
     QFileInfo fi(url.path());
