@@ -147,7 +147,7 @@ public:
     void scheduleCompositingLayerFlush() override;
     virtual CompositingTriggerFlags allowedCompositingTriggers() const;
 #endif
-    virtual bool allowsAcceleratedCompositing() const override;
+    bool allowsAcceleratedCompositing() const override;
 
 #if USE(TILED_BACKING_STORE)
     virtual IntRect visibleRectForTiledBackingStore() const;
@@ -166,7 +166,7 @@ public:
 #endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    virtual std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) override;
+    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) override;
 #endif
 
     void runOpenPanel(Frame*, PassRefPtr<FileChooser>) override;
