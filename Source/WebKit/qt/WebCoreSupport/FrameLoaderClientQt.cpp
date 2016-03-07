@@ -1610,11 +1610,6 @@ void FrameLoaderClientQt::emitLoadFinished(bool ok)
     m_webFrame->emitLoadFinished(wasOriginatingLoad, ok);
 }
 
-void FrameLoaderClientQt::dispatchDidDispatchOnloadEvents()
-{
-    notImplemented();
-}
-
 void FrameLoaderClientQt::willReplaceMultipartContent()
 {
     notImplemented();
@@ -1634,17 +1629,6 @@ WebCore::ResourceError FrameLoaderClientQt::blockedByContentBlockerError(const W
 void FrameLoaderClientQt::updateCachedDocumentLoader(WebCore::DocumentLoader &)
 {
     notImplemented();
-}
-
-void FrameLoaderClientQt::convertMainResourceLoadToDownload(WebCore::DocumentLoader *, WebCore::SessionID, const WebCore::ResourceRequest &, const WebCore::ResourceResponse &)
-{
-    notImplemented();
-}
-
-WebCore::ObjectContentType FrameLoaderClientQt::objectContentType(const WebCore::URL &, const WTF::String &mimeType)
-{
-    notImplemented();
-    return WebCore::ObjectContentNone;
 }
 
 void FrameLoaderClientQt::prefetchDNS(const WTF::String &)

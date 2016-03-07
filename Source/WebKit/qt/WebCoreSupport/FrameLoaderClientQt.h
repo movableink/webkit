@@ -224,13 +224,10 @@ public:
 
     virtual void registerForIconNotification(bool);
 
-    void dispatchDidDispatchOnloadEvents() override;
     void willReplaceMultipartContent() override;
     void didReplaceMultipartContent() override;
     ResourceError blockedByContentBlockerError(const ResourceRequest &) override;
     void updateCachedDocumentLoader(DocumentLoader &) override;
-    void convertMainResourceLoadToDownload(DocumentLoader *, SessionID, const ResourceRequest &, const ResourceResponse &) override;
-    ObjectContentType objectContentType(const URL &, const WTF::String &mimeType) override;
     void prefetchDNS(const WTF::String &) override;
 
     QString chooseFile(const QString& oldFile);
