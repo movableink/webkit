@@ -1127,10 +1127,19 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float width,
 
 void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing, bool doubleLines)
 {
-    DashArray widths;
-    widths.append(width);
-    widths.append(0);
-    drawLinesForText(origin, widths, printing, doubleLines);
+    // FIXME: drawLinesForText produces incorreclty thick lines
+//    DashArray widths;
+//    widths.append(width);
+//    widths.append(0);
+//    drawLinesForText(origin, widths, printing, doubleLines);
+
+    if (paintingDisabled())
+        return;
+
+    FloatPoint startPoint = origin;
+    FloatPoint endPoint = origin + FloatSize(width, 0);
+
+    drawLine(roundedIntPoint(startPoint), roundedIntPoint(endPoint));
 }
 
 // NOTE: this code is based on GraphicsContextCG implementation
