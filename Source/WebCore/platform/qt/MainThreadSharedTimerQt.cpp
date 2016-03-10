@@ -41,8 +41,6 @@ namespace WebCore {
 
 class SharedTimerQt : public QObject {
     Q_OBJECT
-
-    friend void setSharedTimerFiredFunction(void (*f)());
 public:
     static SharedTimerQt* inst();
 
