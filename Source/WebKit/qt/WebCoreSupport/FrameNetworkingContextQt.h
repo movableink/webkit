@@ -31,6 +31,8 @@ public:
 private:
     FrameNetworkingContextQt(Frame*, QObject* originatingObject, bool mimeSniffingEnabled);
 
+    NetworkStorageSession& storageSession() const override;
+
     virtual QObject* originatingObject() const;
     virtual QNetworkAccessManager* networkAccessManager() const;
     virtual bool mimeSniffingEnabled() const;
