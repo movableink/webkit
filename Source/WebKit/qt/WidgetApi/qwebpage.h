@@ -187,6 +187,7 @@ public:
         ToggleMediaLoop,
         ToggleMediaPlayPause,
         ToggleMediaMute,
+        ToggleVideoFullscreen, // FIXME: Backport f63a205e7 as well
 
         WebActionCount
     };
