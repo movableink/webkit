@@ -50,6 +50,7 @@
 #include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MemoryCache.h"
+#include "Page.h"
 #include "PingLoader.h"
 #include "PlatformStrategies.h"
 #include "ResourceLoadScheduler.h"
@@ -413,7 +414,7 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
 
     // SVG Images have unique security rules that prevent all subresource requests except for data urls.
     if (type != CachedResource::MainResource && frame() && frame()->page()) {
-        if (frame()->page()->chrome().client().isSVGImageChromeClient() && !url.protocolIsData())
+        if (frame()->page()->chrome().client()->isSVGImageChromeClient() && !url.protocolIsData())
             return false;
     }
 
