@@ -137,10 +137,7 @@ _PATH_RULES_SPECIFIER = [
     ([# TestNetscapePlugIn has no config.h and uses funny names like
       # NPP_SetWindow.
       os.path.join('Tools', 'DumpRenderTree', 'TestNetscapePlugIn'),
-      # The API test harnesses have no config.h and use funny macros like
-      # TEST_CLASS_NAME.
-      os.path.join('Tools', 'WebKitAPITest'),
-      os.path.join('Tools', 'TestWebKitAPI'),
+      # Qt tests and examples follow Qt coding style
       os.path.join('Source', 'WebKit', 'qt', 'examples'),
       os.path.join('Source', 'WebKit', 'qt', 'tests')],
      ["-build/include",
