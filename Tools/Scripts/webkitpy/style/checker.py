@@ -138,11 +138,14 @@ _PATH_RULES_SPECIFIER = [
       # NPP_SetWindow.
       os.path.join('Tools', 'DumpRenderTree', 'TestNetscapePlugIn'),
       # Qt tests and examples follow Qt coding style
+      os.path.join('Source', 'WebKit', 'qt', 'docs'),
       os.path.join('Source', 'WebKit', 'qt', 'examples'),
       os.path.join('Source', 'WebKit', 'qt', 'tests')],
      ["-build/include",
       "-readability/naming",
-      "-readability/parameter_name"]),
+      "-readability/parameter_name",
+      "-whitespace/braces",
+      "-whitespace/comments"]),
     ([# There is no clean way to avoid "yy_*" names used by flex.
       os.path.join('Source', 'WebCore', 'css', 'CSSParser.cpp'),
       # TestWebKitAPI uses funny macros like EXPECT_WK_STREQ.
