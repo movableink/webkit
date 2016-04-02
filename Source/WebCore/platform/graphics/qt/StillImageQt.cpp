@@ -46,6 +46,11 @@ StillImage::StillImage(const QPixmap* pixmap)
     , m_ownsPixmap(false)
 {}
 
+StillImage::StillImage(QPixmap&& pixmap)
+    : m_pixmap(new QPixmap(pixmap))
+    , m_ownsPixmap(true)
+{ }
+
 StillImage::~StillImage()
 {
     if (m_ownsPixmap)
