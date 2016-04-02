@@ -47,9 +47,11 @@ StillImage::StillImage(const QPixmap* pixmap)
 {}
 
 StillImage::StillImage(QPixmap&& pixmap)
-    : m_pixmap(new QPixmap(pixmap))
+    : m_pixmap(new QPixmap())
     , m_ownsPixmap(true)
-{ }
+{
+    const_cast<QPixmap*>(m_pixmap)->swap(pixmap);
+}
 
 StillImage::~StillImage()
 {

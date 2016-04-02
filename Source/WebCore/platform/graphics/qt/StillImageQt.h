@@ -46,7 +46,7 @@ namespace WebCore {
 
         static PassRefPtr<StillImage> create(QPixmap&& pixmap)
         {
-            return adoptRef(new StillImage(pixmap));
+            return adoptRef(new StillImage(WTFMove(pixmap)));
         }
 
         bool currentFrameKnownToBeOpaque() override;
