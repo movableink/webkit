@@ -198,7 +198,7 @@ endif ()
 
 set(REQUIRED_QT_VERSION 5.2.0)
 
-find_package(Qt5 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui Network Sql)
+find_package(Qt5 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui Network)
 
 # FIXME: Allow building w/o these components
 find_package(Qt5OpenGL ${REQUIRED_QT_VERSION})
