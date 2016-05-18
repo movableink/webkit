@@ -28,6 +28,9 @@
 
 #include "SharedBuffer.h"
 
+#include <QDataStream>
+#include <QIODevice>
+
 namespace WebCore {
 
 std::unique_ptr<KeyedEncoder> KeyedEncoder::encoder()

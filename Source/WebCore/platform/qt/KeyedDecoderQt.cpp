@@ -26,6 +26,8 @@
 #include "config.h"
 #include "KeyedDecoderQt.h"
 
+#include <QDataStream>
+#include <QIODevice>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
