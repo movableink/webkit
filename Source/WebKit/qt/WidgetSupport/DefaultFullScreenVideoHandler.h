@@ -20,7 +20,7 @@
 #ifndef DefaultFullScreenVideoHandler_h
 #define DefaultFullScreenVideoHandler_h
 
-#include "qwebkitplatformplugin.h"
+#include "qwebfullscreenvideohandler.h"
 
 namespace WebKit {
 
