@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.12)
 
 include_directories(
     "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/Source"
+    "${DERIVED_SOURCES_DIR}/ForwardingHeaders"
     "${DERIVED_SOURCES_WEBKIT_DIR}"
     "${WEBCORE_DIR}"
     "${WEBCORE_DIR}/platform"
@@ -14,6 +16,7 @@ include_directories(
 )
 
 include_directories(SYSTEM
+    ${ICU_INCLUDE_DIRS}
     ${Qt5Widgets_INCLUDE_DIRS}
     ${Qt5Test_INCLUDE_DIRS}
 )
