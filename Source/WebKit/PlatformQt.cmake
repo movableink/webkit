@@ -1,4 +1,5 @@
 include(ECMGenerateHeaders)
+include(ECMGeneratePriFile)
 
 list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}"
@@ -285,6 +286,15 @@ install(
         ${CMAKE_INSTALL_PREFIX}/include/QtWebKit/${PROJECT_VERSION}/QtWebKit/private
 )
 
+ecm_generate_pri_file(
+    BASE_NAME webkit-ng
+    LIB_NAME QtWebKit
+    INCLUDE_INSTALL_DIR "include/QtWebKit"
+    DEPS "core gui network"
+    FILENAME_VAR WebKit_PRI_FILENAME
+)
+install(FILES ${WebKit_PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+
 set(WebKit_LIBRARY_TYPE SHARED)
 set(WebKit_OUTPUT_NAME Qt5WebKit)
 
@@ -382,6 +392,15 @@ install(
     DESTINATION
         ${CMAKE_INSTALL_PREFIX}/include/QtWebKitWidgets/${PROJECT_VERSION}/QtWebKitWidgets/private
 )
+
+ecm_generate_pri_file(
+    BASE_NAME webkitwidgets-ng
+    LIB_NAME QtWebKitWidgets
+    INCLUDE_INSTALL_DIR "include/QtWebKitWidgets"
+    DEPS "core gui network widgets webkit-ng"
+    FILENAME_VAR WebKitWidgets_PRI_FILENAME
+)
+install(FILES ${WebKitWidgets_PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
 
 if (WIN32)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8)
