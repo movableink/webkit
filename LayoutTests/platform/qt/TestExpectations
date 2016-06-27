@@ -1,7 +1,148 @@
+# These are the layout test expectations for the Qt port of WebKit.
+#
+# See http://trac.webkit.org/wiki/TestExpectations for more information on this file.
+
+# =========================================================================== #
+#       Entries merged in from the old Skipped file                           #
+# =========================================================================== #
+
+# =========================================================================== #
+# Categories of Skipped Tests                                                 #
+# =========================================================================== #
+#
+# Note:Try to add newly skipped tests to the appropriate category. If you create
+#      a new category, be sure to list it here. If all else fails you can just
+#      add to the 'unsorted' category at the bottom.
+#      Where a test is a layout test, rather than plaintext, it can help to run
+#      it with '--platform mac --ignore-metrics'  and add or create a section
+#      in the category to indicate whether it still failed.
+#
+# List of Categories:
+#
+# - Permanently Skipped Tests.
+# - Disabled features.
+# - Feature not supported yet.
+# - Drag and Drop Support in DRT.
+# - Failing HTTP tests.
+# - Failing xmlhttprequest tests
+# - Failing editing/inserting tests.
+# - Failing editing/pasteboard tests.
+# - Failing editing/deleting tests
+# - Failing editing/selection tests.
+# - Failing editing/spelling tests
+# - Failing plugins tests.
+# - Failing execCommand tests.
+# - Failing Sputnik tests
+# - Fluctuating/flakey tests
+# - failing media tests
+# - Crashing tests due to re-enabled Phonon support in Buildbot's Qt
+# - Missing features in our DumpRenderTree implementation
+# - Failing SVG tests
+# - Failing CSS Tests
+# - failing fast tests
+# - failing fonts tests
+# - failing security tests
+# - failing tables tests
+# - Failed canvas tests from http://philip.html5.org/tests/canvas/suite/tests/
+# - failing transforms tests
+# - failing storage tests
+# - new tests without expected results
+# - Regressions occured after Qt version update
+
+
+# fast/css
 # Regressions: Unexpected text-only failures (63)
 # Regressions: Unexpected image-only failures (22)
 
-# TODO: This tests have missing results, but we are not yet ready to create baseline
+
+# =========================================================================== #
+#       Permanently Skipped Tests.                                            #
+# =========================================================================== #
+
+
+# =========================================================================== #
+#       Disabled features.                                                    #
+# =========================================================================== #
+
+# ENABLE(INPUT_TYPE_*) are not enabled.
+# https://bugs.webkit.org/show_bug.cgi?id=29359
+fast/forms/date
+fast/forms/datetime
+fast/forms/datetimelocal
+fast/forms/month
+fast/forms/time
+fast/forms/week
+fast/forms/input-in-table-cell-no-value.html
+
+# ENABLE(INDIE_UI) is disabled.
+indieui/
+
+# ENABLE(QUOTA) is disabled.
+storage/storageinfo-missing-arguments.html
+storage/storageinfo-no-callbacks.html
+storage/storageinfo-query-usage.html
+storage/storageinfo-request-quota.html
+storage/storagequota-query-usage.html
+storage/storagequota-request-quota.html
+fast/workers/worker-storagequota-query-usage.html
+
+# ENABLE(WEBGL) is disabled.
+http/tests/canvas/webgl
+compositing/webgl
+http/tests/security/webgl-remote-read-remote-image-allowed.html
+http/tests/security/webgl-remote-read-remote-image-allowed-with-credentials.html
+http/tests/security/webgl-remote-read-remote-image-blocked-no-crossorigin.html
+webgl/
+
+# ENABLE(DASHBOARD_SUPPORT) is disabled
+http/tests/xmlhttprequest/default-content-type-dashboard.html
+http/tests/xmlhttprequest/svg-created-by-xhr-allowed-in-dashboard.html
+svg/custom/embedded-svg-allowed-in-dashboard.xml
+svg/custom/manually-parsed-embedded-svg-allowed-in-dashboard.html
+svg/custom/manually-parsed-svg-allowed-in-dashboard.html
+svg/custom/svg-allowed-in-dashboard-object.html
+
+# ENABLE(MOUSE_CURSOR_SCALE) is disabled
+fast/css/cursor-parsing-image-set.html
+
+# accessibility support
+accessibility
+
+# ENABLE(NETSCAPE_PLUGIN_API) is disabled
+java
+plugins
+fast/css/image-object-hover-inherit.html
+fast/css/object-fit/object-fit-embed.html
+fast/css/object-fit/object-fit-object.html
+
+# Encrypted Media Extensions are not enabled.
+media/encrypted-media/
+
+# CSS image-resolution is not yet enabled.
+webkit.org/b/85262 fast/css/image-resolution
+
+# CSS image-orientation is not yet enabled.
+webkit.org/b/89052 fast/css/image-orientation
+
+# =========================================================================== #
+#       Feature not yet supported.                                            #
+# =========================================================================== #
+
+webkit.org/b/49142 fast/css/style-scoped
+
+# =========================================================================== #
+#       Drag and Drop Support in DRT.                                         #
+# =========================================================================== #
+# Drag n drop support on DRT cannot work at the moment because Qt's drag'n'drop
+# relies on an X event getting to the main window. In the absence of being able
+# to receive this event, running windowless, DRT cannot tell what is being dropped and where.
+# Bug: https://bugs.webkit.org/show_bug.cgi?id=31332
+
+fast/css/draggable-region-parser.html
+
+# ============================================================================= #
+# new tests without expected results
+# ============================================================================= #
 
 fast/css/001.html [ Skip ]
 fast/css/002.html [ Skip ]
