@@ -142,16 +142,16 @@ class QtPort(Port):
         #                |
         #               qt
         search_paths = []
-        if self.get_option('webkit_test_runner'):
-            if self.operating_system() == 'mac':
-                search_paths.append('qt-mac-wk2')
-            search_paths.append('qt-wk2')
-        else:
-            search_paths.append('qt-wk1')
-
-        search_paths.append('qt-' + self.qt_version())
-
-        search_paths.append(self.port_name + '-' + self.operating_system())
+#        if self.get_option('webkit_test_runner'):
+#            if self.operating_system() == 'mac':
+#                search_paths.append('qt-mac-wk2')
+#            search_paths.append('qt-wk2')
+#        else:
+#            search_paths.append('qt-wk1')
+#
+#        search_paths.append('qt-' + self.qt_version())
+#
+#        search_paths.append(self.port_name + '-' + self.operating_system())
         search_paths.append(self.port_name)
         return search_paths
 
