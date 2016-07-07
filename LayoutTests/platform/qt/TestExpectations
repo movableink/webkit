@@ -141,6 +141,31 @@ webkit.org/b/49142 fast/css/style-scoped
 fast/css/draggable-region-parser.html
 
 # ============================================================================= #
+# Failing CSS Tests
+# ============================================================================= #
+
+#119
+fast/css/direct-adjacent-style-update-optimization.html [ Failure ]
+#120
+fast/css/getComputedStyle/computed-style-font.html [ Failure ]
+#121
+fast/css/negative-text-indent-in-inline-block.html [ ImageOnlyFailure ]
+#122
+fast/css/pseudo-visited-background-color-on-input.html [ ImageOnlyFailure ]
+#135
+fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
+
+webkit.org/b/131498 fast/css/cascade/box-shadow-and-webkit-box-shadow-cascade-order.html [ ImageOnlyFailure ]
+
+webkit.org/b/115437 fast/css/sticky/sticky-writing-mode-vertical-lr.html [ ImageOnlyFailure ]
+# Similar to above
+fast/css/sticky/sticky-writing-mode-vertical-rl.html [ ImageOnlyFailure ]
+
+#137
+fast/css/will-change/will-change-creates-stacking-context.html [ ImageOnlyFailure ]
+fast/css/will-change/will-change-creates-stacking-context-inline.html [ ImageOnlyFailure ]
+
+# ============================================================================= #
 # new tests without expected results
 # ============================================================================= #
 
