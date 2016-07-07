@@ -147,8 +147,6 @@ WebPage::WebPage(QObject* parent, DumpRenderTree* drt)
     globalSettings->setAttribute(QWebSettings::PrivateBrowsingEnabled, false);
     globalSettings->setAttribute(QWebSettings::SpatialNavigationEnabled, false);
 
-    globalSettings->setFontFamily(QWebSettings::StandardFont, "Liberation Serif");
-
     connect(this, SIGNAL(geometryChangeRequested(const QRect &)),
             this, SLOT(setViewGeometry(const QRect & )));
 
