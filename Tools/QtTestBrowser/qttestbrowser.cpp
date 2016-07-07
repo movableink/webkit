@@ -252,10 +252,8 @@ void LauncherApplication::handleUserOptions()
 #endif
 
 #if HAVE(QTTESTSUPPORT)
-    if (args.contains("-use-test-fonts")) {
+    if (args.contains("-use-test-fonts"))
         WebKit::QtTestSupport::initializeTestFonts();
-        QWebSettings::globalSettings()->setFontFamily(QWebSettings::StandardFont, "Liberation Serif");
-    }
 #endif
 
     if (args.contains("-print-loaded-urls"))
