@@ -170,6 +170,12 @@ webkit.org/b/131498 fast/css/cascade/box-shadow-and-webkit-box-shadow-cascade-or
 #138
 fast/css/word-spacing-characters-complex-text.html [ ImageOnlyFailure ]
 
+# 140
+fast/css/read-only-read-write-webkit-user-modify.html [ Failure ]
+
+# 142
+fast/css/background-clip-values.html [ ImageOnlyFailure ]
+
 # These failures are suspected to be caused by subpixel rendering errors
 
 #121
