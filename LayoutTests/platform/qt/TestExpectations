@@ -89,6 +89,7 @@ fast/workers/worker-storagequota-query-usage.html
 # ENABLE(WEBGL) is disabled.
 http/tests/canvas/webgl
 compositing/webgl
+fast/canvas/webgl
 http/tests/security/webgl-remote-read-remote-image-allowed.html
 http/tests/security/webgl-remote-read-remote-image-allowed-with-credentials.html
 http/tests/security/webgl-remote-read-remote-image-blocked-no-crossorigin.html
@@ -117,6 +118,15 @@ fast/css/object-fit/object-fit-object.html
 
 # Encrypted Media Extensions are not enabled.
 media/encrypted-media/
+
+# ENABLE(MEDIA_STREAM) is disabled
+fast/mediastream
+
+# ENBALE(SPEECH_SYNTHESIS) is disabled
+fast/speechsynthesis
+
+# No woff2 yet
+fast/text/woff2.html
 
 # CSS image-resolution is not yet enabled.
 webkit.org/b/85262 fast/css/image-resolution
