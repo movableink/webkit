@@ -115,15 +115,25 @@ plugins
 fast/css/image-object-hover-inherit.html
 fast/css/object-fit/object-fit-embed.html
 fast/css/object-fit/object-fit-object.html
+fast/invalid/td-inside-object.html
 
 # Encrypted Media Extensions are not enabled.
 media/encrypted-media/
 
 # ENABLE(MEDIA_STREAM) is disabled
 fast/mediastream
+fast/events/constructors/media-stream-event-constructor.html
 
 # ENBALE(SPEECH_SYNTHESIS) is disabled
 fast/speechsynthesis
+
+# ENABLE(DOM4_EVENTS_CONSTRUCTOR) is disabled.
+fast/events/constructors/ui-event-constructor.html
+fast/events/constructors/mouse-event-constructor.html
+fast/events/constructors/composition-event-constructor.html
+fast/events/constructors/wheel-event-constructor.html
+fast/events/constructors/keyboard-event-constructor.html
+fast/events/constructors/focus-event-constructor.html
 
 # No woff2 yet
 fast/text/woff2.html
