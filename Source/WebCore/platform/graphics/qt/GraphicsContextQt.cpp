@@ -231,42 +231,6 @@ static inline Qt::FillRule toQtFillRule(WindRule rule)
     }
     return Qt::OddEvenFill;
 }
-/*
-static inline void adjustPointsForDottedLine(FloatPoint& p1, FloatPoint& p2, float width, bool isVerticalLine)
-{
-    if (isVerticalLine) {
-        p1.setY(p1.y() - width / 2);
-        p2.setY(p2.y() + width / 2);
-    } else {
-        p1.setX(p1.x() - width / 2);
-        p2.setX(p2.x() + width / 2);
-    }
-}
-
-static inline void drawLineEndpointsForStyle(QPainter *painter, const FloatPoint& p1, const FloatPoint& p2, float width, bool isVerticalLine, StrokeStyle style, Color color)
-{
-    // Do a rect fill of our endpoints. This ensures we always have the
-    // appearance of being a border.
-    if (style == DashedStroke) {
-        if (isVerticalLine) {
-            painter->fillRect(FloatRect(p1.x() - width / 2, p1.y() - width, width, width), QColor(color));
-            painter->fillRect(FloatRect(p2.x() - width / 2, p2.y(), width, width), QColor(color));
-        } else {
-            painter->fillRect(FloatRect(p1.x() - width, p1.y() - width / 2, width, width), QColor(color));
-            painter->fillRect(FloatRect(p2.x(), p2.y() - width / 2, width, width), QColor(color));
-        }
-    }
-
-    // As per css spec a dotted stroke should be made of circles so we're
-    // drawing circles as endpoints.
-    if (style == DottedStroke) {
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(QColor(color));
-        painter->drawEllipse(p1.x() - width / 2, p1.y() - width / 2, width, width);
-        painter->drawEllipse(p2.x() - width / 2, p2.y() - width / 2, width, width);
-    }
-}
-*/
 
 class GraphicsContextPlatformPrivate {
     WTF_MAKE_NONCOPYABLE(GraphicsContextPlatformPrivate); WTF_MAKE_FAST_ALLOCATED;
@@ -485,17 +449,14 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
                 patternOffset += patternWidth / 2.f;
         }
 
-        Qt::PenCapStyle capStyle = Qt::FlatCap; // FIXME
+        Qt::PenCapStyle capStyle = Qt::FlatCap;
         QVector<qreal> dashes { patternWidth / thickness, patternWidth / thickness };
 
         QPen pen = p->pen();
-        pen.setWidthF(thickness);
         pen.setCapStyle(capStyle);
         pen.setDashPattern(dashes);
         pen.setDashOffset(patternOffset / thickness);
         p->setPen(pen);
-    } else {
-        // Solid here
     }
 
     FloatPoint p1 = point1;
@@ -511,13 +472,6 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
         p2.move(-cornerWidth, -centerOffset);
     }
 
-    // Qt interprets geometric units as end-point inclusive, while WebCore interprets geomtric units as endpoint exclusive.
-    // This means we need to subtract one from the endpoint, or the line will be painted one pixel too long.
-//    if (p1.x() == p2.x())
-//        p->drawLine(p1, p2 - FloatSize(0, 1));
-//    else
-//        p->drawLine(p1, p2 - FloatSize(1, 0));
-
     p->drawLine(p1, p2);
 
     if (drawsDashedLine)
@@ -525,92 +479,6 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
 
     p->setRenderHint(QPainter::Antialiasing, savedAntiAlias);
 }
-
-//    adjustLineToPixelBoundaries(p1, p2, width, style);
-
-//    Qt::PenCapStyle capStyle = Qt::FlatCap;
-//    QVector<qreal> dashes;
-//    int patWidth = 0;
-
-//    switch (style) {
-//    case NoStroke:
-//    case SolidStroke:
-//    case DoubleStroke:
-//    case WavyStroke:
-//        break;
-//    case DottedStroke: {
-//        capStyle = Qt::RoundCap;
-//        patWidth = static_cast<int>(width);
-//        // The actual length of one line element can not be set to zero and at 0.1 the dots
-//        // are still slightly elongated. Setting it to 0.01 will make it look like the
-//        // line endings are being stuck together, close enough to look like a circle.
-//        // For the distance of the line elements we subtract the small amount again.
-//        const qreal lineElementLength = 0.01;
-//        dashes << lineElementLength << qreal(2 * patWidth) / width - lineElementLength;
-//        adjustPointsForDottedLine(p1, p2, width, isVerticalLine);
-//        break;
-//    }
-//    case DashedStroke:
-//        capStyle = Qt::FlatCap;
-//        patWidth = 3 * static_cast<int>(width);
-//        dashes << qreal(patWidth) / width << qreal(patWidth) / width;
-//        break;
-//    }
-
-//    if (patWidth) {
-//        p->save();
-
-//        QPen pen = p->pen();
-
-//        drawLineEndpointsForStyle(p, p1, p2, width, isVerticalLine, style, color);
-
-//        // Example: 80 pixels with a width of 30 pixels.
-//        // Remainder is 20.  The maximum pixels of line we could paint
-//        // will be 50 pixels.
-//        int distance = (isVerticalLine ? (point2.y() - point1.y()) : (point2.x() - point1.x())) - 2*(int)width;
-//        int remainder = distance % patWidth;
-//        int coverage = distance - remainder;
-//        int numSegments = coverage / patWidth;
-
-//        float patternOffset = 0.0f;
-//        // Special case 1px dotted borders for speed.
-//        if (patWidth == 1)
-//            patternOffset = 1.0f;
-//        else {
-//            bool evenNumberOfSegments = !(numSegments % 2);
-//            if (remainder)
-//                evenNumberOfSegments = !evenNumberOfSegments;
-//            if (evenNumberOfSegments) {
-//                if (remainder) {
-//                    patternOffset += patWidth - remainder;
-//                    patternOffset += remainder / 2;
-//                } else
-//                    patternOffset = patWidth / 2;
-//            } else {
-//                if (remainder)
-//                    patternOffset = (patWidth - remainder) / 2;
-//            }
-//        }
-
-//        pen.setWidthF(width);
-//        pen.setCapStyle(capStyle);
-//        pen.setDashPattern(dashes);
-//        pen.setDashOffset(patternOffset / width);
-//        p->setPen(pen);
-//    }
-
-//    // Qt interprets geometric units as end-point inclusive, while WebCore interprets geomtric units as endpoint exclusive.
-//    // This means we need to subtract one from the endpoint, or the line will be painted one pixel too long.
-//    if (p1.x() == p2.x())
-//        p->drawLine(p1, p2 - FloatSize(0, 1));
-//    else
-//        p->drawLine(p1, p2 - FloatSize(1, 0));
-
-//    if (patWidth)
-//        p->restore();
-
-//    p->setRenderHint(QPainter::Antialiasing, savedAntiAlias);
-//}
 
 // This method is only used to draw the little circles used in lists.
 void GraphicsContext::drawEllipse(const FloatRect& rect)
