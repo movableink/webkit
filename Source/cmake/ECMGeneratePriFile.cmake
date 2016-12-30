@@ -186,10 +186,10 @@ function(ECM_GENERATE_PRI_FILE)
   endif ()
 
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(PRI_TARGET_LIBS "-framework ${PRI_TARGET_LIBNAME}")
-      set(PRI_TARGET_CONFIG "v2 lib_bundle")
       set(PRI_TARGET_FRAMEWORKS ${PRI_TARGET_LIBS})
       set(PRI_TARGET_INCLUDES2 "${PRI_TARGET_LIBS}/${PRI_TARGET_LIBNAME}.framework/Headers")
+      set(PRI_TARGET_LIBS "-framework ${PRI_TARGET_LIBNAME}")
+      set(PRI_TARGET_CONFIG "v2 lib_bundle")
   endif()
 
   file(GENERATE
