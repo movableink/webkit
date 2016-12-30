@@ -432,7 +432,7 @@ endif ()
 
 ecm_generate_pkgconfig_file(
     BASE_NAME Qt5WebKit
-    MODULE_NAME QtWebKit
+    LIB_NAME QtWebKit
     DEPS "${WEBKIT_PKGCONGIG_DEPS}"
     FILENAME_VAR WebKit_PKGCONFIG_FILENAME
     INSTALL
