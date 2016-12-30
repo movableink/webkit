@@ -190,7 +190,7 @@ function(ECM_GENERATE_PRI_FILE)
       set(PRI_TARGET_INCLUDES2 "${PRI_TARGET_LIBS}/${PRI_TARGET_LIBNAME}.framework/Headers")
       set(PRI_TARGET_LIBS "-framework ${PRI_TARGET_LIBNAME}")
       set(PRI_TARGET_CONFIG "v2 lib_bundle")
-  endif()
+  endif ()
 
   file(GENERATE
      OUTPUT ${PRI_FILENAME}
