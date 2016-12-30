@@ -185,7 +185,7 @@ function(ECM_GENERATE_PRI_FILE)
       set(PRI_TARGET_CONFIG "staticlib")
   endif ()
 
-  if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       set(PRI_TARGET_LIBS, "-framework ${PRI_TARGET_LIBNAME}")
       set(PRI_TARGET_CONFIG, "v2 lib_bundle")
       set(PRI_TARGET_FRAMEWORKS, ${QT_MODULE_LIB_BASE})
