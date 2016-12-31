@@ -430,9 +430,21 @@ else ()
     set(WEBKITWIDGETS_PRI_RUNTIME_DEPS "${WEBKITWIDGETS_PRI_RUNTIME_DEPS} printsupport")
 endif ()
 
+set(WEBKIT_BASE_NAME "Qt5WebKit")
+set(WEBKIT_LIB_NAME ${WEBKIT_BASE_NAME})
+set(WEBKITWIDGETS_BASE_NAME "Qt5WebKitWidgets")
+set(WEBKITWIDGETS_LIB_NAME ${WEBKITWIDGETS_BASE_NAME})
+
+# Mac libraries use "Qt" prefix rather than "Qt5"
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(WEBKIT_LIB_NAME "QtWebKit")
+    set(WEBKITWIDGETS_LIB_NAME "QtWebKitWidgets")
+endif ()
+
 ecm_generate_pkgconfig_file(
-    BASE_NAME Qt5WebKit
     DEPS "${WEBKIT_PKGCONGIG_DEPS}"
+    BASE_NAME ${WEBKIT_BASE_NAME}
+    LIB_NAME ${WEBKIT_LIB_NAME}
     FILENAME_VAR WebKit_PKGCONFIG_FILENAME
     INSTALL
 )
@@ -454,6 +466,7 @@ endif ()
 ecm_generate_pri_file(
     BASE_NAME webkit
     LIB_NAME QtWebKit
+    MODULE_NAME ${WEBKIT_LIB_NAME}
     DEPS "${WEBKIT_PRI_DEPS}"
     RUNTIME_DEPS "${WEBKIT_PRI_RUNTIME_DEPS}"
     DEFINES QT_WEBKIT_LIB
@@ -596,7 +609,8 @@ install(
 )
 
 ecm_generate_pkgconfig_file(
-    BASE_NAME Qt5WebKitWidgets
+    BASE_NAME ${WEBKITWIDGETS_BASE_NAME}
+    LIB_NAME ${WEBKITWIDGETS_LIB_NAME}
     DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS}"
     FILENAME_VAR WebKitWidgets_PKGCONFIG_FILENAME
     INSTALL
@@ -619,6 +633,7 @@ endif ()
 ecm_generate_pri_file(
     BASE_NAME webkitwidgets
     LIB_NAME QtWebKitWidgets
+    MODULE_NAME ${WEBKITWIDGETS_LIB_NAME}
     DEPS "${WEBKITWIDGETS_PRI_DEPS}"
     RUNTIME_DEPS "${WEBKITWIDGETS_PRI_RUNTIME_DEPS}"
     DEFINES QT_WEBKITWIDGETS_LIB
