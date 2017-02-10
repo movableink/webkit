@@ -11,7 +11,6 @@
 #
 #   ecm_generate_pkgconfig_file(BASE_NAME <baseName>
 #                         [LIB_NAME <libName>]
-#                         [INCLUDE_NAME <includeName>]
 #                         [DEPS "<dep> [<dep> [...]]"]
 #                         [FILENAME_VAR <filename_variable>]
 #                         [INCLUDE_INSTALL_DIR <dir>]
