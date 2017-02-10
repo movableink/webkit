@@ -484,6 +484,13 @@ else ()
     set(WebKit_LIBRARY_TYPE SHARED)
 endif ()
 
+if (APPLE AND NOT QT_STATIC_BUILD)
+    set(WebKit_OUTPUT_NAME QtWebKit)
+else ()
+    set(WebKit_OUTPUT_NAME Qt5WebKit)
+endif ()
+
+
 ############     WebKitWidgets     ############
 
 set(WebKitWidgets_INCLUDE_DIRECTORIES
@@ -678,6 +685,11 @@ else ()
     set(WebKitWidgets_LIBRARY_TYPE SHARED)
 endif ()
 
+if (APPLE AND NOT QT_STATIC_BUILD)
+    set(WebKitWidgets_OUTPUT_NAME QtWebKitWidgets)
+else ()
+    set(WebKitWidgets_OUTPUT_NAME Qt5WebKitWidgets)
+endif ()
 set(WebKitWidgets_PRIVATE_HEADERS_LOCATION Headers/${PROJECT_VERSION}/QtWebKitWidgets/Private)
 
 WEBKIT_FRAMEWORK(WebKitWidgets)

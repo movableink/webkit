@@ -27,7 +27,6 @@ build_pass|!debug_and_release {
         CMAKE_BUILD_TYPE=$$configuration \
         CMAKE_TOOLCHAIN_FILE=$$toolchain_file \
         CMAKE_PREFIX_PATH=\"$$[QT_INSTALL_PREFIX];$$ROOT_QT_BUILD_DIR/qtbase;$$ROOT_QT_BUILD_DIR/qtlocation;$$ROOT_QT_BUILD_DIR/qtsensors\" \
-        CMAKE_INSTALL_PREFIX=\"$$[QT_INSTALL_PREFIX]\" \
         USE_LIBHYPHEN=OFF
 
     static: CMAKE_CONFIG += USE_THIN_ARCHIVES=OFF
@@ -53,6 +52,10 @@ build_pass|!debug_and_release {
         CMAKE_CONFIG += \
             QT_BUNDLED_ZLIB=1 \
             ZLIB_INCLUDE_DIRS=$$QTBASE_DIR/src/3rdparty/zlib
+    }
+
+    qtConfig(opengles2):!qtConfig(dynamicgl) {
+        CMAKE_CONFIG += QT_USES_GLES2_ONLY=1
     }
 
     exists($$ROOT_BUILD_DIR/conanbuildinfo.cmake):exists($$ROOT_BUILD_DIR/conanfile.txt) {
