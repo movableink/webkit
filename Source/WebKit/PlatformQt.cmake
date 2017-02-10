@@ -432,7 +432,7 @@ endif ()
 
 set(WEBKIT_BASE_NAME "webkit")
 set(WEBKIT_LIB_NAME "Qt5WebKit")
-set(WEBKITWIDGETS_BASE_NAME "webkit_widgets")
+set(WEBKITWIDGETS_BASE_NAME "webkitwidgets")
 set(WEBKITWIDGETS_LIB_NAME "Qt5WebKitWidgets")
 
 # Mac libraries use "Qt" prefix rather than "Qt5"
