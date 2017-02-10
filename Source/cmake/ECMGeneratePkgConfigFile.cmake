@@ -11,6 +11,7 @@
 #
 #   ecm_generate_pkgconfig_file(BASE_NAME <baseName>
 #                         [LIB_NAME <libName>]
+#                         [INCLUDE_NAME <includeName>]
 #                         [DEPS "<dep> [<dep> [...]]"]
 #                         [FILENAME_VAR <filename_variable>]
 #                         [INCLUDE_INSTALL_DIR <dir>]
@@ -24,6 +25,8 @@
 # ``LIB_NAME`` is the name of the library that is being exported. If undefined,
 # it will default to the ``BASE_NAME``. That means the ``LIB_NAME`` will be set
 # as the name field as well as the library to link to.
+#
+# ``DESC`` is a description of the library.
 #
 # ``FILENAME_VAR`` is specified with a variable name. This variable will
 # receive the location of the generated file will be set, within the build
@@ -61,6 +64,7 @@
 #   ecm_generate_pkgconfig_file(
 #       BASE_NAME KF5Archive
 #       DEPS Qt5Core
+#       DESC "KF5Archive module"
 #       FILENAME_VAR pkgconfig_filename
 #       INSTALL
 #   )
@@ -83,7 +87,7 @@
 
 function(ECM_GENERATE_PKGCONFIG_FILE)
   set(options INSTALL)
-  set(oneValueArgs BASE_NAME LIB_NAME FILENAME_VAR INCLUDE_INSTALL_DIR LIB_INSTALL_DIR)
+  set(oneValueArgs BASE_NAME LIB_NAME FILENAME_VAR INCLUDE_INSTALL_DIR LIB_INSTALL_DIR DESC)
   set(multiValueArgs DEPS DEFINES)
 
   cmake_parse_arguments(EGPF "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -101,13 +105,16 @@ function(ECM_GENERATE_PKGCONFIG_FILE)
   if(NOT EGPF_LIB_NAME)
     set(EGPF_LIB_NAME ${EGPF_BASE_NAME})
   endif()
+  if(NOT EGPF_DESC)
+    set(EGPF_DESC "${EGPF_LIB_NAME} module")
+  endif()
   if(NOT EGPF_INCLUDE_INSTALL_DIR)
       if(INCLUDE_INSTALL_DIR)
-          set(EGPF_INCLUDE_INSTALL_DIR "${INCLUDE_INSTALL_DIR}/${EGPF_BASE_NAME}")
+          set(EGPF_INCLUDE_INSTALL_DIR "${INCLUDE_INSTALL_DIR}/${EGPF_LIB_NAME}")
       elseif(CMAKE_INSTALL_INCLUDEDIR)
-          set(EGPF_INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${EGPF_BASE_NAME}")
+          set(EGPF_INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${EGPF_LIB_NAME}")
       else()
-          set(EGPF_INCLUDE_INSTALL_DIR "include/${EGPF_BASE_NAME}")
+          set(EGPF_INCLUDE_INSTALL_DIR "include/${EGPF_LIB_NAME}")
       endif()
   endif()
   if(NOT EGPF_LIB_INSTALL_DIR)
@@ -140,7 +147,7 @@ function(ECM_GENERATE_PKGCONFIG_FILE)
     set(PKGCONFIG_TARGET_DEFINES "${EGPF_DEFINE}")
   endif()
 
-  set(PKGCONFIG_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PKGCONFIG_TARGET_BASENAME}.pc)
+  set(PKGCONFIG_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PKGCONFIG_TARGET_LIBNAME}.pc)
   if (EGPF_FILENAME_VAR)
      set(${EGPF_FILENAME_VAR} ${PKGCONFIG_FILENAME} PARENT_SCOPE)
   endif()
@@ -149,12 +156,18 @@ function(ECM_GENERATE_PKGCONFIG_FILE)
 
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       set(PROJECT_LIBS "-F${CMAKE_INSTALL_PREFIX}/${EGPF_LIB_INSTALL_DIR} -framework ${PKGCONFIG_TARGET_LIBNAME}")
-      set(PKGCONFIG_TARGET_INCLUDES "-I${CMAKE_INSTALL_PREFIX}/${EGPF_LIB_INSTALL_DIR}/${PRI_TARGET_LIBNAME}.framework/includes")
+      set(PKGCONFIG_TARGET_INCLUDES "-I${CMAKE_INSTALL_PREFIX}/${EGPF_LIB_INSTALL_DIR}/${PKGCONFIG_TARGET_LIBNAME}.framework/includes")
   endif ()
 
   file(WRITE ${PKGCONFIG_FILENAME}
 "
-Name: ${PKGCONFIG_TARGET_BASENAME}
+prefix=${CMAKE_INSTALL_PREFIX}
+exec_prefix=${CMAKE_INSTALL_PREFIX}
+libdir=${CMAKE_INSTALL_PREFIX}/${EGPF_LIB_INSTALL_DIR}
+includedir=${EGPF_INCLUDE_INSTALL_DIR}
+
+Name: ${PKGCONFIG_TARGET_LIBNAME}
+Description: ${EGPF_DESC}
 Version: ${PROJECT_VERSION}
 Libs: ${PROJECT_LIBS}
 Cflags: ${PKGCONFIG_TARGET_INCLUDES} ${PKGCONFIG_TARGET_DEFINES}
@@ -167,4 +180,3 @@ Requires: ${PKGCONFIG_TARGET_DEPS}
     install(FILES ${PKGCONFIG_FILENAME} DESTINATION ${ECM_PKGCONFIG_INSTALL_DIR})
   endif()
 endfunction()
-

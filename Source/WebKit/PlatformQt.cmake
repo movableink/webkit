@@ -430,10 +430,10 @@ else ()
     set(WEBKITWIDGETS_PRI_RUNTIME_DEPS "${WEBKITWIDGETS_PRI_RUNTIME_DEPS} printsupport")
 endif ()
 
-set(WEBKIT_BASE_NAME "Qt5WebKit")
-set(WEBKIT_LIB_NAME ${WEBKIT_BASE_NAME})
-set(WEBKITWIDGETS_BASE_NAME "Qt5WebKitWidgets")
-set(WEBKITWIDGETS_LIB_NAME ${WEBKITWIDGETS_BASE_NAME})
+set(WEBKIT_BASE_NAME "webkit")
+set(WEBKIT_LIB_NAME "Qt5WebKit")
+set(WEBKITWIDGETS_BASE_NAME "webkit_widgets")
+set(WEBKITWIDGETS_LIB_NAME "Qt5WebKitWidgets")
 
 # Mac libraries use "Qt" prefix rather than "Qt5"
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -444,6 +444,7 @@ endif ()
 ecm_generate_pkgconfig_file(
     BASE_NAME ${WEBKIT_BASE_NAME}
     LIB_NAME ${WEBKIT_LIB_NAME}
+    INCLUDE_INSTALL_DIR "${KDE_INSTALL_INCLUDEDIR}/QtWebKit"
     DEPS "${WEBKIT_PKGCONFIG_DEPS}"
     FILENAME_VAR WebKit_PKGCONFIG_FILENAME
     INSTALL
@@ -464,9 +465,9 @@ else ()
 endif ()
 
 ecm_generate_pri_file(
-    BASE_NAME webkit
-    LIB_NAME QtWebKit
-    MODULE_NAME ${WEBKIT_LIB_NAME}
+    BASE_NAME ${WEBKIT_BASE_NAME}
+    LIB_NAME ${WEBKIT_LIB_NAME}
+    INCLUDE_INSTALL_DIR "${KDE_INSTALL_INCLUDEDIR}/QtWebKit"
     DEPS "${WEBKIT_PRI_DEPS}"
     RUNTIME_DEPS "${WEBKIT_PRI_RUNTIME_DEPS}"
     DEFINES QT_WEBKIT_LIB
@@ -482,13 +483,6 @@ if (QT_STATIC_BUILD)
 else ()
     set(WebKit_LIBRARY_TYPE SHARED)
 endif ()
-
-if (APPLE)
-    set(WebKit_OUTPUT_NAME QtWebKit)
-else ()
-    set(WebKit_OUTPUT_NAME Qt5WebKit)
-endif ()
-
 
 ############     WebKitWidgets     ############
 
@@ -611,6 +605,7 @@ install(
 ecm_generate_pkgconfig_file(
     BASE_NAME ${WEBKITWIDGETS_BASE_NAME}
     LIB_NAME ${WEBKITWIDGETS_LIB_NAME}
+    INCLUDE_INSTALL_DIR "${KDE_INSTALL_INCLUDEDIR}/QtWebKitWidgets"
     DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS}"
     FILENAME_VAR WebKitWidgets_PKGCONFIG_FILENAME
     INSTALL
@@ -631,9 +626,9 @@ else ()
 endif ()
 
 ecm_generate_pri_file(
-    BASE_NAME webkitwidgets
-    LIB_NAME QtWebKitWidgets
-    MODULE_NAME ${WEBKITWIDGETS_LIB_NAME}
+    BASE_NAME ${WEBKITWIDGETS_BASE_NAME}
+    LIB_NAME ${WEBKITWIDGETS_LIB_NAME}
+    INCLUDE_INSTALL_DIR "${KDE_INSTALL_INCLUDEDIR}/QtWebKitWidgets"
     DEPS "${WEBKITWIDGETS_PRI_DEPS}"
     RUNTIME_DEPS "${WEBKITWIDGETS_PRI_RUNTIME_DEPS}"
     DEFINES QT_WEBKITWIDGETS_LIB
@@ -683,11 +678,6 @@ else ()
     set(WebKitWidgets_LIBRARY_TYPE SHARED)
 endif ()
 
-if (APPLE)
-    set(WebKitWidgets_OUTPUT_NAME QtWebKitWidgets)
-else ()
-    set(WebKitWidgets_OUTPUT_NAME Qt5WebKitWidgets)
-endif ()
 set(WebKitWidgets_PRIVATE_HEADERS_LOCATION Headers/${PROJECT_VERSION}/QtWebKitWidgets/Private)
 
 WEBKIT_FRAMEWORK(WebKitWidgets)
