@@ -410,11 +410,19 @@ generate_header("${FORWARDING_HEADERS_DIR}/QtWebKit/QtWebKitDepends"
 #endif
 ")
 
+if (MACOS_BUILD_FRAMEWORKS)
+    set(WebKit_INCLUDE_DESTINATION "${LIB_INSTALL_DIR}/QtWebKit.framework/Versions/5/Headers")
+    set(WebKit_PRIVATE_INCLUDE_DESTINATION "${WebKit_INCLUDE_DESTINATION}/private")
+else ()
+    set(WebKit_INCLUDE_DESTINATION "${KDE_INSTALL_INCLUDEDIR}/QtWebKit")
+    set(WebKit_PRIVATE_INCLUDE_DESTINATION "${WebKit_INCLUDE_DESTINATION}/${PROJECT_VERSION}/QtWebKit/private")
+endif ()
+
 install(
     FILES
         ${WebKit_PUBLIC_HEADERS}
     DESTINATION
-        ${KDE_INSTALL_INCLUDEDIR}/QtWebKit
+        ${WebKit_INCLUDE_DESTINATION}
     COMPONENT Data
 )
 
@@ -423,7 +431,7 @@ install(
     FILES
         ${WebKit_PRIVATE_HEADERS}
     DESTINATION
-        ${KDE_INSTALL_INCLUDEDIR}/QtWebKit/${PROJECT_VERSION}/QtWebKit/private
+        ${WebKit_PRIVATE_INCLUDE_DESTINATION}
     COMPONENT Data
 )
 
@@ -707,11 +715,19 @@ generate_header("${FORWARDING_HEADERS_DIR}/QtWebKitWidgets/QtWebKitWidgetsDepend
 #endif
 ")
 
+if (MACOS_BUILD_FRAMEWORKS)
+    set(WebKitWidgets_INCLUDE_DESTINATION "${LIB_INSTALL_DIR}/QtWebKitWidgets.framework/Headers")
+    set(WebKitWidgets_PRIVATE_INCLUDE_DESTINATION "${WebKitWidgets_INCLUDE_DESTINATION}/private")
+else ()
+    set(WebKitWidgets_INCLUDE_DESTINATION "${KDE_INSTALL_INCLUDEDIR}/QtWebKitWidgets")
+    set(WebKitWidgets_PRIVATE_INCLUDE_DESTINATION "${WebKitWidgets_INCLUDE_DESTINATION}/${PROJECT_VERSION}/QtWebKitWidgets/private")
+endif ()
+
 install(
     FILES
         ${WebKitWidgets_PUBLIC_HEADERS}
     DESTINATION
-        ${KDE_INSTALL_INCLUDEDIR}/QtWebKitWidgets
+        ${WebKitWidgets_INCLUDE_DESTINATION}
     COMPONENT Data
 )
 
@@ -720,7 +736,7 @@ install(
     FILES
         ${WebKitWidgets_PRIVATE_HEADERS}
     DESTINATION
-        ${KDE_INSTALL_INCLUDEDIR}/QtWebKitWidgets/${PROJECT_VERSION}/QtWebKitWidgets/private
+        ${WebKitWidgets_PRIVATE_INCLUDE_DESTINATION}
     COMPONENT Data
 )
 
