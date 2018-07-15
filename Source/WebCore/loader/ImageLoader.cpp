@@ -317,6 +317,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
     ASSERT(m_failedLoadURL.isEmpty());
     ASSERT(resource == m_image.get());
 
+    element().document().removeInFlightURL(m_image->url());
     m_imageComplete = true;
     if (!hasPendingBeforeLoadEvent())
         updateRenderer();
@@ -436,6 +437,7 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         return;
     if (!element().document().hasLivingRenderTree())
         return;
+    element().document().addInFlightURL(m_image->url());
     m_hasPendingBeforeLoadEvent = false;
     if (element().dispatchBeforeLoadEvent(m_image->url())) {
         updateRenderer();
