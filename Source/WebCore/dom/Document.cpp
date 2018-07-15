@@ -822,14 +822,12 @@ void Document::resetActiveLinkColor()
 
 void Document::addInFlightURL(const URL url)
 {
-  printf("Add in-flight: %s\n", url.string().utf8().data());
   inFlightURLs.append(url);
 }
 
 void Document::removeInFlightURL(const URL url)
 {
   inFlightURLs.removeFirst(url);
-  printf("Remove in-flight: %s now %zu\n", url.string().utf8().data(), inFlightURLs.size());
 }
 
 bool Document::hasInFlightURL(const URL url)
