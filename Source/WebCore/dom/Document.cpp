@@ -820,6 +820,21 @@ void Document::resetActiveLinkColor()
     m_activeLinkColor.setNamedColor("red");
 }
 
+void Document::addInFlightURL(const URL url)
+{
+  inFlightURLs.append(url);
+}
+
+void Document::removeInFlightURL(const URL url)
+{
+  inFlightURLs.removeFirst(url);
+}
+
+bool Document::hasInFlightURL(const URL url)
+{
+  return inFlightURLs.contains(url);
+}
+
 DOMImplementation& Document::implementation()
 {
     if (!m_implementation)

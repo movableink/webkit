@@ -201,6 +201,8 @@ public:
     QWebElementCollection findAllElements(const QString &selectorQuery) const;
     QWebElement findFirstElement(const QString &selectorQuery) const;
 
+    bool hasInFlightURL(QUrl url) const;
+
     QWebHitTestResult hitTestContent(const QPoint &pos) const;
 
     bool event(QEvent *) Q_DECL_OVERRIDE;
