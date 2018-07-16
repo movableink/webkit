@@ -282,6 +282,16 @@ void WebFrameLoaderClient::dispatchDidDispatchOnloadEvents()
     webPage->injectedBundleLoaderClient().didHandleOnloadEventsForFrame(webPage, m_frame);
 }
 
+void WebFrameLoaderClient::dispatchAssetStarted(const WebCore::URL /*url*/)
+{
+  // Not implemented
+}
+
+void WebFrameLoaderClient::dispatchAssetFinished(const WebCore::URL /*url*/)
+{
+  // Not implemented
+}
+
 void WebFrameLoaderClient::dispatchDidReceiveServerRedirectForProvisionalLoad()
 {
     WebPage* webPage = m_frame->page();
