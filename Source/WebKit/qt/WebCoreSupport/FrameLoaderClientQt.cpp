@@ -515,6 +515,16 @@ void FrameLoaderClientQt::dispatchDidFinishLoad()
     emitLoadFinished(true);
 }
 
+void FrameLoaderClientQt::dispatchAssetStarted(const URL url)
+{
+    emitAssetStarted(url);
+}
+
+void FrameLoaderClientQt::dispatchAssetFinished(const URL url)
+{
+    emitAssetFinished(url);
+}
+
 void FrameLoaderClientQt::dispatchDidLayout(LayoutMilestones milestones)
 {
     if (!m_webFrame)
@@ -1544,6 +1554,16 @@ void FrameLoaderClientQt::emitLoadFinished(bool ok)
     m_isOriginatingLoad = false;
 
     m_webFrame->emitLoadFinished(wasOriginatingLoad, ok);
+}
+
+void FrameLoaderClientQt::emitAssetStarted(const URL url)
+{
+  m_webFrame->emitAssetStarted(QUrl(url));
+}
+
+void FrameLoaderClientQt::emitAssetFinished(const URL url)
+{
+  m_webFrame->emitAssetFinished(QUrl(url));
 }
 
 void FrameLoaderClientQt::willReplaceMultipartContent()

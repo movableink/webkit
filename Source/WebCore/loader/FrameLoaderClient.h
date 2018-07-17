@@ -174,6 +174,8 @@ namespace WebCore {
         virtual void dispatchDidFailLoad(const ResourceError&) = 0;
         virtual void dispatchDidFinishDocumentLoad() = 0;
         virtual void dispatchDidFinishLoad() = 0;
+        virtual void dispatchAssetStarted(const URL) = 0;
+        virtual void dispatchAssetFinished(const URL) = 0;
 #if ENABLE(DATA_DETECTION)
         virtual void dispatchDidFinishDataDetection(NSArray *detectionResults) = 0;
 #endif

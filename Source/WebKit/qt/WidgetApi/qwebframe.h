@@ -231,6 +231,8 @@ Q_SIGNALS:
 
     void loadStarted();
     void loadFinished(bool ok);
+    void assetStarted(const QUrl url);
+    void assetFinished(const QUrl url);
 
     void pageChanged();
 

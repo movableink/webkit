@@ -104,6 +104,8 @@ private:
     virtual void dispatchDidFailLoad(const WebCore::ResourceError&) override;
     virtual void dispatchDidFinishDocumentLoad() override;
     virtual void dispatchDidFinishLoad() override;
+    virtual void dispatchAssetStarted(const WebCore::URL) override;
+    virtual void dispatchAssetFinished(const WebCore::URL) override;
 
     virtual void dispatchDidLayout(WebCore::LayoutMilestones) override;
     virtual void dispatchDidLayout() override;

@@ -119,6 +119,8 @@ public:
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
     void dispatchDidLayout(WebCore::LayoutMilestones) override;
+    void dispatchAssetStarted(const URL) override;
+    void dispatchAssetFinished(const URL) override;
 
     WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&) override;
     void dispatchShow() override;
@@ -243,6 +245,8 @@ private Q_SLOTS:
 private:
     void emitLoadStarted();
     void emitLoadFinished(bool ok);
+    void emitAssetStarted(const URL url);
+    void emitAssetFinished(const URL url);
 
     Frame *m_frame;
     QWebFrameAdapter *m_webFrame;
