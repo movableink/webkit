@@ -512,14 +512,6 @@ QList<QWebFrame*> QWebFrame::childFrames() const
 }
 
 /*!
-    Returns true if the document is currently in the process of loading the image URL
-*/
-bool QWebFrame::hasInFlightURL(QUrl url) const
-{
-  return d->hasInFlightURL(url);
-}
-
-/*!
     Returns the scrollbar policy for the scrollbar defined by \a orientation.
 */
 Qt::ScrollBarPolicy QWebFrame::scrollBarPolicy(Qt::Orientation orientation) const

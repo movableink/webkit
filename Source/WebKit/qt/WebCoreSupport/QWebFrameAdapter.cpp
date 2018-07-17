@@ -334,12 +334,6 @@ qreal QWebFrameAdapter::zoomFactor() const
     return pageAdapter->settings->testAttribute(QWebSettings::ZoomTextOnly) ? frame->textZoomFactor() : frame->pageZoomFactor();
 }
 
-bool QWebFrameAdapter::hasInFlightURL(QUrl url) const
-{
-    Document* doc = frame->document();
-    return doc->hasInFlightURL(URL(url));
-}
-
 void QWebFrameAdapter::init(QWebPageAdapter* pageAdapter)
 {
     QWebFrameData frameData(pageAdapter->page);

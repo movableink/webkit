@@ -334,10 +334,6 @@ public:
 
     void removedLastRef();
 
-    void addInFlightURL(const URL url);
-    void removeInFlightURL(const URL url);
-    bool hasInFlightURL(const URL url);
-
     WEBCORE_EXPORT static HashSet<Document*>& allDocuments();
 
     MediaQueryMatcher& mediaQueryMatcher();
@@ -1345,8 +1341,6 @@ private:
 
     void createRenderTree();
     void detachParser();
-
-    Vector<URL> inFlightURLs;
 
     // FontSelectorClient
     virtual void fontsNeedUpdate(FontSelector&) override final;

@@ -179,8 +179,6 @@ public:
     bool hasFocus() const;
     void setFocus();
 
-    bool hasInFlightURL(QUrl url) const;
-
     void setScrollBarPolicy(Qt::Orientation, Qt::ScrollBarPolicy);
     void scrollToAnchor(const QString&);
     void scrollBy(int, int);
