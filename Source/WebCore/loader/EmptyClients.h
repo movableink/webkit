@@ -293,6 +293,8 @@ public:
     virtual void dispatchDidFinishDocumentLoad() override { }
     virtual void dispatchDidFinishLoad() override { }
     virtual void dispatchDidLayout(LayoutMilestones) override { }
+    virtual void dispatchAssetStarted(const URL) override { }
+    virtual void dispatchAssetFinished(const URL) override { }
 
     virtual Frame* dispatchCreatePage(const NavigationAction&) override { return nullptr; }
     virtual void dispatchShow() override { }

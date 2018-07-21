@@ -129,6 +129,8 @@ public:
     virtual void emitIconChanged() = 0;
     virtual void emitLoadStarted(bool originatingLoad) = 0;
     virtual void emitLoadFinished(bool originatingLoad, bool ok) = 0;
+    virtual void emitAssetStarted(const QUrl url) = 0;
+    virtual void emitAssetFinished(const QUrl url) = 0;
     virtual QWebFrameAdapter* createChildFrame(QWebFrameData*) = 0;
 
     void load(const QNetworkRequest&, QNetworkAccessManager::Operation = QNetworkAccessManager::GetOperation, const QByteArray& body = QByteArray());
