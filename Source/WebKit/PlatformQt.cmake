@@ -518,6 +518,7 @@ if (KDE_INSTALL_USE_QT_SYS_PATHS)
     if (MACOS_BUILD_FRAMEWORKS)
         list(APPEND WebKit_PRI_ARGUMENTS
             INCLUDE_INSTALL_DIR "$$QT_MODULE_LIB_BASE/QtWebKit.framework/Headers"
+            INCLUDE_INSTALL_DIR2 "include"
             MODULE_CONFIG "lib_bundle"
         )
         list(APPEND WebKit_Private_PRI_ARGUMENTS
@@ -541,6 +542,7 @@ else ()
     if (MACOS_BUILD_FRAMEWORKS)
         list(APPEND WebKit_PRI_ARGUMENTS
             INCLUDE_INSTALL_DIR "${LIB_INSTALL_DIR}/QtWebKit.framework/Headers"
+            INCLUDE_INSTALL_DIR2 "include"
             MODULE_CONFIG "lib_bundle"
         )
         list(APPEND WebKit_Private_PRI_ARGUMENTS
@@ -742,6 +744,7 @@ if (KDE_INSTALL_USE_QT_SYS_PATHS)
     if (MACOS_BUILD_FRAMEWORKS)
         list(APPEND WebKitWidgets_PRI_ARGUMENTS
             INCLUDE_INSTALL_DIR "$$QT_MODULE_LIB_BASE/QtWebKitWidgets.framework/Headers"
+            INCLUDE_INSTALL_DIR2 "include"
             MODULE_CONFIG "lib_bundle"
         )
         list(APPEND WebKitWidgets_Private_PRI_ARGUMENTS
@@ -765,6 +768,7 @@ else ()
     if (MACOS_BUILD_FRAMEWORKS)
         list(APPEND WebKitWidgets_PRI_ARGUMENTS
             INCLUDE_INSTALL_DIR "${LIB_INSTALL_DIR}/QtWebKitWidgets.framework/Headers"
+            INCLUDE_INSTALL_DIR2 "include"
             MODULE_CONFIG "lib_bundle"
         )
         list(APPEND WebKitWidgets_Private_PRI_ARGUMENTS
