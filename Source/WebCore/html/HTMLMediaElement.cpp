@@ -2580,7 +2580,8 @@ void HTMLMediaElement::seekTask()
     if (time != mediaTime)
         LOG(Media, "HTMLMediaElement::seekTask(%p) - %s - media timeline equivalent is %s", this, toString(time).utf8().data(), toString(mediaTime).utf8().data());
 #endif
-    time = m_player->mediaTimeForTimeValue(time);
+    // we want exact time
+    // time = m_player->mediaTimeForTimeValue(time);
 
     // 8 - If the (possibly now changed) new playback position is not in one of the ranges given in the
     // seekable attribute, then let it be the position in one of the ranges given in the seekable attribute 
@@ -2602,6 +2603,7 @@ void HTMLMediaElement::seekTask()
     if (m_mediaSource && !m_mediaSource->isClosed())
         noSeekRequired = false;
 #endif
+    noSeekRequired = false;
 
     if (noSeekRequired) {
         LOG(Media, "HTMLMediaElement::seekTask(%p) - seek to %s ignored", this, toString(time).utf8().data());
@@ -2613,7 +2615,7 @@ void HTMLMediaElement::seekTask()
         clearSeeking();
         return;
     }
-    time = seekableRanges->ranges().nearest(time);
+    //time = seekableRanges->ranges().nearest(time);
 
     m_sentEndEvent = false;
     m_lastSeekTime = time;
@@ -2624,7 +2626,7 @@ void HTMLMediaElement::seekTask()
     scheduleEvent(eventNames().seekingEvent);
 
     // 11 - Set the current playback position to the given new playback position
-    m_player->seekWithTolerance(time, negativeTolerance, positiveTolerance);
+    m_player->seekWithTolerance(time, MediaTime::zeroTime(), MediaTime::zeroTime());
 
     // 12 - Wait until the user agent has established whether or not the media data for the new playback
     // position is available, and, if it is, until it has decoded enough data to play back that position.

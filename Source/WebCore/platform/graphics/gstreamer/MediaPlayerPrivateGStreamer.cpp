@@ -1847,7 +1847,7 @@ void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
 
 GstElement* MediaPlayerPrivateGStreamer::createAudioSink()
 {
-    m_autoAudioSink = gst_element_factory_make("autoaudiosink", 0);
+    m_autoAudioSink = gst_element_factory_make("fakesink", 0);
     if (!m_autoAudioSink) {
         WARN_MEDIA_MESSAGE("GStreamer's autoaudiosink not found. Please check your gst-plugins-good installation");
         return nullptr;
