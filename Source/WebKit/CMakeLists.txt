@@ -432,6 +432,11 @@ WEBKIT_FRAMEWORK(WebKit)
 add_dependencies(WebKit WebCore ${WEBKIT_EXTRA_DEPENDENCIES})
 ADD_WEBKIT_PREFIX_HEADER(WebKit)
 
+QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(WebKit)
+
+install(TARGETS WebKit EXPORT WebKitTargets
+            DESTINATION "${LIB_INSTALL_DIR}")
+
 add_executable(WebProcess ${WebProcess_SOURCES})
 ADD_WEBKIT_PREFIX_HEADER(WebProcess)
 target_link_libraries(WebProcess ${WebProcess_LIBRARIES})
@@ -492,4 +497,8 @@ else ()
         LIBRARY DESTINATION "${LIB_INSTALL_DIR}"
         RUNTIME DESTINATION "${LIBEXEC_INSTALL_DIR}"
     )
+
+    if (SHARED_CORE OR NOT PORT STREQUAL "Qt")
+        install(TARGETS WebKit DESTINATION "${LIB_INSTALL_DIR}")
+    endif ()
 endif ()

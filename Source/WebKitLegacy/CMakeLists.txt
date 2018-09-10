@@ -44,6 +44,30 @@ endif ()
 
 WEBKIT_FRAMEWORK(WebKitLegacy)
 
+if (${PORT} STREQUAL "Qt")
+    set_target_properties(WebKitLegacy PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
+    install(TARGETS WebKitLegacy EXPORT WebKitTargets
+            DESTINATION "${LIB_INSTALL_DIR}"
+            RUNTIME DESTINATION "${BIN_INSTALL_DIR}"
+    )
+    if (MSVC AND NOT QT_STATIC_BUILD)
+        install(FILES $<TARGET_PDB_FILE:WebKitLegacy> DESTINATION "${BIN_INSTALL_DIR}" OPTIONAL)
+    endif ()
+
+    if (NOT MSVC)
+        ADD_PREFIX_HEADER(WebKitLegacy "${WEBKIT_DIR}/qt/WebKitPrefix.h")
+    endif ()
+
+    if (MACOS_BUILD_FRAMEWORKS)
+        set_target_properties(WebKitLegacy PROPERTIES
+            FRAMEWORK_VERSION 5
+            MACOSX_FRAMEWORK_IDENTIFIER org.qt-project.QtWebKit
+        )
+    endif ()
+
+    add_dependencies(WebKitLegacy WebKit)
+endif ()
+
 add_dependencies(WebKitLegacy WebCore)
 if (TARGET WebKitLegacyGUID)
     add_dependencies(WebKitLegacy WebKitLegacyGUID)

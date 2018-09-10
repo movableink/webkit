@@ -42,6 +42,7 @@ set(ALL_PORTS
     Mac
     WPE
     WinCairo
+    Qt
 )
 set(PORT "NOPORT" CACHE STRING "choose which WebKit port to build (one of ${ALL_PORTS})")
 

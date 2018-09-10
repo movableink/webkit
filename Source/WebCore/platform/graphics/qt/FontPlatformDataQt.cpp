@@ -1,0 +1,175 @@
+/*
+    Copyright (C) 2008 Holger Hans Peter Freyther
+    Copyright (C) 2009 Torch Mobile Inc. http://www.torchmobile.com/
+    Copyright (C) 2011 Nokia Corporation and/or its subsidiary(-ies)
+    Copyright (C) 2015 The Qt Company Ltd
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Library General Public
+    License as published by the Free Software Foundation; either
+    version 2 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Library General Public License for more details.
+
+    You should have received a copy of the GNU Library General Public License
+    along with this library; see the file COPYING.LIB.  If not, write to
+    the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+    Boston, MA 02110-1301, USA.
+
+*/
+
+#include "config.h"
+#include "FontPlatformData.h"
+
+#include "FontCascade.h"
+#include "SharedBuffer.h"
+#include <wtf/text/WTFString.h>
+
+namespace WebCore {
+
+// See http://www.w3.org/TR/css3-fonts/#font-weight-prop
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
+{
+    switch (fontWeight) {
+    case FontWeight100:
+        return QFont::Thin;
+    case FontWeight200:
+        return QFont::ExtraLight;
+    case FontWeight300:
+        return QFont::Light;
+    case FontWeight400:
+        return QFont::Normal;
+    case FontWeight500:
+        return QFont::Medium;
+    case FontWeight600:
+        return QFont::DemiBold;
+    case FontWeight700:
+        return QFont::Bold;
+    case FontWeight800:
+        return QFont::ExtraBold;
+    case FontWeight900:
+        return QFont::Black;
+    }
+    Q_UNREACHABLE();
+}
+#else
+static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
+{
+    switch (fontWeight) {
+    case FontWeight100:
+    case FontWeight200:
+    case FontWeight300:
+        return QFont::Light; // QFont::Light == Weight of 25
+    case FontWeight400:
+    case FontWeight500:
+        return QFont::Normal; // QFont::Normal == Weight of 50
+    case FontWeight600:
+        return QFont::DemiBold; // QFont::DemiBold == Weight of 63
+    case FontWeight700:
+        return QFont::Bold; // QFont::Bold == Weight of 75
+    case FontWeight800:
+    case FontWeight900:
+        return QFont::Black; // QFont::Black == Weight of 87
+    }
+    Q_UNREACHABLE();
+}
+#endif
+
+static inline bool isEmptyValue(const float size, const bool bold, const bool oblique)
+{
+     // this is the empty value by definition of the trait FontDataCacheKeyTraits
+    return !bold && !oblique && size == 0.f;
+}
+
+FontPlatformData::FontPlatformData(float size, bool bold, bool oblique)
+{
+    if (!isEmptyValue(size, bold, oblique))
+        m_data = adoptRef(new FontPlatformDataPrivate(size, bold, oblique));
+}
+
+FontPlatformData::FontPlatformData(const FontDescription& description, const AtomicString& familyName, int wordSpacing, int letterSpacing)
+    : m_data(adoptRef(new FontPlatformDataPrivate()))
+{
+    QFont font;
+    int requestedSize = description.computedPixelSize();
+    font.setFamily(familyName);
+    if (requestedSize)
+        font.setPixelSize(requestedSize);
+    font.setItalic(description.italic());
+    font.setWeight(toQFontWeight(description.weight()));
+    font.setWordSpacing(wordSpacing);
+    font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+
+    if (!FontCascade::shouldUseSmoothing())
+        font.setStyleStrategy(QFont::NoAntialias);
+
+    m_data->bold = font.bold();
+    // WebKit allows font size zero but QFont does not. We will return
+    // m_data->size if a font size of zero is requested and pixelSize()
+    // otherwise.
+    m_data->size = (!requestedSize) ? requestedSize : font.pixelSize();
+    m_data->rawFont = QRawFont::fromFont(font, QFontDatabase::Any);
+}
+
+FontPlatformData::FontPlatformData(const FontPlatformData& other, float size)
+    : m_data(adoptRef(new FontPlatformDataPrivate()))
+{
+    m_data->rawFont = other.m_data->rawFont;
+    m_data->bold = other.m_data->bold;
+    m_data->oblique = other.m_data->oblique;
+    m_data->rawFont.setPixelSize(size);
+    m_data->size = m_data->rawFont.pixelSize();
+}
+
+bool FontPlatformData::operator==(const FontPlatformData& other) const
+{
+    if (m_data == other.m_data)
+        return true;
+
+    if (!m_data || !other.m_data || m_data->isDeletedValue || other.m_data->isDeletedValue)
+        return false;
+
+    const bool equals = (m_data->size == other.m_data->size
+                         && m_data->bold == other.m_data->bold
+                         && m_data->oblique == other.m_data->oblique
+                         && m_data->rawFont == other.m_data->rawFont);
+    return equals;
+}
+
+PassRefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
+{
+    const char tag[4] = {
+        char(table & 0xff),
+        char((table & 0xff00) >> 8),
+        char((table & 0xff0000) >> 16),
+        char(table >> 24)
+    };
+    QByteArray tableData = m_data->rawFont.fontTable(tag);
+
+    // TODO: Wrap SharedBuffer around QByteArray when it's possible
+    return SharedBuffer::create(tableData.data(), tableData.size());
+}
+
+unsigned FontPlatformData::hash() const
+{
+    if (!m_data)
+        return 0;
+    if (m_data->isDeletedValue)
+        return 1;
+    return qHash(m_data->rawFont.familyName()) ^ qHash(m_data->rawFont.style())
+            ^ qHash(m_data->rawFont.weight())
+            ^ qHash(*reinterpret_cast<quint32*>(&m_data->size));
+}
+
+#ifndef NDEBUG
+String FontPlatformData::description() const
+{
+    return String();
+}
+#endif
+
+}

@@ -57,3 +57,5 @@ if (DEVELOPER_MODE)
     target_link_libraries(mbmalloc bmalloc ${CMAKE_THREAD_LIBS_INIT} ${bmalloc_LIBRARIES})
     set_target_properties(mbmalloc PROPERTIES COMPILE_DEFINITIONS "BUILDING_mbmalloc")
 endif ()
+
+QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(bmalloc)

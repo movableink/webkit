@@ -8,13 +8,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
+#     documentation and/or other materials provided with the distribution.
 # 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -106,6 +106,7 @@ BEGIN {
 use constant {
     AppleWin => "AppleWin",
     GTK      => "GTK",
+    Qt       => "Qt",
     iOS      => "iOS",
     tvOS     => "tvOS",
     watchOS  => "watchOS",
@@ -196,7 +197,7 @@ sub determineSourceDir
     $sourceDir = $FindBin::Bin;
     $sourceDir =~ s|/+$||; # Remove trailing '/' as we would die later
 
-    # walks up path checking each directory to see if it is the main WebKit project dir, 
+    # walks up path checking each directory to see if it is the main WebKit project dir,
     # defined by containing Sources, WebCore, and JavaScriptCore.
     until ((-d File::Spec->catdir($sourceDir, "Source") && -d File::Spec->catdir($sourceDir, "Source", "WebCore") && -d File::Spec->catdir($sourceDir, "Source", "JavaScriptCore")) || (-d File::Spec->catdir($sourceDir, "Internal") && -d File::Spec->catdir($sourceDir, "OpenSource")))
     {
@@ -491,6 +492,7 @@ sub argumentsForConfiguration()
     push(@args, '--32-bit') if ($architecture ne "x86_64" and !isWin64());
     push(@args, '--64-bit') if (isWin64());
     push(@args, '--gtk') if isGtk();
+    push(@args, '--qt') if isQt();
     push(@args, '--wpe') if isWPE();
     push(@args, '--jsc-only') if isJSCOnly();
     push(@args, '--wincairo') if isWinCairo();
@@ -549,7 +551,7 @@ sub determineXcodeSDK
 {
     return if defined $xcodeSDK;
     my $sdk;
-    
+
     # The user explicitly specified the sdk, don't assume anything
     if (checkForArgumentAndRemoveFromARGVGettingValue("--sdk", \$sdk)) {
         $xcodeSDK = $sdk;
@@ -574,7 +576,7 @@ sub determineXcodeSDK
         $xcodeSDK ||= "watchsimulator";
     }
     return if !defined $xcodeSDK;
-    
+
     # Prefer the internal version of an sdk, if it exists.
     my @availableSDKs = availableXcodeSDKs();
 
@@ -831,7 +833,7 @@ sub executableProductDir
     my $binaryDirectory;
     if (isAnyWindows()) {
         $binaryDirectory = isWin64() ? "bin64" : "bin32";
-    } elsif (isGtk() || isJSCOnly() || isWPE()) {
+    } elsif (isGtk() || isJSCOnly() || isWPE() || isQt()) {
         $binaryDirectory = "bin";
     } else {
         return $productDirectory;
@@ -1079,6 +1081,49 @@ sub builtDylibPathForName
     my $libraryName = shift;
     determineConfigurationProductDir();
 
+    if (isQt()) {
+        my $isSearchingForWebCore = $libraryName =~ "WebCore";
+        if (isDarwin()) {
+            $libraryName = "QtWebKitWidgets";
+        } else {
+            $libraryName = "Qt5WebKitWidgets";
+        }
+        my $result;
+        if (isDarwin() and -d "$configurationProductDir/lib/$libraryName.framework") {
+            $result = "$configurationProductDir/lib/$libraryName.framework/$libraryName";
+        } elsif (isDarwin() and -d "$configurationProductDir/lib") {
+            $result = "$configurationProductDir/lib/lib$libraryName.dylib";
+        } elsif (isWindows()) {
+            if (configuration() eq "Debug") {
+                # On Windows, there is a "d" suffix to the library name. See <http://trac.webkit.org/changeset/53924/>.
+                $libraryName .= "d";
+            }
+
+            my $qmakebin = "qmake"; # FIXME
+            chomp(my $mkspec = `$qmakebin -query QT_HOST_DATA`);
+            $mkspec .= "/mkspecs";
+            my $qtMajorVersion = retrieveQMakespecVar("$mkspec/qconfig.pri", "QT_MAJOR_VERSION");
+            if (not $qtMajorVersion) {
+                $qtMajorVersion = "";
+            }
+
+            $result = "$configurationProductDir/lib/$libraryName$qtMajorVersion.dll";
+        } else {
+            $result = "$configurationProductDir/lib/lib$libraryName.so";
+        }
+
+        if ($isSearchingForWebCore) {
+            # With CONFIG+=force_static_libs_as_shared we have a shared library for each subdir.
+            # For feature detection to work it is necessary to return the path of the WebCore library here.
+            my $replacedWithWebCore = $result;
+            $replacedWithWebCore =~ s/$libraryName/WebCore/g;
+            if (-e $replacedWithWebCore) {
+                return $replacedWithWebCore;
+            }
+        }
+
+        return $result;
+    }
     if (isGtk()) {
         my $extension = isDarwin() ? ".dylib" : ".so";
         return "$configurationProductDir/lib/libwebkit2gtk-4.0" . $extension;
@@ -1180,7 +1225,7 @@ sub findMatchingArguments($$)
             push(@matchingIndices, $index);
         }
     }
-    return @matchingIndices; 
+    return @matchingIndices;
 }
 
 sub hasArgument($$)
@@ -1212,6 +1257,7 @@ sub determinePortName()
 
     my %argToPortName = (
         gtk => GTK,
+        qt => Qt,
         'jsc-only' => JSCOnly,
         wincairo => WinCairo,
         wpe => WPE
@@ -1247,6 +1293,7 @@ sub determinePortName()
         if ($unknownPortProhibited) {
             my $portsChoice = join "\n\t", qw(
                 --gtk
+                --qt
                 --jsc-only
                 --wpe
             );
@@ -1269,6 +1316,11 @@ sub portName()
 sub isGtk()
 {
     return portName() eq GTK;
+}
+
+sub isQt()
+{
+    return portName() eq Qt;
 }
 
 sub isJSCOnly()
@@ -1702,7 +1754,7 @@ sub relativeScriptsDir()
 sub launcherPath()
 {
     my $relativeScriptsPath = relativeScriptsDir();
-    if (isGtk() || isWPE()) {
+    if (isGtk() || isWPE() || isQt()) {
         if (inFlatpakSandbox()) {
             return "Tools/Scripts/run-minibrowser";
         }
@@ -1714,7 +1766,7 @@ sub launcherPath()
 
 sub launcherName()
 {
-    if (isGtk() || isWPE()) {
+    if (isGtk() || isWPE() || isQt()) {
         return "MiniBrowser";
     } elsif (isAppleMacWebKit()) {
         return "Safari";
@@ -1829,7 +1881,7 @@ sub setupAppleWinEnv()
         my $restartNeeded = 0;
         my %variablesToSet = ();
 
-        # FIXME: We should remove this explicit version check for cygwin once we stop supporting Cygwin 1.7.9 or older versions. 
+        # FIXME: We should remove this explicit version check for cygwin once we stop supporting Cygwin 1.7.9 or older versions.
         # https://bugs.webkit.org/show_bug.cgi?id=85791
         my $uname_version = (POSIX::uname())[2];
         $uname_version =~ s/\(.*\)//;  # Remove the trailing cygwin version, if any.
@@ -1839,7 +1891,7 @@ sub setupAppleWinEnv()
             # for UNIX-like ttys in the Windows console
             $variablesToSet{CYGWIN} = "tty" unless $ENV{CYGWIN};
         }
-        
+
         # Those environment variables must be set to be able to build inside Visual Studio.
         $variablesToSet{WEBKIT_LIBRARIES} = windowsLibrariesDir() unless $ENV{WEBKIT_LIBRARIES};
         $variablesToSet{WEBKIT_OUTPUTDIR} = windowsOutputDir() unless $ENV{WEBKIT_OUTPUTDIR};
@@ -2018,8 +2070,10 @@ sub getJhbuildPath()
         push(@jhbuildPath, "DependenciesGTK");
     } elsif (isWPE()) {
         push(@jhbuildPath, "DependenciesWPE");
+    } elsif (isQt()) {
+        push(@jhbuildPath, "DependenciesQt");
     } else {
-        die "Cannot get JHBuild path for platform that isn't GTK+ or WPE.\n";
+        die "Cannot get JHBuild path for platform that isn't GTK+ or WPE or Qt.\n";
     }
     return File::Spec->catdir(@jhbuildPath);
 }
@@ -2111,6 +2165,8 @@ sub wrapperPrefixIfNeeded()
             push(@prefix, "--gtk");
         } elsif (isWPE()) {
             push(@prefix, "--wpe");
+        } elsif (isQt()) {
+            push(@prefix, "--qt");
         }
         push(@prefix, "run");
 
@@ -2235,6 +2291,13 @@ sub canUseEclipseNinjaGenerator(@)
     return commandExists("eclipse") && exitStatus(system("cmake -N -G 'Eclipse CDT4 - Ninja' >$devnull 2>&1")) == 0;
 }
 
+sub canUseCodeBlocksNinjaGenerator
+{
+    # Check that CodeBlocks Ninja generator is installed
+    my $devnull = File::Spec->devnull();
+    return exitStatus(system("cmake -N -G 'CodeBlocks - Ninja' >$devnull 2>&1")) == 0;
+}
+
 sub cmakeGeneratedBuildfile(@)
 {
     my ($willUseNinja) = @_;
@@ -2279,6 +2342,8 @@ sub generateBuildSystemFromCMakeProject
         push @args, "-G";
         if (canUseEclipseNinjaGenerator()) {
             push @args, "'Eclipse CDT4 - Ninja'";
+        } elsif (isQt() && canUseCodeBlocksNinjaGenerator()) {
+            push @args, "'CodeBlocks - Ninja'";
         } else {
             push @args, "Ninja";
         }
@@ -2290,7 +2355,7 @@ sub generateBuildSystemFromCMakeProject
     push @args, '-DSHOW_BINDINGS_GENERATION_PROGRESS=1' unless ($willUseNinja && -t STDOUT);
 
     # Some ports have production mode, but build-webkit should always use developer mode.
-    push @args, "-DDEVELOPER_MODE=ON" if isGtk() || isJSCOnly() || isWPE() || isWinCairo();
+    push @args, "-DDEVELOPER_MODE=ON" if isGtk() || isJSCOnly() || isWPE() || isWinCairo() || isQt();
 
     push @args, @cmakeArgs if @cmakeArgs;
 
@@ -2332,7 +2397,7 @@ sub buildCMakeGeneratedProject($)
     push @args, ("--", @makeArgs) if @makeArgs;
 
     # GTK and JSCOnly can use a build script to preserve colors and pretty-printing.
-    if ((isGtk() || isJSCOnly()) && -e "$buildPath/build.sh") {
+    if ((isGtk() || isQt() || isJSCOnly()) && -e "$buildPath/build.sh") {
         chdir "$buildPath" or die;
         $command = "$buildPath/build.sh";
         @args = (@makeArgs);
@@ -2363,6 +2428,10 @@ sub buildCMakeProjectOrExit($$$@)
 
     if (isGtk() && checkForArgumentAndRemoveFromARGV("--update-gtk")) {
         system("perl", "$sourceDir/Tools/Scripts/update-webkitgtk-libs") == 0 or die $!;
+    }
+
+    if (isQt() && isAnyWindows() && checkForArgumentAndRemoveFromARGV("--update-qt")) {
+        system("perl", "$sourceDir/Tools/Scripts/update-qtwebkit-win-libs") == 0 or die $!;
     }
 
     if (isWPE() && checkForArgumentAndRemoveFromARGV("--update-wpe")) {
@@ -2624,9 +2693,9 @@ sub relaunchIOSSimulator($)
     quitIOSSimulator($simulatedDevice->{UDID});
 
     # FIXME: <rdar://problem/20916140> Switch to using CoreSimulator.framework for launching and quitting iOS Simulator
-    chomp(my $developerDirectory = $ENV{DEVELOPER_DIR} || `xcode-select --print-path`); 
-    my $iosSimulatorPath = File::Spec->catfile($developerDirectory, "Applications", "Simulator.app"); 
-    system("open", "-a", $iosSimulatorPath, "--args", "-CurrentDeviceUDID", $simulatedDevice->{UDID}) == 0 or die "Failed to open $iosSimulatorPath: $!"; 
+    chomp(my $developerDirectory = $ENV{DEVELOPER_DIR} || `xcode-select --print-path`);
+    my $iosSimulatorPath = File::Spec->catfile($developerDirectory, "Applications", "Simulator.app");
+    system("open", "-a", $iosSimulatorPath, "--args", "-CurrentDeviceUDID", $simulatedDevice->{UDID}) == 0 or die "Failed to open $iosSimulatorPath: $!";
 
     waitUntilIOSSimulatorDeviceIsInState($simulatedDevice->{UDID}, SIMULATOR_DEVICE_STATE_BOOTED);
     waitUntilProcessNotRunning("com.apple.datamigrator");
@@ -2912,7 +2981,7 @@ sub debugMiniBrowser
     if (isAppleMacWebKit()) {
         execMacWebKitAppForDebugging(File::Spec->catfile(productDir(), "MiniBrowser.app", "Contents", "MacOS", "MiniBrowser"));
     }
-    
+
     return 1;
 }
 

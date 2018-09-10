@@ -11,13 +11,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
+#     documentation and/or other materials provided with the distribution.
 # 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -117,6 +117,7 @@ Usage: $programName [options] [options to pass to build system]
   --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (Xcode only)
 
   --gtk                             Build the GTK+ port
+  --qt                              Build the Qt port
   --wpe                             Build the WPE port
   --wincairo                        Build using Cairo (rather than CoreGraphics) on Windows
 
@@ -220,7 +221,7 @@ if (isAppleCocoaWebKit()) {
 
     # ANGLE and libwebrtc must come before WebCore
     splice @projects, 0, 0, ("Source/ThirdParty/ANGLE");
-    if (not $archs32bit and ((portName() eq Mac and not architecture() eq "i386") or 
+    if (not $archs32bit and ((portName() eq Mac and not architecture() eq "i386") or
         (portName() eq iOS and (architecture() eq "arm64" or architecture() eq "x86_64")))) {
         splice @projects, 0, 0, ("Source/ThirdParty/libwebrtc");
     }
@@ -274,7 +275,7 @@ if (isInspectorFrontend()) {
     @projects = ("Source/WebInspectorUI");
 }
 
-if (isCMakeBuild() && !isAnyWindows()) {
+if (isCMakeBuild() && !isAnyWindows() || isQt()) {
     if (!canUseNinja() || defined($ENV{NUMBER_OF_PROCESSORS})) {
         # If the user environment is not setting a specific number of process,
         # then don't pass the number of jobs to Ninja. Because Ninja will
@@ -330,7 +331,7 @@ if (isAppleWinWebKit() || isWinCairo()) {
         $result = 0;
 
         my $project = basename($dir);
-        
+
         my @local_options = @options;
         push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
         push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
