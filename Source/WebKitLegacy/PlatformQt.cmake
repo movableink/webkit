@@ -248,22 +248,20 @@ list(APPEND WebKitLegacy_SYSTEM_INCLUDE_DIRECTORIES
 # Build the include path with duplicates removed
 list(REMOVE_DUPLICATES WebKitLegacy_SYSTEM_INCLUDE_DIRECTORIES)
 
-if (ENABLE_WEBKIT2)
-    if (APPLE)
-        set(WEBKIT2_LIBRARY -Wl,-force_load WebKit2)
-    elseif (MSVC)
-        set(WEBKIT2_LIBRARY "-WHOLEARCHIVE:WebKit2${CMAKE_DEBUG_POSTFIX}")
-    elseif (UNIX OR MINGW)
-        set(WEBKIT2_LIBRARY -Wl,--whole-archive WebKit2 -Wl,--no-whole-archive)
-    else ()
-        message(WARNING "Unknown system, linking with WebKit2 may fail!")
-        set(WEBKIT2_LIBRARY WebKit2)
-    endif ()
+if (APPLE)
+    set(WEBKIT_LIBRARY -Wl,-force_load WebKit)
+elseif (MSVC)
+    set(WEBKIT_LIBRARY "-WHOLEARCHIVE:WebKit${CMAKE_DEBUG_POSTFIX}")
+elseif (UNIX OR MINGW)
+    set(WEBKIT_LIBRARY -Wl,--whole-archive WebKit -Wl,--no-whole-archive)
+else ()
+    message(WARNING "Unknown system, linking with WebKit2 may fail!")
+    set(WEBKIT_LIBRARY WebKit)
 endif ()
 
 list(APPEND WebKitLegacy_LIBRARIES
     PRIVATE
-        ${WEBKIT2_LIBRARY}
+        ${WEBKIT_LIBRARY}
         ${Qt5Quick_LIBRARIES}
         ${Qt5WebChannel_LIBRARIES}
 )
@@ -418,7 +416,7 @@ install(
     COMPONENT Data
 )
 
-file(GLOB WebKitLegacy_PRIVATE_HEADERS qt/Api/*_p.h ../WebKit2/UIProcess/API/qt/*_p.h)
+file(GLOB WebKitLegacy_PRIVATE_HEADERS qt/Api/*_p.h ../WebKit/UIProcess/API/qt/*_p.h)
 install(
     FILES
         ${WebKitLegacy_PRIVATE_HEADERS}
@@ -435,9 +433,7 @@ set(WEBKIT_PRI_RUNTIME_DEPS "core_private gui_private")
 if (QT_WEBCHANNEL)
     set(WEBKIT_PRI_RUNTIME_DEPS "webchannel ${WEBKIT_PRI_RUNTIME_DEPS}")
 endif ()
-if (ENABLE_WEBKIT2)
-    set(WEBKIT_PRI_RUNTIME_DEPS "qml quick ${WEBKIT_PRI_RUNTIME_DEPS}")
-endif ()
+set(WEBKIT_PRI_RUNTIME_DEPS "qml quick ${WEBKIT_PRI_RUNTIME_DEPS}")
 if (ENABLE_GEOLOCATION)
     set(WEBKIT_PRI_RUNTIME_DEPS "positioning ${WEBKIT_PRI_RUNTIME_DEPS}")
 endif ()
@@ -896,9 +892,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
     )
 endif ()
 
-if (ENABLE_WEBKIT2)
-    add_subdirectory(qt/declarative)
-endif ()
+add_subdirectory(qt/declarative)
 
 if (ENABLE_API_TESTS)
     add_subdirectory(qt/tests)

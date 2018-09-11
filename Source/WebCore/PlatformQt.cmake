@@ -297,11 +297,9 @@ list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
     ${WEBCORE_DIR}/css/themeQtNoListboxes.css
 )
 
-if (ENABLE_WEBKIT2)
-    list(APPEND WebCore_SOURCES
-        page/qt/GestureTapHighlighter.cpp
-    )
-endif ()
+list(APPEND WebCore_SOURCES
+    page/qt/GestureTapHighlighter.cpp
+)
 
 if (ENABLE_OPENGL)
     list(APPEND WebCore_SOURCES

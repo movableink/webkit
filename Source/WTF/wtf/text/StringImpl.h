@@ -37,6 +37,10 @@
 #include <wtf/text/StringHasher.h>
 #include <wtf/text/UTF8ConversionError.h>
 
+#if PLATFORM(QT)
+#include <QString>
+#endif
+
 #if USE(CF)
 typedef const struct __CFString * CFStringRef;
 #endif

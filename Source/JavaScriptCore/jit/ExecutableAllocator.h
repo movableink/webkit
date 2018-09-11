@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "JSExportMacros.h"
 #include "JITCompilationEffort.h"
 #include "JSCPtrTag.h"
 #include <stddef.h> // for ptrdiff_t

@@ -119,6 +119,10 @@ public:
 #elif USE(COCOA_EVENT_LOOP)
         static void timerFired(CFRunLoopTimerRef, void*);
         RetainPtr<CFRunLoopTimerRef> m_timer;
+#elif USE(QT_EVENT_LOOP)
+        static void timerFired(RunLoop*, int ID);
+        int m_ID;
+        bool m_isRepeating;
 #elif USE(GLIB_EVENT_LOOP)
         void updateReadyTime();
         GRefPtr<GSource> m_source;
@@ -175,6 +179,11 @@ private:
     static void performWork(void*);
     RetainPtr<CFRunLoopRef> m_runLoop;
     RetainPtr<CFRunLoopSourceRef> m_runLoopSource;
+#elif USE(QT_EVENT_LOOP)
+    typedef HashMap<int, TimerBase*> TimerMap;
+    TimerMap m_activeTimers;
+    class TimerObject;
+    TimerObject* m_timerObject;
 #elif USE(GLIB_EVENT_LOOP)
     GRefPtr<GMainContext> m_mainContext;
     Vector<GRefPtr<GMainLoop>> m_mainLoops;

@@ -4,6 +4,8 @@
 
 #include "config.h"
 
+#include <JavaScriptCore/JSExportMacros.h>
+
 #if OS(WINDOWS)
 #undef WEBCORE_EXPORT
 #define WEBCORE_EXPORT WTF_EXPORT_DECLARATION

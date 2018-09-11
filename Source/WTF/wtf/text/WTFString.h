@@ -35,6 +35,12 @@
 #include <objc/objc.h>
 #endif
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QString;
+QT_END_NAMESPACE
+#endif
+
 namespace WTF {
 
 // Declarations of string operations
@@ -323,6 +329,12 @@ public:
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
     // null string can check isNull explicitly.
     operator NSString *() const;
+#endif
+
+#if PLATFORM(QT)
+    WTF_EXPORT_PRIVATE String(const QString&);
+    WTF_EXPORT_PRIVATE String(const QStringRef&);
+    WTF_EXPORT_PRIVATE operator QString() const;
 #endif
 
     WTF_EXPORT_PRIVATE static String make8BitFrom16BitSource(const UChar*, size_t);

@@ -434,9 +434,6 @@ ADD_WEBKIT_PREFIX_HEADER(WebKit)
 
 QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(WebKit)
 
-install(TARGETS WebKit EXPORT WebKitTargets
-            DESTINATION "${LIB_INSTALL_DIR}")
-
 add_executable(WebProcess ${WebProcess_SOURCES})
 ADD_WEBKIT_PREFIX_HEADER(WebProcess)
 target_link_libraries(WebProcess ${WebProcess_LIBRARIES})

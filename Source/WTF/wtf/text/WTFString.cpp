@@ -501,11 +501,27 @@ WTF_ATTRIBUTE_PRINTF(1, 0) static String createWithFormatAndArguments(const char
 
 String String::format(const char *format, ...)
 {
+#if PLATFORM(QT)
+    // Use QString::vsprintf to avoid the locale dependent formatting of vsnprintf.
+    // https://bugs.webkit.org/show_bug.cgi?id=18994
+    va_list args;
+    va_start(args, format);
+
+    QString buffer;
+    buffer.vsprintf(format, args);
+
+    va_end(args);
+
+    QByteArray ba = buffer.toUtf8();
+    return StringImpl::create(reinterpret_cast<const LChar*>(ba.constData()), ba.length());
+
+#else
     va_list args;
     va_start(args, format);
     String result = createWithFormatAndArguments(format, args);
     va_end(args);
     return result;
+#endif
 }
 
 String String::number(int number)

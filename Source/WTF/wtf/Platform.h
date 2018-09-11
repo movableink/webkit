@@ -512,7 +512,9 @@
 /* PLATFORM(IOS) */
 /* PLATFORM(IOS_SIMULATOR) */
 /* PLATFORM(WIN) */
-#if defined(BUILDING_GTK__)
+#if defined(BUILDING_QT__)
+#define WTF_PLATFORM_QT 1
+#elif defined(BUILDING_GTK__)
 #define WTF_PLATFORM_GTK 1
 #elif defined(BUILDING_WPE__)
 #define WTF_PLATFORM_WPE 1
@@ -680,11 +682,11 @@
 #define HAVE_READLINE 1
 #define HAVE_SYS_TIMEB_H 1
 
-#if __has_include(<mach/mach_exc.defs>) && !PLATFORM(GTK)
+#if __has_include(<mach/mach_exc.defs>) && !PLATFORM(GTK) && !PLATFORM(QT)
 #define HAVE_MACH_EXCEPTIONS 1
 #endif
 
-#if !PLATFORM(GTK)
+#if !PLATFORM(GTK) && !PLATFORM(QT)
 #define USE_ACCELERATE 1
 #endif
 #if !PLATFORM(IOS)
@@ -726,7 +728,7 @@
 /* Include feature macros */
 #include <wtf/FeatureDefines.h>
 
-#if OS(WINDOWS)
+#if OS(WINDOWS) && !PLATFORM(QT)
 #define USE_SYSTEM_MALLOC 1
 #endif
 
@@ -1021,7 +1023,7 @@
 
 /* CSS Selector JIT Compiler */
 #if !defined(ENABLE_CSS_SELECTOR_JIT)
-#if (CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && PLATFORM(IOS))) && ENABLE(JIT) && (OS(DARWIN) || PLATFORM(GTK) || PLATFORM(WPE))
+#if (CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && PLATFORM(IOS))) && ENABLE(JIT) && (OS(DARWIN) || PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(QT))
 #define ENABLE_CSS_SELECTOR_JIT 1
 #else
 #define ENABLE_CSS_SELECTOR_JIT 0
@@ -1105,7 +1107,7 @@
 #include <wtf/glib/GTypedefs.h>
 #endif
 
-#if !defined(USE_EXPORT_MACROS) && (PLATFORM(COCOA) || OS(WINDOWS))
+#if !defined(USE_EXPORT_MACROS) && (PLATFORM(COCOA) || OS(WINDOWS) || PLATFORM(QT))
 #define USE_EXPORT_MACROS 1
 #endif
 
@@ -1173,6 +1175,18 @@
 #ifndef HAVE_QOS_CLASSES
 #if PLATFORM(COCOA)
 #define HAVE_QOS_CLASSES 1
+#endif
+#endif
+
+#if PLATFORM(QT)
+#ifdef __cplusplus
+#include <qglobal.h>
+#if QT_VERSION >= QT_VERSION_CHECK(5,8,0)
+#include <QtGui/qtguiglobal.h>
+#endif
+#endif
+#if defined(QT_OPENGL_ES_2) && !defined(USE_OPENGL_ES_2)
+#define USE_OPENGL_ES_2 1
 #endif
 #endif
 
@@ -1298,6 +1312,8 @@
 #elif PLATFORM(COCOA)
 /* OS X and IOS. Use CoreFoundation & GCD abstraction. */
 #define USE_COCOA_EVENT_LOOP 1
+#elif PLATFORM(QT)
+#define USE_QT_EVENT_LOOP 1
 #else
 #define USE_GENERIC_EVENT_LOOP 1
 #endif

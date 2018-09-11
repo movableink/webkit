@@ -34,7 +34,7 @@
 #include <WebKit/WKBaseGtk.h>
 #elif defined(BUILDING_WPE__)
 #include <WebKit/WKBaseWPE.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !defined(BUILDING_QT__)
 #include <WebKit/WKBaseMac.h>
 #elif defined(_WIN32)
 #include <WebKit/WKBaseWin.h>

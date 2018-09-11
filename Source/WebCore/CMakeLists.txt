@@ -1995,10 +1995,10 @@ endif ()
 # paths of WebCore.
 
 # FIXME: this should come in from upstream
-# add_library(WebCoreHeaderInterface INTERFACE)
-# target_include_directories(WebCoreHeaderInterface INTERFACE ${WebCore_INCLUDE_DIRECTORIES})
-# target_include_directories(WebCoreHeaderInterface SYSTEM INTERFACE ${WebCore_SYSTEM_INCLUDE_DIRECTORIES})
-# target_link_libraries(WebCoreHeaderInterface INTERFACE ${WebCore_LIBRARIES})
+add_library(WebCoreHeaderInterface INTERFACE)
+target_include_directories(WebCoreHeaderInterface INTERFACE ${WebCore_INCLUDE_DIRECTORIES})
+target_include_directories(WebCoreHeaderInterface SYSTEM INTERFACE ${WebCore_SYSTEM_INCLUDE_DIRECTORIES})
+target_link_libraries(WebCoreHeaderInterface INTERFACE ${WebCore_LIBRARIES})
 
 if (MSVC)
     WEBKIT_ADD_PRECOMPILED_HEADER("WebCoreTestSupportPrefix.h" "testing/js/WebCoreTestSupportPrefix.cpp" WebCoreTestSupport_SOURCES)

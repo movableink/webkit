@@ -34,7 +34,7 @@
 #include <wtf/ProcessID.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && !PLATFORM(QT)
 #include "RemoteInspectorXPCConnection.h"
 #include <wtf/RetainPtr.h>
 
