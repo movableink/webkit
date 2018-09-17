@@ -45,7 +45,7 @@
 #endif
 
 // FIXME: Find a better way to avoid the name confliction for NO_ERROR.
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS))
 #undef NO_ERROR
 #elif PLATFORM(GTK)
 // This define is from the X11 headers, but it's used below, so we must undefine it.
@@ -72,6 +72,14 @@ typedef CGLContextObj PlatformGraphicsContext3D;
 OBJC_CLASS CALayer;
 OBJC_CLASS WebGLLayer;
 typedef struct __IOSurface* IOSurfaceRef;
+#elif PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QPainter;
+class QRect;
+class QOpenGLContext;
+class QOpenGLExtensions;
+class QSurface;
+QT_END_NAMESPACE
 #endif // PLATFORM(COCOA)
 
 #if USE(NICOSIA)
@@ -80,7 +88,10 @@ class GC3DLayer;
 }
 #endif
 
-#if !PLATFORM(COCOA)
+#if PLATFORM(QT)
+typedef QOpenGLContext* PlatformGraphicsContext3D;
+typedef QSurface* PlatformGraphicsSurface3D;
+#elif !PLATFORM(COCOA)
 typedef unsigned GLuint;
 typedef void* PlatformGraphicsContext3D;
 typedef void* PlatformGraphicsSurface3D;
@@ -1133,7 +1144,12 @@ public:
     GC3Dboolean isVertexArray(Platform3DObject);
     void bindVertexArray(Platform3DObject);
 
+#if PLATFORM(QT)
+    void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
+                       int canvasWidth, int canvasHeight, QPainter* context);
+#else
     void paintToCanvas(const unsigned char* imagePixels, const IntSize& imageSize, const IntSize& canvasSize, GraphicsContext&);
+#endif
 
     void markContextChanged();
     void markLayerComposited();
@@ -1269,6 +1285,8 @@ public:
         RetainPtr<CGImageRef> m_decodedImage;
         RetainPtr<CFDataRef> m_pixelData;
         UniqueArray<uint8_t> m_formalizedRGBA8Data;
+#elif PLATFORM(QT)
+        QImage m_qtImage;
 #endif
         Image* m_image;
         ImageHtmlDomSource m_imageHtmlDomSource;
@@ -1423,7 +1441,9 @@ private:
     RenderStyle m_renderStyle;
     Vector<Vector<float>> m_vertexArray;
 
+#if !PLATFORM(QT)
     ANGLEWebKitBridge m_compiler;
+#endif
 
     GC3Duint m_texture { 0 };
     GC3Duint m_fbo { 0 };
@@ -1487,6 +1507,10 @@ private:
     // Errors raised by synthesizeGLError().
     ListHashSet<GC3Denum> m_syntheticErrors;
 
+#if PLATFORM(QT)
+    QOpenGLExtensions* m_functions;
+#endif
+
 #if USE(NICOSIA) && USE(TEXTURE_MAPPER)
     friend class Nicosia::GC3DLayer;
     std::unique_ptr<Nicosia::GC3DLayer> m_nicosiaLayer;
@@ -1498,6 +1522,11 @@ private:
     std::unique_ptr<GraphicsContext3DPrivate> m_private;
 #endif
 
+#if PLATFORM(QT)
+    // Must be initialized after m_private so that isGLES2Compliant works
+    ANGLEWebKitBridge m_compiler;
+#endif
+
     // FIXME: Layering violation.
     WebGLRenderingContextBase* m_webglContext { nullptr };
 
@@ -1507,7 +1536,7 @@ private:
     unsigned m_statusCheckCount { 0 };
     bool m_failNextStatusCheck { false };
 
-#if USE(CAIRO)
+#if USE(CAIRO) || PLATFORM(QT)
     Platform3DObject m_vao { 0 };
 #endif
 };

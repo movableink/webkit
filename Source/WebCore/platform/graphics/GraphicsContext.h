@@ -50,6 +50,9 @@ namespace WebCore {
 class PlatformContextCairo;
 }
 typedef WebCore::PlatformContextCairo PlatformGraphicsContext;
+#elif PLATFORM(QT)
+#include <QPainter>
+typedef QPainter PlatformGraphicsContext;
 #elif USE(WINGDI)
 typedef struct HDC__ PlatformGraphicsContext;
 #else
@@ -63,6 +66,10 @@ typedef struct HDC__* HDC;
 // UInt8 is defined in CoreFoundation/CFBase.h
 typedef unsigned char UInt8;
 #endif
+#endif
+
+#if PLATFORM(QT) && OS(WINDOWS)
+#include <windows.h>
 #endif
 
 namespace WebCore {
@@ -440,6 +447,10 @@ public:
     bool hasShadow() const { return hasVisibleShadow() && (m_state.shadowBlur || m_state.shadowOffset.width() || m_state.shadowOffset.height()); }
     bool hasBlurredShadow() const { return hasVisibleShadow() && m_state.shadowBlur; }
 
+#if PLATFORM(QT) || USE(CAIRO)
+    bool mustUseShadowBlur() const;
+#endif
+
     void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&);
     void drawFocusRing(const Path&, float width, float offset, const Color&);
 #if PLATFORM(MAC)
@@ -575,6 +586,12 @@ public:
     bool shouldIncludeChildWindows() const { return false; }
 #endif // PLATFORM(WIN)
 #endif // OS(WINDOWS)
+
+#if PLATFORM(QT)
+    void pushTransparencyLayerInternal(const QRect&, qreal, QPixmap&);
+    void popTransparencyLayerInternal();
+    void takeOwnershipOfPlatformContext();
+#endif
 
     static void adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle);
 

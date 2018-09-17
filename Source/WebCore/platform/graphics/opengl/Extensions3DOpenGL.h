@@ -30,6 +30,12 @@
 #include "GraphicsContext3D.h"
 #include <wtf/text/StringHash.h>
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QOpenGLVertexArrayObjectHelper;
+QT_END_NAMESPACE
+#endif
+
 namespace WebCore {
 
 class Extensions3DOpenGL : public Extensions3DOpenGLCommon {
@@ -61,8 +67,12 @@ protected:
     String getExtensions() override;
 
 private:
-#if PLATFORM(GTK) || PLATFORM(WIN) || (PLATFORM(COCOA) && USE(OPENGL_ES))
+#if PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(WIN) || (PLATFORM(COCOA) && USE(OPENGL_ES))
     bool isVertexArrayObjectSupported();
+#endif
+
+#if PLATFORM(QT) && QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+    QOpenGLVertexArrayObjectHelper *m_vaoFunctions;
 #endif
 };
 

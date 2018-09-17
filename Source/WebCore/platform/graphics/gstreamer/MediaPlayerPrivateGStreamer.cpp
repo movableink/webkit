@@ -166,7 +166,8 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
     , m_preservesPitch(false)
     , m_lastQuery(-1)
 {
-#if USE(GLIB)
+    // FIXME: Use Qt timer priority
+#if USE(GLIB) && !PLATFORM(EFL) && !PLATFORM(QT)
     m_readyTimerHandler.setPriority(G_PRIORITY_DEFAULT_IDLE);
 #endif
 }

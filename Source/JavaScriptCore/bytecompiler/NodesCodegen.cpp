@@ -45,6 +45,10 @@
 #include <wtf/Threading.h>
 #include <wtf/text/StringBuilder.h>
 
+#if PLATFORM(QT)
+#undef emit
+#endif
+
 using namespace WTF;
 
 namespace JSC {

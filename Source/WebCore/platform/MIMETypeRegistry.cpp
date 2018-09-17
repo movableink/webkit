@@ -44,6 +44,11 @@
 #include "UTIUtilities.h"
 #endif
 
+#if PLATFORM(QT)
+#include <QImageReader>
+#include <QImageWriter>
+#endif
+
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
 #include "ArchiveFactory.h"
 #endif
@@ -150,6 +155,18 @@ static void initializeSupportedImageMIMETypes()
     supportedImageResourceMIMETypes->add("image/webp");
 #endif
 
+#if PLATFORM(QT)
+    const QList<QByteArray> mimeTypes = QImageReader::supportedMimeTypes();
+    for (const QByteArray& mimeType : mimeTypes) {
+        if (mimeType.isEmpty())
+            continue;
+        supportedImageMIMETypes->add(mimeType.constData());
+        supportedImageResourceMIMETypes->add(mimeType.constData());
+    }
+    // Do not treat SVG as images directly because WebKit can handle them.
+    supportedImageMIMETypes->remove("image/svg+xml");
+    supportedImageResourceMIMETypes->remove("image/svg+xml");
+#endif // PLATFORM(QT)
 #endif // USE(CG)
 }
 
@@ -174,6 +191,13 @@ static void initializeSupportedImageMIMETypesForEncoding()
     supportedImageMIMETypesForEncoding->add("image/jpeg");
     supportedImageMIMETypesForEncoding->add("image/gif");
 #endif
+#elif PLATFORM(QT)
+    const QList<QByteArray> mimeTypes = QImageWriter::supportedMimeTypes();
+    for (const QByteArray& mimeType : mimeTypes) {
+        if (mimeType.isEmpty())
+            continue;
+        supportedImageMIMETypesForEncoding->add(mimeType.constData());
+    }
 #elif PLATFORM(GTK)
     supportedImageMIMETypesForEncoding->add("image/png");
     supportedImageMIMETypesForEncoding->add("image/jpeg");
@@ -427,6 +451,7 @@ static void initializeUnsupportedTextMIMETypes()
         unsupportedTextMIMETypes->add(type);
 }
 
+#if !PLATFORM(QT)
 String MIMETypeRegistry::getMIMETypeForPath(const String& path)
 {
     size_t pos = path.reverseFind('.');
@@ -438,6 +463,7 @@ String MIMETypeRegistry::getMIMETypeForPath(const String& path)
     }
     return defaultMIMEType();
 }
+#endif
 
 bool MIMETypeRegistry::isSupportedImageMIMEType(const String& mimeType)
 {
@@ -721,6 +747,8 @@ bool MIMETypeRegistry::isSystemPreviewMIMEType(const String& mimeType)
 }
 #endif
 
+#if !PLATFORM(QT)
+
 #if !USE(CURL)
 
 // FIXME: Not sure why it makes sense to have a cross-platform function when only CURL has the concept
@@ -797,6 +825,8 @@ String MIMETypeRegistry::getNormalizedMIMEType(const String& mimeType)
 }
 
 #endif
+
+#endif // !PLATFORM(QT)
 
 String MIMETypeRegistry::appendFileExtensionIfNecessary(const String& filename, const String& mimeType)
 {

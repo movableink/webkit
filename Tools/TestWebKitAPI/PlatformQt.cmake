@@ -3,7 +3,7 @@ set(TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY_WTF "${TESTWEBKITAPI_RUNTIME_OUTPUT_D
 
 # This is necessary because it is possible to build TestWebKitAPI with WebKit
 # disabled and this triggers the inclusion of the WebKit headers.
-add_definitions(-DBUILDING_WEBKIT2__)
+add_definitions(-DBUILDING_WEBKIT__)
 
 add_custom_target(TestWebKitAPI-forwarding-headers
     COMMAND ${PERL_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-forwarding-headers.pl --include-path ${TESTWEBKITAPI_DIR} --output ${FORWARDING_HEADERS_DIR} --platform qt
@@ -24,6 +24,7 @@ include_directories(SYSTEM
 )
 
 add_definitions(
+    -DAPITEST_SOURCE_DIR="${TESTWEBKITAPI_DIR}"
     -DROOT_BUILD_DIR="${CMAKE_BINARY_DIR}"
     -DQT_NO_CAST_FROM_ASCII
 )
@@ -42,7 +43,11 @@ list(APPEND test_wtf_LIBRARIES
     ${Qt5Gui_LIBRARIES}
 )
 
-set(test_webcore_LIBRARIES
+list(APPEND test_webkit_api_LIBRARIES
+    ${Qt5Gui_LIBRARIES}
+)
+
+list(APPEND test_webcore_LIBRARIES
     WebCore
     gtest
     ${Qt5Gui_LIBRARIES}
@@ -50,6 +55,18 @@ set(test_webcore_LIBRARIES
 )
 
 add_definitions(-DWEBKIT_SRC_DIR="${CMAKE_SOURCE_DIR}")
+
+set(bundle_harness_SOURCES
+    ${TESTWEBKITAPI_DIR}/qt/InjectedBundleControllerQt.cpp
+    ${TESTWEBKITAPI_DIR}/qt/PlatformUtilitiesQt.cpp
+    ${TESTWEBKITAPI_DIR}/qt/PlatformWebViewQt.cpp
+)
+
+set(webkit_api_harness_SOURCES
+    ${TESTWEBKITAPI_DIR}/qt/InjectedBundleControllerQt.cpp
+    ${TESTWEBKITAPI_DIR}/qt/PlatformUtilitiesQt.cpp
+    ${TESTWEBKITAPI_DIR}/qt/PlatformWebViewQt.cpp
+)
 
 add_executable(TestWebCore
     ${test_main_SOURCES}
@@ -61,6 +78,7 @@ add_executable(TestWebCore
     ${TESTWEBKITAPI_DIR}/Tests/WebCore/PublicSuffix.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebCore/TextCodec.cpp
 )
+
 
 target_link_libraries(TestWebCore ${test_webcore_LIBRARIES})
 add_test(TestWebCore ${TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY}/WebCore/TestWebCore)

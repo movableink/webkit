@@ -57,6 +57,11 @@ typedef D2D_SIZE_U D2D1_SIZE_U;
 
 struct D2D_SIZE_F;
 typedef D2D_SIZE_F D2D1_SIZE_F;
+#elif PLATFORM(QT)
+#include <qglobal.h>
+QT_BEGIN_NAMESPACE
+class QSize;
+QT_END_NAMESPACE
 #endif
 
 namespace WTF {
@@ -172,6 +177,11 @@ public:
     operator D2D1_SIZE_F() const;
 #endif
 
+#if PLATFORM(QT)
+    IntSize(const QSize&);
+    operator QSize() const;
+#endif
+
 private:
     int m_width, m_height;
 };
@@ -218,4 +228,3 @@ inline bool operator!=(const IntSize& a, const IntSize& b)
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntSize&);
 
 } // namespace WebCore
-

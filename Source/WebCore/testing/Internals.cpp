@@ -222,6 +222,11 @@
 #include "SpeechSynthesis.h"
 #endif
 
+#if PLATFORM(QT)
+#include "NetworkingContext.h"
+#include <QNetworkAccessManager>
+#endif
+
 #if ENABLE(MEDIA_STREAM)
 #include "MediaStream.h"
 #include "MockRealtimeMediaSourceCenter.h"
@@ -486,6 +491,13 @@ void Internals::resetToConsistentState(Page& page)
 
     page.setShowAllPlugins(false);
     page.setLowPowerModeEnabledOverrideForTesting(std::nullopt);
+
+#if PLATFORM(QT)
+    if (NetworkingContext* context = page.mainFrame().loader().networkingContext()) {
+        if (QNetworkAccessManager* qnam = context->networkAccessManager())
+            qnam->clearAccessCache();
+    }
+#endif
 
 #if USE(QUICK_LOOK)
     MockPreviewLoaderClient::singleton().setPassword("");

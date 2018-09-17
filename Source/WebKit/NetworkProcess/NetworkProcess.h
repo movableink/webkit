@@ -41,6 +41,10 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
 
+#if PLATFORM(QT)
+#include "QtNetworkAccessManager.h"
+#endif
+
 namespace PAL {
 class SessionID;
 }
@@ -125,6 +129,10 @@ public:
 #endif
 
     void findPendingDownloadLocation(NetworkDataTask&, ResponseCompletionHandler&&, const WebCore::ResourceResponse&);
+
+#if PLATFORM(QT)
+    QNetworkAccessManager& networkAccessManager() { return m_networkAccessManager; }
+#endif
 
     void prefetchDNS(const String&);
 
@@ -220,6 +228,9 @@ private:
 
     void downloadRequest(PAL::SessionID, DownloadID, const WebCore::ResourceRequest&, const String& suggestedFilename);
     void resumeDownload(PAL::SessionID, DownloadID, const IPC::DataReference& resumeData, const String& path, SandboxExtension::Handle&&);
+#if PLATFORM(QT)
+    void startTransfer(DownloadID, const String& destination);
+#endif
     void cancelDownload(DownloadID);
     void continueWillSendRequest(DownloadID, WebCore::ResourceRequest&&);
     void continueDecidePendingDownloadDestination(DownloadID, String destination, SandboxExtension::Handle&&, bool allowOverwrite);
@@ -297,6 +308,10 @@ private:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     NetworkContentRuleListManager m_NetworkContentRuleListManager;
+#endif
+
+#if PLATFORM(QT)
+    QtNetworkAccessManager m_networkAccessManager;
 #endif
 };
 

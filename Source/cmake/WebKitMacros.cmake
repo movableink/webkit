@@ -144,6 +144,7 @@ macro(WEBKIT_FRAMEWORK _target)
         ${${_target}_HEADERS}
         ${${_target}_SOURCES}
     )
+    message("MAKING WEBKIT FRAMEWORK: ${_target}")
     target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_target}_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_target}_SYSTEM_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_target}_PRIVATE_INCLUDE_DIRECTORIES}>")

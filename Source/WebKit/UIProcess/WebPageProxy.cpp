@@ -170,6 +170,14 @@
 #include "RemoteScrollingCoordinatorProxy.h"
 #endif
 
+#if PLATFORM(QT)
+#include "ArgumentCodersQt.h"
+#endif
+
+#if USE(COORDINATED_GRAPHICS_MULTIPROCESS)
+#include "CoordinatedLayerTreeHostProxyMessages.h"
+#endif
+
 #ifndef NDEBUG
 #include <wtf/RefCountedLeakCounter.h>
 #endif
@@ -479,6 +487,8 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, uin
 
 WebPageProxy::~WebPageProxy()
 {
+    // QtWebPageSGNode may be the last owner of WebPageProxy, but it is destroyed
+    // in the renderer thread which causes assertion failure when accessing globalPageMap
     ASSERT(m_process->webPage(m_pageID) != this);
 #if !ASSERT_DISABLED
     for (WebPageProxy* page : m_process->pages())
@@ -1825,7 +1835,7 @@ void WebPageProxy::performDragControllerAction(DragControllerAction action, Drag
 {
     if (!isValid())
         return;
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
     UNUSED_PARAM(dragStorageName);
     UNUSED_PARAM(sandboxExtensionHandle);
     UNUSED_PARAM(sandboxExtensionsForUpload);
@@ -1852,7 +1862,7 @@ void WebPageProxy::didPerformDragControllerAction(uint64_t dragOperation, bool m
     setDragCaretRect(insertionRect);
 }
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
 void WebPageProxy::startDrag(WebSelectionData&& selection, uint64_t dragOperation, const ShareableBitmap::Handle& dragImageHandle)
 {
     RefPtr<ShareableBitmap> dragImage = !dragImageHandle.isNull() ? ShareableBitmap::create(dragImageHandle) : nullptr;
@@ -2204,6 +2214,19 @@ void WebPageProxy::findPlugin(const String& mimeType, uint32_t processType, cons
 
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
 
+#if ENABLE(QT_GESTURE_EVENTS)
+void WebPageProxy::handleGestureEvent(const WebGestureEvent& event)
+{
+    if (!isValid())
+        return;
+
+    m_gestureEventQueue.append(event);
+
+    m_process->responsivenessTimer().start();
+    m_process->send(Messages::EventDispatcher::GestureEvent(m_pageID, event), 0);
+}
+#endif
+
 #if ENABLE(TOUCH_EVENTS)
 
 static TrackingType mergeTrackingTypes(TrackingType a, TrackingType b)
@@ -2349,6 +2372,14 @@ void WebPageProxy::handleTouchEventAsynchronously(const NativeWebTouchEvent& eve
 }
 
 #elif ENABLE(TOUCH_EVENTS)
+
+#if PLATFORM(QT)
+void WebPageProxy::handlePotentialActivation(const IntPoint& touchPoint, const IntSize& touchArea)
+{
+    m_process->send(Messages::WebPage::HighlightPotentialActivation(touchPoint, touchArea), m_pageID);
+}
+#endif
+
 void WebPageProxy::handleTouchEvent(const NativeWebTouchEvent& event)
 {
     if (!isValid())
@@ -5430,6 +5461,9 @@ void WebPageProxy::didReceiveEvent(uint32_t opaqueType, bool handled)
     case WebEvent::KeyUp:
     case WebEvent::RawKeyDown:
     case WebEvent::Char:
+#if ENABLE(QT_GESTURE_EVENTS)
+    case WebEvent::GestureSingleTap:
+#endif
 #if ENABLE(TOUCH_EVENTS)
     case WebEvent::TouchStart:
     case WebEvent::TouchMove:
@@ -5472,6 +5506,16 @@ void WebPageProxy::didReceiveEvent(uint32_t opaqueType, bool handled)
 
         break;
     }
+#if ENABLE(QT_GESTURE_EVENTS)
+    case WebEvent::GestureSingleTap: {
+        WebGestureEvent event = m_gestureEventQueue.first();
+        MESSAGE_CHECK(type == event.type());
+
+        m_gestureEventQueue.removeFirst();
+        m_pageClient.doneWithGestureEvent(event, handled);
+        break;
+    }
+#endif
 
     case WebEvent::Wheel: {
         MESSAGE_CHECK(!m_currentlyProcessedWheelEvents.isEmpty());
@@ -6141,6 +6185,9 @@ void WebPageProxy::resetStateAfterProcessExited(ProcessTerminationReason termina
     m_pendingLearnOrIgnoreWordMessageCount = 0;
 
     // Can't expect DidReceiveEvent notifications from a crashed web process.
+#if ENABLE(QT_GESTURE_EVENTS)
+    m_gestureEventQueue.clear();
+#endif
     m_mouseEventQueue.clear();
     m_keyEventQueue.clear();
     m_wheelEventQueue.clear();
@@ -6849,7 +6896,7 @@ RefPtr<ViewSnapshot> WebPageProxy::takeViewSnapshot()
 }
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
 void WebPageProxy::setComposition(const String& text, Vector<CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd)
 {
     // FIXME: We need to find out how to proper handle the crashes case.
@@ -6874,7 +6921,7 @@ void WebPageProxy::cancelComposition()
 
     process().send(Messages::WebPage::CancelComposition(), m_pageID);
 }
-#endif // PLATFORM(GTK)
+#endif // PLATFORM(QT) || PLATFORM(GTK)
 
 void WebPageProxy::didSaveToPageCache()
 {

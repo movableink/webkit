@@ -45,7 +45,23 @@
 #include <WebCore/npruntime_internal.h>
 #endif
 
+#if OS(WINDOWS) && PLATFORM(QT)
+typedef struct HWND__* HWND;
+typedef HWND PlatformPluginWidget;
+#else
 typedef PlatformWidget PlatformPluginWidget;
+#endif
+
+#if PLATFORM(QT)
+#if USE(TEXTURE_MAPPER)
+#include "TextureMapperPlatformLayer.h"
+#endif // PLATFORM(QT)
+
+#include <QImage>
+QT_BEGIN_NAMESPACE
+class QPainter;
+QT_END_NAMESPACE
+#endif // USE(TEXTURE_MAPPER)
 
 namespace JSC {
     namespace Bindings {
@@ -230,6 +246,11 @@ namespace WebCore {
         static Window getRootWindow(Frame* parentFrame);
 #endif
 
+#if PLATFORM(QT) && ENABLE(NETSCAPE_PLUGIN_API) && defined(XP_UNIX)
+        // PluginViewQt (X11) needs a few workarounds when running under DRT
+        static void setIsRunningUnderDRT(bool flag) { s_isRunningUnderDRT = flag; }
+#endif
+
     private:
         PluginView(Frame* parentFrame, const IntSize&, PluginPackage*, HTMLPlugInElement*, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
 
@@ -335,11 +356,30 @@ namespace WebCore {
         bool m_haveUpdatedPluginWidget;
 #endif
 
+#if PLATFORM(QT) && OS(WINDOWS)
+        // On Mac OSX and Qt/Windows the plugin does not have its own native widget,
+        // but is using the containing window as its reference for positioning/painting.
+        PlatformPluginWidget m_window;
+public:
+        PlatformPluginWidget platformPluginWidget() const { return m_window; }
+        void setPlatformPluginWidget(PlatformPluginWidget widget) { m_window = widget; }
+#else
 public:
         void setPlatformPluginWidget(PlatformPluginWidget widget) { setPlatformWidget(widget); }
         PlatformPluginWidget platformPluginWidget() const { return platformWidget(); }
+#endif
 
 private:
+
+#if PLATFORM(QT)
+#if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
+        static bool s_isRunningUnderDRT;
+        static void setXKeyEventSpecificFields(XEvent*, KeyboardEvent*);
+        void paintUsingXPixmap(QPainter* painter, const QRect &exposedRect);
+        QWebPageClient* platformPageClient() const;
+#endif
+#endif // PLATFORM(QT)
+
         IntRect m_clipRect; // The clip rect to apply to a windowed plug-in
         IntRect m_windowRect; // Our window rect.
 

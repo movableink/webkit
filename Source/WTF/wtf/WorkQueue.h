@@ -33,7 +33,7 @@
 #include <wtf/Seconds.h>
 #include <wtf/Threading.h>
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && OS(DARWIN))
 #include <dispatch/dispatch.h>
 #endif
 
@@ -46,6 +46,16 @@
 #if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
 #include <wtf/Condition.h>
 #include <wtf/RunLoop.h>
+#endif
+
+#if USE(QT_EVENT_LOOP)
+#include <QSocketNotifier>
+#endif
+
+#if PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
+QT_BEGIN_NAMESPACE
+class QProcess;
+QT_END_NAMESPACE
 #endif
 
 namespace WTF {
@@ -73,10 +83,16 @@ public:
 
     WTF_EXPORT_PRIVATE static void concurrentApply(size_t iterations, WTF::Function<void(size_t index)>&&);
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && OS(DARWIN))
     dispatch_queue_t dispatchQueue() const { return m_dispatchQueue; }
 #elif USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
     RunLoop& runLoop() const { return *m_runLoop; }
+#elif PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
+    QSocketNotifier* registerSocketEventHandler(int, QSocketNotifier::Type, std::function<void()>);
+    void dispatchOnTermination(QProcess*, std::function<void()>);
+#elif PLATFORM(QT) && OS(WINDOWS)
+    void registerHandle(HANDLE, const std::function<void()>&);
+    void unregisterAndCloseHandle(HANDLE);
 #endif
 
 private:
@@ -94,9 +110,13 @@ private:
     void performWorkOnRegisteredWorkThread();
 #endif
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && OS(DARWIN))
     static void executeFunction(void*);
     dispatch_queue_t m_dispatchQueue;
+#elif USE(QT_EVENT_LOOP)
+    class WorkItemQt;
+    QThread* m_workThread;
+    friend class WorkItemQt;
 #elif USE(WINDOWS_EVENT_LOOP)
     volatile LONG m_isWorkThreadRegistered;
 

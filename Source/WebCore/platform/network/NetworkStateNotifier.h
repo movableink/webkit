@@ -39,9 +39,15 @@ typedef const struct __SCDynamicStore * SCDynamicStoreRef;
 
 #if PLATFORM(WIN)
 #include <windows.h>
+#elif PLATFORM(QT)
+#include <QtCore/qglobal.h>
 #endif
 
 namespace WebCore {
+
+#if (PLATFORM(QT) && !defined(QT_NO_BEARERMANAGEMENT))
+class NetworkStateNotifierPrivate;
+#endif
 
 class NetworkStateNotifier {
     WTF_MAKE_NONCOPYABLE(NetworkStateNotifier);
@@ -50,6 +56,9 @@ public:
     WEBCORE_EXPORT static NetworkStateNotifier& singleton();
 
     WEBCORE_EXPORT bool onLine();
+#if (PLATFORM(QT) && !defined(QT_NO_BEARERMANAGEMENT))
+    void setNetworkAccessAllowed(bool);
+#endif
     WEBCORE_EXPORT void addListener(WTF::Function<void(bool isOnLine)>&&);
 
 private:

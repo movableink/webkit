@@ -56,6 +56,10 @@ typedef SIZE* LPSIZE;
 typedef struct HBITMAP__ *HBITMAP;
 #endif
 
+#if PLATFORM(QT)
+#include <QPixmap>
+#endif
+
 #if PLATFORM(GTK)
 typedef struct _GdkPixbuf GdkPixbuf;
 #endif
@@ -173,6 +177,10 @@ public:
     virtual GdkPixbuf* getGdkPixbuf() { return nullptr; }
 #endif
 
+#if PLATFORM(QT)
+    static void setPlatformResource(const char* name, const QPixmap&);
+#endif
+
     virtual void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
         const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal);
 
@@ -211,4 +219,3 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Image&);
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
     static bool isType(const WebCore::Image& image) { return image.is##ToClassName(); } \
 SPECIALIZE_TYPE_TRAITS_END()
-

@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-#if !USE(DIRECT2D)
+#if !USE(DIRECT2D) && !PLATFORM(QT)
 float Path::length() const
 {
     PathTraversalState traversalState(PathTraversalState::Action::TotalLength);
@@ -65,10 +65,12 @@ PathTraversalState Path::traversalStateAtLength(float length, bool& success) con
     return traversalState;
 }
 
+#if !PLATFORM(QT)
 FloatPoint Path::pointAtLength(float length, bool& success) const
 {
     return traversalStateAtLength(length, success).current();
 }
+#endif
 
 float Path::normalAngleAtLength(float length, bool& success) const
 {
@@ -175,10 +177,12 @@ Path Path::polygonPathFromPoints(const Vector<FloatPoint>& points)
     return path;
 }
 
+#if !PLATFORM(QT)
 FloatRect Path::fastBoundingRect() const
 {
     return boundingRect();
 }
+#endif
 #endif
 
 #ifndef NDEBUG

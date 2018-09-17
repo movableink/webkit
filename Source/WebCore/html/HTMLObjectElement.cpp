@@ -86,6 +86,14 @@ RenderWidget* HTMLObjectElement::renderWidgetLoadingPlugin() const
     return renderWidget(); // This will return 0 if the renderer is not a RenderWidget.
 }
 
+#if PLATFORM(QT)
+static bool isQtPluginServiceType(const String& serviceType)
+{
+    return equalLettersIgnoringASCIICase(serviceType, "application/x-qt-plugin")
+        || equalLettersIgnoringASCIICase(serviceType, "application/x-qt-styled-widget");
+}
+#endif
+
 bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
 {
     if (name == borderAttr)
@@ -166,7 +174,12 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
 
         // FIXME: url adjustment does not belong in this function.
         if (url.isEmpty() && urlParameter.isEmpty() && (equalLettersIgnoringASCIICase(name, "src") || equalLettersIgnoringASCIICase(name, "movie") || equalLettersIgnoringASCIICase(name, "code") || equalLettersIgnoringASCIICase(name, "url")))
+#if PLATFORM(QT)
+                if(!isQtPluginServiceType(serviceType))
+#endif
+        {
             urlParameter = stripLeadingAndTrailingHTMLSpaces(param.value());
+        }
         // FIXME: serviceType calculation does not belong in this function.
         if (serviceType.isEmpty() && equalLettersIgnoringASCIICase(name, "type")) {
             serviceType = param.value();
@@ -204,6 +217,11 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
     // attribute, not by a param element. However, for compatibility, allow the
     // resource's URL to be given by a param named "src", "movie", "code" or "url"
     // if we know that resource points to a plug-in.
+
+#if PLATFORM(QT)
+    if (isQtPluginServiceType(serviceType))
+        return;
+#endif
 
     if (url.isEmpty() && !urlParameter.isEmpty()) {
         SubframeLoader& loader = document().frame()->loader().subframeLoader();
@@ -250,6 +268,10 @@ bool HTMLObjectElement::shouldAllowQuickTimeClassIdQuirk()
     
 bool HTMLObjectElement::hasValidClassId()
 {
+#if PLATFORM(QT)
+    if (isQtPluginServiceType(serviceType()))
+        return true;
+#endif
     if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && protocolIs(attributeWithoutSynchronization(classidAttr), "java"))
         return true;
     

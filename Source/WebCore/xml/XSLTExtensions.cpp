@@ -35,7 +35,7 @@
 #include <libxslt/extensions.h>
 #include <libxslt/extra.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK)
+#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(QT)
 #include "SoftLinkLibxslt.h"
 #endif
 

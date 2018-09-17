@@ -33,7 +33,7 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
-#if USE(SOUP)
+#if USE(SOUP) || PLATFORM(QT)
 #include "HTTPCookieAcceptPolicy.h"
 #include <WebCore/SoupNetworkProxySettings.h>
 #endif
@@ -93,7 +93,7 @@ struct NetworkProcessCreationParameters {
     bool suppressesConnectionTerminationOnSystemChange;
 #endif
 
-#if USE(SOUP)
+#if USE(SOUP) || PLATFORM(QT)
     String cookiePersistentStoragePath;
     uint32_t cookiePersistentStorageType { 0 };
     HTTPCookieAcceptPolicy cookieAcceptPolicy { HTTPCookieAcceptPolicyAlways };

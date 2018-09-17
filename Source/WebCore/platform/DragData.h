@@ -43,6 +43,11 @@ typedef id <NSDraggingInfo> DragDataRef;
 typedef void* DragDataRef;
 #endif
 
+#elif PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QMimeData;
+QT_END_NAMESPACE
+typedef const QMimeData* DragDataRef;
 #elif PLATFORM(WIN)
 typedef struct IDataObject* DragDataRef;
 #elif PLATFORM(GTK)
@@ -112,7 +117,7 @@ public:
     bool containsPromise() const;
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK)
 
     DragData& operator =(const DragData& data)
     {

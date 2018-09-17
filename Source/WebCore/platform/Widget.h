@@ -39,6 +39,11 @@
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakPtr.h>
 
+#if PLATFORM(QT)
+#include <QPointer>
+#include <qglobal.h>
+#endif
+
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #endif
@@ -54,11 +59,21 @@ typedef HWND PlatformWidget;
 typedef struct _GtkWidget GtkWidget;
 typedef struct _GtkContainer GtkContainer;
 typedef GtkWidget* PlatformWidget;
+#elif PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QObject;
+QT_END_NAMESPACE
+typedef QObject* PlatformWidget;
 #else
 typedef void* PlatformWidget;
 #endif
 
+#if PLATFORM(QT)
+class QWebPageClient;
+typedef QWebPageClient* PlatformPageClient;
+#else
 typedef PlatformWidget PlatformPageClient;
+#endif
 
 namespace WebCore {
 
@@ -181,6 +196,11 @@ public:
     void addToSuperview(NSView*);
 #endif
 
+#if PLATFORM(QT)
+    QObject* bindingObject() const;
+    void setBindingObject(QObject*);
+#endif
+
     // Virtual methods to convert points to/from the containing ScrollView
     WEBCORE_EXPORT virtual IntRect convertToContainingView(const IntRect&) const;
     WEBCORE_EXPORT virtual IntRect convertFromContainingView(const IntRect&) const;
@@ -212,6 +232,10 @@ private:
     bool m_parentVisible;
 
     IntRect m_frame; // Not used when a native widget exists.
+
+#if PLATFORM(QT)
+    QPointer<QObject> m_bindingObject;
+#endif
 };
 
 #if !PLATFORM(COCOA)
@@ -250,4 +274,3 @@ inline void Widget::retainPlatformWidget()
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
     static bool isType(const WebCore::Widget& widget) { return widget.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
-

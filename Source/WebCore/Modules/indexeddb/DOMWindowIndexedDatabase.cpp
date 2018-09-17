@@ -34,6 +34,10 @@
 #include "IDBFactory.h"
 #include "Page.h"
 
+#if PLATFORM(QT)
+#include "Settings.h"
+#endif
+
 namespace WebCore {
 
 DOMWindowIndexedDatabase::DOMWindowIndexedDatabase(DOMWindow* window)
@@ -104,6 +108,11 @@ IDBFactory* DOMWindowIndexedDatabase::indexedDB()
     Page* page = document->page();
     if (!page)
         return nullptr;
+
+#if PLATFORM(QT)
+    if (!page->settings().offlineStorageDatabaseEnabled())
+        return nullptr;
+#endif
 
     if (!m_window->isCurrentlyDisplayedInFrame())
         return nullptr;

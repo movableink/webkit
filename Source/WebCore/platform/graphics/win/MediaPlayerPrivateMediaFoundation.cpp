@@ -40,6 +40,11 @@
 #endif
 #include <wtf/SoftLinking.h>
 
+#if PLATFORM(QT)
+#include "QWebPageClient.h"
+#include <QWindow>
+#endif
+
 #if USE(MEDIA_FOUNDATION)
 
 #include <wtf/MainThread.h>
@@ -704,7 +709,16 @@ void MediaPlayerPrivateMediaFoundation::createVideoWindow()
     view = m_player->cachedResourceLoader()->document()->view();
     if (!view || !view->hostWindow())
         return;
-    hWndParent = view->hostWindow()->platformPageClient();
+
+    HWND pageClient = view->hostWindow()->platformPageClient();
+#if PLATFORM(QT)
+    QWindow* ownerWindow = pageClient ? pageClient->ownerWindow() : nullptr;
+    if (!ownerWindow)
+        return;
+    hWndParent = (HWND)ownerWindow->winId();
+#else
+    hWndParent = pageClient;
+#endif
 
     m_hwndVideo = CreateWindowEx(WS_EX_NOACTIVATE | WS_EX_TRANSPARENT, registerVideoWindowClass(), 0, WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
         0, 0, 0, 0, hWndParent, 0, 0, 0);
@@ -2978,6 +2992,30 @@ void MediaPlayerPrivateMediaFoundation::Direct3DPresenter::paintCurrentFrame(Web
             Cairo::drawSurface(*context.platformContext(), image, destRect, srcRect, state.imageInterpolationQuality, state.alpha, Cairo::ShadowState(state));
             cairo_surface_destroy(image);
         }
+#elif PLATFORM(QT)
+        D3DFORMAT format = D3DFMT_UNKNOWN;
+        D3DSURFACE_DESC desc;
+        if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
+            format = desc.Format;
+
+        QImage::Format imageFormat = QImage::Format_Invalid;
+
+        switch (format) {
+        case D3DFMT_A8R8G8B8:
+            imageFormat = QImage::Format_ARGB32_Premultiplied;
+            break;
+        case D3DFMT_X8R8G8B8:
+            imageFormat = QImage::Format_RGB32;
+            break;
+        }
+
+        ASSERT(imageFormat != QImage::Format_Invalid);
+
+        QImage image(static_cast<unsigned char*>(data), width, height, pitch, imageFormat);
+
+        FloatRect srcRect(0, 0, width, height);
+        QPainter* p = context.platformContext();
+        p->drawImage(destRect, image, srcRect);
 #else
 #error "Platform needs to implement drawing of Direct3D surface to graphics context!"
 #endif

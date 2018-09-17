@@ -29,4 +29,6 @@
 #include "ImageBufferDataDirect2D.h"
 #elif USE(CAIRO)
 #include "ImageBufferDataCairo.h"
+#elif PLATFORM(QT)
+#include "ImageBufferDataQt.h"
 #endif

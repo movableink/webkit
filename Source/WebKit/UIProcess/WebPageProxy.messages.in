@@ -91,6 +91,17 @@ messages -> WebPageProxy {
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
     SetCanShortCircuitHorizontalWheelEvents(bool canShortCircuitHorizontalWheelEvents)
 
+#if USE(COORDINATED_GRAPHICS_MULTIPROCESS)
+    PageDidRequestScroll(WebCore::IntPoint point)
+    PageTransitionViewportReady()
+    DidFindZoomableArea(WebCore::IntPoint target, WebCore::IntRect area)
+#endif
+#if PLATFORM(QT)
+    AuthenticationRequiredRequest(String hostname, String realm, String prefilledUsername) -> (String username, String password)
+    CertificateVerificationRequest(String hostname) -> (bool ignoreErrors)
+    ProxyAuthenticationRequiredRequest(String hostname, uint16_t port, String prefilledUsername) -> (String username, String password)
+#endif
+
     DidChangeContentSize(WebCore::IntSize newSize)
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -251,6 +262,11 @@ messages -> WebPageProxy {
     # Editor notifications
     EditorStateChanged(struct WebKit::EditorState editorState)
     CompositionWasCanceled()
+
+#if PLATFORM(QT)
+    WillSetInputMethodState()
+#endif
+
     SetHasHadSelectionChangesFromUserInteraction(bool hasHadUserSelectionChanges)
     SetNeedsHiddenContentEditableQuirk(bool needsHiddenContentEditableQuirk)
     SetNeedsPlainTextQuirk(bool needsPlainTextQuirk)
@@ -318,7 +334,7 @@ messages -> WebPageProxy {
     StartDrag(struct WebCore::DragItem dragItem, WebKit::ShareableBitmap::Handle dragImage)
     SetPromisedDataForImage(String pasteboardName, WebKit::SharedMemory::Handle imageHandle, uint64_t imageSize, String filename, String extension, String title, String url, String visibleURL, WebKit::SharedMemory::Handle archiveHandle, uint64_t archiveSize)
 #endif
-#if PLATFORM(GTK) && ENABLE(DRAG_SUPPORT)
+#if (PLATFORM(QT) || PLATFORM(GTK)) && ENABLE(DRAG_SUPPORT)
     StartDrag(struct WebKit::WebSelectionData selection, uint64_t dragOperation, WebKit::ShareableBitmap::Handle dragImage)
 #endif
 

@@ -44,6 +44,8 @@ class Font;
 
 #if USE(WINGDI)
 typedef wchar_t GlyphBufferGlyph;
+#elif PLATFORM(QT)
+typedef quint32 GlyphBufferGlyph;
 #else
 typedef Glyph GlyphBufferGlyph;
 #endif
@@ -67,6 +69,20 @@ public:
     void setHeight(CGFloat height) { this->CGSize::height = height; }
     CGFloat width() const { return this->CGSize::width; }
     CGFloat height() const { return this->CGSize::height; }
+};
+#elif PLATFORM(QT)
+struct GlyphBufferAdvance : public QPointF {
+public:
+    GlyphBufferAdvance() : QPointF() { }
+    GlyphBufferAdvance(const QPointF& advance)
+        : QPointF(advance)
+    {
+    }
+
+    void setWidth(qreal width) { QPointF::setX(width); }
+    void setHeight(qreal height) { QPointF::setY(height); }
+    qreal width() const { return QPointF::x(); }
+    qreal height() const { return QPointF::y(); }
 };
 #else
 typedef FloatSize GlyphBufferAdvance;

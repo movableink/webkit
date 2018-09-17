@@ -40,6 +40,12 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QOpenGLContext;
+QT_END_NAMESPACE
+#endif
+
 namespace WebCore {
 
 class FloatRect;
@@ -72,6 +78,9 @@ public:
 #endif
 
     // Create an image buffer compatible with the context, with suitable resolution for drawing into the buffer and then into this context.
+#if PLATFORM(QT) && ENABLE(ACCELERATED_2D_CANVAS)
+    static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const IntSize&, ColorSpace, QOpenGLContext*);
+#endif
     static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const FloatSize&, const GraphicsContext&);
     static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const FloatSize&, ColorSpace, const GraphicsContext&);
     static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const FloatSize&, float resolutionScale, ColorSpace, const GraphicsContext&);
@@ -172,6 +181,9 @@ private:
 #elif USE(DIRECT2D)
     ImageBuffer(const FloatSize&, float resolutionScale, ColorSpace, RenderingMode, const GraphicsContext*, bool& success);
 #endif
+#if PLATFORM(QT) && ENABLE(ACCELERATED_2D_CANVAS)
+    ImageBuffer(const IntSize&, ColorSpace, QOpenGLContext*, bool& success);
+#endif
 };
 
 #if USE(CG)
@@ -180,4 +192,3 @@ Vector<uint8_t> data(const ImageData&, const String& mimeType, std::optional<dou
 #endif
 
 } // namespace WebCore
-

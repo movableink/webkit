@@ -32,7 +32,6 @@
 #ifndef UTYPES_H
 #define UTYPES_H
 
-
 #include "unicode/umachine.h"
 #include "unicode/uversion.h"
 #include "unicode/uconfig.h"

@@ -679,6 +679,13 @@ void NetworkProcess::cancelDownload(DownloadID downloadID)
     downloadManager().cancelDownload(downloadID);
 }
 
+#if PLATFORM(QT)
+void NetworkProcess::startTransfer(DownloadID downloadID, const String& destination)
+{
+    downloadManager().startTransfer(downloadID, destination);
+}
+#endif
+
 void NetworkProcess::continueWillSendRequest(DownloadID downloadID, WebCore::ResourceRequest&& request)
 {
     downloadManager().continueWillSendRequest(downloadID, WTFMove(request));

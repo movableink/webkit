@@ -1456,7 +1456,7 @@ IntPoint ScrollView::locationOfContents() const
     return result;
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(QT) && !PLATFORM(COCOA)
 
 void ScrollView::platformAddChild(Widget*)
 {

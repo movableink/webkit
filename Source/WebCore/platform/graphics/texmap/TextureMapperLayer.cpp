@@ -447,7 +447,7 @@ void TextureMapperLayer::paintRecursive(const TextureMapperPaintOptions& options
     paintUsingOverlapRegions(paintOptions);
 }
 
-#if !USE(COORDINATED_GRAPHICS)
+#if !USE(COORDINATED_GRAPHICS) || PLATFORM(QT)
 void TextureMapperLayer::setChildren(const Vector<GraphicsLayer*>& newChildren)
 {
     removeAllChildren();

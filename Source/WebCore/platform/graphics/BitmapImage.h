@@ -61,7 +61,7 @@ public:
     {
         return adoptRef(*new BitmapImage(observer));
     }
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS))
     WEBCORE_EXPORT static RefPtr<BitmapImage> create(HBITMAP);
 #endif
     virtual ~BitmapImage();

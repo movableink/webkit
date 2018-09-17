@@ -114,6 +114,10 @@ class WebOpenPanelResultListenerProxy;
 class WebPageProxy;
 class WebPopupMenuProxy;
 
+#if ENABLE(QT_GESTURE_EVENTS)
+class WebGestureEvent;
+#endif
+
 struct AssistedNodeInformation;
 struct InteractionInformationAtPosition;
 struct WebHitTestResultData;
@@ -199,6 +203,10 @@ public:
     virtual void didFailProvisionalLoadForMainFrame() { };
     virtual void didCommitLoadForMainFrame(const String& mimeType, bool useCustomContentProvider) = 0;
 
+#if PLATFORM(QT)
+    virtual void updateTextInputState() = 0;
+#endif // PLATFORM(QT)
+
     virtual void handleDownloadRequest(DownloadProxy*) = 0;
 
     virtual bool handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, API::OpenPanelParameters*, WebOpenPanelResultListenerProxy*) { return false; }
@@ -207,7 +215,7 @@ public:
     virtual void didChangeContentSize(const WebCore::IntSize&) = 0;
 
 #if ENABLE(DRAG_SUPPORT)
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
     virtual void startDrag(Ref<WebCore::SelectionData>&&, WebCore::DragOperation, RefPtr<ShareableBitmap>&& dragImage) = 0;
 #else
     virtual void startDrag(const WebCore::DragItem&, const ShareableBitmap::Handle&) { }
@@ -263,6 +271,9 @@ public:
 #endif
     
     virtual void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool wasEventHandled) = 0;
+#if ENABLE(QT_GESTURE_EVENTS)
+    virtual void doneWithGestureEvent(const WebGestureEvent&, bool wasEventHandled) = 0;
+#endif
 #if ENABLE(TOUCH_EVENTS)
     virtual void doneWithTouchEvent(const NativeWebTouchEvent&, bool wasEventHandled) = 0;
 #endif

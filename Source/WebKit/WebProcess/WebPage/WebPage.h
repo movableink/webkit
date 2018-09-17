@@ -79,6 +79,11 @@
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
+#if PLATFORM(QT)
+#include "ArgumentCodersQt.h"
+#include "TapHighlightController.h"
+#endif
+
 #if HAVE(ACCESSIBILITY) && PLATFORM(GTK)
 #include "WebPageAccessibilityObject.h"
 #include <wtf/glib/GRefPtr.h>
@@ -554,6 +559,9 @@ public:
     static const WebEvent* currentEvent();
 
     FindController& findController() { return m_findController.get(); }
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(QT)
+    TapHighlightController& tapHighlightController() { return m_tapHighlightController; }
+#endif
 
 #if ENABLE(GEOLOCATION)
     GeolocationPermissionRequestManager& geolocationPermissionRequestManager() { return m_geolocationPermissionRequestManager.get(); }
@@ -712,7 +720,7 @@ public:
 
     SandboxExtensionTracker& sandboxExtensionTracker() { return m_sandboxExtensionTracker; }
 
-#if PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK)
     void setComposition(const String& text, const Vector<WebCore::CompositionUnderline>& underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeLength);
     void confirmComposition(const String& text, int64_t selectionStart, int64_t selectionLength);
     void cancelComposition();
@@ -793,11 +801,11 @@ public:
     void clearSelection();
     void restoreSelectionInFocusedEditableElement();
 
-#if ENABLE(DRAG_SUPPORT) && PLATFORM(GTK)
+#if ENABLE(DRAG_SUPPORT) && (PLATFORM(QT) || PLATFORM(GTK))
     void performDragControllerAction(DragControllerAction, const WebCore::IntPoint& clientPosition, const WebCore::IntPoint& globalPosition, uint64_t draggingSourceOperationMask, WebSelectionData&&, uint32_t flags);
 #endif
 
-#if ENABLE(DRAG_SUPPORT) && !PLATFORM(GTK)
+#if ENABLE(DRAG_SUPPORT) && !PLATFORM(GTK) && !PLATFORM(QT)
     void performDragControllerAction(DragControllerAction, const WebCore::DragData&, SandboxExtension::Handle&&, SandboxExtension::HandleArray&&);
 #endif
 
@@ -881,12 +889,15 @@ public:
     void contextMenuShowing() { m_isShowingContextMenu = true; }
 #endif
 
+#if PLATFORM(QT)
+    void setUserScripts(const Vector<String>&);
+#endif
     void wheelEvent(const WebWheelEvent&);
 
     void wheelEventHandlersChanged(bool);
     void recomputeShortCircuitHorizontalWheelEventsState();
 
-#if ENABLE(MAC_GESTURE_EVENTS)
+#if ENABLE(MAC_GESTURE_EVENTS) || ENABLE(QT_GESTURE_EVENTS)
     void gestureEvent(const WebGestureEvent&);
 #endif
 
@@ -1186,6 +1197,9 @@ private:
     void updatePotentialTapSecurityOrigin(const WebTouchEvent&, bool wasHandled);
 #elif ENABLE(TOUCH_EVENTS)
     void touchEvent(const WebTouchEvent&);
+#if PLATFORM(QT)
+    void highlightPotentialActivation(const WebCore::IntPoint&, const WebCore::IntSize& area);
+#endif
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
@@ -1292,6 +1306,10 @@ private:
 
 #if PLATFORM(GTK)
     void failedToShowPopupMenu();
+#endif
+#if PLATFORM(QT)
+    void hidePopupMenu();
+    void selectedIndex(int32_t newIndex);
 #endif
 
     void didChooseFilesForOpenPanel(const Vector<String>&);
@@ -1743,4 +1761,3 @@ private:
 };
 
 } // namespace WebKit
-

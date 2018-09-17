@@ -50,7 +50,7 @@
 #include <wtf/text/StringBuffer.h>
 #include <wtf/unicode/UTF8.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK)
+#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(QT)
 #include "SoftLinkLibxslt.h"
 #endif
 

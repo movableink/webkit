@@ -41,6 +41,9 @@ typedef ID2D1BitmapBrush* PlatformPatternPtr;
 #elif USE(CAIRO)
 typedef struct _cairo_pattern cairo_pattern_t;
 typedef cairo_pattern_t* PlatformPatternPtr;
+#elif PLATFORM(QT)
+#include <QBrush>
+typedef QBrush PlatformPatternPtr;
 #elif USE(WINGDI)
 typedef void* PlatformPatternPtr;
 #endif
@@ -59,7 +62,10 @@ public:
     Image& tileImage() const { return m_tileImage.get(); }
 
     // Pattern space is an abstract space that maps to the default user space by the transformation 'userSpaceTransformation'
-#if !USE(DIRECT2D)
+#if PLATFORM(QT)
+    // Qt ignores user space transformation and uses pattern's instead
+    PlatformPatternPtr createPlatformPattern() const;
+#elif !USE(DIRECT2D)
     PlatformPatternPtr createPlatformPattern(const AffineTransform& userSpaceTransformation) const;
 #else
     PlatformPatternPtr createPlatformPattern(const GraphicsContext&, float alpha, const AffineTransform& userSpaceTransformation) const;
@@ -79,4 +85,3 @@ private:
 };
 
 } //namespace
-

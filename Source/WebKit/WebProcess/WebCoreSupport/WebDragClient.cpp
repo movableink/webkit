@@ -50,7 +50,7 @@ DragSourceAction WebDragClient::dragSourceActionMaskForPoint(const IntPoint&)
     return DragSourceActionAny;
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(QT)
 void WebDragClient::startDrag(DragItem, DataTransfer&, Frame&)
 {
 }

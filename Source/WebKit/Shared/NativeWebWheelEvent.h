@@ -46,12 +46,18 @@ struct wpe_input_axis_event;
 #include <windows.h>
 #endif
 
+#if PLATFORM(QT)
+#include <qevent.h>
+#endif
+
 namespace WebKit {
 
 class NativeWebWheelEvent : public WebWheelEvent {
 public:
 #if USE(APPKIT)
     NativeWebWheelEvent(NSEvent *, NSView *);
+#elif PLATFORM(QT)
+    explicit NativeWebWheelEvent(QWheelEvent*, const QTransform& fromItemTransform);
 #elif PLATFORM(GTK)
     NativeWebWheelEvent(const NativeWebWheelEvent&);
     NativeWebWheelEvent(GdkEvent*);
@@ -64,6 +70,8 @@ public:
 
 #if USE(APPKIT)
     NSEvent* nativeEvent() const { return m_nativeEvent.get(); }
+#elif PLATFORM(QT)
+    const QWheelEvent* nativeEvent() const { return m_nativeEvent; }
 #elif PLATFORM(GTK)
     GdkEvent* nativeEvent() const { return m_nativeEvent.get(); }
 #elif PLATFORM(WIN)
@@ -75,6 +83,8 @@ public:
 private:
 #if USE(APPKIT)
     RetainPtr<NSEvent> m_nativeEvent;
+#elif PLATFORM(QT)
+    QWheelEvent* m_nativeEvent;
 #elif PLATFORM(GTK)
     GUniquePtr<GdkEvent> m_nativeEvent;
 #elif PLATFORM(WIN)

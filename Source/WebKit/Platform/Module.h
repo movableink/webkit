@@ -33,6 +33,10 @@
 #include <wtf/RetainPtr.h>
 #endif
 
+#if PLATFORM(QT)
+#include <QLibrary>
+#endif
+
 #if USE(GLIB)
 typedef struct _GModule GModule;
 #endif
@@ -71,11 +75,13 @@ private:
 #if OS(WINDOWS)
     HMODULE m_module;
 #endif
-#if USE(CF)
+#if USE(CF) && !PLATFORM(QT)
     RetainPtr<CFBundleRef> m_bundle;
 #if !defined(__LP64__)
     CFBundleRefNum m_bundleResourceMap;
 #endif
+#elif PLATFORM(QT)
+    QLibrary m_lib;
 #elif USE(GLIB)
     GModule* m_handle;
 #endif

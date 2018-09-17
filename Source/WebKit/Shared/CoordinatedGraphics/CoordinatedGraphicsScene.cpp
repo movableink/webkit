@@ -100,6 +100,13 @@ void CoordinatedGraphicsScene::paintToCurrentGLContext(const TransformationMatri
         updateViewport();
 }
 
+#if PLATFORM(QT)
+void CoordinatedGraphicsScene::setScrollPosition(const FloatPoint& scrollPosition)
+{
+    m_scrollPosition = scrollPosition;
+}
+#endif
+
 void CoordinatedGraphicsScene::updateViewport()
 {
     if (m_client)

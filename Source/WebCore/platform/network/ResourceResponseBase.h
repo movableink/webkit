@@ -37,6 +37,8 @@
 namespace WebCore {
 
 class ResourceResponse;
+struct CrossThreadResourceResponseData;
+struct CrossThreadResourceResponseDataBase;
 
 bool isScriptAllowedByNosniff(const ResourceResponse&);
 

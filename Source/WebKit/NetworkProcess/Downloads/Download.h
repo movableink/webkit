@@ -61,6 +61,10 @@ class NetworkDataTask;
 class NetworkSession;
 class WebPage;
 
+#if PLATFORM(QT)
+class QtFileDownloader;
+#endif
+
 class Download : public IPC::MessageSender {
     WTF_MAKE_NONCOPYABLE(Download); WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -85,6 +89,10 @@ public:
     void didFail(const WebCore::ResourceError&, const IPC::DataReference& resumeData);
     void didCancel(const IPC::DataReference& resumeData);
 
+#if PLATFORM(QT)
+    void startTransfer(const String& destination);
+#endif
+
 private:
     // IPC::MessageSender
     IPC::Connection* messageSenderConnection() override;
@@ -103,6 +111,9 @@ private:
     RefPtr<NetworkDataTask> m_download;
 #if PLATFORM(COCOA)
     RetainPtr<NSURLSessionDownloadTask> m_downloadTask;
+#endif
+#if PLATFORM(QT)
+    QtFileDownloader* m_qtDownloader { nullptr };
 #endif
     PAL::SessionID m_sessionID;
     String m_suggestedName;

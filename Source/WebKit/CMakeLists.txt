@@ -212,7 +212,7 @@ if (${WebCore_LIBRARY_TYPE} STREQUAL STATIC)
     # Link with WebCore as PRIVATE not to propagate WebCore to all users of WebKit.
     set(WebKit_LIBRARIES
         PRIVATE WebCore
-        PUBLIC WebCoreHeaderInterface
+        PRIVATE WebCoreHeaderInterface
     )
 else ()
     # All users of WebKit need to link WebCore if WebCore is a shared library.
@@ -499,3 +499,6 @@ else ()
         install(TARGETS WebKit DESTINATION "${LIB_INSTALL_DIR}")
     endif ()
 endif ()
+
+install(TARGETS WebKit EXPORT WebKit DESTINATION "${LIB_INSTALL_DIR}")
+install(EXPORT WebKit DESTINATION "${LIB_INSTALL_DIR}")

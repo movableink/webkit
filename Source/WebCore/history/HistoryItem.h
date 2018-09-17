@@ -46,6 +46,12 @@
 typedef struct objc_object* id;
 #endif
 
+#if PLATFORM(QT)
+#include <QVariant>
+#include <QByteArray>
+#include <QDataStream>
+#endif
+
 namespace WebCore {
 
 class CachedPage;
@@ -176,6 +182,11 @@ public:
     WEBCORE_EXPORT void setTransientProperty(const String&, id);
 #endif
 
+#if PLATFORM(QT)
+    QVariant userData() const { return m_userData; }
+    void setUserData(const QVariant& userData) { m_userData = userData; }
+#endif
+
 #ifndef NDEBUG
     int showTree() const;
     int showTreeWithIndent(unsigned indentLevel) const;
@@ -290,6 +301,10 @@ private:
 #endif
 
     BackForwardItemIdentifier m_identifier;
+
+#if PLATFORM(QT)
+    QVariant m_userData;
+#endif
 };
 
 } // namespace WebCore

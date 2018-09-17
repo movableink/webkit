@@ -25,7 +25,7 @@
 #include "ImageBuffer.h"
 #include "TextureMapperAnimation.h"
 
-#if !USE(COORDINATED_GRAPHICS)
+#if !USE(COORDINATED_GRAPHICS) || PLATFORM(QT)
 
 namespace WebCore {
 
@@ -284,7 +284,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
     if (image) {
         // Make the decision about whether the image has changed.
         // This code makes the assumption that pointer equality on a NativeImagePtr is a valid way to tell if the image is changed.
-        // This assumption is true for the GTK+ port.
+        // This assumption is true in the Qt and GTK+ ports.
         NativeImagePtr newNativeImagePtr = image->nativeImageForCurrentFrame();
         if (!newNativeImagePtr)
             return;
@@ -514,6 +514,9 @@ void GraphicsLayerTextureMapper::updateBackingStoreIfNeeded()
     if (dirtyRect.isEmpty())
         return;
 
+#if PLATFORM(QT) && !defined(QT_NO_DYNAMIC_CAST)
+    ASSERT(dynamic_cast<TextureMapperTiledBackingStore*>(m_backingStore.get()));
+#endif
     m_backingStore->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
 
     dirtyRect.scale(pageScaleFactor() * deviceScaleFactor());

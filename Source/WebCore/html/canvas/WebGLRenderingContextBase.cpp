@@ -103,6 +103,10 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
+#if PLATFORM(QT)
+#undef emit
+#endif
+
 namespace WebCore {
 
 static const Seconds secondsBetweenRestoreAttempts { 1_s };

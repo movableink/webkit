@@ -79,7 +79,7 @@ void NetworkProcessCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << storageAccessAPIEnabled;
     encoder << suppressesConnectionTerminationOnSystemChange;
 #endif
-#if USE(SOUP)
+#if USE(SOUP) || PLATFORM(QT)
     encoder << cookiePersistentStoragePath;
     encoder << cookiePersistentStorageType;
     encoder.encodeEnum(cookieAcceptPolicy);
@@ -196,7 +196,7 @@ bool NetworkProcessCreationParameters::decode(IPC::Decoder& decoder, NetworkProc
         return false;
 #endif
 
-#if USE(SOUP)
+#if USE(SOUP) || PLATFORM(QT)
     if (!decoder.decode(result.cookiePersistentStoragePath))
         return false;
     if (!decoder.decode(result.cookiePersistentStorageType))

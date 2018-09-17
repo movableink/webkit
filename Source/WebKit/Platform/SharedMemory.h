@@ -30,7 +30,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
 
-#if USE(UNIX_DOMAIN_SOCKETS)
+#if USE(UNIX_DOMAIN_SOCKETS) || PLATFORM(QT)
 #include "Attachment.h"
 #include <wtf/Optional.h>
 #endif

@@ -72,6 +72,10 @@ public:
     void didReceiveDownloadProxyMessage(IPC::Connection&, IPC::Decoder&);
     void didReceiveSyncDownloadProxyMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&);
 
+#if PLATFORM(QT)
+    void startTransfer(const String& filename);
+#endif
+
     WebPageProxy* originatingPage() const;
     void setOriginatingPage(WebPageProxy*);
 

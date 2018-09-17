@@ -29,6 +29,10 @@
 
 #include "AccessCase.h"
 
+#if PLATFORM(QT)
+#undef emit
+#endif
+
 namespace JSC {
 
 class JSModuleEnvironment;

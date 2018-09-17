@@ -495,6 +495,24 @@ void GraphicsContext::clearShadow()
     clearPlatformShadow();
 }
 
+#if PLATFORM(QT)
+bool GraphicsContext::mustUseShadowBlur() const
+{
+    // We can't avoid ShadowBlur if the shadow has blur.
+    if (hasBlurredShadow())
+        return true;
+    // We can avoid ShadowBlur and optimize, since we're not drawing on a
+    // canvas and box shadows are affected by the transformation matrix.
+    if (!m_state.shadowsIgnoreTransforms)
+        return false;
+    // We can avoid ShadowBlur, since there are no transformations to apply to the canvas.
+    if (getCTM().isIdentity())
+        return false;
+    // Otherwise, no chance avoiding ShadowBlur.
+    return true;
+}
+#endif
+
 bool GraphicsContext::getShadow(FloatSize& offset, float& blur, Color& color) const
 {
     offset = m_state.shadowOffset;

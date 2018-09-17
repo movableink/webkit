@@ -44,6 +44,9 @@ messages -> NetworkProcess LegacyReceiver {
 
     DownloadRequest(PAL::SessionID sessionID, WebKit::DownloadID downloadID, WebCore::ResourceRequest request, String suggestedFilename)
     ResumeDownload(PAL::SessionID sessionID, WebKit::DownloadID downloadID, IPC::DataReference resumeData, String path, WebKit::SandboxExtension::Handle sandboxExtensionHandle)
+#if PLATFORM(QT)
+    StartTransfer(WebKit::DownloadID downloadID, String destination)
+#endif
     CancelDownload(WebKit::DownloadID downloadID)
 
     ContinueWillSendRequest(WebKit::DownloadID downloadID, WebCore::ResourceRequest request)

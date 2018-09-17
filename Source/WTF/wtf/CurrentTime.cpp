@@ -58,8 +58,12 @@
 #include <zircon/syscalls.h>
 #endif
 
-#if USE(GLIB)
+#if USE(GLIB) && !PLATFORM(QT)
 #include <glib.h>
+#endif
+
+#if PLATFORM(QT)
+#include <QElapsedTimer>
 #endif
 
 namespace WTF {

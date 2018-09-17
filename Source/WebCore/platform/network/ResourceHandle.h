@@ -167,7 +167,7 @@ public:
 
     WEBCORE_EXPORT static void forceContentSniffing();
 
-#if USE(CURL)
+#if PLATFORM(QT) || USE(CURL)
     ResourceHandleInternal* getInternal() { return d.get(); }
 #endif
 
@@ -229,8 +229,10 @@ private:
     bool start();
     static void platformLoadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentialsPolicy, ResourceError&, ResourceResponse&, Vector<char>& data);
 
-    void refAuthenticationClient() override { ref(); }
-    void derefAuthenticationClient() override { deref(); }
+#if !PLATFORM(QT)
+    virtual void refAuthenticationClient() override { ref(); }
+    virtual void derefAuthenticationClient() override { deref(); }
+#endif
 
 #if PLATFORM(COCOA) || USE(CFURLCONNECTION)
     enum class SchedulingBehavior { Asynchronous, Synchronous };

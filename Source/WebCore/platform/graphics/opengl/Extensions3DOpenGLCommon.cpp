@@ -44,6 +44,10 @@
 #undef GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #endif
 
+#elif PLATFORM(QT)
+#define FUNCTIONS m_context->m_functions
+#include "OpenGLShimsQt.h"
+
 #else
 
 #if USE(LIBEPOXY)

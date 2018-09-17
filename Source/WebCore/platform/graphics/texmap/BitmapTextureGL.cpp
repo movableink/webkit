@@ -35,6 +35,10 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+#if PLATFORM(QT)
+#include <QPaintEngine>
+#endif
+
 #if USE(CAIRO)
 #include "CairoUtilities.h"
 #include "RefPtrCairo.h"
@@ -156,6 +160,20 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
     cairo_surface_t* surface = frameImage.get();
     imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));
     bytesPerLine = cairo_image_surface_get_stride(surface);
+#elif PLATFORM(QT)
+    QImage qImage;
+    QPaintEngine* paintEngine = frameImage->paintEngine();
+    if (paintEngine && paintEngine->type() == QPaintEngine::Raster) {
+        // QRasterPixmapData::toImage() will deep-copy the backing QImage if there's an active QPainter on it.
+        // For performance reasons, we don't want that here, so we temporarily redirect the paint engine.
+        QPaintDevice* currentPaintDevice = paintEngine->paintDevice();
+        paintEngine->setPaintDevice(0);
+        qImage = frameImage->toImage();
+        paintEngine->setPaintDevice(currentPaintDevice);
+    } else
+        qImage = frameImage->toImage();
+    imageData = reinterpret_cast<const char*>(qImage.constBits());
+    bytesPerLine = qImage.bytesPerLine();
 #endif
 
     updateContents(imageData, targetRect, offset, bytesPerLine);

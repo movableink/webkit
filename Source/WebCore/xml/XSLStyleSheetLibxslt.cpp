@@ -37,7 +37,7 @@
 #include <libxslt/xsltutils.h>
 #include <wtf/CheckedArithmetic.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK)
+#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(QT)
 #include "SoftLinkLibxslt.h"
 #endif
 

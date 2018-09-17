@@ -95,6 +95,15 @@ void PluginPackage::determineQuirks(const String& mimeType)
         // Pre 10 Flash only requests windowless plugins if we return a mozilla user agent
         if (compareFileVersion(flashTenVersion) < 0)
             m_quirks.add(PluginQuirkWantsMozillaUserAgent);
+#if PLATFORM(QT)
+        else
+          m_quirks.add(PluginQuirkRequiresGtkToolKit);
+#endif
+
+#if PLATFORM(QT)
+        // Flash will crash on repeated calls to SetWindow in windowed mode
+        m_quirks.add(PluginQuirkDontCallSetWindowMoreThanOnce);
+#endif
 
         m_quirks.add(PluginQuirkThrottleInvalidate);
         m_quirks.add(PluginQuirkThrottleWMUserPlusOneMessages);

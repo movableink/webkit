@@ -40,6 +40,12 @@ typedef struct _NSRect NSRect;
 #endif
 #endif // PLATFORM(MAC)
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QRectF;
+QT_END_NAMESPACE
+#endif
+
 #if USE(CAIRO)
 typedef struct _cairo_rectangle cairo_rectangle_t;
 #endif
@@ -189,6 +195,12 @@ public:
     WEBCORE_EXPORT operator NSRect() const;
 #endif
 
+#if PLATFORM(QT)
+    FloatRect(const QRectF&);
+    operator QRectF() const;
+    FloatRect normalized() const;
+#endif
+
 #if USE(CAIRO)
     FloatRect(const cairo_rectangle_t&);
     operator cairo_rectangle_t() const;
@@ -271,4 +283,3 @@ WEBCORE_EXPORT IntRect roundedIntRect(const FloatRect&);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatRect&);
 
 }
-

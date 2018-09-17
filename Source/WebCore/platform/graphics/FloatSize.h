@@ -34,6 +34,12 @@
 #include <CoreGraphics/CoreGraphics.h>
 #endif
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QSizeF;
+QT_END_NAMESPACE
+#endif
+
 #if USE(CG)
 typedef struct CGSize CGSize;
 #endif
@@ -137,6 +143,11 @@ public:
     {
         return FloatSize(m_height, m_width);
     }
+
+#if PLATFORM(QT)
+    explicit FloatSize(const QSizeF&);
+    operator QSizeF() const;
+#endif
 
 #if USE(CG)
     WEBCORE_EXPORT explicit FloatSize(const CGSize&); // don't do this implicitly since it's lossy
@@ -255,4 +266,3 @@ inline IntPoint flooredIntPoint(const FloatSize& p)
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatSize&);
 
 } // namespace WebCore
-

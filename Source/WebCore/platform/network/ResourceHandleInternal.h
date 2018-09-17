@@ -42,6 +42,15 @@
 #include <wtf/MessageQueue.h>
 #endif
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QWebNetworkJob;
+QT_END_NAMESPACE
+namespace WebCore {
+class QNetworkReplyHandler;
+}
+#endif
+
 #if PLATFORM(COCOA)
 OBJC_CLASS NSURLAuthenticationChallenge;
 OBJC_CLASS NSURLConnection;
@@ -69,6 +78,9 @@ public:
         , m_defersLoading(defersLoading)
         , m_shouldContentSniff(shouldContentSniff)
         , m_shouldContentEncodingSniff(shouldContentEncodingSniff)
+#if PLATFORM(QT)
+        , m_job(0)
+#endif
 #if USE(CFURLCONNECTION)
         , m_currentRequest(request)
 #endif
@@ -110,6 +122,7 @@ public:
     RetainPtr<NSURLConnection> m_connection;
     RetainPtr<id> m_delegate;
 #endif
+
 #if PLATFORM(COCOA)
     bool m_startWhenScheduled { false };
 #endif
@@ -125,6 +138,10 @@ public:
     bool m_addedCacheValidationHeaders { false };
     RefPtr<CurlRequest> m_curlRequest;
     MessageQueue<WTF::Function<void()>>* m_messageQueue { };
+#endif
+
+#if PLATFORM(QT)
+        QNetworkReplyHandler* m_job;
 #endif
 
 #if PLATFORM(COCOA)

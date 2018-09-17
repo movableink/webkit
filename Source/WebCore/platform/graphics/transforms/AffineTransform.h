@@ -33,6 +33,8 @@
 
 #if USE(CG)
 typedef struct CGAffineTransform CGAffineTransform;
+#elif PLATFORM(QT)
+#include <QTransform>
 #endif
 
 #if PLATFORM(WIN)
@@ -178,6 +180,8 @@ public:
 
 #if USE(CG)
     WEBCORE_EXPORT operator CGAffineTransform() const;
+#elif PLATFORM(QT)
+    operator QTransform() const;
 #endif
 
 #if PLATFORM(WIN)

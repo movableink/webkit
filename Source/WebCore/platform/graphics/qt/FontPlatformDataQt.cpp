@@ -35,23 +35,23 @@ namespace WebCore {
 static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
 {
     switch (fontWeight) {
-    case FontWeight100:
+    case weight < FontSelectionValue(150): // FontWeight100
         return QFont::Thin;
-    case FontWeight200:
+    case weight < FontSelectionValue(250): // FontWeight200
         return QFont::ExtraLight;
-    case FontWeight300:
+    case weight < FontSelectionValue(350): // FontWeight300
         return QFont::Light;
-    case FontWeight400:
+    case weight < FontSelectionValue(450): // FontWeight400
         return QFont::Normal;
-    case FontWeight500:
+    case weight < FontSelectionValue(550): // FontWeight500
         return QFont::Medium;
-    case FontWeight600:
+    case weight < FontSelectionValue(650): // FontWeight600
         return QFont::DemiBold;
-    case FontWeight700:
+    case weight < FontSelectionValue(750): // FontWeight700
         return QFont::Bold;
-    case FontWeight800:
+    case weight < FontSelectionValue(850): // FontWeight800
         return QFont::ExtraBold;
-    case FontWeight900:
+    case weight >= FontSelectionValue(850): // FontWeight900
         return QFont::Black;
     }
     Q_UNREACHABLE();
@@ -60,19 +60,15 @@ static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
 static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
 {
     switch (fontWeight) {
-    case FontWeight100:
-    case FontWeight200:
-    case FontWeight300:
+    case weight < FontSelectionValue(350): // FontWeight100, 200, 300
         return QFont::Light; // QFont::Light == Weight of 25
-    case FontWeight400:
-    case FontWeight500:
+    case weight < FontSelectionValue(550): // FontWeight400, 500
         return QFont::Normal; // QFont::Normal == Weight of 50
-    case FontWeight600:
+    case weight < FontSelectionValue(650): // FontWeight600
         return QFont::DemiBold; // QFont::DemiBold == Weight of 63
-    case FontWeight700:
+    case weight < FontSelectionValue(750): // FontWeight700
         return QFont::Bold; // QFont::Bold == Weight of 75
-    case FontWeight800:
-    case FontWeight900:
+    case weight >= FontSelectionValue(750): // FontWeight800, 900
         return QFont::Black; // QFont::Black == Weight of 87
     }
     Q_UNREACHABLE();

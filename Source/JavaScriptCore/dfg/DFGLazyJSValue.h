@@ -31,6 +31,10 @@
 #include "DFGFrozenValue.h"
 #include <wtf/text/StringImpl.h>
 
+#if PLATFORM(QT)
+#undef emit
+#endif
+
 namespace JSC {
 
 class CCallHelpers;

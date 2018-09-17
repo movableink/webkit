@@ -39,6 +39,13 @@
 typedef struct CGColor* CGColorRef;
 #endif
 
+#if PLATFORM(QT)
+#include <qglobal.h>
+QT_BEGIN_NAMESPACE
+class QColor;
+QT_END_NAMESPACE
+#endif
+
 #if PLATFORM(WIN)
 struct _D3DCOLORVALUE;
 typedef _D3DCOLORVALUE D3DCOLORVALUE;
@@ -241,6 +248,11 @@ public:
     // This is an implementation of Porter-Duff's "source-over" equation
     Color blend(const Color&) const;
     Color blendWithWhite() const;
+
+#if PLATFORM(QT)
+    Color(const QColor&);
+    operator QColor() const;
+#endif
 
     Color colorWithAlphaMultipliedBy(float) const;
 

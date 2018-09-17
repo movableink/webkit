@@ -68,7 +68,7 @@ JSLazyEventListener::JSLazyEventListener(const CreationArguments& arguments, con
     : JSEventListener(nullptr, arguments.wrapper, true, mainThreadNormalWorld())
     , m_functionName(arguments.attributeName.localName().string())
     , m_eventParameterName(eventParameterName(arguments.shouldUseSVGEventName))
-    , m_code(arguments.attributeValue)
+    , m_code(WTF::String(arguments.attributeValue))
     , m_sourceURL(sourceURL)
     , m_sourcePosition(convertZeroToOne(sourcePosition))
     , m_originalNode(arguments.node)

@@ -50,6 +50,10 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #endif
 
+#if PLATFORM(QT)
+#include <QRawFont>
+#endif
+
 #if USE(DIRECT2D)
 interface IDWriteFactory;
 interface IDWriteGdiInterop;
@@ -203,6 +207,10 @@ public:
 
     bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
     bool applyTransforms(GlyphBufferGlyph*, GlyphBufferAdvance*, size_t glyphCount, bool enableKerning, bool requiresShaping) const;
+
+#if PLATFORM(QT)
+    QRawFont getQtRawFont() const { return m_platformData.rawFont(); }
+#endif
 
 #if PLATFORM(WIN)
     SCRIPT_FONTPROPERTIES* scriptFontProperties() const;

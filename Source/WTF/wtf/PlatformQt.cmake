@@ -1,8 +1,10 @@
 list(APPEND WTF_SOURCES
     qt/MainThreadQt.cpp
+    qt/LanguageQt.cpp
     qt/RunLoopQt.cpp
 
     text/qt/StringQt.cpp
+    text/qt/TextBreakIteratorInternalICUQt.cpp
 )
 QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/MainThreadQt.cpp qt/RunLoopQt.cpp)
 
@@ -41,6 +43,7 @@ if (UNIX AND NOT APPLE)
         UniStdExtras.cpp
 
         qt/WorkQueueQt.cpp
+        unix/CPUTimeUnix.cpp
     )
     QTWEBKIT_GENERATE_MOC_FILES_CPP(WTF qt/WorkQueueQt.cpp)
 endif ()
@@ -67,6 +70,7 @@ if (WIN32)
 
         win/WorkItemWin.cpp
         win/WorkQueueWin.cpp
+        win/CPUTimeWin.cpp
     )
     list(APPEND WTF_LIBRARIES
         winmm
@@ -76,11 +80,11 @@ endif ()
 if (APPLE)
     list(APPEND WTF_SOURCES
         cocoa/WorkQueueCocoa.cpp
-
         text/cf/AtomicStringImplCF.cpp
         text/cf/StringCF.cpp
         text/cf/StringImplCF.cpp
         text/cf/StringViewCF.cpp
+        cocoa/CPUTimeCocoa.cpp
     )
     list(APPEND WTF_LIBRARIES
         ${COREFOUNDATION_LIBRARY}

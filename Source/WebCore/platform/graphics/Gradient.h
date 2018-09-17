@@ -43,6 +43,11 @@ typedef CGGradientRef PlatformGradient;
 interface ID2D1Brush;
 interface ID2D1RenderTarget;
 typedef ID2D1Brush* PlatformGradient;
+#elif PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QGradient;
+QT_END_NAMESPACE
+typedef QGradient* PlatformGradient;
 #elif USE(CAIRO)
 typedef struct _cairo_pattern cairo_pattern_t;
 typedef cairo_pattern_t* PlatformGradient;
@@ -117,7 +122,7 @@ public:
     void setSpreadMethod(GradientSpreadMethod);
     GradientSpreadMethod spreadMethod() const { return m_spreadMethod; }
 
-    // CG needs to transform the gradient at draw time.
+    // Qt and CG need to transform the gradient at draw time.
     void setGradientSpaceTransform(const AffineTransform& gradientSpaceTransformation);
     const AffineTransform& gradientSpaceTransform() { return m_gradientSpaceTransformation; }
 

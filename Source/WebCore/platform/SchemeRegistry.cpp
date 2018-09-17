@@ -116,6 +116,9 @@ static const URLSchemesMap& builtinLocalURLSchemes()
 #if PLATFORM(COCOA)
         "applewebdata",
 #endif
+#if PLATFORM(QT)
+        "qrc",
+#endif
     });
     return schemes;
 }

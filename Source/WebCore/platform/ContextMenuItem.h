@@ -43,7 +43,7 @@ enum ContextMenuAction {
     ContextMenuItemTagOpenImageInNewWindow,
     ContextMenuItemTagDownloadImageToDisk,
     ContextMenuItemTagCopyImageToClipboard,
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
     ContextMenuItemTagCopyImageUrlToClipboard,
 #endif
     ContextMenuItemTagOpenFrameInNewWindow,
@@ -56,6 +56,11 @@ enum ContextMenuAction {
     ContextMenuItemTagPaste,
 #if PLATFORM(GTK)
     ContextMenuItemTagDelete,
+#endif
+#if PLATFORM(GTK) || PLATFORM(QT)
+    ContextMenuItemTagSelectAll,
+#endif
+#if PLATFORM(GTK)
     ContextMenuItemTagSelectAll,
     ContextMenuItemTagInputMethods,
     ContextMenuItemTagUnicode,
@@ -141,6 +146,9 @@ enum ContextMenuAction {
     ContextMenuItemTagMediaPlayPause,
     ContextMenuItemTagMediaMute,
     ContextMenuItemTagDictationAlternative,
+#if PLATFORM(QT)
+    ContextMenuItemTagOpenLinkInThisWindow,
+#endif
     ContextMenuItemTagToggleVideoFullscreen,
     ContextMenuItemTagShareMenu,
     ContextMenuItemTagToggleVideoEnhancedFullscreen,

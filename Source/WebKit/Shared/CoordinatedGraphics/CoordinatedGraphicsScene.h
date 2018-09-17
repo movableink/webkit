@@ -73,6 +73,9 @@ public:
 
     void applyStateChanges(const Vector<WebCore::CoordinatedGraphicsState>&);
     void paintToCurrentGLContext(const WebCore::TransformationMatrix&, float, const WebCore::FloatRect&, const WebCore::Color& backgroundColor, bool drawsBackground, WebCore::TextureMapper::PaintFlags = 0);
+#if PLATFORM(QT)
+    void setScrollPosition(const WebCore::FloatPoint&);
+#endif
     void detach();
 
     // The painting thread must lock the main thread to use below two methods, because two methods access members that the main thread manages. See m_client.
@@ -123,5 +126,3 @@ private:
 #endif // USE(COORDINATED_GRAPHICS)
 
 #endif // CoordinatedGraphicsScene_h
-
-

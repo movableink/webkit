@@ -41,6 +41,13 @@
 #include <CoreGraphics/CGContext.h>
 #endif
 
+#if PLATFORM(QT)
+#include <QPainter>
+#include <QBrush>
+#include <QPen>
+#include <QColor>
+#endif
+
 namespace WebCore {
 
 static bool isCurrentColorString(const String& colorString)
@@ -172,6 +179,12 @@ void CanvasStyle::applyStrokeColor(GraphicsContext& context) const
             // We'll need a fancier Color abstraction to support CMYKA correctly
 #if USE(CG)
             CGContextSetCMYKStrokeColor(context.platformContext(), color.c, color.m, color.y, color.k, color.a);
+#elif PLATFORM(QT)
+        QPen currentPen = context->platformContext()->pen();
+        QColor clr;
+        clr.setCmykF(m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
+        currentPen.setColor(clr);
+        context->platformContext()->setPen(currentPen);
 #else
             context.setStrokeColor(color.color);
 #endif
@@ -202,6 +215,12 @@ void CanvasStyle::applyFillColor(GraphicsContext& context) const
             // We'll need a fancier Color abstraction to support CMYKA correctly
 #if USE(CG)
             CGContextSetCMYKFillColor(context.platformContext(), color.c, color.m, color.y, color.k, color.a);
+#elif PLATFORM(QT)
+        QBrush currentBrush = context->platformContext()->brush();
+        QColor clr;
+        clr.setCmykF(m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
+        currentBrush.setColor(clr);
+        context->platformContext()->setBrush(currentBrush);
 #else
             context.setFillColor(color.color);
 #endif

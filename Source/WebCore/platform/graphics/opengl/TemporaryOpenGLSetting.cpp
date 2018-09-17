@@ -40,6 +40,10 @@
 #include <OpenGL/gl.h>
 #endif
 
+#elif PLATFORM(QT)
+#define FUNCTIONS m_functions
+#include "OpenGLShimsQt.h"
+#define glIsEnabled(...) m_functions->glIsEnabled(__VA_ARGS__)
 #elif USE(OPENGL_ES)
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
@@ -51,9 +55,16 @@
 
 namespace WebCore {
 
+#if PLATFORM(QT)
+TemporaryOpenGLSetting::TemporaryOpenGLSetting(QOpenGLExtensions* functions, GC3Denum capability, GC3Denum scopedState)
+#else
 TemporaryOpenGLSetting::TemporaryOpenGLSetting(GLenum capability, GLenum scopedState)
+#endif
     : m_capability(capability)
     , m_scopedState(scopedState)
+#if PLATFORM(QT)
+    , m_functions(functions)
+#endif
 {
     m_originalState = ::glIsEnabled(m_capability);
     if (m_originalState == m_scopedState)

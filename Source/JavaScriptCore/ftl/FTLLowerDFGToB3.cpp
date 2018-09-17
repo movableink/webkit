@@ -105,6 +105,10 @@
     } \
 } while (0)
 
+#if PLATFORM(QT)
+#undef emit
+#endif
+
 namespace JSC { namespace FTL {
 
 using namespace B3;
@@ -16970,4 +16974,3 @@ void lowerDFGToB3(State& state)
 } } // namespace JSC::FTL
 
 #endif // ENABLE(FTL_JIT)
-

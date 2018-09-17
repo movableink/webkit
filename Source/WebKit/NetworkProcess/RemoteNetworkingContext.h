@@ -36,6 +36,13 @@ class RemoteNetworkingContext {
 public:
     // FIXME: Remove platform-specific code and use SessionTracker.
     static void ensureWebsiteDataStoreSession(WebsiteDataStoreParameters&&);
+
+#if PLATFORM(QT)
+    QObject* originatingObject() const override { return nullptr; }
+    QNetworkAccessManager* networkAccessManager() const override;
+    bool mimeSniffingEnabled() const override  { return true; }
+    bool thirdPartyCookiePolicyPermission(const QUrl&) const override  { return true; }
+#endif
 };
 
 }

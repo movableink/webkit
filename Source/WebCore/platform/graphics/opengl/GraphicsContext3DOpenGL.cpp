@@ -26,6 +26,8 @@
 
 #include "config.h"
 
+// Note this implementation serves a double role for Qt where it also handles OpenGLES.
+
 #if ENABLE(GRAPHICS_CONTEXT_3D)
 
 #include "GraphicsContext3D.h"
@@ -61,12 +63,62 @@
 #undef GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #endif
 
+#if PLATFORM(QT)
+
+#define FUNCTIONS m_functions
+#include "OpenGLShimsQt.h"
+#include <QOpenGLContext>
+
+#define scopedScissor(c, s)     scopedScissor(m_functions, c, s)
+#define scopedDither(c, s)      scopedDither(m_functions, c, s)
+#define scopedDepth(c, s)       scopedDepth(m_functions, c, s)
+#define scopedStencil(c, s)     scopedStencil(m_functions, c, s)
+
+#ifndef GL_BGRA
+#define GL_BGRA                         0x80E1
+#endif
+
+#ifndef GL_READ_FRAMEBUFFER
+#define GL_READ_FRAMEBUFFER             0x8CA8
+#endif
+
+#ifndef GL_DRAW_FRAMEBUFFER
+#define GL_DRAW_FRAMEBUFFER             0x8CA9
+#endif
+
+#ifndef GL_MAX_VARYING_FLOATS
+#define GL_MAX_VARYING_FLOATS             0x8B4B
+#endif
+
+#ifndef GL_ALPHA16F_ARB
+#define GL_ALPHA16F_ARB                   0x881C
+#endif
+
+#ifndef GL_LUMINANCE16F_ARB
+#define GL_LUMINANCE16F_ARB               0x881E
+#endif
+
+#ifndef GL_LUMINANCE_ALPHA16F_ARB
+#define GL_LUMINANCE_ALPHA16F_ARB         0x881F
+#endif
+
+#ifndef GL_HALF_FLOAT_OES
+#define GL_HALF_FLOAT_OES                 0x8D61
+#endif
+
+#endif
+
 namespace WebCore {
 
 void GraphicsContext3D::releaseShaderCompiler()
 {
     makeContextCurrent();
+#if PLATFORM(QT)
+    ASSERT(m_private);
+    m_functions->glReleaseShaderCompiler();
+#else
     notImplemented();
+#endif
 }
 
 #if PLATFORM(MAC)
@@ -106,8 +158,24 @@ void GraphicsContext3D::readPixelsAndConvertToBGRAIfNecessary(int x, int y, int 
         for (int i = 0; i < totalBytes; i += 4)
             std::swap(pixels[i], pixels[i + 2]);
 #endif
-    } else
+    } else {
+#if PLATFORM(QT)
+        ASSERT(m_private);
+        bool readBGRA = !isGLES2Compliant() || platformGraphicsContext3D()->hasExtension("GL_EXT_read_format_bgra");
+
+        if (readBGRA)
+            glReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        else
+            glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        int totalBytes = width * height * 4;
+        if (!readBGRA) {
+            for (int i = 0; i < totalBytes; i += 4)
+                std::swap(pixels[i], pixels[i + 2]); // Convert to BGRA.
+        }
+#else
         ::glReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+#endif
+    }
 
 #if PLATFORM(MAC)
     if (!m_attrs.alpha)
@@ -117,7 +185,19 @@ void GraphicsContext3D::readPixelsAndConvertToBGRAIfNecessary(int x, int y, int 
 
 void GraphicsContext3D::validateAttributes()
 {
+#if PLATFORM(QT)
+    if (isGLES2Compliant())
+        validateDepthStencil("GL_OES_packed_depth_stencil");
+    else
+        validateDepthStencil("GL_EXT_packed_depth_stencil");
+
+    if (m_attrs.antialias && isGLES2Compliant()) {
+        if (!m_functions->hasOpenGLExtension(QOpenGLExtensions::FramebufferMultisample) || !m_functions->hasOpenGLExtension(QOpenGLExtensions::FramebufferBlit))
+            m_attrs.antialias = false;
+    }
+#else
     validateDepthStencil("GL_EXT_packed_depth_stencil");
+#endif
 }
 
 bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
@@ -226,6 +306,10 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
 void GraphicsContext3D::attachDepthAndStencilBufferIfNeeded(GLuint internalDepthStencilFormat, int width, int height)
 {
     if (!m_attrs.antialias && (m_attrs.stencil || m_attrs.depth)) {
+#if PLATFORM(QT)
+        bool supportPackedDepthStencilBuffer = internalDepthStencilFormat == GL_DEPTH24_STENCIL8_EXT;
+        if (supportPackedDepthStencilBuffer || !isGLES2Compliant()) {
+#endif
         ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
         ::glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, internalDepthStencilFormat, width, height);
         if (m_attrs.stencil)
@@ -233,6 +317,21 @@ void GraphicsContext3D::attachDepthAndStencilBufferIfNeeded(GLuint internalDepth
         if (m_attrs.depth)
             ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
         ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+#if PLATFORM(QT)
+        } else {
+            if (m_attrs.stencil) {
+                ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_stencilBuffer);
+                ::glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_STENCIL_INDEX8, width, height);
+                ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_stencilBuffer);
+            }
+            if (m_attrs.depth) {
+                ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthBuffer);
+                ::glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT16, width, height);
+                ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthBuffer);
+            }
+            ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+        }
+#endif
     }
 
     if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT) {
@@ -243,6 +342,18 @@ void GraphicsContext3D::attachDepthAndStencilBufferIfNeeded(GLuint internalDepth
 
 void GraphicsContext3D::resolveMultisamplingIfNecessary(const IntRect& rect)
 {
+#if PLATFORM(QT)
+    Q_ASSERT(m_private);
+    if (!m_attrs.antialias)
+        return;
+
+    // QTFIXME: Probably not needed, iOS uses following code successfully
+    if (isGLES2Compliant()) {
+        notImplemented();
+        return;
+    }
+#endif
+
     TemporaryOpenGLSetting scopedScissor(GL_SCISSOR_TEST, GL_FALSE);
     TemporaryOpenGLSetting scopedDither(GL_DITHER, GL_FALSE);
     TemporaryOpenGLSetting scopedDepth(GL_DEPTH_TEST, GL_FALSE);
@@ -275,6 +386,9 @@ void GraphicsContext3D::renderbufferStorage(GC3Denum target, GC3Denum internalfo
 {
     makeContextCurrent();
 #if USE(OPENGL)
+#if PLATFORM(QT)
+    if (!isGLES2Compliant()) {
+#endif
     switch (internalformat) {
     case DEPTH_STENCIL:
         internalformat = GL_DEPTH24_STENCIL8_EXT;
@@ -290,6 +404,9 @@ void GraphicsContext3D::renderbufferStorage(GC3Denum target, GC3Denum internalfo
         internalformat = GL_RGB;
         break;
     }
+#if PLATFORM(QT)
+    }
+#endif
 #endif
     ::glRenderbufferStorageEXT(target, internalformat, width, height);
 }
@@ -301,6 +418,12 @@ void GraphicsContext3D::getIntegerv(GC3Denum pname, GC3Dint* value)
     // whereas GLES2 return the number of vectors (each vector has 4 components).
     // Therefore, the value returned by desktop GL needs to be divided by 4.
     makeContextCurrent();
+#if PLATFORM(QT)
+    if (isGLES2Compliant()) {
+        ::glGetIntegerv(pname, value);
+        return;
+    }
+#endif
     switch (pname) {
 #if USE(OPENGL)
     case MAX_FRAGMENT_UNIFORM_VECTORS:
@@ -356,11 +479,18 @@ void GraphicsContext3D::getIntegerv(GC3Denum pname, GC3Dint* value)
 
 void GraphicsContext3D::getShaderPrecisionFormat(GC3Denum shaderType, GC3Denum precisionType, GC3Dint* range, GC3Dint* precision)
 {
+#if !PLATFORM(QT)
     UNUSED_PARAM(shaderType);
+#endif
     ASSERT(range);
     ASSERT(precision);
 
     makeContextCurrent();
+
+#if PLATFORM(QT)
+    m_functions->glGetShaderPrecisionFormat(shaderType, precisionType, range, precision);
+    return;
+#endif
 
     switch (precisionType) {
     case GraphicsContext3D::LOW_INT:
@@ -395,6 +525,9 @@ bool GraphicsContext3D::texImage2D(GC3Denum target, GC3Dint level, GC3Denum inte
     GC3Denum openGLFormat = format;
     GC3Denum openGLInternalFormat = internalformat;
 #if USE(OPENGL)
+#if PLATFORM(QT)
+    if (!isGLES2Compliant()) {
+#endif
     if (type == GL_FLOAT) {
         if (format == GL_RGBA)
             openGLInternalFormat = GL_RGBA32F_ARB;
@@ -419,6 +552,9 @@ bool GraphicsContext3D::texImage2D(GC3Denum target, GC3Dint level, GC3Denum inte
         openGLFormat = GL_RGBA;
     else if (format == Extensions3D::SRGB_EXT)
         openGLFormat = GL_RGB;
+#if PLATFORM(QT)
+    }
+#endif
 #endif
 
     if (m_usingCoreProfile) {

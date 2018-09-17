@@ -49,6 +49,8 @@ struct PlatformPopupMenuData {
     bool shouldPopOver { false };
     bool hideArrows { false };
     WebCore::PopupMenuStyle::PopupMenuSize menuSize { WebCore::PopupMenuStyle::PopupMenuSize::PopupMenuSizeNormal };
+#elif PLATFORM(QT)
+    bool multipleSelections { false };
 #elif PLATFORM(WIN)
     int m_clientPaddingLeft { 0 };
     int m_clientPaddingRight { 0 };

@@ -342,6 +342,16 @@ exit:
     return pluginsDirectory;
 }
 
+#if PLATFORM(QT)
+static inline void addQtWebKitPluginPath(Vector<String>& directories)
+{
+    Vector<String> qtPaths;
+    String qtPath(qgetenv("QTWEBKIT_PLUGIN_PATH").constData());
+    qtPath.split(UChar(';'), false, qtPaths);
+    directories.appendVector(qtPaths);
+}
+#endif
+
 static inline void addMacromediaPluginDirectories(Vector<String>& directories)
 {
     WCHAR systemDirectoryStr[MAX_PATH];
@@ -370,6 +380,10 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
     addMozillaPluginDirectories(directories);
     addWindowsMediaPlayerPluginDirectory(directories);
     addMacromediaPluginDirectories(directories);
+#if PLATFORM(QT)
+    addJavaPluginDirectory(directories);
+    addQtWebKitPluginPath(directories);
+#endif
 
     return directories;
 }

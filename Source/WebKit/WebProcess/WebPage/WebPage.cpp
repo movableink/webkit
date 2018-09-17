@@ -247,6 +247,15 @@
 #include <wtf/MachSendRight.h>
 #endif
 
+#if PLATFORM(QT)
+#if ENABLE(DEVICE_ORIENTATION) && HAVE(QTSENSORS)
+#include "DeviceMotionClientQt.h"
+#include "DeviceOrientationClientQt.h"
+#endif
+#include "HitTestResult.h"
+#include <QMimeData>
+#endif
+
 #if PLATFORM(GTK)
 #include "WebPrintOperationGtk.h"
 #include "WebSelectionData.h"
@@ -473,6 +482,10 @@ WebPage::WebPage(uint64_t pageID, WebPageCreationParameters&& parameters)
 
 #if ENABLE(GEOLOCATION)
     WebCore::provideGeolocationTo(m_page.get(), *new WebGeolocationClient(*this));
+#endif
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(QT) && HAVE(QTSENSORS)
+    WebCore::provideDeviceMotionTo(m_page.get(), new DeviceMotionClientQt);
+    WebCore::provideDeviceOrientationTo(m_page.get(), new DeviceOrientationClientQt);
 #endif
 #if ENABLE(NOTIFICATIONS)
     WebCore::provideNotification(m_page.get(), new WebNotificationClient(this));
@@ -895,6 +908,18 @@ WebCore::WebGLLoadPolicy WebPage::resolveWebGLPolicyForURL(WebFrame*, const URL&
 }
 #endif
 
+#if PLATFORM(QT)
+
+static Element* rootEditableElementRespectingShadowTree(const Frame& frame)
+{
+    Element* selectionRoot = frame.selection().selection().rootEditableElement();
+    if (selectionRoot && selectionRoot->isInShadowTree())
+        selectionRoot = selectionRoot->shadowHost();
+    return selectionRoot;
+}
+
+#endif
+
 EditorState WebPage::editorState(IncludePostLayoutDataHint shouldIncludePostLayoutData) const
 {
     Frame& frame = m_page->focusController().focusedOrMainFrame();
@@ -988,6 +1013,75 @@ EditorState WebPage::editorState(IncludePostLayoutDataHint shouldIncludePostLayo
     }
 
     platformEditorState(frame, result, shouldIncludePostLayoutData);
+
+#if PLATFORM(QT)
+    size_t location = 0;
+    size_t length = 0;
+
+    Element* selectionRoot = rootEditableElementRespectingShadowTree(frame);
+    Element* scope = selectionRoot ? selectionRoot : frame.document()->documentElement();
+
+    if (!scope)
+        return result;
+
+    if (is<HTMLInputElement>(scope)) {
+        HTMLInputElement* input = downcast<HTMLInputElement>(scope);
+        if (input->isTelephoneField())
+            result.inputMethodHints |= Qt::ImhDialableCharactersOnly;
+        else if (input->isNumberField())
+            result.inputMethodHints |= Qt::ImhDigitsOnly;
+        else if (input->isEmailField()) {
+            result.inputMethodHints |= Qt::ImhEmailCharactersOnly;
+            result.inputMethodHints |= Qt::ImhNoAutoUppercase;
+        } else if (input->isURLField()) {
+            result.inputMethodHints |= Qt::ImhUrlCharactersOnly;
+            result.inputMethodHints |= Qt::ImhNoAutoUppercase;
+        } else if (input->isPasswordField()) {
+            // Set ImhHiddenText flag for password fields. The Qt platform
+            // is responsible for determining which widget will receive input
+            // method events for password fields.
+            result.inputMethodHints |= Qt::ImhHiddenText;
+            result.inputMethodHints |= Qt::ImhNoAutoUppercase;
+            result.inputMethodHints |= Qt::ImhNoPredictiveText;
+            result.inputMethodHints |= Qt::ImhSensitiveData;
+        }
+    }
+
+    if (selectionRoot && selectionRoot->renderer())
+        result.editorRect = frame.view()->contentsToWindow(selectionRoot->renderer()->absoluteBoundingBoxRect());
+
+    RefPtr<Range> range;
+    if (result.hasComposition && (range = frame.editor().compositionRange())) {
+        frame.editor().getCompositionSelection(result.anchorPosition, result.cursorPosition);
+
+        result.compositionRect = frame.view()->contentsToWindow(range->absoluteBoundingBox());
+    }
+
+    if (!result.hasComposition && !result.selectionIsNone && (range = frame.selection().selection().firstRange())) {
+        TextIterator::getLocationAndLengthFromRange(scope, range.get(), location, length);
+        bool baseIsFirst = frame.selection().selection().isBaseFirst();
+
+        result.cursorPosition = (baseIsFirst) ? location + length : location;
+        result.anchorPosition = (baseIsFirst) ? location : location + length;
+        result.selectedText = range->text();
+    }
+
+    if (range)
+        result.cursorRect = frame.view()->contentsToWindow(frame.editor().firstRectForRange(range.get()));
+
+    // FIXME: We should only transfer innerText when it changes and do this on the UI side.
+    if (result.isContentEditable) {
+        if (is<HTMLTextFormControlElement>(scope))
+            result.surroundingText = downcast<HTMLTextFormControlElement>(scope)->innerTextValue();
+        else
+            result.surroundingText = scope->innerText();
+
+        if (result.hasComposition) {
+            // The anchor is always the left position when they represent a composition.
+            result.surroundingText.remove(result.anchorPosition, result.cursorPosition - result.anchorPosition);
+        }
+    }
+#endif
 
     m_lastEditorStateWasContentEditable = result.isContentEditable ? EditorStateIsContentEditable::Yes : EditorStateIsContentEditable::No;
 
@@ -2502,6 +2596,52 @@ void WebPage::updateBackForwardListForReattach(const Vector<WebKit::BackForwardL
 }
 
 #if ENABLE(TOUCH_EVENTS)
+#if PLATFORM(QT)
+void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize& area)
+{
+    if (point == IntPoint::zero()) {
+        // An empty point deactivates the highlighting.
+        tapHighlightController().hideHighlight();
+    } else {
+        Frame* mainframe = &m_page->mainFrame();
+        Node* activationNode = 0;
+        Node* adjustedNode = 0;
+        IntPoint adjustedPoint;
+
+#if ENABLE(TOUCH_ADJUSTMENT)
+        if (!mainframe->eventHandler().bestClickableNodeForTouchPoint(point, IntSize(area.width() / 2, area.height() / 2), adjustedPoint, adjustedNode))
+            return;
+
+#else
+        HitTestResult result = mainframe->eventHandler().hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
+        adjustedNode = result.innerNode();
+#endif
+        // Find the node to highlight. This is not the same as the node responding the tap gesture, because many
+        // pages has a global click handler and we do not want to highlight the body.
+        for (Node* node = adjustedNode; node; node = node->parentOrShadowHostNode()) {
+            if (node->isDocumentNode() || node->isFrameOwnerElement())
+                break;
+
+            // We always highlight focusable (form-elements), image links or content-editable elements.
+            if ((node->isElementNode() && downcast<Element>(node)->isMouseFocusable()) || node->isLink() || node->isContentEditable())
+                activationNode = node;
+            else if (node->willRespondToMouseClickEvents()) {
+                // Highlight elements with default mouse-click handlers, but highlight only inline elements with
+                // scripted event-handlers.
+                if (!node->Node::willRespondToMouseClickEvents() || (node->renderer() && node->renderer()->isInline()))
+                    activationNode = node;
+            }
+
+            if (activationNode)
+                break;
+        }
+
+        if (activationNode)
+            tapHighlightController().highlight(activationNode);
+    }
+}
+#endif
+
 static bool handleTouchEvent(const WebTouchEvent& touchEvent, Page* page)
 {
     if (!page->mainFrame().view())
@@ -2574,7 +2714,7 @@ void WebPage::touchEvent(const WebTouchEvent& touchEvent)
 }
 #endif
 
-#if ENABLE(MAC_GESTURE_EVENTS)
+#if ENABLE(MAC_GESTURE_EVENTS) || ENABLE(QT_GESTURE_EVENTS)
 static bool handleGestureEvent(const WebGestureEvent& event, Page* page)
 {
     if (!page->mainFrame().view())
@@ -3389,7 +3529,7 @@ NotificationPermissionRequestManager* WebPage::notificationPermissionRequestMana
 
 #if ENABLE(DRAG_SUPPORT)
 
-#if PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK)
 void WebPage::performDragControllerAction(DragControllerAction action, const IntPoint& clientPosition, const IntPoint& globalPosition, uint64_t draggingSourceOperationMask, WebSelectionData&& selection, uint32_t flags)
 {
     if (!m_page) {
@@ -4829,7 +4969,7 @@ void WebPage::confirmCompositionAsync()
 
 #endif // PLATFORM(COCOA)
 
-#if PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK)
 static Frame* targetFrameForEditing(WebPage* page)
 {
     Frame& targetFrame = page->corePage()->focusController().focusedOrMainFrame();

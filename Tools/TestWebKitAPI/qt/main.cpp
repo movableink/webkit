@@ -21,7 +21,7 @@
 #include "config.h"
 #include "TestsController.h"
 
-#if HAVE(WEBKIT2)
+#if HAVE(WEBKIT)
 #include "qquickwebview_p.h"
 #endif
 #include <QGuiApplication>
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
             useDesktopBehavior = false;
     }
 
-#if HAVE(WEBKIT2)
+#if HAVE(WEBKIT)
     QQuickWebViewExperimental::setFlickableViewportEnabled(!useDesktopBehavior);
 #endif
 

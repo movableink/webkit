@@ -51,8 +51,18 @@
 #include <wtf/spi/darwin/XPCSPI.h>
 #endif
 
+#if PLATFORM(QT)
+#include "PlatformProcessIdentifier.h"
+#endif
+
 #if USE(GLIB)
 #include "GSocketMonitor.h"
+#endif
+
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QSocketNotifier;
+QT_END_NAMESPACE
 #endif
 
 namespace IPC {
@@ -158,6 +168,12 @@ public:
     static Connection* connection(UniqueID);
     UniqueID uniqueID() const { return m_uniqueID; }
 
+#if (PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 101000
+    void setShouldCloseConnectionOnMachExceptions();
+#elif PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
+    void setShouldCloseConnectionOnProcessTermination(WebKit::PlatformProcessIdentifier);
+#endif
+
     void setOnlySendMessagesAsDispatchWhenWaitingForSyncReplyWhenProcessingSuchAMessage(bool);
     void setShouldExitOnSyncMessageSendFailure(bool);
 
@@ -198,7 +214,7 @@ public:
 
     Identifier identifier() const;
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || (PLATFORM(QT) && USE(MACH_PORTS))
     bool kill();
     void terminateSoon(Seconds);
 #endif
@@ -352,6 +368,9 @@ private:
     GSocketMonitor m_readSocketMonitor;
     GSocketMonitor m_writeSocketMonitor;
 #endif
+#if PLATFORM(QT)
+    QSocketNotifier* m_socketNotifier;
+#endif
 #elif OS(DARWIN)
     // Called on the connection queue.
     void receiveSourceEventHandler();
@@ -367,6 +386,15 @@ private:
 
     std::unique_ptr<MachMessage> m_pendingOutgoingMachMessage;
     bool m_isInitializingSendSource { false };
+
+#if (PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 101000
+    void exceptionSourceEventHandler();
+
+    // If setShouldCloseConnectionOnMachExceptions has been called, this has
+    // the exception port that exceptions from the other end will be sent on.
+    mach_port_t m_exceptionPort;
+    dispatch_source_t m_exceptionPortDataAvailableSource;
+#endif
 
     OSObjectPtr<xpc_connection_t> m_xpcConnection;
     bool m_wasKilled { false };

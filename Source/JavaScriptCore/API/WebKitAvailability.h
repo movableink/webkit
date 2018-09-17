@@ -70,11 +70,13 @@
 
 #if defined(BUILDING_GTK__)
 #undef JSC_API_AVAILABLE
-#define JSC_API_AVAILABLE(...)
 #endif
+
+#define JSC_API_AVAILABLE(...)
 
 #else
 #define JSC_API_AVAILABLE(...)
-#endif
+
+#endif /* defined(__APPLE__) */
 
 #endif /* __WebKitAvailability__ */

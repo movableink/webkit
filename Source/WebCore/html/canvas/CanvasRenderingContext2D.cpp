@@ -368,6 +368,12 @@ Ref<TextMetrics> CanvasRenderingContext2D::measureText(const String& text)
     String normalizedText = text;
     normalizeSpaces(normalizedText);
 
+#if PLATFORM(QT)
+    // We always use complex text shaping since it can't be turned off for QPainterPath::addText().
+    FontCascade::CodePath oldCodePath = FontCascade::codePath();
+    FontCascade::setCodePath(FontCascade::Complex);
+#endif
+
     const RenderStyle* computedStyle;
     auto direction = toTextDirection(state().direction, &computedStyle);
     bool override = computedStyle ? isOverride(computedStyle->unicodeBidi()) : false;
@@ -380,6 +386,10 @@ Ref<TextMetrics> CanvasRenderingContext2D::measureText(const String& text)
     glyphOverflow.computeBounds = true;
     float fontWidth = font.width(textRun, &glyphOverflow);
     metrics->setWidth(fontWidth);
+
+#if PLATFORM(QT)
+    FontCascade::setCodePath(oldCodePath);
+#endif
 
     FloatPoint offset = textOffset(fontWidth, direction);
 
@@ -565,6 +575,12 @@ void CanvasRenderingContext2D::drawTextInternal(const String& text, float x, flo
 
     c->setTextDrawingMode(fill ? TextModeFill : TextModeStroke);
 
+#if PLATFORM(QT)
+    // We always use complex text shaping since it can't be turned off for QPainterPath::addText().
+    FontCascade::CodePath oldCodePath = FontCascade::codePath();
+    FontCascade::setCodePath(FontCascade::Complex);
+#endif
+
     GraphicsContextStateSaver stateSaver(*c);
     if (useMaxWidth) {
         c->translate(location);
@@ -586,6 +602,10 @@ void CanvasRenderingContext2D::drawTextInternal(const String& text, float x, flo
         fontProxy.drawBidiText(*c, textRun, location, FontCascade::UseFallbackIfFontNotReady);
         didDraw(textRect);
     }
+
+#if PLATFORM(QT)
+    FontCascade::setCodePath(oldCodePath);
+#endif
 }
 
 } // namespace WebCore

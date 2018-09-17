@@ -55,6 +55,13 @@ namespace WTF {
 class TextStream;
 }
 
+#if PLATFORM(QT)
+#include "qglobal.h"
+QT_BEGIN_NAMESPACE
+class QPointF;
+QT_END_NAMESPACE
+#endif
+
 namespace WebCore {
 
 class AffineTransform;
@@ -168,6 +175,11 @@ public:
     {
         return { m_y, m_x };
     }
+
+#if PLATFORM(QT)
+    FloatPoint(const QPointF&);
+    operator QPointF() const;
+#endif
 
 #if USE(CG)
     WEBCORE_EXPORT FloatPoint(const CGPoint&);
@@ -300,4 +312,3 @@ inline bool areEssentiallyEqual(const FloatPoint& a, const FloatPoint& b)
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatPoint&);
 
 }
-

@@ -115,7 +115,7 @@ list(APPEND WebCore_SOURCES
     platform/network/qt/ResourceHandleQt.cpp
     platform/network/qt/ResourceRequestQt.cpp
     platform/network/qt/ResourceResponseQt.cpp
-    platform/network/qt/SocketStreamHandleQt.cpp
+    platform/network/qt/SocketStreamHandleImplQt.cpp
     platform/network/qt/SynchronousLoaderClientQt.cpp
 
     platform/qt/CursorQt.cpp
@@ -127,7 +127,6 @@ list(APPEND WebCore_SOURCES
     platform/qt/FileSystemQt.cpp
     platform/qt/KeyedDecoderQt.cpp
     platform/qt/KeyedEncoderQt.cpp
-    platform/qt/LanguageQt.cpp
     platform/qt/LocalizedStringsQt.cpp
     platform/qt/LoggingQt.cpp
     platform/qt/MainThreadSharedTimerQt.cpp
@@ -153,8 +152,6 @@ list(APPEND WebCore_SOURCES
     platform/text/LocaleICU.cpp
 
     platform/text/hyphen/HyphenationLibHyphen.cpp
-
-    platform/text/qt/TextBreakIteratorInternalICUQt.cpp
 )
 
 QTWEBKIT_GENERATE_MOC_FILES_CPP(WebCore
@@ -169,7 +166,7 @@ QTWEBKIT_GENERATE_MOC_FILES_H(WebCore
 )
 
 QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/NetworkStateNotifierPrivate.h platform/network/qt/NetworkStateNotifierQt.cpp)
-QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/SocketStreamHandlePrivate.h platform/network/qt/SocketStreamHandleQt.cpp)
+QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/SocketStreamHandlePrivate.h platform/network/qt/SocketStreamHandleImplQt.cpp)
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set_source_files_properties(
@@ -422,6 +419,11 @@ endif ()
 # From PlatformWin.cmake
 
 if (WIN32)
+    # Eliminate C2139 errors
+    if (MSVC)
+        add_compile_options(/D_ENABLE_EXTENDED_ALIGNED_STORAGE)
+    endif ()
+
     if (${JavaScriptCore_LIBRARY_TYPE} MATCHES STATIC)
         add_definitions(-DSTATICALLY_LINKED_WITH_WTF -DSTATICALLY_LINKED_WITH_JavaScriptCore)
     endif ()

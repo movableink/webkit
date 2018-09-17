@@ -40,6 +40,11 @@
 #include <CoreGraphics/CGPath.h>
 typedef struct CGPath PlatformPath;
 
+#elif PLATFORM(QT)
+
+#include <qpainterpath.h>
+typedef QPainterPath PlatformPath;
+
 #elif USE(DIRECT2D)
 #include "COMPtr.h"
 
@@ -70,11 +75,16 @@ typedef void PlatformPath;
 
 #endif
 
-typedef PlatformPath* PlatformPathPtr;
-
 namespace WTF {
 class TextStream;
 }
+
+#if PLATFORM(QT)
+/* QPainterPath is valued based */
+typedef PlatformPath PlatformPathPtr;
+#else
+typedef PlatformPath* PlatformPathPtr;
+#endif
 
 namespace WebCore {
 
@@ -135,7 +145,11 @@ namespace WebCore {
         float normalAngleAtLength(float length, bool& success) const;
 
         WEBCORE_EXPORT void clear();
+#if PLATFORM(QT)
+        bool isNull() const { return false; }
+#else
         bool isNull() const { return !m_path; }
+#endif
         bool isEmpty() const;
         // Gets the current point of the current path, which is conceptually the final point reached by the path so far.
         // Note the Path can be empty (isEmpty() == true) and still have a current point.
@@ -168,14 +182,18 @@ namespace WebCore {
         void translate(const FloatSize&);
 
         // To keep Path() cheap, it does not allocate a PlatformPath immediately
-        // meaning Path::platformPath() can return null.
+        // meaning Path::platformPath() can return null (except on Qt).
 #if USE(DIRECT2D)
         PlatformPathPtr platformPath() const { return m_path.get(); }
 #else
         PlatformPathPtr platformPath() const { return m_path; }
 #endif
+#if PLATFORM(QT)
+        PlatformPathPtr ensurePlatformPath() { return platformPath(); }
+#else
         // ensurePlatformPath() will allocate a PlatformPath if it has not yet been and will never return null.
         WEBCORE_EXPORT PlatformPathPtr ensurePlatformPath();
+#endif
 
         WEBCORE_EXPORT void apply(const PathApplierFunction&) const;
         void transform(const AffineTransform&);
@@ -211,6 +229,8 @@ namespace WebCore {
         COMPtr<ID2D1GeometryGroup> m_path;
         COMPtr<ID2D1PathGeometry> m_activePathGeometry;
         COMPtr<ID2D1GeometrySink> m_activePath;
+#elif PLATFORM(QT)
+        PlatformPathPtr m_path;
 #else
         PlatformPathPtr m_path { nullptr };
 #endif

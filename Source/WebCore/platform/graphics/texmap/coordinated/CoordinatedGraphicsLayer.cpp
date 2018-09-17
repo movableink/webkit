@@ -46,6 +46,16 @@
 
 namespace WebCore {
 
+#if !PLATFORM(QT)
+std::unique_ptr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, GraphicsLayerClient& client, Type layerType)
+{
+    if (!factory)
+        return std::make_unique<CoordinatedGraphicsLayer>(layerType, client);
+
+    return factory->createGraphicsLayer(layerType, client);
+}
+#endif
+
 std::unique_ptr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, GraphicsLayerClient& client, Type layerType)
 {
     if (!factory)

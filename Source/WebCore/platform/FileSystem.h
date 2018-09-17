@@ -42,11 +42,19 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if USE(CF)
-typedef const struct __CFData* CFDataRef;
+#if PLATFORM(QT)
+#include <QFile>
+#include <QLibrary>
+#if defined(Q_OS_WIN32)
+#include <windows.h>
+#endif
 #endif
 
+#if USE(CF) || (PLATFORM(QT) && defined(Q_OS_MAC))
+typedef const struct __CFData* CFDataRef;
+#else
 OBJC_CLASS NSString;
+#endif
 
 #if PLATFORM(WIN)
 typedef void *HANDLE;
@@ -63,7 +71,10 @@ struct FileMetadata;
 namespace FileSystem {
 
 // PlatformFileHandle
-#if USE(GLIB) && !PLATFORM(WIN)
+#if PLATFORM(QT)
+typedef QFile* PlatformFileHandle;
+const PlatformFileHandle invalidPlatformFileHandle = 0;
+#elif USE(GLIB) && !PLATFORM(WIN)
 typedef GFileIOStream* PlatformFileHandle;
 const PlatformFileHandle invalidPlatformFileHandle = 0;
 #elif PLATFORM(WIN)
@@ -221,4 +232,3 @@ inline MappedFileData& MappedFileData::operator=(MappedFileData&& other)
 
 } // namespace FileSystem
 } // namespace WebCore
-

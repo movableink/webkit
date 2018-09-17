@@ -36,7 +36,7 @@
 #include <wtf/Vector.h>
 #include <wtf/unicode/Collator.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK)
+#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(QT)
 #include "SoftLinkLibxslt.h"
 
 static void xsltTransformErrorTrampoline(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char* message, ...) WTF_ATTRIBUTE_PRINTF(4, 5);

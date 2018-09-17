@@ -37,6 +37,8 @@ void PlatformPopupMenuData::encode(IPC::Encoder& encoder) const
     encoder << shouldPopOver;
     encoder << hideArrows;
     encoder.encodeEnum(menuSize);
+#elif PLATFORM(QT)
+    encoder << multipleSelections;
 #elif PLATFORM(WIN)
     encoder << m_clientPaddingLeft;
     encoder << m_clientPaddingRight;
@@ -91,6 +93,9 @@ bool PlatformPopupMenuData::decode(IPC::Decoder& decoder, PlatformPopupMenuData&
     if (!decoder.decode(selectedBackingStoreHandle))
         return false;
     data.m_selectedBackingStore = ShareableBitmap::create(selectedBackingStoreHandle);
+#elif PLATFORM(QT)
+    if (!decoder.decode(data.multipleSelections))
+        return false;
 #else
     UNUSED_PARAM(decoder);
     UNUSED_PARAM(data);

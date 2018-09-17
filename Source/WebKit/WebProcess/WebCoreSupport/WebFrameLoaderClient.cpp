@@ -1229,6 +1229,13 @@ bool WebFrameLoaderClient::shouldFallBack(const ResourceError& error)
     if (error.errorCode() == pluginWillHandleLoadError.get().errorCode() && error.domain() == pluginWillHandleLoadError.get().domain())
         return false;
 
+#if PLATFORM(QT)
+    static NeverDestroyed<const ResourceError> errorInterruptedForPolicyChange(this->interruptedForPolicyChangeError(ResourceRequest()));
+
+    if (error.errorCode() == errorInterruptedForPolicyChange.get().errorCode() && error.domain() == errorInterruptedForPolicyChange.get().domain())
+        return false;
+#endif
+
     return true;
 }
 
@@ -1413,7 +1420,11 @@ void WebFrameLoaderClient::transitionToCommittedForNewPage()
     m_frameHasCustomContentProvider = isMainFrame && webPage->shouldUseCustomContentProviderForResponse(response);
     m_frameCameFromPageCache = false;
 
+#if PLATFORM(QT)
+    ScrollbarMode defaultScrollbarMode = ScrollbarAuto;
+#else
     ScrollbarMode defaultScrollbarMode = shouldHideScrollbars ? ScrollbarAlwaysOff : ScrollbarAuto;
+#endif
 
     ScrollbarMode horizontalScrollbarMode = webPage->alwaysShowsHorizontalScroller() ? ScrollbarAlwaysOn : defaultScrollbarMode;
     ScrollbarMode verticalScrollbarMode = webPage->alwaysShowsVerticalScroller() ? ScrollbarAlwaysOn : defaultScrollbarMode;
