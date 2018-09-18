@@ -65,7 +65,9 @@ if (${PORT} STREQUAL "Qt")
         )
     endif ()
 
-    add_dependencies(WebKitLegacy WebKit)
+    if (ENABLE_WEBKIT)
+        add_dependencies(WebKitLegacy WebKit)
+    endif ()
 endif ()
 
 add_dependencies(WebKitLegacy WebCore)

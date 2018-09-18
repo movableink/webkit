@@ -1,10 +1,14 @@
 # Automoc
 
 set(TARGETS_WITH_AUTOMOC
-    WebKit
     WebKitWidgets
     WebKitLegacy
 )
+if (ENABLE_WEBKIT)
+    LIST(APPEND TARGETS_WITH_AUTOMOC
+        WebKit
+    )
+endif ()
 set_property(TARGET ${TARGETS_WITH_AUTOMOC} PROPERTY AUTOMOC ON)
 
 
