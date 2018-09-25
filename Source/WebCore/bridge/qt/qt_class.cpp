@@ -224,4 +224,3 @@ Field* QtClass::fieldNamed(PropertyName identifier, Instance* instance) const
 
 }
 }
-

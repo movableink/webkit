@@ -143,7 +143,7 @@ void FormDataIODevice::openFileForCurrentElement()
 
     m_currentFile->setFileName(m_formElements[0].m_filename);
     m_currentFile->open(QFile::ReadOnly);
-    if (isValidFileTime(m_formElements[0].m_expectedFileModificationTime)) {
+    if (FileSystem::isValidFileTime(m_formElements[0].m_expectedFileModificationTime)) {
         QFileInfo info(*m_currentFile);
         if (!info.exists() || static_cast<time_t>(m_formElements[0].m_expectedFileModificationTime) < info.lastModified().toTime_t()) {
             moveToNextElement();
@@ -521,7 +521,7 @@ void QNetworkReplyHandler::finish()
     }
 
     if (!m_replyWrapper->reply()->error() || shouldIgnoreHttpError(m_replyWrapper->reply(), m_replyWrapper->responseContainsData()))
-        client->didFinishLoading(m_resourceHandle, 0);
+        client->didFinishLoading(m_resourceHandle);
     else
         client->didFail(m_resourceHandle, errorForReply(m_replyWrapper->reply()));
 
@@ -547,7 +547,7 @@ void QNetworkReplyHandler::timeout()
     ASSERT(m_replyWrapper->reply());
 
     ResourceError timeoutError("QtNetwork", QNetworkReply::TimeoutError, m_replyWrapper->reply()->url(), "Request timed out");
-    timeoutError.setIsTimeout(true);
+    timeoutError.setType(ResourceErrorBase::Type::Timeout);
     client->didFail(m_resourceHandle, timeoutError);
 
     m_replyWrapper = nullptr;
@@ -586,11 +586,8 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
                               m_replyWrapper->encoding());
 
     if (url.isLocalFile()) {
-        if (client->usesAsyncCallbacks()) {
             setLoadingDeferred(true);
             client->didReceiveResponseAsync(m_resourceHandle, response);
-        } else
-            client->didReceiveResponse(m_resourceHandle, response);
         return;
     }
 
@@ -612,11 +609,8 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         return;
     }
 
-    if (client->usesAsyncCallbacks()) {
         setLoadingDeferred(true);
         client->didReceiveResponseAsync(m_resourceHandle, response);
-    } else
-        client->didReceiveResponse(m_resourceHandle, response);
 }
 
 void QNetworkReplyHandler::continueAfterWillSendRequest(const ResourceRequest& newRequest)
@@ -682,13 +676,8 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     if (!newRequest.url().protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https") && m_resourceHandle->context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
         newRequest.clearHTTPReferrer();
 
-    if (client->usesAsyncCallbacks()) {
         setLoadingDeferred(true);
         client->willSendRequestAsync(m_resourceHandle, newRequest, response);
-    } else {
-        client->willSendRequest(m_resourceHandle, newRequest, response);
-        continueAfterWillSendRequest(newRequest);
-    }
 }
 
 void QNetworkReplyHandler::forwardData()
@@ -724,7 +713,7 @@ void QNetworkReplyHandler::forwardData()
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=19793
         // -1 means we do not provide any data about transfer size to inspector so it would use
         // Content-Length headers or content size to show transfer size.
-        client->didReceiveBuffer(m_resourceHandle, SharedBuffer::adoptVector(buffer), -1);
+        client->didReceiveBuffer(m_resourceHandle, SharedBuffer::create(buffer), -1);
         // Check if the request has been aborted or this reply-handler was otherwise released.
         if (wasAborted() || !m_replyWrapper)
             break;
@@ -843,9 +832,6 @@ void QNetworkReplyHandler::start()
     double timeoutInSeconds = d->m_firstRequest.timeoutInterval();
     if (timeoutInSeconds > 0 && timeoutInSeconds < (INT_MAX / 1000))
         m_timeoutTimer.start(timeoutInSeconds * 1000, this);
-
-    if (m_resourceHandle->firstRequest().reportUploadProgress())
-        connect(m_replyWrapper->reply(), SIGNAL(uploadProgress(qint64, qint64)), this, SLOT(uploadProgress(qint64, qint64)));
 }
 
 ResourceError QNetworkReplyHandler::errorForReply(QNetworkReply* reply)

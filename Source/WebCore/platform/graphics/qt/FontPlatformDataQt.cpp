@@ -32,45 +32,41 @@ namespace WebCore {
 
 // See http://www.w3.org/TR/css3-fonts/#font-weight-prop
 #if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
+static inline QFont::Weight toQFontWeight(FontSelectionValue fontWeight)
 {
-    switch (fontWeight) {
-    case weight < FontSelectionValue(150): // FontWeight100
+    if (fontWeight < FontSelectionValue(150)) // FontWeight100
         return QFont::Thin;
-    case weight < FontSelectionValue(250): // FontWeight200
+    if (fontWeight < FontSelectionValue(250)) // FontWeight200
         return QFont::ExtraLight;
-    case weight < FontSelectionValue(350): // FontWeight300
+    if (fontWeight < FontSelectionValue(350)) // FontWeight300
         return QFont::Light;
-    case weight < FontSelectionValue(450): // FontWeight400
+    if (fontWeight < FontSelectionValue(450)) // FontWeight400
         return QFont::Normal;
-    case weight < FontSelectionValue(550): // FontWeight500
+    if (fontWeight < FontSelectionValue(550)) // FontWeight500
         return QFont::Medium;
-    case weight < FontSelectionValue(650): // FontWeight600
+    if (fontWeight < FontSelectionValue(650)) // FontWeight600
         return QFont::DemiBold;
-    case weight < FontSelectionValue(750): // FontWeight700
+    if (fontWeight < FontSelectionValue(750)) // FontWeight700
         return QFont::Bold;
-    case weight < FontSelectionValue(850): // FontWeight800
+    if (fontWeight < FontSelectionValue(850)) // FontWeight800
         return QFont::ExtraBold;
-    case weight >= FontSelectionValue(850): // FontWeight900
+    if (fontWeight >= FontSelectionValue(850)) // FontWeight900
         return QFont::Black;
-    }
     Q_UNREACHABLE();
 }
 #else
-static inline QFont::Weight toQFontWeight(FontWeight fontWeight)
+static inline QFont::Weight toQFontWeight(FontSelectionValue fontWeight)
 {
-    switch (fontWeight) {
-    case weight < FontSelectionValue(350): // FontWeight100, 200, 300
+    if (fontWeight < FontSelectionValue(350)) // FontWeight100, 200, 300
         return QFont::Light; // QFont::Light == Weight of 25
-    case weight < FontSelectionValue(550): // FontWeight400, 500
+    if (fontWeight < FontSelectionValue(550)) // FontWeight400, 500
         return QFont::Normal; // QFont::Normal == Weight of 50
-    case weight < FontSelectionValue(650): // FontWeight600
+    if (fontWeight < FontSelectionValue(650)) // FontWeight600
         return QFont::DemiBold; // QFont::DemiBold == Weight of 63
-    case weight < FontSelectionValue(750): // FontWeight700
+    if (fontWeight < FontSelectionValue(750)) // FontWeight700
         return QFont::Bold; // QFont::Bold == Weight of 75
-    case weight >= FontSelectionValue(750): // FontWeight800, 900
+    if (fontWeight >= FontSelectionValue(750)) // FontWeight800, 900
         return QFont::Black; // QFont::Black == Weight of 87
-    }
     Q_UNREACHABLE();
 }
 #endif
@@ -81,7 +77,7 @@ static inline bool isEmptyValue(const float size, const bool bold, const bool ob
     return !bold && !oblique && size == 0.f;
 }
 
-FontPlatformData::FontPlatformData(float size, bool bold, bool oblique)
+FontPlatformData::FontPlatformData(float size, bool bold, bool oblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering)
 {
     if (!isEmptyValue(size, bold, oblique))
         m_data = adoptRef(new FontPlatformDataPrivate(size, bold, oblique));
@@ -95,7 +91,7 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
     font.setFamily(familyName);
     if (requestedSize)
         font.setPixelSize(requestedSize);
-    font.setItalic(description.italic());
+    font.setIsItalic(description.italic());
     font.setWeight(toQFontWeight(description.weight()));
     font.setWordSpacing(wordSpacing);
     font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -136,7 +132,7 @@ bool FontPlatformData::operator==(const FontPlatformData& other) const
     return equals;
 }
 
-PassRefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
+RefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
 {
     const char tag[4] = {
         char(table & 0xff),

@@ -25,6 +25,7 @@
 #if defined(QT_OPENGL_ES_2) && !defined(TEXMAP_OPENGL_ES_2)
     #define TEXMAP_OPENGL_ES_2
 #endif
+#include "GraphicsContext.h"
 #endif
 
 #include "BitmapTexture.h"
@@ -101,6 +102,9 @@ public:
     void setWrapMode(WrapMode m) { m_wrapMode = m; }
 
 protected:
+#if PLATFORM(QT)
+    GraphicsContext* m_context;
+#endif
     std::unique_ptr<BitmapTexturePool> m_texturePool;
 
     bool isInMaskMode() const { return m_isMaskMode; }

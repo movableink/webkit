@@ -168,22 +168,22 @@ String stringFromFileSystemRepresentation(const char* fileSystemRepresentation)
     return String();
 }
 
-FileSystem::PlatformFileHandle openFile(const String& path, FileOpenMode mode)
+FileSystem::PlatformFileHandle openFile(const String& path, FileSystem::FileOpenMode mode)
 {
     QIODevice::OpenMode platformMode;
 
-    if (mode == OpenForRead)
+    if (mode == FileSystem::FileOpenMode::Read)
         platformMode = QIODevice::ReadOnly;
-    else if (mode == OpenForWrite)
+    else if (mode == FileSystem::FileOpenMode::Write)
         platformMode = (QIODevice::WriteOnly | QIODevice::Truncate);
     else
-        return invalidPlatformFileHandle;
+        return FileSystem::invalidPlatformFileHandle;
 
     QFile* file = new QFile(path);
     if (file->open(platformMode))
         return file;
 
-    return invalidPlatformFileHandle;
+    return FileSystem::invalidPlatformFileHandle;
 }
 
 int readFromFile(FileSystem::PlatformFileHandle handle, char* data, int length)
@@ -201,18 +201,18 @@ void closeFile(FileSystem::PlatformFileHandle& handle)
     }
 }
 
-long long seekFile(FileSystem::PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
+long long seekFile(FileSystem::PlatformFileHandle handle, long long offset, FileSystem::FileSeekOrigin origin)
 {
     if (handle) {
         long long current = 0;
 
         switch (origin) {
-        case SeekFromBeginning:
+        case FileSystem::FileSeekOrigin::Beginning:
             break;
-        case SeekFromCurrent:
+        case FileSystem::FileSeekOrigin::Current:
             current = handle->pos();
             break;
-        case SeekFromEnd:
+        case FileSystem::FileSeekOrigin::End:
             current = handle->size();
             break;
         }
@@ -253,26 +253,6 @@ int writeToFile(FileSystem::PlatformFileHandle handle, const char* data, int len
         return handle->write(data, length);
 
     return 0;
-}
-
-bool unloadModule(FileSystem::PlatformModule module)
-{
-#if defined(Q_OS_MAC)
-    CFRelease(module);
-    return true;
-
-#elif defined(Q_OS_WIN)
-    return ::FreeLibrary(module);
-
-#else
-#ifndef QT_NO_LIBRARY
-    if (module->unload()) {
-        delete module;
-        return true;
-    }
-#endif
-    return false;
-#endif
 }
 
 }

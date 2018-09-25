@@ -42,6 +42,10 @@ OBJC_CLASS NSString;
 OBJC_CLASS NSArray;
 #endif
 
+#if PLATFORM(QT)
+#include <QMimeData>
+#endif
+
 #if PLATFORM(WIN)
 #include "COMPtr.h"
 #include "WCDataObject.h"
@@ -191,6 +195,10 @@ public:
     explicit Pasteboard(const DragDataMap&);
 #endif
 
+#if PLATFORM(QT)
+    Pasteboard(const QMimeData* , bool);
+#endif
+
     WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForCopyAndPaste();
 
     static bool isSafeTypeForDOMToReadAndWrite(const String&);
@@ -237,7 +245,7 @@ public:
     virtual void setDragImage(DragImage, const IntPoint& hotSpot);
 #endif
 
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || PLATFORM(QT)
     RefPtr<DocumentFragment> documentFragment(Frame&, Range&, bool allowPlainText, bool& chosePlainText); // FIXME: Layering violation.
     void writeImage(Element&, const URL&, const String& title); // FIXME: Layering violation.
     void writeSelection(Range&, bool canSmartCopyOrDelete, Frame&, ShouldSerializeSelectedTextForDataTransfer = DefaultSelectedTextType); // FIXME: Layering violation.
@@ -260,6 +268,18 @@ public:
     explicit Pasteboard(const String& pasteboardName, const Vector<String>& promisedFilePaths = { });
 #endif
 
+#if PLATFORM(QT)
+    static std::unique_ptr<Pasteboard> createForGlobalSelection();
+    static std::unique_ptr<Pasteboard> create(const QMimeData* readableClipboard = 0, bool isForDragAndDrop = false);
+
+    QMimeData* clipboardData() const { return m_writableData; }
+    void invalidateWritableData() const { m_writableData = 0; }
+    bool isForDragAndDrop() const { return m_isForDragAndDrop; }
+    bool isForCopyAndPaste() const { return !m_isForDragAndDrop; }
+    void writeImage(Node&, const URL&, const String& title); // FIXME: Layering violation.
+    void updateSystemPasteboard();
+#endif
+
 #if PLATFORM(COCOA)
     static bool shouldTreatCocoaTypeAsFile(const String&);
     WEBCORE_EXPORT static NSArray *supportedFileUploadPasteboardTypes();
@@ -278,6 +298,10 @@ public:
 #endif
 
 private:
+#if PLATFORM(QT)
+    const QMimeData* readData() const;
+#endif
+
 #if PLATFORM(IOS)
     bool respectsUTIFidelities() const;
     void readRespectingUTIFidelities(PasteboardWebContentReader&, WebContentReadingPolicy);
@@ -323,6 +347,13 @@ private:
     Vector<String> m_promisedFilePaths;
 #endif
 
+#if PLATFORM(QT)
+    bool m_selectionMode;
+    const QMimeData* m_readableData;
+    mutable QMimeData* m_writableData;
+    bool m_isForDragAndDrop;
+#endif
+
 #if PLATFORM(WIN)
     HWND m_owner;
     COMPtr<IDataObject> m_dataObject;
@@ -342,7 +373,7 @@ extern const char* const WebURLNamePboardType;
 extern const char* const WebURLsWithTitlesPboardType;
 #endif
 
-#if !PLATFORM(GTK)
+#if !PLATFORM(GTK) && !PLATFORM(QT)
 
 inline Pasteboard::~Pasteboard()
 {

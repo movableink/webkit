@@ -84,7 +84,7 @@ enum TrailingZerosTruncatingPolicy { KeepTrailingZeros, TruncateTrailingZeros };
 class String {
 public:
     // Construct a null string, distinguishable from an empty string.
-    String() = default;
+    String() { };
 
     // Construct a string with UTF-16 data.
     WTF_EXPORT_PRIVATE String(const UChar* characters, unsigned length);

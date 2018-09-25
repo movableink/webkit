@@ -1523,6 +1523,10 @@ private:
 #endif
 
 #if PLATFORM(QT)
+#if !USE(TEXTURE_MAPPER)
+    friend class GraphicsContext3DPrivate;
+    std::unique_ptr<GraphicsContext3DPrivate> m_private;
+#endif
     // Must be initialized after m_private so that isGLES2Compliant works
     ANGLEWebKitBridge m_compiler;
 #endif

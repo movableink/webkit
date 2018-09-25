@@ -35,7 +35,7 @@
 
 #include "SocketStreamHandle.h"
 
-#include <wtf/PassRefPtr.h>
+#include <wtf/RefPtr.h>
 #include <wtf/RefCounted.h>
 
 #if !PLATFORM(QT)
@@ -54,10 +54,10 @@ namespace WebCore {
     class SocketStreamHandleClient;
     class SocketStreamHandlePrivate;
 
-    class SocketStreamHandleImpl final : public RefCounted<SocketStreamHandleImpl>, public SocketStreamHandleBase {
+    class SocketStreamHandleImpl final : public RefCounted<SocketStreamHandleImpl>, public SocketStreamHandle {
     public:
-        static PassRefPtr<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient* client, NetworkingContext&) { return adoptRef(new SocketStreamHandleImpl(url, client)); }
-        static PassRefPtr<SocketStreamHandleImpl> create(QTcpSocket* socket, SocketStreamHandleClient* client) { return adoptRef(new SocketStreamHandleImpl(socket, client)); }
+        static RefPtr<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient* client, NetworkingContext&) { return adoptRef(new SocketStreamHandleImpl(url, client)); }
+        static RefPtr<SocketStreamHandleImpl> create(QTcpSocket* socket, SocketStreamHandleClient* client) { return adoptRef(new SocketStreamHandleImpl(socket, client)); }
 
         ~SocketStreamHandleImpl();
 

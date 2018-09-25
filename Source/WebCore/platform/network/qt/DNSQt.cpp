@@ -75,6 +75,8 @@ void DNSResolveQueue::platformResolve(const String& hostname)
     dnsPrefetchHelper.lookup(QString(hostname));
 }
 
+using DNSResolveQueuePlatform = DNSResolveQueue;
+
 } // namespace
 
 #include "DNSQt.moc"

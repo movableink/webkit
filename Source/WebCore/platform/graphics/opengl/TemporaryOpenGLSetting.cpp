@@ -29,21 +29,18 @@
 #if ENABLE(GRAPHICS_CONTEXT_3D)
 #include "TemporaryOpenGLSetting.h"
 
-#if USE(LIBEPOXY)
+#if PLATFORM(QT)
+#define FUNCTIONS m_functions
+#include "OpenGLShimsQt.h"
+#define glIsEnabled(...) m_functions->glIsEnabled(__VA_ARGS__)
+#elif USE(LIBEPOXY)
 #include "EpoxyShims.h"
-
 #elif PLATFORM(COCOA)
-
 #if USE(OPENGL_ES)
 #include <OpenGLES/ES2/gl.h>
 #else
 #include <OpenGL/gl.h>
 #endif
-
-#elif PLATFORM(QT)
-#define FUNCTIONS m_functions
-#include "OpenGLShimsQt.h"
-#define glIsEnabled(...) m_functions->glIsEnabled(__VA_ARGS__)
 #elif USE(OPENGL_ES)
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>

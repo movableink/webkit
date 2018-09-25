@@ -68,6 +68,9 @@ public:
         GestureChange,
         GestureEnd,
 #endif
+#if ENABLE(QT_GESTURE_EVENTS)
+        GestureTap,
+#endif
     };
 
     enum class Modifier : uint8_t {

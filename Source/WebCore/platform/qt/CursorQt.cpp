@@ -40,6 +40,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <QCursor>
+
 #undef CopyCursor
 
 namespace WebCore {

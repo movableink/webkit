@@ -96,6 +96,11 @@ private:
     HANDLE m_waitHandle;
     OVERLAPPED m_overlapped;
 #endif
+
+#if (PLATFORM(QT) && !defined(QT_NO_BEARERMANAGEMENT))
+    friend class NetworkStateNotifierPrivate;
+    NetworkStateNotifierPrivate* p;
+#endif
 };
 
 } // namespace WebCore
