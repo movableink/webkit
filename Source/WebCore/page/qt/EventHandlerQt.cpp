@@ -116,7 +116,7 @@ bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&
 OptionSet<PlatformEvent::Modifier> EventHandler::accessKeyModifiers()
 {
 #if OS(DARWIN)
-    return PlatformEvent::Modifier::CtrlKey | PlatformEvent::Modifier::AltKey;
+    return { PlatformEvent::Modifier::CtrlKey, PlatformEvent::Modifier::AltKey };
 #else
     return PlatformEvent::Modifier::AltKey;
 #endif

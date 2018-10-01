@@ -14,6 +14,13 @@ list(APPEND JavaScriptCore_LIBRARIES
     ${Qt5Core_LIBRARIES}
 )
 
+list(APPEND JavaScriptCore_FORWARDING_HEADERS
+    API/JavaScript.h
+    API/JSWeakObjectMapRefPrivate.h
+    API/APICast.h
+    runtime/JSCInlines.h
+)
+
 if (QT_STATIC_BUILD)
     list(APPEND JavaScriptCore_LIBRARIES
         ${STATIC_LIB_DEPENDENCIES}

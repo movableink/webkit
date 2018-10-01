@@ -114,7 +114,6 @@ void GraphicsContext3D::releaseShaderCompiler()
 {
     makeContextCurrent();
 #if PLATFORM(QT)
-    ASSERT(m_private);
     m_functions->glReleaseShaderCompiler();
 #else
     notImplemented();
@@ -160,7 +159,6 @@ void GraphicsContext3D::readPixelsAndConvertToBGRAIfNecessary(int x, int y, int 
 #endif
     } else {
 #if PLATFORM(QT)
-        ASSERT(m_private);
         bool readBGRA = !isGLES2Compliant() || platformGraphicsContext3D()->hasExtension("GL_EXT_read_format_bgra");
 
         if (readBGRA)
@@ -343,7 +341,6 @@ void GraphicsContext3D::attachDepthAndStencilBufferIfNeeded(GLuint internalDepth
 void GraphicsContext3D::resolveMultisamplingIfNecessary(const IntRect& rect)
 {
 #if PLATFORM(QT)
-    Q_ASSERT(m_private);
     if (!m_attrs.antialias)
         return;
 

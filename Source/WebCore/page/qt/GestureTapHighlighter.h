@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
- * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -11,6 +10,9 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
+ *     its contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -24,50 +26,21 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TemporaryOpenGLSetting_h
-#define TemporaryOpenGLSetting_h
-
-#include "GraphicsTypes3D.h"
-
-#include <wtf/Noncopyable.h>
-
-#if PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QOpenGLExtensions;
-QT_END_NAMESPACE
-#endif
+#ifndef GestureTapHighlighter_h
+#define GestureTapHighlighter_h
 
 namespace WebCore {
 
-// TemporaryOpenGLSetting<> is useful for temporarily disabling (or enabling) a particular OpenGL
-// feature with a particular scope. A TemporaryOpenGLSetting<> object returns the flag to its original
-// value upon destruction, making it an alternative to checking, clearing, and resetting each flag
-// at all of a block's exit points.
-//
-// Based on WTF::SetForScope<>
+class AffineTransform;
+class Path;
+class Node;
 
-class TemporaryOpenGLSetting {
-    WTF_MAKE_NONCOPYABLE(TemporaryOpenGLSetting);
-public:
-#if PLATFORM(QT)
-    TemporaryOpenGLSetting(QOpenGLExtensions*, GC3Denum capability, GC3Denum scopedState);
-#else
-    TemporaryOpenGLSetting(GC3Denum capability, GC3Denum scopedState);
-#endif
-    ~TemporaryOpenGLSetting();
+namespace GestureTapHighlighter {
 
-private:
-    const GC3Denum m_capability;
-    const GC3Denum m_scopedState;
-    GC3Denum m_originalState;
+Path pathForNodeHighlight(const Node*);
 
-#if PLATFORM(QT)
-    QOpenGLExtensions* m_functions = nullptr;
-#endif
-};
+} // namespace GestureTapHighlighter
 
-}
+} // namespace WebCore
 
-using WebCore::TemporaryOpenGLSetting;
-
-#endif
+#endif // GestureTapHighlighter__h

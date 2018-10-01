@@ -88,7 +88,7 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     resourceLoaderOptions.preflightPolicy = PreflightPolicy::Consider;
     ThreadableLoaderOptions options(resourceLoaderOptions,
         context.shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective,
-        String(cachedResourceRequestInitiators().fetch),
+        cachedResourceRequestInitiators().fetch.string(),
         ResponseFilteringPolicy::Disable);
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;

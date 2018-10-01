@@ -33,7 +33,6 @@
 namespace WebCore {
 
 Color::Color(const QColor& c)
-    : m_color(makeRGBA(c.red(), c.green(), c.blue(), c.alpha()))
 {
     setRGB(makeRGBA(c.red(), c.green(), c.blue(), c.alpha()));
     if (c.isValid())
@@ -42,7 +41,7 @@ Color::Color(const QColor& c)
 
 Color::operator QColor() const
 {
-    if (c.isValid())
+    if (isValid())
         return QColor(red(), green(), blue(), alpha());
     else
         return QColor();

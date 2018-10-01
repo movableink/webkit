@@ -1015,7 +1015,7 @@ String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
 #if USE(CF)
     return formatLocalizedString(WEB_UI_CFSTRING("%@ WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), localizedApplicationName.createCFString().get());
-#elif USE(GLIB)
+#elif USE(GLIB) || PLATFORM(QT)
     return formatLocalizedString(WEB_UI_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), localizedApplicationName.utf8().data());
 #else
     return String::fromUTF8("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);

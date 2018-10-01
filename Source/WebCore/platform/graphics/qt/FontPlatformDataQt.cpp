@@ -77,7 +77,7 @@ static inline bool isEmptyValue(const float size, const bool bold, const bool ob
     return !bold && !oblique && size == 0.f;
 }
 
-FontPlatformData::FontPlatformData(float size, bool bold, bool oblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering)
+FontPlatformData::FontPlatformData(float size, bool bold, bool oblique, FontOrientation, FontWidthVariant, TextRenderingMode)
 {
     if (!isEmptyValue(size, bold, oblique))
         m_data = adoptRef(new FontPlatformDataPrivate(size, bold, oblique));
@@ -91,7 +91,7 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
     font.setFamily(familyName);
     if (requestedSize)
         font.setPixelSize(requestedSize);
-    font.setIsItalic(description.italic());
+    font.setItalic(description.italic() != std::nullopt);
     font.setWeight(toQFontWeight(description.weight()));
     font.setWordSpacing(wordSpacing);
     font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -156,6 +156,14 @@ unsigned FontPlatformData::hash() const
             ^ qHash(m_data->rawFont.weight())
             ^ qHash(*reinterpret_cast<quint32*>(&m_data->size));
 }
+
+// Fixme: orientation
+FontPlatformData FontPlatformData::cloneWithOrientation(const FontPlatformData& source, FontOrientation orientation)
+{
+    FontPlatformData copy(source);
+    return copy;
+}
+
 
 #ifndef NDEBUG
 String FontPlatformData::description() const

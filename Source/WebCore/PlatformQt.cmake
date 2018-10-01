@@ -3,6 +3,8 @@ include(platform/ImageDecoders.cmake)
 include(platform/TextureMapper.cmake)
 
 list(APPEND WebCore_INCLUDE_DIRECTORIES
+    "${DERIVED_SOURCES_DIR}/ForwardingHeaders/JavaScriptCore"
+    "${JAVASCRIPTCORE_DIR}/runtime"
     "${THIRDPARTY_DIR}/ANGLE/"
     "${THIRDPARTY_DIR}/ANGLE/include/KHR"
     "${WEBCORE_DIR}/Modules/gamepad"
@@ -385,6 +387,10 @@ WEBKIT_CREATE_FORWARDING_HEADERS(WebCore DIRECTORIES ${WebCore_FORWARDING_HEADER
 
 list(APPEND WebCoreTestSupport_LIBRARIES
     WebCore
+)
+
+list(REMOVE_ITEM WebCore_SOURCES
+    platform/graphics/FontPlatformData.cpp
 )
 
 if (HAVE_FONTCONFIG)

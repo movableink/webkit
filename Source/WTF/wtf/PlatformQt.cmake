@@ -89,4 +89,7 @@ if (APPLE)
     list(APPEND WTF_LIBRARIES
         ${COREFOUNDATION_LIBRARY}
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+        cf/TypeCastsCF.h
+    )
 endif ()
