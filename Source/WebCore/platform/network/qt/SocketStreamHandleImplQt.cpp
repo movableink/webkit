@@ -59,9 +59,9 @@ SocketStreamHandlePrivate::SocketStreamHandlePrivate(SocketStreamHandleImpl* str
 
     initConnections();
 
-    unsigned int port = url.hasPort() ? url.port() : (isSecure ? 443 : 80);
+    unsigned int port = url.port() ? url.port() : (isSecure ? 443 : 80);
 
-    QString host = url.host();
+    QString host = url.host().value();
     if (isSecure) {
 #ifndef QT_NO_SSL
         static_cast<QSslSocket*>(m_socket)->connectToHostEncrypted(host, port);
@@ -119,7 +119,7 @@ void SocketStreamHandlePrivate::socketReadyRead()
 int SocketStreamHandlePrivate::send(const uint8_t* data, size_t len)
 {
     if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState)
-        return 0;
+        return false;
     quint64 sentSize = m_socket->write(data, len);
     QMetaObject::invokeMethod(this, "socketSentData", Qt::QueuedConnection);
     return sentSize;
