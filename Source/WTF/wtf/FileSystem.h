@@ -42,13 +42,12 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if PLATFORM(QT)
-#include <QFile>
-#include <QLibrary>
-#if defined(Q_OS_WIN32)
-#include <windows.h>
-#endif
-#endif
+//#if PLATFORM(QT)
+//#include <QFile>
+//#if defined(Q_OS_WIN32)
+//#include <windows.h>
+//#endif
+//#endif
 
 #if USE(CF) || (PLATFORM(QT) && defined(Q_OS_MACOS))
 typedef const struct __CFData* CFDataRef;
@@ -72,17 +71,17 @@ namespace FileSystemImpl {
 
 // PlatformFileHandle
 #if PLATFORM(QT)
-typedef QFile* PlatformFileHandle;
-const PlatformFileHandle invalidPlatformFileHandle = 0;
-#elif USE(GLIB) && !OS(WINDOWS)
-typedef GFileIOStream* PlatformFileHandle;
-const PlatformFileHandle invalidPlatformFileHandle = 0;
-#elif OS(WINDOWS)
-typedef HANDLE PlatformFileHandle;
-// FIXME: -1 is INVALID_HANDLE_VALUE, defined in <winbase.h>. Chromium tries to
-// avoid using Windows headers in headers. We'd rather move this into the .cpp.
-const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1);
-#else
+//typedef QFile* PlatformFileHandle;
+//const PlatformFileHandle invalidPlatformFileHandle = 0;
+//#elif USE(GLIB) && !OS(WINDOWS)
+//typedef GFileIOStream* PlatformFileHandle;
+//const PlatformFileHandle invalidPlatformFileHandle = 0;
+//#elif OS(WINDOWS)
+//typedef HANDLE PlatformFileHandle;
+//// FIXME: -1 is INVALID_HANDLE_VALUE, defined in <winbase.h>. Chromium tries to
+//// avoid using Windows headers in headers. We'd rather move this into the .cpp.
+//const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1);
+//#else
 typedef int PlatformFileHandle;
 const PlatformFileHandle invalidPlatformFileHandle = -1;
 #endif

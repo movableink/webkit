@@ -1,7 +1,8 @@
 target_compile_definitions(WTF PRIVATE QT_NO_KEYWORDS)
 
 list(APPEND WTF_SOURCES
-    qt/FileSystemQt.cpp
+    posix/FileSystemPOSIX.cpp
+    #qt/FileSystemQt.cpp
     qt/LanguageQt.cpp
     qt/MainThreadQt.cpp
     qt/RunLoopQt.cpp
@@ -77,9 +78,11 @@ if (USE_GLIB)
     )
     list(APPEND WTF_PUBLIC_HEADERS
         glib/GLibUtilities.h
+        #glib/GMutexLocker.h
         glib/GRefPtr.h
         glib/GTypedefs.h
         glib/GUniquePtr.h
+        #glib/WTFGType.h
     )
 endif ()
 
