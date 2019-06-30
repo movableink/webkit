@@ -21,10 +21,10 @@
 #define qt_instance_h
 
 #include "BridgeJSC.h"
-#include "JSWeakObjectMapRefPrivate.h"
-#include "Weak.h"
-#include "WeakInlines.h"
 #include "runtime_root.h"
+#include <JavaScriptCore/JSWeakObjectMapRefPrivate.h>
+#include <JavaScriptCore/Weak.h>
+#include <JavaScriptCore/WeakInlines.h>
 #include <QPointer>
 #include <qhash.h>
 #include <qset.h>

@@ -81,7 +81,7 @@ public:
 class FontPlatformData {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    FontPlatformData(float size, bool bold, bool oblique);
+    FontPlatformData(float size, bool bold, bool oblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering);
     FontPlatformData(const FontDescription&, const AtomString& familyName, int wordSpacing = 0, int letterSpacing = 0);
     FontPlatformData(const FontPlatformData&, float size);
     FontPlatformData(const QRawFont& rawFont)

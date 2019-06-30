@@ -1593,7 +1593,7 @@ void GraphicsContext::set3DTransform(const TransformationMatrix& transform)
 }
 #endif
 
-void GraphicsContext::setURLForRect(const URL& url, const IntRect& rect)
+void GraphicsContext::setURLForRect(const URL& url, const FloatRect& rect)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
     if (paintingDisabled())

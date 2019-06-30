@@ -20,15 +20,15 @@
 #include "config.h"
 #include "qt_instance.h"
 
-#include "APICast.h"
+#include <JavaScriptCore/APICast.h>
 #include "CommonVM.h"
-#include "Error.h"
+#include <JavaScriptCore/Error.h>
 #include "JSDOMBinding.h"
 #include "JSDOMWindowBase.h"
-#include "JSGlobalObject.h"
-#include "JSLock.h"
-#include "ObjectPrototype.h"
-#include "PropertyNameArray.h"
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSLock.h>
+//#include "ObjectPrototype.h"
+#include <JavaScriptCore/PropertyNameArray.h>
 #include "qt_class.h"
 #include "qt_runtime.h"
 #include "runtime_object.h"
@@ -91,7 +91,7 @@ QtInstance::QtInstance(QObject* o, Ref<RootObject>&& rootObject, ValueOwnership 
 
 QtInstance::~QtInstance()
 {
-    JSLockHolder lock(commonVM());
+    JSLockHolder lock(WebCore::commonVM());
 
     cachedInstances.remove(m_hashkey);
 
@@ -118,7 +118,7 @@ QtInstance::~QtInstance()
 
 RefPtr<QtInstance> QtInstance::getQtInstance(QObject* o, RootObject* rootObject, ValueOwnership ownership)
 {
-    JSLockHolder lock(commonVM());
+    JSLockHolder lock(WebCore::commonVM());
 
     foreach (QtInstance* instance, cachedInstances.values(o))
         if (instance->rootObject() == rootObject) {
@@ -135,7 +135,7 @@ RefPtr<QtInstance> QtInstance::getQtInstance(QObject* o, RootObject* rootObject,
     RefPtr<QtInstance> ret = QtInstance::create(o, rootObject, ownership);
     cachedInstances.insert(o, ret.get());
 
-    return ret.release();
+    return ret;
 }
 
 bool QtInstance::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)

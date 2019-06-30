@@ -30,7 +30,7 @@
  */
 
 #include "config.h"
-#include "SocketStreamHandleImpl.h"
+#include "SocketStreamHandle.h"
 
 #include "Logging.h"
 #include "NotImplemented.h"

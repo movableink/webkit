@@ -22,9 +22,9 @@
 
 #include "BridgeJSC.h"
 #include "JSDOMBinding.h"
-#include "JavaScript.h"
-#include "Weak.h"
-#include "WeakInlines.h"
+#include <JavaScriptCore/JavaScript.h>
+#include <JavaScriptCore/Weak.h>
+#include <JavaScriptCore/WeakInlines.h>
 #include "qt_instance.h"
 #include "runtime_method.h"
 

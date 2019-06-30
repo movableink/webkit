@@ -20,25 +20,25 @@
 #include "config.h"
 #include "qt_runtime.h"
 
-#include "APICast.h"
-#include "BooleanObject.h"
-#include "DateInstance.h"
-#include "DatePrototype.h"
-#include "FunctionPrototype.h"
-#include "Interpreter.h"
-#include "JSArray.h"
-#include "JSContextRefPrivate.h"
+#include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/BooleanObject.h>
+#include <JavaScriptCore/DateInstance.h>
+#include <JavaScriptCore/FunctionPrototype.h>
+//#include <JavaScriptCore/Interpreter.h>
+#include <JavaScriptCore/JSArray.h>
+#include <JavaScriptCore/JSContextRefPrivate.h>
+#include <JavaScriptCore/JSDateMath.h>
 #include "JSDOMBinding.h"
 #include "JSDOMWindow.h"
 #include "JSDocument.h"
-#include "JSGlobalObject.h"
+#include <JavaScriptCore/JSGlobalObject.h>
 #include "JSHTMLElement.h"
-#include "JSLock.h"
-#include "JSObject.h"
-#include "JSRetainPtr.h"
-#include "JSUint8ClampedArray.h"
-#include "ObjectPrototype.h"
-#include "PropertyNameArray.h"
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/JSRetainPtr.h>
+#include <JavaScriptCore/JSTypedArrays.h>
+//#include "ObjectPrototype.h"
+#include <JavaScriptCore/PropertyNameArray.h>
 #include "qdatetime.h"
 #include "qdebug.h"
 #include "qmetaobject.h"
@@ -48,12 +48,12 @@
 #include "qt_instance.h"
 #include "qt_pixmapruntime.h"
 #include "qvarlengtharray.h"
-#include <JSFunction.h>
+#include <JavaScriptCore/JSFunction.h>
 
 #include <wtf/DateMath.h>
 
 #include <limits.h>
-#include <runtime/Error.h>
+#include <JavaScriptCore/Error.h>
 #include <runtime_array.h>
 #include <runtime_object.h>
 
