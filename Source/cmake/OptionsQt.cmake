@@ -907,6 +907,7 @@ set_package_properties(Ruby PROPERTIES TYPE REQUIRED)
 set_package_properties(Qt5PrintSupport PROPERTIES PURPOSE "Required for ENABLE_PRINT_SUPPORT=ON")
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
+include(target/icu)
 
 include(ECMQueryQmake)
 
