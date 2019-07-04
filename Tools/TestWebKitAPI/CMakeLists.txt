@@ -113,7 +113,7 @@ set(TestWTF_LIBRARIES
 WEBKIT_EXECUTABLE_DECLARE(TestWTF)
 
 # TestWebCore definitions
-if (ENABLE_WEBCORE)
+if (FALSE) # ENABLE_WEBCORE)
     set(TestWebCore_SOURCES
         TestsController.cpp
 
@@ -328,9 +328,9 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 WEBKIT_TEST(TestWTF)
 
 # TestWebCore target
-if (ENABLE_WEBCORE)
-    WEBKIT_TEST(TestWebCore)
-endif ()
+#if (ENABLE_WEBCORE)
+#    WEBKIT_TEST(TestWebCore)
+#endif ()
 
 # TestWebKitLegacy target
 if (ENABLE_WEBKIT_LEGACY)
