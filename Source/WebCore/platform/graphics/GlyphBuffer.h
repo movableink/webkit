@@ -70,28 +70,28 @@ public:
     CGFloat width() const { return this->CGSize::width; }
     CGFloat height() const { return this->CGSize::height; }
 };
-//#elif PLATFORM(QT)
-//struct GlyphBufferAdvance : public QPointF {
-//public:
-//    GlyphBufferAdvance() : QPointF() { }
-//    GlyphBufferAdvance(const QPointF& advance)
-//        : QPointF(advance)
-//    {
-//    }
-//    GlyphBufferAdvance(float width, float height)
-//        : QPointF(width, height)
-//    {
-//    }
-//    GlyphBufferAdvance(FloatSize size)
-//        : QPointF(size.width(), size.height())
-//    {
-//    }
-//
-//
-//    void setWidth(qreal width) { QPointF::setX(width); }
-//    qreal width() const { return QPointF::x(); }
-//    qreal height() const { return QPointF::y(); }
-//};
+#elif PLATFORM(QT)
+struct GlyphBufferAdvance : public QPointF {
+public:
+    GlyphBufferAdvance() : QPointF() { }
+    GlyphBufferAdvance(const QPointF& advance)
+        : QPointF(advance)
+    {
+    }
+    GlyphBufferAdvance(float width, float height)
+        : QPointF(width, height)
+    {
+    }
+    GlyphBufferAdvance(FloatSize size)
+        : QPointF(size.width(), size.height())
+    {
+    }
+
+
+    void setWidth(qreal width) { QPointF::setX(width); }
+    qreal width() const { return QPointF::x(); }
+    qreal height() const { return QPointF::y(); }
+};
 #else
 typedef FloatSize GlyphBufferAdvance;
 #endif
