@@ -701,7 +701,7 @@
 #define HAVE_READLINE 1
 #define HAVE_SYS_TIMEB_H 1
 
-#if __has_include(<mach/mach_exc.defs>) && !PLATFORM(GTK)
+#if __has_include(<mach/mach_exc.defs>) && !PLATFORM(GTK) && !PLATFORM(QT)
 #define HAVE_MACH_EXCEPTIONS 1
 #endif
 
