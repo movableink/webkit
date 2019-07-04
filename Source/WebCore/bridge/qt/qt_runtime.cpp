@@ -24,7 +24,6 @@
 #include <JavaScriptCore/BooleanObject.h>
 #include <JavaScriptCore/DateInstance.h>
 #include <JavaScriptCore/FunctionPrototype.h>
-//#include <JavaScriptCore/Interpreter.h>
 #include <JavaScriptCore/JSArray.h>
 #include <JavaScriptCore/JSContextRefPrivate.h>
 #include <JavaScriptCore/JSDateMath.h>
@@ -37,7 +36,6 @@
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JSTypedArrays.h>
-//#include "ObjectPrototype.h"
 #include <JavaScriptCore/PropertyNameArray.h>
 #include "qdatetime.h"
 #include "qdebug.h"
@@ -146,29 +144,29 @@ void registerCustomType(int qtMetaTypeId, ConvertToVariantFunction toVariantFunc
     customRuntimeConversions()->insert(qtMetaTypeId, conversion);
 }
 
-static bool isJSUint8Array(JSObjectRef object)
+static bool isJSUint8Array(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits(JSUint8Array::info());
+    return toJS(object)->inherits<JSUint8Array>(vm);
 }
 
-static bool isJSUint8ClampedArray(JSObjectRef object)
+static bool isJSUint8ClampedArray(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits(JSUint8ClampedArray::info());
+    return toJS(object)->inherits<JSUint8ClampedArray>(vm);
 }
 
-static bool isJSArray(JSObjectRef object)
+static bool isJSArray(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits(JSArray::info());
+    return toJS(object)->inherits<JSArray>(vm);
 }
 
-static bool isJSDate(JSObjectRef object)
+static bool isJSDate(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits(DateInstance::info());
+    return toJS(object)->inherits<DateInstance>(vm);
 }
 
-static bool isQtObject(JSObjectRef object)
+static bool isQtObject(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits(RuntimeObject::info());
+    return toJS(object)->inherits<RuntimeObject>(vm);
 }
 
 static JSRealType valueRealType(JSContextRef context, JSValueRef value, JSValueRef* exception)
@@ -186,15 +184,18 @@ static JSRealType valueRealType(JSContextRef context, JSValueRef value, JSValueR
 
     JSObjectRef object = JSValueToObject(context, value, exception);
 
-    if (isJSUint8Array(object))
+    ExecState* exec = toJS(context);
+    JSLockHolder locker(exec);
+
+    if (isJSUint8Array(exec->vm(), object))
         return RTUint8Array;
-    if (isJSUint8ClampedArray(object))
+    if (isJSUint8ClampedArray(exec->vm(), object))
         return RTUint8ClampedArray;
-    if (isJSArray(object))
+    if (isJSArray(exec->vm(), object))
             return Array;
-    if (isJSDate(object))
+    if (isJSDate(exec->vm(), object))
             return Date;
-    if (isQtObject(object))
+    if (isQtObject(exec->vm(), object))
             return QObj;
 
     return Object;
@@ -210,11 +211,11 @@ static JSValueRef unwrapBoxedPrimitive(JSContextRef context, JSValueRef value, J
     ExecState* exec = toJS(context);
     JSLockHolder locker(exec);
     JSObject* object = toJS(obj);
-    if (object->inherits(NumberObject::info()))
+    if (object->inherits<NumberObject>(exec->vm()))
         return toRef(exec, jsNumber(object->toNumber(exec)));
-    if (object->inherits(StringObject::info()))
+    if (object->inherits<StringObject>(exec->vm()))
         return toRef(exec, object->toString(exec));
-    if (object->inherits(BooleanObject::info()))
+    if (object->inherits<BooleanObject>(exec->vm()))
         return toRef(exec, object->toPrimitive(exec));
     return value;
 }
@@ -293,7 +294,7 @@ static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSVal
     JSLockHolder locker(exec);
     if (type == Date) {
         JSObject* jsObject = toJS(object);
-        DateInstance* date = asDateInstance(jsObject);
+        DateInstance* date = jsDynamicCast<DateInstance*>(exec->vm(), jsObject);
         gdt->copyFrom(*date->gregorianDateTimeUTC(exec));
     } else {
         double ms = JSValueToNumber(context, value, exception);
@@ -502,11 +503,15 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
 
         case QMetaType::QByteArray: {
             if (type == RTUint8Array) {
-                RefPtr<JSC::Uint8Array> arr = toUint8Array(toJS(toJS(context), value));
+                ExecState* exec = toJS(context);
+                JSLockHolder locker(exec);
+                RefPtr<JSC::Uint8Array> arr = toPossiblySharedUint8Array(exec->vm(), toJS(toJS(context), value));
                 ret = QVariant(QByteArray(reinterpret_cast<const char*>(arr->data()), arr->length()));
                 dist = 0;
             } else if (type == RTUint8ClampedArray) {
-                RefPtr<JSC::Uint8ClampedArray> arr = toUint8ClampedArray(toJS(toJS(context), value));
+                ExecState* exec = toJS(context);
+                JSLockHolder locker(exec);
+                RefPtr<JSC::Uint8ClampedArray> arr = toPossiblySharedUint8ClampedArray(exec->vm(), toJS(toJS(context), value));
                 ret = QVariant(QByteArray(reinterpret_cast<const char*>(arr->data()), arr->length()));
                 dist = 0;
             } else {
@@ -680,7 +685,7 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
     return convertValueToQVariant(context, value, hint, distance, &visitedObjects, recursionLimit, exception);
 }
 
-JSValueRef convertQVariantToValue(JSContextRef context, Ref<RootObject>&& root, const QVariant& variant, JSValueRef *exception)
+JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const QVariant& variant, JSValueRef *exception)
 {
     // Variants with QObject * can be isNull but not a null pointer
     // An empty QString variant is also null
@@ -761,15 +766,16 @@ JSValueRef convertQVariantToValue(JSContextRef context, Ref<RootObject>&& root, 
         return QtPixmapRuntime::toJS(context, variant, exception);
 
     if (customRuntimeConversions()->contains(type)) {
-        if (!root->globalObject()->inherits(JSDOMWindow::info()))
-            return JSValueMakeUndefined(context);
-
-        Document* document = JSDOMWindow::toWrapped(root->globalObject())->document();
-        if (!document)
-            return JSValueMakeUndefined(context);
+        // QTFIXME: check
         ExecState* exec = toJS(context);
         JSLockHolder locker(exec);
-        return toRef(exec, customRuntimeConversions()->value(type).toJSValueFunc(exec, toJSDOMGlobalObject(document, exec), variant));
+        if (!root->globalObject()->inherits<JSDOMWindow>(exec->vm()))
+            return JSValueMakeUndefined(context);
+
+        Document* document = JSDOMWindow::toWrapped(exec->vm(), root->globalObject())->document();
+        if (!document)
+            return JSValueMakeUndefined(context);
+        return toRef(exec, customRuntimeConversions()->value(type).toJSValueFunc(exec, toJSDOMWindow(document->frame(), currentWorld(*exec)), variant));
     }
 
     if (type == QMetaType::QVariantMap) {
@@ -780,7 +786,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, Ref<RootObject>&& root, 
         while (i != map.constEnd()) {
             QString s = i.key();
             JSStringRef propertyName = JSStringCreateWithCharacters(reinterpret_cast<const JSChar*>(s.constData()), s.length());
-            JSValueRef propertyValue = convertQVariantToValue(context, root.ptr(), i.value(), /*ignored exception*/0);
+            JSValueRef propertyValue = convertQVariantToValue(context, root, i.value(), /*ignored exception*/0);
             if (propertyValue)
                 JSObjectSetProperty(context, ret, propertyName, propertyValue, kJSPropertyAttributeNone, /*ignored exception*/0);
             JSStringRelease(propertyName);
@@ -799,7 +805,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, Ref<RootObject>&& root, 
         if (exception && *exception)
             return array;
         for (int i = 0; i < vl.count(); ++i) {
-            JSValueRef property = convertQVariantToValue(context, root.ptr(), vl.at(i), /*ignored exception*/0);
+            JSValueRef property = convertQVariantToValue(context, root, vl.at(i), /*ignored exception*/0);
             if (property)
                 JSObjectSetPropertyAtIndex(context, array, i, property, /*ignored exception*/0);
         }
@@ -821,7 +827,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, Ref<RootObject>&& root, 
         ExecState* exec = toJS(context);
         JSLockHolder locker(exec);
         for (int i = 0; i < ol.count(); ++i) {
-            JSValueRef jsObject = toRef(exec, QtInstance::getQtInstance(ol.at(i), rootRef, QtInstance::QtOwnership)->createRuntimeObject(exec));
+            JSValueRef jsObject = toRef(exec, QtInstance::getQtInstance(ol.at(i), root, QtInstance::QtOwnership)->createRuntimeObject(exec));
             JSObjectSetPropertyAtIndex(context, array, i, jsObject, /*ignored exception*/0);
         }
         return array;
@@ -836,7 +842,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, Ref<RootObject>&& root, 
     if (type == (QMetaType::Type)qMetaTypeId<QVariant>()) {
         QVariant real = variant.value<QVariant>();
         qConvDebug() << "real variant is:" << real;
-        return convertQVariantToValue(context, root.ptr(), real, exception);
+        return convertQVariantToValue(context, root, real, exception);
     }
 
     qConvDebug() << "fallback path for" << variant << variant.userType();
@@ -1463,7 +1469,7 @@ JSValueRef QtRuntimeMethod::connectOrDisconnect(JSContextRef context, JSObjectRe
 
 QMultiMap<QObject*, QtConnectionObject*> QtConnectionObject::connections;
 
-QtConnectionObject::QtConnectionObject(JSContextRef context, Ref<QtInstance>&& senderInstance, int signalIndex, JSObjectRef receiver, JSObjectRef receiverFunction)
+QtConnectionObject::QtConnectionObject(JSContextRef context, RefPtr<QtInstance>&& senderInstance, int signalIndex, JSObjectRef receiver, JSObjectRef receiverFunction)
     : QObject(senderInstance->getObject())
     , m_context(JSContextGetGlobalContext(context))
     , m_rootObject(senderInstance->rootObject())
@@ -1586,7 +1592,7 @@ void QtConnectionObject::execute(void** argv)
 
     for (int i = 0; i < argc; i++) {
         int argType = method.parameterType(i);
-        args[i] = convertQVariantToValue(m_context, m_rootObject, QVariant(argType, argv[i+1]), ignoredException);
+        args[i] = convertQVariantToValue(m_context, m_rootObject.get(), QVariant(argType, argv[i+1]), ignoredException);
     }
 
     JSValueRef callException = 0;
