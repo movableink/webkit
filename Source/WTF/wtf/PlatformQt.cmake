@@ -28,6 +28,7 @@ if (USE_MACH_PORTS)
     )
     list(APPEND WTF_SOURCES
         cocoa/MachSendRight.cpp
+        cocoa/WorkQueueCocoa.cpp
     )
 endif()
 
@@ -49,12 +50,6 @@ endif ()
 if (QT_STATIC_BUILD)
     list(APPEND WTF_LIBRARIES
         ${STATIC_LIB_DEPENDENCIES}
-    )
-endif ()
-
-if (USE_MACH_PORTS)
-    list(APPEND WTF_SOURCES
-        cocoa/WorkQueueCocoa.cpp
     )
 endif ()
 
