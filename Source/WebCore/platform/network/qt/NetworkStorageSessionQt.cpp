@@ -28,6 +28,7 @@
 
 #include "Cookie.h"
 #include "CookieRequestHeaderFieldProxy.h"
+#include "NetworkingContext.h"
 
 namespace WebCore {
 
