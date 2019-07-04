@@ -18,8 +18,7 @@
 */
 
 #include "config.h"
-
-#include "DNSResolveQueue.h"
+#include "DNSResolveQueueQt.h"
 
 #include <QHostInfo>
 #include <QObject>
@@ -55,29 +54,19 @@ public Q_SLOTS:
     }
 };
 
-// This is called on mouse over a href and on page loading.
-void prefetchDNS(const String& hostname)
-{
-    if (hostname.isEmpty())
-        return;
-    DNSResolveQueue::singleton().add(hostname);
-}
-
-void DNSResolveQueue::updateIsUsingProxy()
+void DNSResolveQueueQt::updateIsUsingProxy()
 {
     // Qt expects the system or a proxy to cache the result, but other platforms disable WebCore DNS prefetching when proxies are enabled.
     m_isUsingProxy = false;
 }
 
 // This is called by the platform-independent DNSResolveQueue.
-void DNSResolveQueue::platformResolve(const String& hostname)
+void DNSResolveQueueQt::platformResolve(const String& hostname)
 {
     static NeverDestroyed<DnsPrefetchHelper> dnsPrefetchHelper;
     dnsPrefetchHelper.get().lookup(hostname);
 }
 
-using DNSResolveQueuePlatform = DNSResolveQueue;
+} // namespace WebCore
 
-} // namespace
-
-#include "DNSQt.moc"
+#include "DNSResolveQueueQt.moc"
