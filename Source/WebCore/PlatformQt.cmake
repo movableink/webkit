@@ -72,14 +72,14 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/FontCacheQt.cpp
     platform/graphics/qt/FontCascadeQt.cpp
     platform/graphics/qt/FontCustomPlatformDataQt.cpp
-    platform/graphics/qt/FontPlatformDataQt.cpp
+#    platform/graphics/qt/FontPlatformDataQt.cpp
     platform/graphics/qt/FontQt.cpp
     platform/graphics/qt/GlyphPageTreeNodeQt.cpp
     platform/graphics/qt/GradientQt.cpp
 #    platform/graphics/qt/GraphicsContextQt.cpp
     platform/graphics/qt/IconQt.cpp
 #    platform/graphics/qt/ImageBufferDataQt.cpp
-    platform/graphics/qt/ImageBufferQt.cpp
+#    platform/graphics/qt/ImageBufferQt.cpp
     platform/graphics/qt/ImageDecoderQt.cpp
 #    platform/graphics/qt/ImageQt.cpp
     platform/graphics/qt/IntPointQt.cpp
@@ -103,11 +103,11 @@ list(APPEND WebCore_SOURCES
     platform/network/qt/NetworkStateNotifierQt.cpp
     platform/network/qt/NetworkStorageSessionQt.cpp
     platform/network/qt/ProxyServerQt.cpp
-    platform/network/qt/QNetworkReplyHandler.cpp
+#    platform/network/qt/QNetworkReplyHandler.cpp
     platform/network/qt/QtMIMETypeSniffer.cpp
-    platform/network/qt/ResourceHandleQt.cpp
-    platform/network/qt/ResourceRequestQt.cpp
-    platform/network/qt/ResourceResponseQt.cpp
+#    platform/network/qt/ResourceHandleQt.cpp
+    #platform/network/qt/ResourceRequestQt.cpp
+    #    platform/network/qt/ResourceResponseQt.cpp
     platform/network/qt/SocketStreamHandleImplQt.cpp
     platform/network/qt/SynchronousLoaderClientQt.cpp
 
@@ -122,7 +122,7 @@ list(APPEND WebCore_SOURCES
     platform/qt/LocalizedStringsQt.cpp
     platform/qt/LoggingQt.cpp
     platform/qt/MainThreadSharedTimerQt.cpp
-    platform/qt/MIMETypeRegistryQt.cpp
+    #    platform/qt/MIMETypeRegistryQt.cpp
     platform/qt/PasteboardQt.cpp
     platform/qt/PlatformKeyboardEventQt.cpp
     platform/qt/PlatformScreenQt.cpp

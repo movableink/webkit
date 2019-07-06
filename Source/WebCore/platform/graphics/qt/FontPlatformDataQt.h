@@ -118,8 +118,9 @@ public:
 
     FontOrientation orientation() const { return FontOrientation::Horizontal; } // QTFIXME: Implement.
     void setOrientation(FontOrientation) { } // QTFIXME: Implement.
-    FontPlatformData cloneWithOrientation(const FontPlatformData& source, FontOrientation orientation);
+    static FontPlatformData cloneWithOrientation(const FontPlatformData& source, FontOrientation orientation);
     RefPtr<SharedBuffer> openTypeTable(uint32_t table) const;
+    bool syntheticOblique() const { return false; } // QTFIXME: Implement.
 
     unsigned hash() const;
 
