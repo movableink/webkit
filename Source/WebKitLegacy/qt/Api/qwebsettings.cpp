@@ -26,10 +26,10 @@
 #include "ApplicationCacheStorage.h"
 #include "CrossOriginPreflightResultCache.h"
 #include "DatabaseManager.h"
-#include "FileSystem.h"
 #include "FontCache.h"
 #include "GCController.h"
-#include "IconDatabase.h"
+// QTFIXME: There is no IconDatabase anymore
+//#include "IconDatabase.h"
 #include "Image.h"
 #if ENABLE(ICONDATABASE)
 #include "IconDatabaseClientQt.h"
@@ -55,6 +55,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include <wtf/FastMalloc.h>
+#include <wtf/FileSystem.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 

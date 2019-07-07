@@ -33,6 +33,13 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/x11"
 )
 
+list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+    platform/network/qt/CertificateInfo.h
+    platform/network/qt/ResourceError.h
+    platform/network/qt/ResourceRequest.h
+    platform/network/qt/ResourceResponse.h
+)
+
 list(APPEND WebCore_SOURCES
     accessibility/qt/AccessibilityObjectQt.cpp
 

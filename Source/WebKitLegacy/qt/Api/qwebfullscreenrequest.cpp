@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "qwebfullscreenrequest.h"
 
-#include "Element.h"
 #include "QWebPageAdapter.h"
 
+#include <WebCore/Element.h>
 #include <QPointer>
 
 class QWebFullScreenRequestPrivate {
