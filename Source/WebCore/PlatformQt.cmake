@@ -129,7 +129,7 @@ list(APPEND WebCore_SOURCES
     platform/qt/LocalizedStringsQt.cpp
     platform/qt/LoggingQt.cpp
     platform/qt/MainThreadSharedTimerQt.cpp
-    #    platform/qt/MIMETypeRegistryQt.cpp
+    platform/qt/MIMETypeRegistryQt.cpp
     platform/qt/PasteboardQt.cpp
     platform/qt/PlatformKeyboardEventQt.cpp
     platform/qt/PlatformScreenQt.cpp
