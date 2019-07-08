@@ -535,6 +535,18 @@ String insecurePluginVersionText()
     return String();
 }
 
+String unsupportedPluginText()
+{
+    notImplemented();
+    return String();
+}
+
+String pluginTooSmallText()
+{
+    notImplemented();
+    return String();
+}
+
 String inactivePluginText()
 {
     notImplemented();
