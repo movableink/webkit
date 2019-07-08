@@ -79,7 +79,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/FontCacheQt.cpp
     platform/graphics/qt/FontCascadeQt.cpp
     platform/graphics/qt/FontCustomPlatformDataQt.cpp
-#    platform/graphics/qt/FontPlatformDataQt.cpp
+    platform/graphics/qt/FontPlatformDataQt.cpp
     platform/graphics/qt/FontQt.cpp
     platform/graphics/qt/GlyphPageTreeNodeQt.cpp
     platform/graphics/qt/GradientQt.cpp
