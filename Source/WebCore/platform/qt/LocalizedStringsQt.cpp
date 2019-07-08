@@ -512,6 +512,12 @@ String AXLinkActionVerb()
     return String();
 }
 
+String autoFillStrongPasswordLabel()
+{
+    notImplemented();
+    return String();
+}
+
 String missingPluginText()
 {
     return QCoreApplication::translate("QWebPage", "Missing Plug-in", "Label text to be used when a plug-in is missing");
