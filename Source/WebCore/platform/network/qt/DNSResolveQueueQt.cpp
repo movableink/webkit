@@ -20,6 +20,7 @@
 #include "config.h"
 #include "DNSResolveQueueQt.h"
 
+#include "NotImplemented.h"
 #include <QHostInfo>
 #include <QObject>
 #include <QString>
@@ -53,6 +54,16 @@ public Q_SLOTS:
         DNSResolveQueue::singleton().decrementRequestCount();
     }
 };
+
+void DNSResolveQueueQt::resolve(const WTF::String&, uint64_t, DNSCompletionHandler&&)
+{
+    notImplemented();
+}
+
+void DNSResolveQueueQt::stopResolve(uint64_t)
+{
+    notImplemented();
+}
 
 void DNSResolveQueueQt::updateIsUsingProxy()
 {
