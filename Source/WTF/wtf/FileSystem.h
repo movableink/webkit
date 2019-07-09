@@ -78,14 +78,15 @@ namespace FileSystemImpl {
 //#elif USE(GLIB) && !OS(WINDOWS)
 //typedef GFileIOStream* PlatformFileHandle;
 //const PlatformFileHandle invalidPlatformFileHandle = 0;
-//#elif OS(WINDOWS)
-//typedef HANDLE PlatformFileHandle;
-//// FIXME: -1 is INVALID_HANDLE_VALUE, defined in <winbase.h>. Chromium tries to
-//// avoid using Windows headers in headers. We'd rather move this into the .cpp.
-//const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1);
-//#else
+#if OS(WINDOWS)
+typedef HANDLE PlatformFileHandle;
+// FIXME: -1 is INVALID_HANDLE_VALUE, defined in <winbase.h>. Chromium tries to
+// avoid using Windows headers in headers. We'd rather move this into the .cpp.
+const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1);
+#else
 typedef int PlatformFileHandle;
 const PlatformFileHandle invalidPlatformFileHandle = -1;
+#endif
 #endif
 
 enum class FileOpenMode {
