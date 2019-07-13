@@ -141,16 +141,20 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
             const qreal height = font.ascent() + font.descent();
             const QRectF boundingRect(point.x(), point.y() - font.ascent() + baseLineOffset, width, height);
 
-//            shadow.drawShadowLayer(context.getCTM(), context.clipBounds(), boundingRect,
-//                [state, point, qtGlyphRun, textStrokePath](GraphicsContext& shadowContext)
-//            {
-//                QPainter* shadowPainter = shadowContext.platformContext();
-//                shadowPainter->setPen(state.shadowColor);
-//                if (shadowContext.textDrawingMode() & TextModeFill)
-//                    shadowPainter->drawGlyphRun(point, qtGlyphRun);
-//                else if (shadowContext.textDrawingMode() & TextModeStroke)
-//                    shadowPainter->strokePath(textStrokePath, shadowPainter->pen());
-//            });
+            shadow.drawShadowLayer(context.getCTM(), context.clipBounds(), boundingRect,
+                [state, point, qtGlyphRun, textStrokePath](GraphicsContext& shadowContext)
+                {
+                    QPainter* shadowPainter = shadowContext.platformContext();
+                    shadowPainter->setPen(state.shadowColor);
+                    if (shadowContext.textDrawingMode() & TextModeFill)
+                        shadowPainter->drawGlyphRun(point, qtGlyphRun);
+                    else if (shadowContext.textDrawingMode() & TextModeStroke)
+                        shadowPainter->strokePath(textStrokePath, shadowPainter->pen());
+                },
+                [&context](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
+                {
+                    context.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), context.compositeOperation());
+                });
         } else {
             QPen previousPen = painter->pen();
             painter->setPen(state.shadowColor);
