@@ -25,12 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEB_CRYPTO)
-
 #include "CryptoAlgorithmIdentifier.h"
 #include <CommonCrypto/CommonCryptor.h>
 #include <CommonCrypto/CommonRandom.h>
-#include <pal/spi/cocoa/CommonCryptoSPI.h>
+#include <PAL/pal/spi/cocoa/CommonCryptoSPI.h>
 #include <wtf/Vector.h>
 
 #if !HAVE(CCRSAGetCRTComponents)
@@ -69,5 +67,3 @@ private:
 bool getCommonCryptoDigestAlgorithm(CryptoAlgorithmIdentifier, CCDigestAlgorithm&);
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)

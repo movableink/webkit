@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 enum class CryptoAlgorithmIdentifier {
@@ -52,5 +50,3 @@ enum class CryptoAlgorithmIdentifier {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)
