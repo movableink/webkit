@@ -33,6 +33,7 @@
 #include "qwebelement_p.h"
 
 #include <JavaScriptCore/InitializeThreading.h>
+#include <QPixmap>
 #include <WebCore/Image.h>
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MemoryCache.h>
@@ -70,7 +71,7 @@ Q_DECL_EXPORT void initializeWebKitQt()
 
 Q_DECL_EXPORT void setImagePlatformResource(const char* name, const QPixmap& pixmap)
 {
-    WebCore::Image::setPlatformResource(name, pixmap);
+    WebCore::Image::setPlatformResource(name, pixmap.toImage());
 }
 
 }
