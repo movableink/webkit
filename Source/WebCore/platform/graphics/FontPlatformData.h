@@ -24,10 +24,6 @@
 
 #pragma once
 
-#if PLATFORM(QT)
-#include "qt/FontPlatformDataQt.h"
-#else
-
 #include "TextFlags.h"
 #include <wtf/Forward.h>
 #include <wtf/RetainPtr.h>
@@ -46,6 +42,13 @@
 #include "HbUniquePtr.h"
 #include "RefPtrFontconfig.h"
 #include <memory>
+#endif
+
+#if PLATFORM(QT)
+#include <QRawFont>
+#include <wtf/GetPtr.h>
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 #endif
 
 #if USE(APPKIT)
@@ -76,6 +79,18 @@ namespace WebCore {
 class FontDescription;
 class SharedBuffer;
 
+#if PLATFORM(QT)
+class FontPlatformDataPrivate : public RefCounted<FontPlatformDataPrivate> {
+    WTF_MAKE_NONCOPYABLE(FontPlatformDataPrivate); WTF_MAKE_FAST_ALLOCATED;
+public:
+    FontPlatformDataPrivate() = default;
+    FontPlatformDataPrivate(const QRawFont& rawFont)
+        : rawFont(rawFont)
+    { }
+    QRawFont rawFont;
+};
+#endif
+
 // This class is conceptually immutable. Once created, no instances should ever change (in an observable way).
 class FontPlatformData {
     WTF_MAKE_FAST_ALLOCATED;
@@ -87,6 +102,13 @@ public:
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT FontPlatformData(CTFontRef, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering);
+#endif
+
+#if PLATFORM(QT)
+    FontPlatformData(const FontDescription&, const AtomString& family);
+    FontPlatformData(const QRawFont& rawFont)
+        : m_data(adoptRef(new FontPlatformDataPrivate(rawFont)))
+    { }
 #endif
 
     static FontPlatformData cloneWithOrientation(const FontPlatformData&, FontOrientation);
@@ -174,6 +196,16 @@ public:
     bool isFixedWidth() const { return m_fixedWidth; }
 #endif
 
+#if PLATFORM(QT)
+    QRawFont rawFont() const
+    {
+        ASSERT(!isHashTableDeletedValue());
+        if (!m_data)
+            return QRawFont();
+        return m_data->rawFont;
+    }
+#endif
+
     unsigned hash() const;
 
     bool operator==(const FontPlatformData& other) const
@@ -203,7 +235,7 @@ public:
 #endif
     }
 
-#if PLATFORM(COCOA) || PLATFORM(WIN) || USE(FREETYPE)
+#if PLATFORM(COCOA) || PLATFORM(WIN) || USE(FREETYPE) || PLATFORM(QT)
     RefPtr<SharedBuffer> openTypeTable(uint32_t table) const;
 #endif
 
@@ -249,6 +281,10 @@ private:
 
 #if USE(FREETYPE)
     RefPtr<FcPattern> m_pattern;
+#endif
+
+#if PLATFORM(QT)
+    RefPtr<FontPlatformDataPrivate> m_data;
 #endif
 
     // The values below are common to all ports
@@ -324,5 +360,3 @@ private:
 #endif
 
 } // namespace WebCore
-
-#endif // PLATFORM(QT)
