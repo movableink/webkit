@@ -358,9 +358,11 @@ void DumpRenderTreeSupportQt::setWindowsBehaviorAsEditingBehavior(QWebPageAdapte
 
 void DumpRenderTreeSupportQt::clearAllApplicationCaches()
 {
+#ifndef APPLICATION_CACHE_STORAGE_BROKEN
     auto& applicationCacheStorage = ApplicationCacheStorage::singleton();
     applicationCacheStorage.empty();
     applicationCacheStorage.vacuumDatabaseFile();
+#endif
 }
 
 void DumpRenderTreeSupportQt::dumpFrameLoader(bool b)
