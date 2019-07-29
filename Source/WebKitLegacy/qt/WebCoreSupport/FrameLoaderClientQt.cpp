@@ -1399,7 +1399,7 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
 
     if (MIMETypeRegistry::isApplicationPluginMIMEType(mimeType)) {
         pluginAdapter = m_webFrame->pageAdapter->createPlugin(classid, qurl, params, values);
-#ifndef QT_NO_STYLE_STYLESHEET
+#if 0 //ndef QT_NO_STYLE_STYLESHEET
         QtPluginWidgetAdapter* widget = qobject_cast<QtPluginWidgetAdapter*>(pluginAdapter);
         if (widget && equalLettersIgnoringASCIICase(mimeType, "application/x-qt-styled-widget")) {
 
