@@ -190,9 +190,9 @@ void QWebSettingsPrivate::apply()
                                       global->attributes.value(QWebSettings::JavascriptCanOpenWindows));
         settings->setJavaScriptCanOpenWindowsAutomatically(value);
 
-        value = attributes.value(QWebSettings::JavascriptCanCloseWindows,
-                                      global->attributes.value(QWebSettings::JavascriptCanCloseWindows));
-        settings->setAllowScriptsToCloseWindows(value);
+//        value = attributes.value(QWebSettings::JavascriptCanCloseWindows,
+//                                      global->attributes.value(QWebSettings::JavascriptCanCloseWindows));
+//        settings->setAllowScriptsToCloseWindows(value);
 
         value = attributes.value(QWebSettings::JavaEnabled,
                                       global->attributes.value(QWebSettings::JavaEnabled));
