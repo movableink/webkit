@@ -1097,9 +1097,14 @@ void QWebSettings::resetAttribute(WebAttribute attr)
 void QWebSettings::setOfflineStoragePath(const QString& path)
 {
     WebCore::initializeWebCoreQt();
-    QWebSettings::globalSettings()->d->offlineDatabasePath = path;
-    // QTFIXME: Should we make it actually switchable at run time?
-    WebCore::DatabaseTracker::singleton().initializeTracker(path);
+    if (!WebCore::DatabaseTracker::isInitialized()) {
+        QWebSettings::globalSettings()->d->offlineDatabasePath = path;
+        // QTFIXME: Should we make it actually switchable at run time?
+        WebCore::DatabaseTracker::initializeTracker(path);
+    } else {
+        if (path != QWebSettings::globalSettings()->d->offlineDatabasePath)
+            qWarning("Changing offlineStoragePath is not supported");
+    }
 }
 
 /*!
