@@ -219,8 +219,10 @@ void RunLoop::TimerBase::stop()
         TimerObject* timer = 0;
         if (it != m_runLoop->m_timerObjects.end())
             timer = it->value;
-        ASSERT(timer);
-        timer->stopAsync(this);
+	if (timer != NULL) {
+            //ASSERT(timer);
+            timer->stopAsync(this);
+	}
     }
 }
 
