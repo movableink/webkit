@@ -432,6 +432,8 @@ Q_SIGNALS:
     void loadStarted();
     void loadProgress(int progress);
     void loadFinished(bool ok);
+    void assetStarted(QUrl url);
+    void assetFinished(QUrl url);
 
     void linkHovered(const QString &link, const QString &title, const QString &textContent);
     void statusBarMessage(const QString& text);

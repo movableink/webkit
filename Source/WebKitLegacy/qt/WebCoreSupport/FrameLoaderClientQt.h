@@ -100,6 +100,8 @@ public:
     void dispatchDidFinishLoading(WebCore::DocumentLoader*, unsigned long) override;
     void dispatchDidFailLoading(WebCore::DocumentLoader*, unsigned long, const WebCore::ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, int) override;
+    void dispatchAssetStarted(const URL) override;
+    void dispatchAssetFinished(const URL) override;
 
     void dispatchDidDispatchOnloadEvents() override;
     void dispatchDidReceiveServerRedirectForProvisionalLoad() override;
@@ -243,6 +245,8 @@ private Q_SLOTS:
 private:
     void emitLoadStarted();
     void emitLoadFinished(bool ok);
+    void emitAssetStarted(const URL url);
+    void emitAssetFinished(const URL url);
 
     Frame *m_frame;
     QWebFrameAdapter *m_webFrame;

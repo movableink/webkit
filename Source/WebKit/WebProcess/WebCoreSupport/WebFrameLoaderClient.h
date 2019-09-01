@@ -116,6 +116,8 @@ private:
     void dispatchDidFailLoad(const WebCore::ResourceError&) final;
     void dispatchDidFinishDocumentLoad() final;
     void dispatchDidFinishLoad() final;
+    virtual void dispatchAssetStarted(const WebCore::URL) override;
+    virtual void dispatchAssetFinished(const WebCore::URL) override;
     void dispatchDidExplicitOpen(const URL&) final;
 
     void dispatchDidReachLayoutMilestone(OptionSet<WebCore::LayoutMilestone>) final;

@@ -34,6 +34,7 @@
 #include "EventSender.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
@@ -320,6 +321,10 @@ void ImageLoader::notifyFinished(CachedResource& resource)
     ASSERT(m_failedLoadURL.isEmpty());
     ASSERT_UNUSED(resource, &resource == m_image.get());
 
+    Frame* frame = element().document().frame();
+    if (frame)
+        frame->loader().client().dispatchAssetFinished(m_image->url());
+
     m_imageComplete = true;
     if (!hasPendingBeforeLoadEvent())
         updateRenderer();
@@ -502,6 +507,11 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         return;
     if (!element().document().hasLivingRenderTree())
         return;
+
+    Frame* frame = element().document().frame();
+    if (frame)
+	frame->loader().client().dispatchAssetStarted(m_image->url());
+
     m_hasPendingBeforeLoadEvent = false;
     Ref<Document> originalDocument = element().document();
     if (element().dispatchBeforeLoadEvent(m_image->url())) {

@@ -289,6 +289,16 @@ void WebFrameLoaderClient::dispatchDidFailLoading(DocumentLoader*, unsigned long
     webPage->removeResourceRequest(identifier);
 }
 
+void WebFrameLoaderClient::dispatchAssetStarted(const WebCore::URL /*url*/)
+{
+  // Not implemented
+}
+
+void WebFrameLoaderClient::dispatchAssetFinished(const WebCore::URL /*url*/)
+{
+  // Not implemented
+}
+
 bool WebFrameLoaderClient::dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int /*length*/)
 {
     notImplemented();

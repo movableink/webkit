@@ -109,6 +109,18 @@ void QWebFramePrivate::emitLoadFinished(bool originatingLoad, bool ok)
     emit q->loadFinished(ok);
 }
 
+void QWebFramePrivate::emitAssetStarted(QUrl url)
+{
+  if (page)
+    emit page->assetStarted(url);
+}
+
+void QWebFramePrivate::emitAssetFinished(QUrl url)
+{
+  if (page)
+    emit page->assetFinished(url);
+}
+
 QWebFrameAdapter* QWebFramePrivate::createChildFrame(QWebFrameData* frameData)
 {
     QWebFrame* newFrame = new QWebFrame(/*parent frame*/q, frameData);
@@ -1018,6 +1030,22 @@ QWebFrame *QWebFramePrivate::kit(const QWebFrameAdapter* frameAdapter)
     \a ok will indicate whether the load was successful or any error occurred.
 
     \sa loadStarted()
+*/
+
+/*!
+    \fn void QWebFrame::assetStarted(const QUrl url)
+    \since --
+    This signal is emitted when an asset begins loading
+    \a url contains the URL of the asset
+    \sa assetFinished()
+*/
+
+/*!
+    \fn void QWebFrame::assetFinished(const QUrl url)
+    \since --
+    This signal is emitted when an asset finishes loading
+    \a url contains the URL of the asset
+    \sa assetStarted()
 */
 
 /*!

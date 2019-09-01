@@ -63,6 +63,8 @@ public:
     void emitIconChanged() override;
     void emitLoadStarted(bool originatingLoad) override;
     void emitLoadFinished(bool originatingLoad, bool ok) override;
+    void emitAssetStarted(const QUrl url);
+    void emitAssetFinished(const QUrl url);
     QWebFrameAdapter* createChildFrame(QWebFrameData*) override;
 
     QWebFrame *q;
