@@ -76,12 +76,14 @@ FontPlatformData FontPlatformData::cloneWithSyntheticOblique(const FontPlatformD
     return copy;
 }
 
+#if !PLATFORM(QT)
 FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source, float size)
 {
     FontPlatformData copy(source);
     copy.m_size = size;
     return copy;
 }
+#endif
 #endif
 
 }
