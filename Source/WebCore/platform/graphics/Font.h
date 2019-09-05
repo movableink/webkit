@@ -160,9 +160,7 @@ public:
         m_adjustedSpaceWidth = spaceWidth;
     }
 
-#if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
     float syntheticBoldOffset() const { return m_syntheticBoldOffset; }
-#endif
 
     Glyph spaceGlyph() const { return m_spaceGlyph; }
     void setSpaceGlyph(Glyph spaceGlyph) { m_spaceGlyph = spaceGlyph; }
@@ -306,9 +304,7 @@ private:
     float m_spaceWidth { 0 };
     float m_adjustedSpaceWidth { 0 };
 
-#if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
     float m_syntheticBoldOffset { 0 };
-#endif
 
     unsigned m_treatAsFixedPitch : 1;
     unsigned m_isInterstitial : 1; // Whether or not this custom font is the last resort placeholder for a loading font
