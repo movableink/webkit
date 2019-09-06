@@ -230,11 +230,8 @@ void RunLoop::TimerBase::stop()
     else {
         QThread* thread = QThread::currentThread();
         TimerObjectMap::iterator it = m_runLoop->m_timerObjects.find(thread);
-        TimerObject* timer = 0;
         if (it != m_runLoop->m_timerObjects.end())
-            timer = it->value;
-        ASSERT(timer);
-        timer->stopAsync(this);
+            it->value->stopAsync(this);;
     }
 }
 
