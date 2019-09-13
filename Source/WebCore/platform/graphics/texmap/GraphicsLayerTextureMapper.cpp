@@ -288,7 +288,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         // This code makes the assumption that pointer equality on a NativeImagePtr is a valid way to tell if the image is changed.
         // This assumption is true for the GTK+ port.
         NativeImagePtr newNativeImagePtr = image->nativeImageForCurrentFrame();
-        if (!newNativeImagePtr)
+        if (newNativeImagePtr.isNull())
             return;
 
         if (newNativeImagePtr == m_compositedNativeImagePtr)
@@ -300,7 +300,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         m_compositedImage->setContentsToImage(image);
         m_compositedImage->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
     } else {
-        m_compositedNativeImagePtr = nullptr;
+        m_compositedNativeImagePtr = QImage();
         m_compositedImage = nullptr;
     }
 

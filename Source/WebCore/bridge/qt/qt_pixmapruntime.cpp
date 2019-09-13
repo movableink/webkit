@@ -241,13 +241,13 @@ QVariant QtPixmapRuntime::toQt(JSContextRef context, JSObjectRef obj, QMetaType:
     if (!image)
         return emptyVariantForHint(hint);
 
-    QImage* nativeImage = image->nativeImageForCurrentFrame();
-    if (!nativeImage)
+    QImage nativeImage = image->nativeImageForCurrentFrame();
+    if (nativeImage.isNull())
         return emptyVariantForHint(hint);
 
     return (hint == static_cast<QMetaType::Type>(qMetaTypeId<QPixmap>()))
-        ? QVariant::fromValue<QPixmap>(QPixmap::fromImage(*nativeImage))
-        : QVariant::fromValue<QImage>(*nativeImage);
+        ? QVariant::fromValue<QPixmap>(QPixmap::fromImage(WTFMove(nativeImage)))
+        : QVariant::fromValue<QImage>(nativeImage);
 }
 
 bool QtPixmapRuntime::canHandle(QMetaType::Type hint)

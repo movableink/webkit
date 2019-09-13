@@ -420,12 +420,12 @@ void ImageBufferDataPrivateUnaccelerated::drawPattern(GraphicsContext& destConte
 
 void ImageBufferDataPrivateUnaccelerated::clip(GraphicsContext& context, const IntRect& rect) const
 {
-    auto* nativeImage = m_image->nativeImageForCurrentFrame();
-    if (!nativeImage)
+    auto nativeImage = m_image->nativeImageForCurrentFrame();
+    if (nativeImage.isNull())
         return;
 
-    QImage alphaMask = *nativeImage;
-    context.pushTransparencyLayerInternal(rect, 1.0, alphaMask);
+//    QImage alphaMask = nativeImage;
+    context.pushTransparencyLayerInternal(rect, 1.0, nativeImage);
 }
 
 void ImageBufferDataPrivateUnaccelerated::platformTransformColorSpace(const std::array<uint8_t, 256>& lookUpTable)

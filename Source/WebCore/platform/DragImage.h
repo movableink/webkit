@@ -67,7 +67,7 @@ typedef RetainPtr<CGImageRef> DragImageRef;
 #elif PLATFORM(MAC)
 typedef RetainPtr<NSImage> DragImageRef;
 #elif PLATFORM(QT)
-typedef QImage* DragImageRef;
+typedef QImage DragImageRef;
 #elif PLATFORM(WIN)
 typedef HBITMAP DragImageRef;
 #elif USE(CAIRO)
@@ -121,7 +121,7 @@ public:
     bool hasVisiblePath() const { return !!m_visiblePath; }
     Optional<Path> visiblePath() const { return m_visiblePath; }
 
-    explicit operator bool() const { return !!m_dragImageRef; }
+    explicit operator bool() const { return /*!!m_dragImageRef*/ !m_dragImageRef.isNull(); }
     DragImageRef get() const { return m_dragImageRef; }
 
 private:

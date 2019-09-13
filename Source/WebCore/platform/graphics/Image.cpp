@@ -139,7 +139,7 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,  const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    if (!nativeImageForCurrentFrame(&ctxt))
+    if (nativeImageForCurrentFrame(&ctxt).isNull())
         return;
 
     ctxt.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);

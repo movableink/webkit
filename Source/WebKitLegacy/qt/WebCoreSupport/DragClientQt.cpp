@@ -97,8 +97,8 @@ void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Fram
     QObject* view = pageClient ? pageClient->ownerWidget() : 0;
     if (view) {
         QDrag* drag = new QDrag(view);
-        if (dragImage) {
-            drag->setPixmap(QPixmap::fromImage(*dragImage));
+        if (!dragImage.isNull()) {
+            drag->setPixmap(QPixmap::fromImage(WTFMove(dragImage)));
             drag->setHotSpot(IntPoint(eventPos - dragImageOrigin));
         } else if (clipboardData && clipboardData->hasImage())
             drag->setPixmap(qvariant_cast<QPixmap>(clipboardData->imageData()));

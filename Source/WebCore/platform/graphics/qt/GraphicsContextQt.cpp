@@ -510,8 +510,8 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect &destRect, const
     if (paintingDisabled() || !patternTransform.isInvertible())
         return;
 
-    auto* frameImage = image.nativeImageForCurrentFrame();
-    if (!frameImage) // If it's too early we won't have an image yet.
+    QImage frameImage = image.nativeImageForCurrentFrame();
+    if (frameImage.isNull()) // If it's too early we won't have an image yet.
         return;
 
     if (m_impl) {
@@ -532,10 +532,10 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect &destRect, const
         return;
 
     QImage qImage;
-    if (tr.x() || tr.y() || tr.width() != frameImage->width() || tr.height() != frameImage->height())
-        qImage = frameImage->copy(tr);
+    if (tr.x() || tr.y() || tr.width() != frameImage.width() || tr.height() != frameImage.height())
+        qImage = frameImage.copy(tr);
     else
-        qImage = *frameImage; // May do a deep copy if frameImage is being painted to
+        qImage = frameImage; // May do a deep copy if frameImage is being painted to
 
     QPoint trTopLeft = tr.topLeft();
 

@@ -48,20 +48,20 @@ namespace WebCore {
 
 IntSize nativeImageSize(const NativeImagePtr& image)
 {
-    return image ? IntSize(image->size()) : IntSize();
+    return image.size();// image ? IntSize(image->size()) : IntSize();
 }
 
 bool nativeImageHasAlpha(const NativeImagePtr& image)
 {
-    return !image || image->hasAlphaChannel();
+    return image.hasAlphaChannel();//  !image || image->hasAlphaChannel();
 }
 
 Color nativeImageSinglePixelSolidColor(const NativeImagePtr& image)
 {
-    if (!image || image->width() != 1 || image->height() != 1)
+    if (image.width() != 1 || image.height() != 1)
         return Color();
 
-    return QColor::fromRgba(image->pixel(0, 0));
+    return QColor::fromRgba(image.pixel(0, 0));
 }
 
 void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& srcRect, const IntSize& srcSize, const ImagePaintingOptions& options)
@@ -73,16 +73,16 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const F
 
     CompositeOperator previousOperator = ctxt.compositeOperation();
     BlendMode previousBlendMode = ctxt.blendModeOperation();
-    ctxt.setCompositeOperation(!image->hasAlphaChannel() && options.compositeOperator() == CompositeSourceOver && options.blendMode() == BlendMode::Normal ? CompositeCopy : options.compositeOperator(), options.blendMode());
+    ctxt.setCompositeOperation(!image.hasAlphaChannel() && options.compositeOperator() == CompositeSourceOver && options.blendMode() == BlendMode::Normal ? CompositeCopy : options.compositeOperator(), options.blendMode());
 
     if (ctxt.hasShadow()) {
         ShadowBlur shadow(ctxt.state());
-        const auto& pixmap = *image;
+//        const auto& pixmap = *image;
         shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
-            [normalizedSrc, normalizedDst, &pixmap](GraphicsContext& shadowContext)
+            [normalizedSrc, normalizedDst, &image](GraphicsContext& shadowContext)
             {
                 QPainter* shadowPainter = shadowContext.platformContext();
-                shadowPainter->drawImage(normalizedDst, pixmap, normalizedSrc);
+                shadowPainter->drawImage(normalizedDst, image, normalizedSrc);
             },
             [&ctxt](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
             {
@@ -90,7 +90,7 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const F
             });
     }
 
-    ctxt.platformContext()->drawImage(normalizedDst, *image, normalizedSrc);
+    ctxt.platformContext()->drawImage(normalizedDst, image, normalizedSrc);
 
     ctxt.setCompositeOperation(previousOperator, previousBlendMode);
 }

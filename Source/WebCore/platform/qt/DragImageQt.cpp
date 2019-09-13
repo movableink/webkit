@@ -33,27 +33,26 @@ namespace WebCore {
 
 IntSize dragImageSize(DragImageRef image)
 {
-    if (!image)
-        return IntSize();
+//    if (!image)
+//        return IntSize();
 
-    return image->size();
+    return image.size();
 }
 
 void deleteDragImage(DragImageRef image)
 {
-    delete image;
+//    delete image;
 }
 
 DragImageRef scaleDragImage(DragImageRef image, FloatSize scale)
 {
-    if (!image)
-        return 0;
+    if (image.isNull())
+        return QImage();
 
-    int scaledWidth = image->width() * scale.width();
-    int scaledHeight = image->height() * scale.height();
+    int scaledWidth = image.width() * scale.width();
+    int scaledHeight = image.height() * scale.height();
 
-    *image = image->scaled(scaledWidth, scaledHeight);
-    return image;
+    return image.scaled(scaledWidth, scaledHeight);
 }
 
 DragImageRef dissolveDragImageToFraction(DragImageRef image, float)
@@ -63,25 +62,26 @@ DragImageRef dissolveDragImageToFraction(DragImageRef image, float)
 
 DragImageRef createDragImageFromImage(Image* image, ImageOrientation)
 {
-    if (!image || !image->nativeImageForCurrentFrame())
-        return 0;
+    if (!image/* || !image->nativeImageForCurrentFrame()*/)
+        return QImage();
 
-    return new QImage(*image->nativeImageForCurrentFrame());
+    return image->nativeImageForCurrentFrame();
+//    return new QImage(*image->nativeImageForCurrentFrame());
 }
 
 DragImageRef createDragImageIconForCachedImageFilename(const String&)
 {
-    return 0;
+    return QImage();
 }
 
 DragImageRef createDragImageForLink(Element&, URL&, const String&, TextIndicatorData&, FontRenderingMode, float)
 {
-    return nullptr;
+    return QImage();
 }
 
 DragImageRef createDragImageForColor(const Color&, const FloatRect&, float, Path&)
 {
-    return nullptr;
+    return QImage();
 }
 
 }

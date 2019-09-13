@@ -83,7 +83,7 @@ unsigned ImageFrame::clearImage()
     unsigned frameBytes = this->frameBytes();
 
     clearNativeImageSubimages(m_nativeImage);
-    m_nativeImage = nullptr;
+    m_nativeImage = QImage();
     m_decodingOptions = DecodingOptions();
 
     return frameBytes;
@@ -103,7 +103,7 @@ IntSize ImageFrame::size() const
     
 bool ImageFrame::hasNativeImage(const Optional<SubsamplingLevel>& subsamplingLevel) const
 {
-    return m_nativeImage && (!subsamplingLevel || *subsamplingLevel >= m_subsamplingLevel);
+    return !m_nativeImage.isNull() && (!subsamplingLevel || *subsamplingLevel >= m_subsamplingLevel);
 }
 
 bool ImageFrame::hasFullSizeNativeImage(const Optional<SubsamplingLevel>& subsamplingLevel) const

@@ -819,11 +819,9 @@ QWebHitTestResultPrivate::QWebHitTestResultPrivate(const WebCore::HitTestResult 
     innerNonSharedNode->ref();
     boundingRect = (innerNonSharedNode && innerNonSharedNode->renderer())? innerNonSharedNode->renderer()->absoluteBoundingBoxRect() : IntRect();
     WebCore::Image *img = hitTest.image();
-    if (img) {
-        QImage* image = img->nativeImageForCurrentFrame();
-        if (image)
-            pixmap = QPixmap::fromImage(*image);
-    }
+    if (img)
+        pixmap = QPixmap::fromImage(img->nativeImageForCurrentFrame());
+
     WebCore::Frame *wframe = hitTest.targetFrame();
     if (wframe) {
         linkTargetFrame = QWebFrameAdapter::kit(wframe)->handle();

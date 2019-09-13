@@ -258,14 +258,14 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
             LOG(Images, "BitmapImage::%s - %p - url: %s [an image frame will be decoded synchronously]", __FUNCTION__, this, sourceURL().string().utf8().data());
         }
         
-        if (!image) // If it's too early we won't have an image yet.
+        if (image.isNull()) // If it's too early we won't have an image yet.
             return ImageDrawResult::DidNothing;
 
         if (m_currentFrameDecodingStatus != DecodingStatus::Complete)
             ++m_decodeCountForTesting;
     }
 
-    ASSERT(image);
+    ASSERT(!image.isNull());
     Color color = singlePixelSolidColor();
     if (color.isValid()) {
         fillWithSolidColor(context, destRect, color, options.compositeOperator());

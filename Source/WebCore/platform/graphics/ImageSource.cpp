@@ -362,7 +362,7 @@ void ImageSource::startAsyncDecodingQueue()
 
             // Get the frame NativeImage on the decoding thread.
             NativeImagePtr nativeImage = protectedDecoder->createFrameImageAtIndex(frameRequest.index, frameRequest.subsamplingLevel, frameRequest.decodingOptions);
-            if (nativeImage)
+            if (!nativeImage.isNull())
                 LOG(Images, "ImageSource::%s - %p - url: %s [frame %ld has been decoded]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);
             else {
                 LOG(Images, "ImageSource::%s - %p - url: %s [decoding for frame %ld has failed]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);
@@ -677,7 +677,7 @@ void ImageSource::setTargetContext(const GraphicsContext* targetContext)
 
 NativeImagePtr ImageSource::createFrameImageAtIndex(size_t index, SubsamplingLevel subsamplingLevel)
 {
-    return isDecoderAvailable() ? m_decoder->createFrameImageAtIndex(index, subsamplingLevel) : nullptr;
+    return isDecoderAvailable() ? m_decoder->createFrameImageAtIndex(index, subsamplingLevel) : QImage();
 }
 
 NativeImagePtr ImageSource::frameImageAtIndex(size_t index)

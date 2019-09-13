@@ -100,20 +100,20 @@ struct ScopedNodeDragEnabler {
 static DragImageRef createDragImageFromSnapshot(std::unique_ptr<ImageBuffer> snapshot, Node* node)
 {
     if (!snapshot)
-        return nullptr;
+        return QImage();
 
     ImageOrientation orientation;
     if (node) {
         RenderObject* renderer = node->renderer();
         if (!renderer || !is<RenderElement>(renderer))
-            return nullptr;
+            return QImage();
 
         orientation = downcast<RenderElement>(*renderer).imageOrientation();
     }
 
     RefPtr<Image> image = ImageBuffer::sinkIntoImage(WTFMove(snapshot), PreserveResolution::Yes);
     if (!image)
-        return nullptr;
+        return QImage();
     return createDragImageFromImage(image.get(), orientation);
 }
 
@@ -160,7 +160,7 @@ DragImageRef createDragImageForRange(Frame& frame, Range& range, bool forceBlack
     frame.document()->updateLayout();
     RenderView* view = frame.contentRenderer();
     if (!view)
-        return nullptr;
+        return QImage();
 
     // To snapshot the range, temporarily select it and take selection snapshot.
     Position start = range.startPosition();
@@ -174,14 +174,14 @@ DragImageRef createDragImageForRange(Frame& frame, Range& range, bool forceBlack
         end = candidate;
 
     if (start.isNull() || end.isNull() || start == end)
-        return nullptr;
+        return QImage();
 
     const ScopedFrameSelectionState selectionState(frame);
 
     RenderObject* startRenderer = start.deprecatedNode()->renderer();
     RenderObject* endRenderer = end.deprecatedNode()->renderer();
     if (!startRenderer || !endRenderer)
-        return nullptr;
+        return QImage();
 
     SnapshotOptions options = SnapshotOptionsPaintSelectionOnly | (forceBlackText ? SnapshotOptionsForceBlackText : SnapshotOptionsNone);
     int startOffset = start.deprecatedEditingOffset();
@@ -201,14 +201,14 @@ DragImageRef createDragImageForImage(Frame& frame, Node& node, IntRect& imageRec
 
     RenderObject* renderer = node.renderer();
     if (!renderer)
-        return nullptr;
+        return QImage();
 
     // Calculate image and element metrics for the client, then create drag image.
     LayoutRect topLevelRect;
     IntRect paintingRect = snappedIntRect(renderer->paintingRootRect(topLevelRect));
 
     if (paintingRect.isEmpty())
-        return nullptr;
+        return QImage();
 
     elementRect = snappedIntRect(topLevelRect);
     imageRect = paintingRect;
@@ -241,7 +241,7 @@ FloatPoint anchorPointForLinkDragImage(DragImageRef dragImage)
 #endif
 
 DragImage::DragImage()
-    : m_dragImageRef { nullptr }
+//    : m_dragImageRef { nullptr }
 {
 }
 
@@ -251,7 +251,7 @@ DragImage::DragImage(DragImageRef dragImageRef)
 }
 
 DragImage::DragImage(DragImage&& other)
-    : m_dragImageRef { std::exchange(other.m_dragImageRef, nullptr) }
+    : m_dragImageRef { std::exchange(other.m_dragImageRef, QImage()) }
 {
     m_indicatorData = other.m_indicatorData;
     m_visiblePath = other.m_visiblePath;
@@ -259,10 +259,10 @@ DragImage::DragImage(DragImage&& other)
 
 DragImage& DragImage::operator=(DragImage&& other)
 {
-    if (m_dragImageRef)
+    if (!m_dragImageRef.isNull())
         deleteDragImage(m_dragImageRef);
 
-    m_dragImageRef = std::exchange(other.m_dragImageRef, nullptr);
+    m_dragImageRef = std::exchange(other.m_dragImageRef, QImage());
     m_indicatorData = other.m_indicatorData;
     m_visiblePath = other.m_visiblePath;
 
@@ -271,7 +271,7 @@ DragImage& DragImage::operator=(DragImage&& other)
 
 DragImage::~DragImage()
 {
-    if (m_dragImageRef)
+    if (!m_dragImageRef.isNull())
         deleteDragImage(m_dragImageRef);
 }
 

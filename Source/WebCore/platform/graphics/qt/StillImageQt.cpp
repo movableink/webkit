@@ -70,7 +70,7 @@ FloatSize StillImage::size(ImageOrientation) const
 
 NativeImagePtr StillImage::nativeImageForCurrentFrame(const GraphicsContext*)
 {
-    return const_cast<NativeImagePtr>(m_image);
+    return *m_image;
 }
 
 ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, const FloatRect& src, const ImagePaintingOptions& options)

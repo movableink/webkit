@@ -554,7 +554,7 @@ DragImageRef DataTransfer::createDragImage(IntPoint& location) const
     }
 
     // We do not have enough information to create a drag image, use the default icon.
-    return nullptr;
+    return QImage();
 }
 
 #endif
