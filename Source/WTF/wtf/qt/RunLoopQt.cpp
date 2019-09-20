@@ -142,6 +142,7 @@ void RunLoop::stop()
 
 RunLoop::RunLoop()
 {
+    QEventLoop tmpLoop; // Call QEventLoop ctor for ensureEventDispatcher()
     qRegisterMetaType<RunLoop::TimerBase*>("RunLoop::TimerBase*");
     m_timer = new TimerObject(this);
     m_performWorkTimer = new PerformWorkTimerObject(this);
