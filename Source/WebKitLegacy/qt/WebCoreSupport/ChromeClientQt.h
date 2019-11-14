@@ -156,7 +156,7 @@ public:
 
 #if ENABLE(VIDEO) && ((USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)) || USE(QT_MULTIMEDIA))
     bool supportsVideoFullscreen(MediaPlayerEnums::VideoFullscreenMode) final;
-    void enterVideoFullscreenForVideoElement(HTMLVideoElement&, MediaPlayerEnums::VideoFullscreenMode) final;
+    void enterVideoFullscreenForVideoElement(HTMLVideoElement&, HTMLMediaElementEnums::VideoFullscreenMode, bool standby);
     void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&) final;
     bool requiresFullscreenForVideoPlayback() final;
     FullScreenVideoQt* fullScreenVideo();

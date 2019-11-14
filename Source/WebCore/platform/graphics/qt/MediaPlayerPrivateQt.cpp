@@ -86,11 +86,10 @@ MediaPlayer::SupportsType MediaPlayerPrivateQt::supportsType(const MediaEngineSu
 
     // Parse and trim codecs
     QStringList codecList;
-    foreach (const String& codec, parameters.codecs) {
-        codecList.append(QString(codec));
-    }
+    for (const String& codec : parameters.type.codecs())
+        codecList.append(codec);
 
-    if (QMediaPlayer::hasSupport(parameters.type, codecList) >= QMultimedia::ProbablySupported)
+    if (QMediaPlayer::hasSupport(parameters.type.containerType(), codecList) >= QMultimedia::ProbablySupported)
         return MediaPlayer::IsSupported;
 
     return MediaPlayer::MayBeSupported;
@@ -382,11 +381,6 @@ void MediaPlayerPrivateQt::setRate(float rate)
 void MediaPlayerPrivateQt::setVolume(float volume)
 {
     m_mediaPlayer->setVolume(static_cast<int>(volume * 100.0));
-}
-
-bool MediaPlayerPrivateQt::supportsMuting() const
-{
-    return true;
 }
 
 void MediaPlayerPrivateQt::setMuted(bool muted)

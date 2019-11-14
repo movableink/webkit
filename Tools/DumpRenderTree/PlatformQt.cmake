@@ -41,6 +41,15 @@ list(APPEND DumpRenderTree_LIBRARIES
     WebKitWidgets
 )
 
+if (USE_QT_MULTIMEDIA)
+    list(APPEND DumpRenderTree_SYSTEM_INCLUDE_DIRECTORIES
+        ${Qt5Multimedia_INCLUDE_DIRS}
+    )
+    list(APPEND DumpRenderTree_LIBRARIES
+        ${Qt5Multimedia_LIBRARIES}
+    )
+endif ()
+
 if (WIN32)
     add_definitions(-DWEBCORE_EXPORT=)
     add_definitions(-DSTATICALLY_LINKED_WITH_WTF -DSTATICALLY_LINKED_WITH_JavaScriptCore)

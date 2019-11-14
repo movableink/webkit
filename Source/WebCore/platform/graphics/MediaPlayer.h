@@ -96,6 +96,7 @@ struct VideoPlaybackQualityMetrics {
 
 #if PLATFORM(QT)
 class Document;
+class MediaPlayerPrivateQt;
 #endif
 
 class MediaPlayerClient {
@@ -583,6 +584,10 @@ public:
 
 #if USE(AVFOUNDATION)
     WEBCORE_EXPORT AVPlayer *objCAVFoundationAVPlayer() const;
+#endif
+
+#if USE(QT_MULTIMEDIA)
+    MediaPlayerPrivateQt* qtMediaPlayer() const;
 #endif
 
     bool performTaskAtMediaTime(WTF::Function<void()>&&, MediaTime);

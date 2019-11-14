@@ -120,6 +120,10 @@
 #endif
 #endif
 
+#if ENABLE(VIDEO)
+#include <WebCore/HTMLMediaElement.h>
+#endif
+
 // from text/qfont.cpp
 QT_BEGIN_NAMESPACE
 extern Q_GUI_EXPORT int qt_defaultDpi();
@@ -1178,7 +1182,7 @@ void QWebPageAdapter::triggerAction(QWebPageAdapter::MenuAction action, QWebHitT
         if (HTMLMediaElement* mediaElt = mediaElement(hitTestResult->innerNonSharedNode)) {
             if (mediaElt->isVideo() && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard)) {
                 UserGestureIndicator indicator(ProcessingUserGesture);
-                mediaElt->toggleFullscreenState();
+                mediaElt->toggleStandardFullscreenState();
             }
         }
         break;

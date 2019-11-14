@@ -75,7 +75,6 @@ public:
     void setRate(float) override;
     void setVolume(float) override;
 
-    bool supportsMuting() const override;
     void setMuted(bool) override;
 
     void setPreload(MediaPlayer::Preload) override;

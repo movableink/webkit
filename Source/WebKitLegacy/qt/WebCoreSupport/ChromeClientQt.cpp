@@ -65,12 +65,6 @@
 
 #if ENABLE(VIDEO) && ((USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)) || USE(QT_MULTIMEDIA))
 #include "FullScreenVideoQt.h"
-#include "HTMLMediaElement.h"
-#include "HTMLNames.h"
-#include "HTMLVideoElement.h"
-#if USE(QT_MULTIMEDIA)
-#include "MediaPlayerPrivateQt.h"
-#endif
 #endif
 
 #if USE(TEXTURE_MAPPER)
@@ -664,7 +658,7 @@ bool ChromeClientQt::requiresFullscreenForVideoPlayback()
     return fullScreenVideo()->requiresFullScreenForVideoPlayback();
 }
 
-void ChromeClientQt::enterVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, MediaPlayerEnums::VideoFullscreenMode)
+void ChromeClientQt::enterVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, HTMLMediaElementEnums::VideoFullscreenMode, bool /*standby*/)
 {
     fullScreenVideo()->enterFullScreenForNode(&videoElement);
 }

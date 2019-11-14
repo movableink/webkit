@@ -68,10 +68,10 @@
 #include <WebCore/GeolocationController.h>
 #endif
 
-#if ENABLE(VIDEO) && USE(QT_MULTIMEDIA)
-#include "HTMLVideoElement.h"
-#include "MediaPlayerPrivateQt.h"
-#endif
+//#if ENABLE(VIDEO) && USE(QT_MULTIMEDIA)
+//#include <WebCore/HTMLVideoElement.h>
+//#include "MediaPlayerPrivateQt.h"
+//#endif
 
 #include <QPainter>
 #include <wtf/WallTime.h>
@@ -685,28 +685,28 @@ QUrl DumpRenderTreeSupportQt::mediaContentUrlByElementId(QWebFrameAdapter* adapt
 {
     QUrl res;
 
-#if ENABLE(VIDEO) && USE(QT_MULTIMEDIA)
-    Frame* coreFrame = adapter->frame;
-    if (!coreFrame)
-        return res;
+//#if ENABLE(VIDEO) && USE(QT_MULTIMEDIA)
+//    Frame* coreFrame = adapter->frame;
+//    if (!coreFrame)
+//        return res;
 
-    Document* doc = coreFrame->document();
-    if (!doc)
-        return res;
+//    Document* doc = coreFrame->document();
+//    if (!doc)
+//        return res;
 
-    Node* coreNode = doc->getElementById(String(elementId));
-    if (!coreNode)
-        return res;
+//    Node* coreNode = doc->getElementById(String(elementId));
+//    if (!coreNode)
+//        return res;
 
-    HTMLVideoElement* videoElement = downcast<HTMLVideoElement>(coreNode);
-    PlatformMedia platformMedia = videoElement->platformMedia();
-    if (platformMedia.type != PlatformMedia::QtMediaPlayerType)
-        return res;
+//    HTMLVideoElement* videoElement = downcast<HTMLVideoElement>(coreNode);
+//    PlatformMedia platformMedia = videoElement->platformMedia();
+//    if (platformMedia.type != PlatformMedia::QtMediaPlayerType)
+//        return res;
 
-    MediaPlayerPrivateQt* mediaPlayerQt = static_cast<MediaPlayerPrivateQt*>(platformMedia.media.qtMediaPlayer);
-    if (mediaPlayerQt && mediaPlayerQt->mediaPlayer())
-        res = mediaPlayerQt->mediaPlayer()->media().canonicalUrl();
-#endif
+//    MediaPlayerPrivateQt* mediaPlayerQt = static_cast<MediaPlayerPrivateQt*>(platformMedia.media.qtMediaPlayer);
+//    if (mediaPlayerQt && mediaPlayerQt->mediaPlayer())
+//        res = mediaPlayerQt->mediaPlayer()->media().canonicalUrl();
+//#endif
 
     return res;
 }

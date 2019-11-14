@@ -1558,6 +1558,13 @@ AVPlayer* MediaPlayer::objCAVFoundationAVPlayer() const
 
 #endif
 
+#if USE(QT_MULTIMEDIA)
+MediaPlayerPrivateQt* MediaPlayer::qtMediaPlayer() const
+{
+    return static_cast<MediaPlayerPrivateQt*>(m_private.get());
+}
+#endif
+
 bool MediaPlayer::performTaskAtMediaTime(WTF::Function<void()>&& task, MediaTime time)
 {
     return m_private->performTaskAtMediaTime(WTFMove(task), time);
