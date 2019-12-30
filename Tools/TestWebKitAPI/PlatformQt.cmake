@@ -26,6 +26,18 @@ target_sources(TestWTF PRIVATE
     qt/UtilitiesQt.cpp
 )
 
+if (APPLE)
+    list(APPEND TestWebKitAPI_LIBRARIES
+        WebKit::JavaScriptCore
+        WebKit::WTF
+    )
+
+    list(APPEND TestWebCore_LIBRARIES
+        WebKit::JavaScriptCore
+        WebKit::WTF
+    )
+endif ()
+
 #target_link_libraries(TestWebCore ${test_webcore_LIBRARIES})
 #add_test(TestWebCore ${TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY}/WebCore/TestWebCore)
 #set_tests_properties(TestWebCore PROPERTIES TIMEOUT 60)
