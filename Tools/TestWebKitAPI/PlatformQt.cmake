@@ -27,11 +27,6 @@ target_sources(TestWTF PRIVATE
 )
 
 if (APPLE)
-    list(APPEND TestWebKitAPI_LIBRARIES
-        WebKit::JavaScriptCore
-        WebKit::WTF
-    )
-
     list(APPEND TestWebCore_LIBRARIES
         WebKit::JavaScriptCore
         WebKit::WTF
