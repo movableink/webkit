@@ -473,6 +473,10 @@ if (WIN32)
 endif ()
 
 if (APPLE)
+    list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
+        "${CMAKE_BINARY_DIR}/../include/private/JavaScriptCore"
+    )
+
     list(APPEND WebCore_SOURCES
         platform/cf/SharedBufferCF.cpp
     )
