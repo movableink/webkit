@@ -423,6 +423,7 @@ else ()
     find_package(Sqlite REQUIRED)
 endif ()
 
+find_package(HarfBuzz 0.9.2 REQUIRED)
 find_package(Threads REQUIRED)
 
 if (USE_LIBJPEG)

@@ -314,12 +314,12 @@ std::unique_ptr<DisplayList::DisplayList> FontCascade::displayListForTextRun(Gra
 {
     ASSERT(!context.paintingDisabled());
     unsigned destination = to.valueOr(run.length());
-    
+
     // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
     CodePath codePathToUse = codePath(run);
     if (codePathToUse != Complex && (enableKerning() || requiresShaping()) && (from || destination != run.length()))
         codePathToUse = Complex;
-    
+
     // QTFIXME We cannot produce DisplayList in this way!
 //#if PLATFORM(QT)
 //    if (codePathToUse == Complex) {
@@ -333,17 +333,17 @@ std::unique_ptr<DisplayList::DisplayList> FontCascade::displayListForTextRun(Gra
     // We couldn't generate any glyphs for the run. Give up.
     if (glyphBuffer.isEmpty())
         return nullptr;
-    
+
     std::unique_ptr<DisplayList::DisplayList> displayList = makeUnique<DisplayList::DisplayList>();
     GraphicsContext recordingContext([&](GraphicsContext& displayListContext) {
         return makeUnique<DisplayList::Recorder>(displayListContext, *displayList, context.state(), FloatRect(), AffineTransform());
     });
-    
+
     FloatPoint startPoint(startX, 0);
     drawGlyphBuffer(recordingContext, glyphBuffer, startPoint, customFontNotReadyAction);
     return displayList;
 }
-    
+
 float FontCascade::widthOfTextRange(const TextRun& run, unsigned from, unsigned to, HashSet<const Font*>* fallbackFonts, float* outWidthBeforeRange, float* outWidthAfterRange) const
 {
     ASSERT(from <= to);
@@ -658,7 +658,7 @@ FontCascade::CodePath FontCascade::codePath(const TextRun& run, Optional<unsigne
 
 FontCascade::CodePath FontCascade::characterRangeCodePath(const UChar* characters, unsigned len)
 {
-    // FIXME: Should use a UnicodeSet in ports where ICU is used. Note that we 
+    // FIXME: Should use a UnicodeSet in ports where ICU is used. Note that we
     // can't simply use UnicodeCharacter Property/class because some characters
     // are not 'combining', but still need to go to the complex path.
     // Alternatively, we may as well consider binary search over a sorted
@@ -669,11 +669,11 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(const UChar* character
         const UChar c = characters[i];
         if (c == zeroWidthJoiner && previousCharacterIsEmojiGroupCandidate)
             return Complex;
-        
+
         previousCharacterIsEmojiGroupCandidate = false;
-        if (c < 0x2E5) // U+02E5 through U+02E9 (Modifier Letters : Tone letters)  
+        if (c < 0x2E5) // U+02E5 through U+02E9 (Modifier Letters : Tone letters)
             continue;
-        if (c <= 0x2E9) 
+        if (c <= 0x2E9)
             return Complex;
 
         if (c < 0x300) // U+0300 through U+036F Combining diacritical marks
@@ -687,9 +687,9 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(const UChar* character
             return Complex;
 
         // U+0600 through U+109F Arabic, Syriac, Thaana, NKo, Samaritan, Mandaic,
-        // Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, 
+        // Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada,
         // Malayalam, Sinhala, Thai, Lao, Tibetan, Myanmar
-        if (c < 0x0600) 
+        if (c < 0x0600)
             continue;
         if (c <= 0x109F)
             return Complex;
@@ -769,7 +769,7 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(const UChar* character
 
         // U+A800 through U+ABFF Nagri, Phags-pa, Saurashtra, Devanagari Extended,
         // Hangul Jamo Ext. A, Javanese, Myanmar Extended A, Tai Viet, Meetei Mayek,
-        if (c < 0xA800) 
+        if (c < 0xA800)
             continue;
         if (c <= 0xABFF)
             return Complex;
@@ -890,23 +890,23 @@ bool FontCascade::isCJKIdeograph(UChar32 c)
     // The basic CJK Unified Ideographs block.
     if (c >= 0x4E00 && c <= 0x9FFF)
         return true;
-    
+
     // CJK Unified Ideographs Extension A.
     if (c >= 0x3400 && c <= 0x4DBF)
         return true;
-    
+
     // CJK Radicals Supplement.
     if (c >= 0x2E80 && c <= 0x2EFF)
         return true;
-    
+
     // Kangxi Radicals.
     if (c >= 0x2F00 && c <= 0x2FDF)
         return true;
-    
+
     // CJK Strokes.
     if (c >= 0x31C0 && c <= 0x31EF)
         return true;
-    
+
     // CJK Compatibility Ideographs.
     if (c >= 0xF900 && c <= 0xFAFF)
         return true;
@@ -918,11 +918,11 @@ bool FontCascade::isCJKIdeograph(UChar32 c)
     // CJK Unified Ideographs Extension C.
     if (c >= 0x2A700 && c <= 0x2B73F)
         return true;
-    
+
     // CJK Unified Ideographs Extension D.
     if (c >= 0x2B740 && c <= 0x2B81F)
         return true;
-    
+
     // CJK Compatibility Ideographs Supplement.
     if (c >= 0x2F800 && c <= 0x2FA1F)
         return true;
@@ -934,8 +934,8 @@ bool FontCascade::isCJKIdeographOrSymbol(UChar32 c)
 {
     // 0x2C7 Caron, Mandarin Chinese 3rd Tone
     // 0x2CA Modifier Letter Acute Accent, Mandarin Chinese 2nd Tone
-    // 0x2CB Modifier Letter Grave Access, Mandarin Chinese 4th Tone 
-    // 0x2D9 Dot Above, Mandarin Chinese 5th Tone 
+    // 0x2CB Modifier Letter Grave Access, Mandarin Chinese 4th Tone
+    // 0x2D9 Dot Above, Mandarin Chinese 5th Tone
     if ((c == 0x2C7) || (c == 0x2CA) || (c == 0x2CB) || (c == 0x2D9))
         return true;
 
@@ -975,7 +975,7 @@ bool FontCascade::isCJKIdeographOrSymbol(UChar32 c)
 
     if ((c == 0x25B1) || (c == 0x25B2) || (c == 0x25B3) || (c == 0x25B6) || (c == 0x25B7) || (c == 0x25BC) || (c == 0x25BD))
         return true;
-    
+
     if ((c == 0x25C0) || (c == 0x25C1) || (c == 0x25C6) || (c == 0x25C7) || (c == 0x25C9) || (c == 0x25CB) || (c == 0x25CC))
         return true;
 
@@ -1024,7 +1024,7 @@ bool FontCascade::isCJKIdeographOrSymbol(UChar32 c)
     if (c >= 0x3040 && c <= 0x309F)
         return true;
 
-    // Katakana 
+    // Katakana
     if (c >= 0x30A0 && c <= 0x30FF)
         return true;
 
@@ -1042,7 +1042,7 @@ bool FontCascade::isCJKIdeographOrSymbol(UChar32 c)
     // Enclosed CJK Letters and Months.
     if (c >= 0x3200 && c <= 0x32FF)
         return true;
-    
+
     // CJK Compatibility.
     if (c >= 0x3300 && c <= 0x33FF)
         return true;
@@ -1258,7 +1258,7 @@ enum class GlyphUnderlineType : uint8_t {
     SkipGlyph,
     DrawOverGlyph
 };
-    
+
 static GlyphUnderlineType computeUnderlineType(const TextRun& textRun, const GlyphBuffer& glyphBuffer, unsigned index)
 {
     // In general, we want to skip descenders. However, skipping descenders on CJK characters leads to undesirable renderings,
@@ -1272,12 +1272,12 @@ static GlyphUnderlineType computeUnderlineType(const TextRun& textRun, const Gly
         ASSERT_WITH_SECURITY_IMPLICATION(offsetInString < textRun.length());
         return GlyphUnderlineType::DrawOverGlyph;
     }
-    
+
     if (textRun.is8Bit())
         baseCharacter = textRun.characters8()[offsetInString];
     else
         U16_NEXT(textRun.characters16(), offsetInString, textRun.length(), baseCharacter);
-    
+
     // u_getIntPropertyValue with UCHAR_IDEOGRAPHIC doesn't return true for Japanese or Korean codepoints.
     // Instead, we can use the "Unicode allocation block" for the character.
     UBlockCode blockCode = ublock_getCode(baseCharacter);
@@ -1405,7 +1405,7 @@ float FontCascade::getGlyphsAndAdvancesForSimpleText(const TextRun& run, unsigne
     return initialAdvance;
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 float FontCascade::getGlyphsAndAdvancesForComplexText(const TextRun& run, unsigned from, unsigned to, GlyphBuffer& glyphBuffer, ForTextEmphasisOrNot forTextEmphasis) const
 {
     float initialAdvance;
@@ -1553,7 +1553,7 @@ float FontCascade::floatWidthForSimpleText(const TextRun& run, HashSet<const Fon
     return it.m_runWidthSoFar;
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 float FontCascade::floatWidthForComplexText(const TextRun& run, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
     ComplexTextController controller(*this, run, true, fallbackFonts);
@@ -1586,7 +1586,7 @@ void FontCascade::adjustSelectionRectForSimpleText(const TextRun& run, LayoutRec
     selectionRect.setWidth(LayoutUnit::fromFloatCeil(afterWidth - beforeWidth));
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, unsigned from, unsigned to) const
 {
     ComplexTextController controller(*this, run);
@@ -1646,7 +1646,7 @@ int FontCascade::offsetForPositionForSimpleText(const TextRun& run, float x, boo
     return offset;
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bool includePartialGlyphs) const
 {
     ComplexTextController controller(*this, run);
@@ -1654,20 +1654,20 @@ int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bo
 }
 #endif
 
-#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
-// FIXME: Unify this with the macOS and iOS implementation.
-const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
-{
-    UChar32 baseCharacter;
-    size_t baseCharacterLength = 0;
-    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
-    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
-
-    if (!baseCharacterGlyphData.glyph)
-        return nullptr;
-    return baseCharacterGlyphData.font;
-}
-#endif
+//#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
+//// FIXME: Unify this with the macOS and iOS implementation.
+//const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
+//{
+//    UChar32 baseCharacter;
+//    size_t baseCharacterLength = 0;
+//    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
+//    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
+//
+//    if (!baseCharacterGlyphData.glyph)
+//        return nullptr;
+//    return baseCharacterGlyphData.font;
+//}
+//#endif
 
 void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext& context, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, unsigned to) const
 {

@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-#if PLATFORM(WIN) || PLATFORM(QT)
+#if PLATFORM(WIN)
 
 class TextLayout {
 };
@@ -310,7 +310,7 @@ static bool advanceByCombiningCharacterSequence(const UChar*& iterator, const UC
             sawJoiner = true;
             shouldContinue = true;
         }
-        
+
         if (!shouldContinue && !(U_GET_GC_MASK(nextCharacter) & U_GC_M_MASK))
             break;
 
@@ -512,7 +512,7 @@ void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
 unsigned ComplexTextController::indexOfCurrentRun(unsigned& leftmostGlyph)
 {
     leftmostGlyph = 0;
-    
+
     size_t runCount = m_complexTextRuns.size();
     if (m_currentRun >= runCount)
         return runCount;
@@ -829,7 +829,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 ASSERT(m_glyphOrigins.size() == m_adjustedBaseAdvances.size());
             }
             m_adjustedGlyphs.append(glyph);
-            
+
             FloatRect glyphBounds = font.boundsForGlyph(glyph);
             glyphBounds.move(glyphOrigin.x(), glyphOrigin.y());
             m_minGlyphBoundingBoxX = std::min(m_minGlyphBoundingBoxX, glyphBounds.x());
@@ -837,7 +837,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             m_minGlyphBoundingBoxY = std::min(m_minGlyphBoundingBoxY, glyphBounds.y());
             m_maxGlyphBoundingBoxY = std::max(m_maxGlyphBoundingBoxY, glyphBounds.maxY());
             glyphOrigin.move(advance);
-            
+
             lastCharacterIndex = characterIndex;
         }
         if (!isMonotonic)

@@ -114,6 +114,10 @@ list(APPEND WebCore_SOURCES
 #    platform/graphics/PlatformDisplay.cpp
     platform/graphics/WOFFFileFormat.cpp
 
+    platform/graphics/cairo/FontCairoHarfbuzzNG.cpp
+
+    platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz.cpp
+
 #    platform/graphics/texmap/BitmapTextureImageBuffer.cpp
 #    platform/graphics/texmap/TextureMapperImageBuffer.cpp
 
@@ -291,6 +295,7 @@ endif ()
 
 # Note: Qt5Network_INCLUDE_DIRS includes Qt5Core_INCLUDE_DIRS
 list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
+    ${HARFBUZZ_INCLUDE_DIRS}
     ${HYPHEN_INCLUDE_DIR}
     ${LIBXML2_INCLUDE_DIR}
     ${LIBXSLT_INCLUDE_DIR}
@@ -304,6 +309,7 @@ list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 list(APPEND WebCore_LIBRARIES
+    ${HARFBUZZ_LIBRARIES}
     ${HYPHEN_LIBRARIES}
     ${LIBXML2_LIBRARIES}
     ${LIBXSLT_LIBRARIES}
