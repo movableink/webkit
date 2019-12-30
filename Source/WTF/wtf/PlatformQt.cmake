@@ -163,8 +163,12 @@ elseif (APPLE)
         VERBATIM)
     list(APPEND WTF_SOURCES
         cocoa/MemoryFootprintCocoa.cpp
+        cocoa/MemoryPressureHandlerCocoa.mm
         ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
         ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
+    )
+    list(APPEND WTF_PUBLIC_HEADERS
+        spi/darwin/ProcessMemoryFootprint.h
     )
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     list(APPEND WTF_SOURCES

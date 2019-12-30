@@ -205,7 +205,7 @@ private:
     void holdOffTimerFired();
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || (PLATFORM(QT) && OS(DARWIN))
     dispatch_queue_t m_dispatchQueue { nullptr };
 #endif
 };
