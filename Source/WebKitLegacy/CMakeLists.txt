@@ -91,7 +91,7 @@ if (TARGET WebKitLegacyGUID)
     add_dependencies(WebKitLegacy WebKitLegacyGUID)
 endif ()
 
-if (APPLE)
+if (APPLE AND NOT ${PORT} STREQUAL "Qt")
     set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "-umbrella WebKit")
 endif ()
 
