@@ -158,6 +158,12 @@ if (ENABLE_GEOLOCATION)
     )
 endif ()
 
+if (USE_GSTREAMER)
+    list(APPEND WebKitLegacy_SYSTEM_INCLUDE_DIRECTORIES
+        ${GSTREAMER_INCLUDE_DIRS}
+    )
+endif ()
+
 if (USE_QT_MULTIMEDIA)
     list(APPEND WebKitLegacy_SOURCES
         qt/Api/qwebfullscreenvideohandler.h

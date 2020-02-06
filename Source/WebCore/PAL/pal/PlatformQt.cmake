@@ -34,3 +34,15 @@ if (APPLE AND ENABLE_WEB_CRYPTO)
         spi/cocoa/CommonCryptoSPI.h
     )
 endif ()
+
+if (USE_GLIB)
+    list(APPEND PAL_SOURCES
+        system/glib/SleepDisablerGLib.cpp
+    )
+    list(APPEND PAL_SYSTEM_INCLUDE_DIRECTORIES
+        ${GLIB_INCLUDE_DIRS}
+    )
+    list(APPEND WTF_LIBRARIES
+        ${GLIB_LIBRARIES}
+    )
+endif ()
