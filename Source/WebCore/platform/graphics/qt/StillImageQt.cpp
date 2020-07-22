@@ -88,7 +88,7 @@ ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, co
     BlendMode previousBlendMode = ctxt.blendModeOperation();
     ctxt.setCompositeOperation(options.compositeOperator(), options.blendMode());
 
-    if (ctxt.hasShadow()) {
+    if (false && ctxt.hasShadow()) {
         ShadowBlur shadow(ctxt.state());
         const auto& pixmap = *m_image;
         shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
