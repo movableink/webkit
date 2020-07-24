@@ -13,7 +13,7 @@ stages:
 Build:
   stage: build
   script:
-    - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt${QT_VERSION_SHORT} --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt${QT_VERSION_SHORT} -Wno-dev"
+    - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt${QT_VERSION_SHORT} --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt${QT_VERSION_SHORT} -Wno-dev -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_USE_SPLIT_DWARF=ON"
     - pushd WebKitBuild/Release
     - cpack -G DEB -D CPACK_PACKAGE_CONTACT=devops@movableink.com -D CPACK_PACKAGE_VERSION=0.4.0 -D CPACK_PACKAGE_FILE_NAME=qt-webkit-0.4.0_amd64 -D CPACK_PACKAGE_NAME=qt-webkit -D CPACK_PACKAGING_INSTALL_PREFIX=/opt/qt${QT_VERSION_SHORT}
 
