@@ -1,0 +1,28 @@
+image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:5.14.2
+
+stages:
+  - build
+  - upload
+  - deploy
+
+Build:
+  stage: build
+  script:
+    - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt514 --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt514 -Wno-dev"
+    - pushd WebKitBuild/Release
+    - cpack -G DEB -D CPACK_PACKAGE_CONTACT=devops@movableink.com -D CPACK_PACKAGE_VERSION=0.4.0 -D CPACK_PACKAGE_FILE_NAME=qt-webkit-0.4.0_amd64 -D CPACK_PACKAGE_NAME=qt-webkit -D CPACK_PACKAGING_INSTALL_PREFIX=/opt/qt514
+
+# s3_push:
+#   stage: upload
+#   cache: {}
+#   script:
+#     - apt-get update
+#     - apt-get install -y python-pip
+#     - pip install awscli
+#     - yarn install --production
+#     - rm -f data/* # remove geoip if it exists - the servers will have it
+#     - rm -Rf tmp # get rid of any temp cruft
+#     - echo $CI_COMMIT_SHA > ./REVISION
+#     - touch ojos-${CI_COMMIT_SHA}.tar.gz
+#     - tar --exclude=ojos-${CI_COMMIT_SHA}.tar.gz -czvf ojos-${CI_COMMIT_SHA}.tar.gz .
+#     - aws s3 cp --acl private ojos-${CI_COMMIT_SHA}.tar.gz s3://movableink-apps/tarballs/ojos/ojos-${CI_COMMIT_SHA}.tar.gz
