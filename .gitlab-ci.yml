@@ -1,7 +1,9 @@
-image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:5.14.2
-
 variables:
+  QT_VERSION: 5.14.2
+  QT_VERSION_SHORT: 514
   GIT_DEPTH: 10
+
+image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:${QT_VERSION}
 
 stages:
   - build
@@ -11,9 +13,9 @@ stages:
 Build:
   stage: build
   script:
-    - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt514 --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt514 -Wno-dev"
+    - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt${QT_VERSION_SHORT} --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt${QT_VERSION_SHORT} -Wno-dev"
     - pushd WebKitBuild/Release
-    - cpack -G DEB -D CPACK_PACKAGE_CONTACT=devops@movableink.com -D CPACK_PACKAGE_VERSION=0.4.0 -D CPACK_PACKAGE_FILE_NAME=qt-webkit-0.4.0_amd64 -D CPACK_PACKAGE_NAME=qt-webkit -D CPACK_PACKAGING_INSTALL_PREFIX=/opt/qt514
+    - cpack -G DEB -D CPACK_PACKAGE_CONTACT=devops@movableink.com -D CPACK_PACKAGE_VERSION=0.4.0 -D CPACK_PACKAGE_FILE_NAME=qt-webkit-0.4.0_amd64 -D CPACK_PACKAGE_NAME=qt-webkit -D CPACK_PACKAGING_INSTALL_PREFIX=/opt/qt${QT_VERSION_SHORT}
 
 # s3_push:
 #   stage: upload
