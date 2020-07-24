@@ -1,5 +1,8 @@
 image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:5.14.2
 
+variables:
+  - GIT_DEPTH: 10
+
 stages:
   - build
   - upload
