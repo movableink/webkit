@@ -7,8 +7,7 @@ image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:
 
 stages:
   - build
-  - upload
-  - deploy
+  - publish
 
 Build:
   stage: build
@@ -16,6 +15,12 @@ Build:
     - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt${QT_VERSION_SHORT} --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt${QT_VERSION_SHORT} -Wno-dev -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_USE_SPLIT_DWARF=ON"
     - pushd WebKitBuild/Release
     - cpack -G DEB -D CPACK_PACKAGE_CONTACT=devops@movableink.com -D CPACK_PACKAGE_VERSION=0.4.0 -D CPACK_PACKAGE_FILE_NAME=qt-webkit-0.4.0_amd64 -D CPACK_PACKAGE_NAME=qt-webkit -D CPACK_PACKAGING_INSTALL_PREFIX=/opt/qt${QT_VERSION_SHORT}
+
+Publish:
+  stage: publish
+  script:
+    - gem install package_cloud
+    - package_cloud push movableink/ubuntu/ubuntu/bionic WebKitBuild/Release/qt-webkit-0.4.0_amd64.deb
 
 # s3_push:
 #   stage: upload
