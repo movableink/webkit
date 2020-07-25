@@ -12,6 +12,10 @@ stages:
 
 Build:
   stage: build
+  artifacts:
+    paths:
+      - WebKitBuild/Release/qt-webkit-*.deb
+    expire_in: 1 month
   script:
     - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt${QT_VERSION_SHORT} --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt${QT_VERSION_SHORT} -Wno-dev"
     - pushd WebKitBuild/Release
