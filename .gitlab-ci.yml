@@ -24,21 +24,8 @@ Build:
 Publish:
   image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/ruby-rspec:latest
   stage: publish
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master" && $CI_COMMIT_MESSAGE !~ /\[skip[-\s]deploy\]/i'
   script:
     - gem install -N package_cloud
     - package_cloud push movableink/ubuntu/ubuntu/bionic WebKitBuild/Release/qt-webkit-${WEBKIT_VERSION}_amd64.deb
-
-# s3_push:
-#   stage: upload
-#   cache: {}
-#   script:
-#     - apt-get update
-#     - apt-get install -y python-pip
-#     - pip install awscli
-#     - yarn install --production
-#     - rm -f data/* # remove geoip if it exists - the servers will have it
-#     - rm -Rf tmp # get rid of any temp cruft
-#     - echo $CI_COMMIT_SHA > ./REVISION
-#     - touch ojos-${CI_COMMIT_SHA}.tar.gz
-#     - tar --exclude=ojos-${CI_COMMIT_SHA}.tar.gz -czvf ojos-${CI_COMMIT_SHA}.tar.gz .
-#     - aws s3 cp --acl private ojos-${CI_COMMIT_SHA}.tar.gz s3://movableink-apps/tarballs/ojos/ojos-${CI_COMMIT_SHA}.tar.gz
