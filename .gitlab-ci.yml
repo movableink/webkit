@@ -2,7 +2,7 @@ variables:
   QT_VERSION: 5.14.2
   QT_VERSION_SHORT: 514
   GIT_DEPTH: 10
-  WEBKIT_VERSION: 0.4.0
+  WEBKIT_VERSION: 0.4.1
 
 image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:${QT_VERSION}
 
