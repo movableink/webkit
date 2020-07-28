@@ -1,0 +1,31 @@
+variables:
+  QT_VERSION: 5.14.2
+  QT_VERSION_SHORT: 514
+  GIT_DEPTH: 10
+  WEBKIT_VERSION: 0.4.1
+
+image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/qtwebkit-builder:${QT_VERSION}
+
+stages:
+  - build
+  - publish
+
+Build:
+  stage: build
+  artifacts:
+    paths:
+      - WebKitBuild/Release/qt-webkit-*.deb
+    expire_in: 1 month
+  script:
+    - Tools/Scripts/build-webkit --qt --release --prefix=/opt/qt${QT_VERSION_SHORT} --cmakeargs="-DCMAKE_PREFIX_PATH=/opt/qt${QT_VERSION_SHORT} -Wno-dev"
+    - pushd WebKitBuild/Release
+    - cpack -G DEB -D CPACK_PACKAGE_CONTACT=devops@movableink.com -D CPACK_PACKAGE_VERSION=${WEBKIT_VERSION} -D CPACK_PACKAGE_FILE_NAME=qt-webkit-${WEBKIT_VERSION}_amd64 -D CPACK_PACKAGE_NAME=qt-webkit -D CPACK_PACKAGING_INSTALL_PREFIX=/opt/qt${QT_VERSION_SHORT}
+
+Publish:
+  image: 817035293158.dkr.ecr.us-east-1.amazonaws.com/movableink/ruby-rspec:latest
+  stage: publish
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master" && $CI_COMMIT_MESSAGE !~ /\[skip[-\s]deploy\]/i'
+  script:
+    - gem install -N package_cloud
+    - package_cloud push movableink/PPA/ubuntu/bionic WebKitBuild/Release/qt-webkit-${WEBKIT_VERSION}_amd64.deb
