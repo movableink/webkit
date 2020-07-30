@@ -9,7 +9,25 @@ set(PROJECT_VERSION_MAJOR 5)
 set(PROJECT_VERSION_MINOR 212)
 set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
-set(PROJECT_VERSION_STRING "${PROJECT_VERSION}")
+
+find_package(Git)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    INCLUDE(GetGitRevisionDescription)
+    EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD OUTPUT_VARIABLE SHORT_SHA OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    SET(REVISION ${SHORT_SHA} CACHE STRING "git short sha" FORCE)
+    set(PROJECT_VERSION_STRING "${PROJECT_VERSION}-${REVISION}")
+
+    # only use the plugin to tie the configure state to the sha to force rebuilds
+    # of files that depend on version.h
+    include(GetGitRevisionDescription)
+    get_git_head_revision(REFSPEC COMMITHASH)
+else()
+    message(WARNING "Git not found, cannot set version info")
+
+    SET(REVISION "unknown")
+    set(PROJECT_VERSION_STRING "${PROJECT_VERSION}")
+endif()
 
 set(QT_CONAN_DIR "" CACHE PATH "Directory containing conanbuildinfo.cmake and conanfile.txt")
 if (QT_CONAN_DIR)
