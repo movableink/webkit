@@ -133,21 +133,19 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const F
     BlendMode previousBlendMode = ctxt.blendModeOperation();
     ctxt.setCompositeOperation(!image.hasAlphaChannel() && options.compositeOperator() == CompositeSourceOver && options.blendMode() == BlendMode::Normal ? CompositeCopy : options.compositeOperator(), options.blendMode());
 
-    // QTFIXME - infinite loop
-    // if (ctxt.hasShadow()) {
-    //     ShadowBlur shadow(ctxt.state());
-    //     const auto& pixmap = *image;
-    //     shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
-    //         [normalizedSrc, normalizedDst, &image](GraphicsContext& shadowContext)
-    //         {
-    //             QPainter* shadowPainter = shadowContext.platformContext();
-    //             shadowPainter->drawImage(normalizedDst, image, normalizedSrc);
-    //         },
-    //         [&ctxt](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
-    //         {
-    //             ctxt.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), ctxt.compositeOperation());
-    //         });
-    // }
+    if (ctxt.hasShadow() && ctxt.mustUseShadowBlur()) {
+        ShadowBlur shadow(ctxt.state());
+        shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
+            [normalizedSrc, normalizedDst, &image](GraphicsContext& shadowContext)
+            {
+                QPainter* shadowPainter = shadowContext.platformContext();
+                shadowPainter->drawImage(normalizedDst, image, normalizedSrc);
+            },
+            [&ctxt](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
+            {
+                ctxt.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), ctxt.compositeOperation());
+            });
+    }
 
     ctxt.platformContext()->drawImage(normalizedDst, maybePrescaledImage, normalizedSrc);
 
