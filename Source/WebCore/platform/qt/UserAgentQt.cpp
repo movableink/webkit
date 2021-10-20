@@ -52,7 +52,7 @@ namespace WebCore {
     \li %AppVersion% expands to QCoreApplication::applicationName()/QCoreApplication::applicationVersion() if they're set; otherwise defaulting to Qt and the current Qt version.
     \endlist
 */
-String UserAgentQt::standardUserAgent()
+String UserAgentQt::standardUserAgent(const WTF::String& /* applicationNameForUserAgent */)
 {
     static QString ua;
 

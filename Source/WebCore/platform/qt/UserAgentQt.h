@@ -25,7 +25,7 @@ namespace WebCore {
 
 class UserAgentQt {
 public:
-    static String standardUserAgent();
+    static String standardUserAgent(const WTF::String&);
 };
 
 }
