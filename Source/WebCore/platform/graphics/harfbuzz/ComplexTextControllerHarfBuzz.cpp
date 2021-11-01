@@ -62,12 +62,20 @@ namespace WebCore {
 
 static inline float harfBuzzPositionToFloat(hb_position_t value)
 {
+#if PLATFORM(QT)
+    return static_cast<float>(value) / 64;
+#else
     return static_cast<float>(value) / (1 << 16);
+#endif
 }
 
 static inline hb_position_t floatToHarfBuzzPosition(float value)
 {
+#if PLATFORM(QT)
+    return static_cast<hb_position_t>(value * 64);
+#else
     return static_cast<hb_position_t>(value * (1 << 16));
+#endif
 }
 
 #if USE(CAIRO)
