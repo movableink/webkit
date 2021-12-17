@@ -59,8 +59,8 @@ if (${PORT} STREQUAL "Qt")
     endif ()
 
     if (SEPARATE_DEBUG_INFO)
-        QTWEBKIT_SEPARATE_DEBUG_INFO(WebKit WebKit_DEBUG_INFO)
-        install(FILES ${WebKit_DEBUG_INFO} DESTINATION "${LIB_INSTALL_DIR}" OPTIONAL)
+        QTWEBKIT_SEPARATE_DEBUG_INFO(WebKitLegacy WebKitLegacy_DEBUG_INFO)
+        install(FILES ${WebKitLegacy_DEBUG_INFO} DESTINATION "${LIB_INSTALL_DIR}" OPTIONAL)
     endif ()
 
     if (NOT MSVC)
