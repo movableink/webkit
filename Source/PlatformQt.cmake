@@ -131,8 +131,8 @@ set(Qt5@MODULE_NAME@_VERSION_STRING \${Qt5@MODULE_NAME@_VERSION})
 set(Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS \"\")
 set(Qt5@MODULE_NAME@_PRIVATE_INCLUDE_DIRS \"\") # FIXME: Support private headers
 
-get_target_property(Qt5@MODULE_NAME@_INCLUDE_DIRS        Qt5::@MODULE_NAME@ INTERFACE_INCLUDE_DIRECTORIES)
-get_target_property(Qt5@MODULE_NAME@_COMPILE_DEFINITIONS Qt5::@MODULE_NAME@ INTERFACE_COMPILE_DEFINITIONS)
+get_target_property(Qt5@MODULE_NAME@_INCLUDE_DIRS        Qt5::@FULL_MODULE_NAME@ INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(Qt5@MODULE_NAME@_COMPILE_DEFINITIONS Qt5::@FULL_MODULE_NAME@ INTERFACE_COMPILE_DEFINITIONS)
 
 foreach (_module_dep \${_Qt5@MODULE_NAME@_MODULE_DEPENDENCIES})
     list(APPEND Qt5@MODULE_NAME@_INCLUDE_DIRS \${Qt5\${_module_dep}_INCLUDE_DIRS})
@@ -149,7 +149,7 @@ list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS)
 
 # Fixup order of configurations to match behavior of other Qt modules
 # See also https://bugreports.qt.io/browse/QTBUG-29186
-get_target_property(_configurations Qt5::@MODULE_NAME@ IMPORTED_CONFIGURATIONS)
+get_target_property(_configurations Qt5::@FULL_MODULE_NAME@ IMPORTED_CONFIGURATIONS)
 list(FIND _configurations RELEASE _index)
 if (\${_index} GREATER -1)
     list(REMOVE_AT _configurations \${_index})
@@ -161,6 +161,7 @@ unset(_index)
 ")
 
 set(MODULE_NAME WebKit)
+set(FULL_MODULE_NAME WebKitLegacy)
 string(CONFIGURE ${_package_footer_template} QTWEBKIT_PACKAGE_FOOTER @ONLY)
 ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfig.cmake"
@@ -168,6 +169,7 @@ ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitConfig.c
 )
 
 set(MODULE_NAME WebKitWidgets)
+set(FULL_MODULE_NAME WebKitWidgets)
 string(CONFIGURE ${_package_footer_template} QTWEBKIT_PACKAGE_FOOTER @ONLY)
 ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitWidgetsConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitWidgetsConfig.cmake"
@@ -175,6 +177,7 @@ ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitWidgetsC
 )
 
 unset(MODULE_NAME)
+unset(FULL_MODULE_NAME)
 unset(QTWEBKIT_PACKAGE_FOOTER)
 
 write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfigVersion.cmake"
