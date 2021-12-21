@@ -1248,9 +1248,16 @@
 #ifdef __cplusplus
 #define Q_FORWARD_DECLARE_OBJC_CLASS(classname) OBJC_CLASS classname
 #include <qglobal.h>
+
 #if QT_VERSION >= QT_VERSION_CHECK(5,8,0)
 #include <QtGui/qtguiglobal.h>
 #endif
+
+#include <QtNetwork/qtnetwork-config.h>
+#if !QT_CONFIG(bearermanagement)
+#define QT_NO_BEARERMANAGEMENT
+#endif
+
 #endif
 #if defined(QT_OPENGL_ES_2) && !defined(USE_OPENGL_ES_2)
 #define USE_OPENGL_ES_2 1
