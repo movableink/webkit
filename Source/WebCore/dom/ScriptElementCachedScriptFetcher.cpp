@@ -27,6 +27,7 @@
 #include "ScriptElementCachedScriptFetcher.h"
 
 #include "Element.h"
+#include "ResourceLoaderOptions.h"
 #include "ScriptElement.h"
 
 namespace WebCore {
@@ -36,7 +37,7 @@ CachedResourceHandle<CachedScript> ScriptElementCachedScriptFetcher::requestModu
     // https://github.com/tc39/proposal-dynamic-import/blob/master/HTML Integration.md
     // If the fetcher is not module script, credential mode is always "omit".
 
-    return requestScriptWithCache(document, sourceURL, isClassicScript() ? "omit"_s : m_crossOriginMode, WTFMove(integrity));
+    return requestScriptWithCache(document, sourceURL, isClassicScript() ? WebCore::ScriptMode::Classic : WebCore::ScriptMode::Module, isClassicScript() ? "omit"_s : m_crossOriginMode, WTFMove(integrity));
 }
 
 }

@@ -1349,22 +1349,25 @@ private:
     EncodedType m_type;
 };
 
-class CachedInstructionStream : public CachedObject<InstructionStream> {
+class CachedInstructionStream : public VariableLengthObject<InstructionStream> {
 public:
     void encode(Encoder& encoder, const InstructionStream& stream)
     {
-        m_instructions.encode(encoder, stream.m_instructions);
+        m_size = stream.size();
+        uint8_t* buffer = this->allocate<uint8_t>(encoder, m_size);
+        memcpy(buffer, stream.instructions(), m_size);
     }
 
-    InstructionStream* decode(Decoder& decoder) const
+    InstructionStream* decode(Decoder&) const
     {
-        Vector<uint8_t, 0, UnsafeVectorOverflow> instructionsVector;
-        m_instructions.decode(decoder, instructionsVector);
-        return new InstructionStream(WTFMove(instructionsVector));
+        InstructionStreamReader* stream = new InstructionStreamReader();
+        stream->m_size = m_size;
+        stream->m_instructions = this->buffer();
+        return stream;
     }
 
 private:
-    CachedVector<uint8_t, 0, UnsafeVectorOverflow> m_instructions;
+    size_t m_size;
 };
 
 class CachedMetadataTable : public CachedObject<UnlinkedMetadataTable> {

@@ -33,6 +33,7 @@
 #include "RuntimeApplicationChecks.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
@@ -89,6 +90,11 @@ StringView CachedScript::script()
     return m_script;
 }
 
+RefPtr<JSC::CachedBytecode> CachedScript::cachedBytecode()
+{
+    return m_cachedBytecode;
+}
+
 unsigned CachedScript::scriptHash()
 {
     if (m_decodingState == NeverDecoded)
@@ -101,6 +107,35 @@ void CachedScript::finishLoading(SharedBuffer* data)
     m_data = data;
     setEncodedSize(data ? data->size() : 0);
     CachedResource::finishLoading(data);
+}
+
+void CachedScript::didRetrieveDerivedDataFromCache(const String& type, SharedBuffer& sharedBuffer)
+{
+    ASSERT_UNUSED(type, type == "bytecode-cache");
+
+    String filename = String(sharedBuffer.data(), sharedBuffer.size());
+
+    dataLogLn("Reading cache from: ", filename);
+
+    auto fd = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::Write, {FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking});
+    if (!FileSystem::isHandleValid(fd))
+        return;
+
+    auto closeFD = makeScopeExit([&] {
+        FileSystem::unlockAndCloseFile(fd);
+        unlink(filename.ascii().data());
+    });
+
+    long long fileSize;
+    if (!FileSystem::getFileSize(fd, fileSize))
+        return;
+
+    bool success;
+    FileSystem::MappedFileData mappedFile(fd, FileSystem::MappedFileMode::Private, success);
+    if (!success)
+        return;
+
+    m_cachedBytecode = JSC::CachedBytecode::create(WTFMove(mappedFile));
 }
 
 void CachedScript::destroyDecodedData()

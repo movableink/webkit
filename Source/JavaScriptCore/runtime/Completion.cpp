@@ -92,7 +92,7 @@ bool checkModuleSyntax(ExecState* exec, const SourceCode& source, ParserError& e
     return true;
 }
 
-RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error)
+RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error, const BytecodeCacheMetadata* metadata)
 {
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::current().atomStringTable());
@@ -103,7 +103,7 @@ RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source,
     EvalContextType evalContextType = EvalContextType::None;
 
     ParserError parserError;
-    UnlinkedCodeBlock* unlinkedCodeBlock = recursivelyGenerateUnlinkedCodeBlock<UnlinkedProgramCodeBlock>(vm, source, strictMode, scriptMode, { }, parserError, evalContextType, &variablesUnderTDZ);
+    UnlinkedCodeBlock* unlinkedCodeBlock = recursivelyGenerateUnlinkedCodeBlock<UnlinkedProgramCodeBlock>(vm, source, strictMode, scriptMode, { }, parserError, evalContextType, &variablesUnderTDZ, metadata);
     if (parserError.isValid())
         error = parserError;
     if (!unlinkedCodeBlock)
@@ -112,7 +112,7 @@ RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source,
     return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ProgramType, strictMode, scriptMode, fd, error, { });
 }
 
-RefPtr<CachedBytecode> generateModuleBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error)
+RefPtr<CachedBytecode> generateModuleBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error, const BytecodeCacheMetadata* metadata)
 {
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::current().atomStringTable());
@@ -123,7 +123,7 @@ RefPtr<CachedBytecode> generateModuleBytecode(VM& vm, const SourceCode& source, 
     EvalContextType evalContextType = EvalContextType::None;
 
     ParserError parserError;
-    UnlinkedCodeBlock* unlinkedCodeBlock = recursivelyGenerateUnlinkedCodeBlock<UnlinkedModuleProgramCodeBlock>(vm, source, strictMode, scriptMode, { }, parserError, evalContextType, &variablesUnderTDZ);
+    UnlinkedCodeBlock* unlinkedCodeBlock = recursivelyGenerateUnlinkedCodeBlock<UnlinkedModuleProgramCodeBlock>(vm, source, strictMode, scriptMode, { }, parserError, evalContextType, &variablesUnderTDZ, metadata);
     if (parserError.isValid())
         error = parserError;
     if (!unlinkedCodeBlock)
@@ -151,6 +151,8 @@ JSValue evaluate(ExecState* exec, const SourceCode& source, JSValue thisValue, N
         scope.clearException();
         return jsUndefined();
     }
+
+    vm.codeCache()->write(vm);
 
     RELEASE_ASSERT(result);
     return result;

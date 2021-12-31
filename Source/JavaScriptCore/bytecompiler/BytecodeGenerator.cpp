@@ -5064,7 +5064,7 @@ void StructureForInContext::finalize(BytecodeGenerator& generator, UnlinkedCodeB
         return;
 
     OpcodeID lastOpcodeID = generator.m_lastOpcodeID;
-    InstructionStream::MutableRef lastInstruction = generator.m_lastInstruction;
+    InstructionStreamWriter::MutableRef lastInstruction = generator.m_lastInstruction;
     for (const auto& instTuple : m_getInsts) {
         unsigned instIndex = std::get<0>(instTuple);
         int propertyRegIndex = std::get<1>(instTuple);

@@ -268,6 +268,8 @@ public:
 
     virtual void didSendData(unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
 
+    virtual void didRetrieveDerivedDataFromCache(const String& /* type */, SharedBuffer&) { }
+
 #if USE(FOUNDATION) || USE(SOUP)
     WEBCORE_EXPORT void tryReplaceEncodedData(SharedBuffer&);
 #endif

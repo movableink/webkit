@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CodeCache.h"
 
+#include "BytecodeCacheMetadata.h"
 #include "IndirectEvalExecutable.h"
 #include <wtf/text/StringConcatenateNumbers.h>
 
@@ -172,16 +173,19 @@ void CodeCache::write(VM& vm)
         writeCodeBlock(vm, it.key, it.value);
 }
 
-void generateUnlinkedCodeBlockForFunctions(VM& vm, UnlinkedCodeBlock* unlinkedCodeBlock, const SourceCode& parentSource, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error)
+void generateUnlinkedCodeBlockForFunctions(VM& vm, UnlinkedCodeBlock* unlinkedCodeBlock, const SourceCode& parentSource, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, const BytecodeCacheMetadata* metadata)
 {
     auto generate = [&](UnlinkedFunctionExecutable* unlinkedExecutable, CodeSpecializationKind constructorKind) {
         if (constructorKind == CodeForConstruct && SourceParseModeSet(SourceParseMode::AsyncArrowFunctionMode, SourceParseMode::AsyncMethodMode, SourceParseMode::AsyncFunctionMode).contains(unlinkedExecutable->parseMode()))
             return;
 
         SourceCode source = unlinkedExecutable->linkedSourceCode(parentSource);
+        if (metadata && !metadata->shouldCache(source, constructorKind))
+            return;
+
         UnlinkedFunctionCodeBlock* unlinkedFunctionCodeBlock = unlinkedExecutable->unlinkedCodeBlockFor(vm, source, constructorKind, codeGenerationMode, error, unlinkedExecutable->parseMode());
         if (unlinkedFunctionCodeBlock)
-            generateUnlinkedCodeBlockForFunctions(vm, unlinkedFunctionCodeBlock, source, codeGenerationMode, error);
+            generateUnlinkedCodeBlockForFunctions(vm, unlinkedFunctionCodeBlock, source, codeGenerationMode, error, metadata);
     };
 
     // FIXME: We should also generate CodeBlocks for CodeForConstruct

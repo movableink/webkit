@@ -31,20 +31,26 @@
 
 namespace JSC {
 
-InstructionStream::InstructionStream(InstructionBuffer&& instructions)
-    : m_instructions(WTFMove(instructions))
+InstructionStream::InstructionStream()
 { }
 
 size_t InstructionStream::sizeInBytes() const
 {
-    return m_instructions.size();
+    return size();
 }
 
 bool InstructionStream::contains(Instruction* instruction) const
 {
 
     const uint8_t* pointer = bitwise_cast<const uint8_t*>(instruction);
-    return pointer >= m_instructions.data() && pointer < (m_instructions.data() + m_instructions.size());
+    return pointer >= instructions() && pointer < (instructions() + size());
 }
 
+InstructionStreamReader::InstructionStreamReader(InstructionVector&& vector)
+    : m_owned(true)
+    , m_size(vector.size())
+    , m_instructions(vector.releaseBuffer().leakPtr())
+{
 }
+
+} // namespace JSC

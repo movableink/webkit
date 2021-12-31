@@ -53,6 +53,12 @@ CachedResourceRequest PreloadRequest::resourceRequest(Document& document)
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
     if (skipContentSecurityPolicyCheck)
         options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
+    if (m_resourceType == CachedResource::Type::Script) {
+        if (m_moduleScript == ModuleScript::Yes)
+            options.scriptMode = ScriptMode::Module;
+        else
+            options.scriptMode = ScriptMode::Classic;
+    }
 
     String crossOriginMode = m_crossOriginMode;
     if (m_moduleScript == ModuleScript::Yes) {

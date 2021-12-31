@@ -195,6 +195,7 @@ bytecode/ArithProfile.cpp
 bytecode/ArrayAllocationProfile.cpp
 bytecode/ArrayProfile.cpp
 bytecode/BytecodeBasicBlock.cpp
+bytecode/BytecodeCacheMetadata.cpp
 bytecode/BytecodeDumper.cpp
 bytecode/BytecodeGeneratorification.cpp
 bytecode/BytecodeIntrinsicRegistry.cpp

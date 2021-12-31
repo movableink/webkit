@@ -38,13 +38,13 @@ void BytecodeRewriter::applyModification()
     for (size_t insertionIndex = m_insertions.size(); insertionIndex--;) {
         Insertion& insertion = m_insertions[insertionIndex];
         if (insertion.type == Insertion::Type::Remove)
-            m_writer.m_instructions.remove(insertion.index.bytecodeOffset, insertion.length());
+            m_writer.m_stream.remove(insertion.index.bytecodeOffset, insertion.length());
         else {
             if (insertion.includeBranch == IncludeBranch::Yes) {
                 int finalOffset = insertion.index.bytecodeOffset + calculateDifference(m_insertions.begin(), m_insertions.begin() + insertionIndex);
                 adjustJumpTargetsInFragment(finalOffset, insertion);
             }
-            m_writer.m_instructions.insertVector(insertion.index.bytecodeOffset, insertion.instructions.m_instructions);
+            m_writer.m_stream.insertVector(insertion.index.bytecodeOffset, insertion.instructions.m_stream);
         }
     }
     m_insertions.clear();

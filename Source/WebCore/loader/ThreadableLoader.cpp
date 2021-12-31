@@ -90,6 +90,7 @@ ThreadableLoaderOptions ThreadableLoaderOptions::isolatedCopy() const
     copy.clientCredentialPolicy = this->clientCredentialPolicy;
     copy.maxRedirectCount = this->maxRedirectCount;
     copy.preflightPolicy = this->preflightPolicy;
+    copy.scriptMode = this->scriptMode;
 
     // ThreadableLoaderOptions
     copy.contentSecurityPolicyEnforcement = this->contentSecurityPolicyEnforcement;

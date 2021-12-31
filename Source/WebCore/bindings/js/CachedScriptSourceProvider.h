@@ -29,6 +29,9 @@
 #include "CachedResourceHandle.h"
 #include "CachedScript.h"
 #include "CachedScriptFetcher.h"
+#include "LoaderStrategy.h"
+#include "PlatformStrategies.h"
+#include <JavaScriptCore/BytecodeCacheMetadata.h>
 #include <JavaScriptCore/SourceProvider.h>
 
 namespace WebCore {
@@ -40,13 +43,21 @@ public:
 
     virtual ~CachedScriptSourceProvider()
     {
+        commitCachedBytecode();
         m_cachedScript->removeClient(*this);
     }
 
     unsigned hash() const override { return m_cachedScript->scriptHash(); }
     StringView source() const override { return m_cachedScript->script(); }
+    RefPtr<JSC::CachedBytecode> cachedBytecode() const override { return m_cachedScript->cachedBytecode(); }
+    void commitCachedBytecode() const override;
+
+    void cacheBytecode(const JSC::BytecodeCacheGenerator&) const override;
+    void updateCache(const JSC::UnlinkedFunctionExecutable*, const JSC::SourceCode&, JSC::CodeSpecializationKind, const JSC::UnlinkedFunctionCodeBlock*) const override;
 
 private:
+    void commitBytecodeCache();
+
     CachedScriptSourceProvider(CachedScript* cachedScript, JSC::SourceProviderSourceType sourceType, Ref<CachedScriptFetcher>&& scriptFetcher)
         : SourceProvider(JSC::SourceOrigin { cachedScript->response().url(), WTFMove(scriptFetcher) }, URL(cachedScript->response().url()), TextPosition(), sourceType)
         , m_cachedScript(cachedScript)
@@ -54,6 +65,9 @@ private:
         m_cachedScript->addClient(*this);
     }
 
+    mutable bool m_shouldCache { false };
+    mutable bool m_hasUpdates { false };
+    mutable JSC::BytecodeCacheMetadata m_bytecodeCacheMetadata;
     CachedResourceHandle<CachedScript> m_cachedScript;
 };
 

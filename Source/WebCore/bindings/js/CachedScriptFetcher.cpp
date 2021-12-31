@@ -42,10 +42,10 @@ Ref<CachedScriptFetcher> CachedScriptFetcher::create(const String& charset)
 
 CachedResourceHandle<CachedScript> CachedScriptFetcher::requestModuleScript(Document& document, const URL& sourceURL, String&& integrity) const
 {
-    return requestScriptWithCache(document, sourceURL, String { }, WTFMove(integrity));
+    return requestScriptWithCache(document, sourceURL, WebCore::ScriptMode::Module, String { }, WTFMove(integrity));
 }
 
-CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(Document& document, const URL& sourceURL, const String& crossOriginMode, String&& integrity) const
+CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(Document& document, const URL& sourceURL, WebCore::ScriptMode scriptMode, const String& crossOriginMode, String&& integrity) const
 {
     if (!document.settings().isScriptEnabled())
         return nullptr;
@@ -57,6 +57,7 @@ CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(D
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     options.integrity = WTFMove(integrity);
     options.referrerPolicy = m_referrerPolicy;
+    options.scriptMode = scriptMode;
 
     auto request = createPotentialAccessControlRequest(sourceURL, document, crossOriginMode, WTFMove(options));
     request.upgradeInsecureRequestIfNeeded(document);

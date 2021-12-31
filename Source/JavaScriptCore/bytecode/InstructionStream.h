@@ -31,50 +31,52 @@
 
 namespace JSC {
 
+class InstructionStreamWriter;
 struct Instruction;
+
+using InstructionVector = Vector<uint8_t, 0, UnsafeVectorOverflow>;
 
 class InstructionStream {
     WTF_MAKE_FAST_ALLOCATED;
 
-    using InstructionBuffer = Vector<uint8_t, 0, UnsafeVectorOverflow>;
-
     friend class InstructionStreamWriter;
     friend class CachedInstructionStream;
 public:
+    virtual ~InstructionStream() { }
     size_t sizeInBytes() const;
 
     using Offset = unsigned;
 
 private:
-    template<class InstructionBuffer>
+    template<class InstructionStream>
     class BaseRef {
         WTF_MAKE_FAST_ALLOCATED;
 
-        friend class InstructionStream;
+        friend InstructionStream;
 
     public:
-        BaseRef(const BaseRef<InstructionBuffer>& other)
-            : m_instructions(other.m_instructions)
+        BaseRef(const BaseRef<InstructionStream>& other)
+            : m_stream(other.m_stream)
             ,  m_index(other.m_index)
         { }
 
-        void operator=(const BaseRef<InstructionBuffer>& other)
+        void operator=(const BaseRef<InstructionStream>& other)
         {
-            m_instructions = other.m_instructions;
+            m_stream = other.m_stream;
             m_index = other.m_index;
         }
 
         inline const Instruction* operator->() const { return unwrap(); }
         inline const Instruction* ptr() const { return unwrap(); }
 
-        bool operator!=(const BaseRef<InstructionBuffer>& other) const
+        bool operator!=(const BaseRef<InstructionStream>& other) const
         {
-            return &m_instructions != &other.m_instructions || m_index != other.m_index;
+            return &m_stream != &other.m_stream || m_index != other.m_index;
         }
 
         BaseRef next() const
         {
-            return BaseRef { m_instructions, m_index + ptr()->size() };
+            return BaseRef { m_stream, m_index + ptr()->size() };
         }
 
         inline Offset offset() const
@@ -84,43 +86,22 @@ private:
 
         bool isValid() const
         {
-            return m_index < m_instructions.size();
+            return m_index < m_stream.size();
         }
 
-    private:
-        inline const Instruction* unwrap() const { return reinterpret_cast<const Instruction*>(&m_instructions[m_index]); }
-
-    protected:
-        BaseRef(InstructionBuffer& instructions, size_t index)
-            : m_instructions(instructions)
+        BaseRef(InstructionStream& stream, size_t index)
+            : m_stream(stream)
             , m_index(index)
         { }
 
-        InstructionBuffer& m_instructions;
+    private:
+        inline const Instruction* unwrap() const { return reinterpret_cast<const Instruction*>(&m_stream.instructions()[m_index]); }
+        InstructionStream& m_stream;
         Offset m_index;
     };
 
 public:
-    using Ref = BaseRef<const InstructionBuffer>;
-
-    class MutableRef : public BaseRef<InstructionBuffer> {
-        friend class InstructionStreamWriter;
-
-    protected:
-        using BaseRef<InstructionBuffer>::BaseRef;
-
-    public:
-        Ref freeze() const  { return Ref { m_instructions, m_index }; }
-        inline Instruction* operator->() { return unwrap(); }
-        inline Instruction* ptr() { return unwrap(); }
-        inline operator Ref()
-        {
-            return Ref { m_instructions, m_index };
-        }
-
-    private:
-        inline Instruction* unwrap() { return reinterpret_cast<Instruction*>(&m_instructions[m_index]); }
-    };
+    using Ref = BaseRef<const InstructionStream>;
 
 private:
     class iterator : public Ref {
@@ -144,54 +125,111 @@ private:
 public:
     inline iterator begin() const
     {
-        return iterator { m_instructions, 0 };
+        return iterator { *this, 0 };
     }
 
     inline iterator end() const
     {
-        return iterator { m_instructions, m_instructions.size() };
+        return iterator { *this, size() };
     }
 
     inline const Ref at(Offset offset) const
     {
-        ASSERT(offset < m_instructions.size());
-        return Ref { m_instructions, offset };
+        ASSERT(offset < size());
+        return Ref { *this, offset };
     }
 
-    inline size_t size() const
-    {
-        return m_instructions.size();
-    }
-
-    const void* rawPointer() const
-    {
-        return m_instructions.data();
-    }
+    virtual size_t size() const = 0;
+    virtual const uint8_t* instructions() const = 0;
 
     bool contains(Instruction *) const;
 
 protected:
-    explicit InstructionStream(InstructionBuffer&&);
+    InstructionStream();
+};
 
-    InstructionBuffer m_instructions;
+class InstructionStreamReader : public InstructionStream {
+    friend class CachedInstructionStream;
+
+public:
+    InstructionStreamReader(InstructionVector&&);
+
+    const uint8_t* instructions() const override
+    {
+        return m_instructions;
+    }
+
+    size_t size() const override
+    {
+        return m_size;
+    }
+
+    ~InstructionStreamReader()
+    {
+        if (m_owned)
+            fastFree(const_cast<uint8_t*>(m_instructions));
+    }
+
+private:
+    InstructionStreamReader()
+    {
+    }
+
+    bool m_owned { false };
+    size_t m_size;
+    const uint8_t* m_instructions;
 };
 
 class InstructionStreamWriter : public InstructionStream {
     friend class BytecodeRewriter;
 public:
     InstructionStreamWriter()
-        : InstructionStream({ })
     { }
+
+    const uint8_t* instructions() const override
+    {
+        return m_stream.data();
+    }
+
+    size_t size() const override
+    {
+        return m_stream.size();
+    }
+
+    uint8_t* mutableInstructions()
+    {
+        return m_stream.data();
+    }
+
+
+    class MutableRef : public BaseRef<InstructionStreamWriter> {
+        friend class InstructionStreamWriter;
+
+    protected:
+        using BaseRef<InstructionStreamWriter>::BaseRef;
+
+    public:
+        Ref freeze() const { return Ref { m_stream, m_index }; }
+        inline Instruction* operator->() { return unwrap(); }
+        inline Instruction* ptr() { return unwrap(); }
+        inline operator Ref()
+        {
+            return Ref { m_stream, m_index };
+        }
+
+    private:
+        inline Instruction* unwrap() { return reinterpret_cast<Instruction*>(&m_stream.mutableInstructions()[m_index]); }
+    };
 
     inline MutableRef ref(Offset offset)
     {
-        ASSERT(offset < m_instructions.size());
-        return MutableRef { m_instructions, offset };
+        ASSERT(offset < m_stream.size());
+        return MutableRef { *this, offset };
     }
 
     void seek(unsigned position)
     {
-        ASSERT(position <= m_instructions.size());
+        ASSERT(position <= m_stream.size());
         m_position = position;
     }
 
@@ -203,10 +241,10 @@ public:
     void write(uint8_t byte)
     {
         ASSERT(!m_finalized);
-        if (m_position < m_instructions.size())
-            m_instructions[m_position++] = byte;
+        if (m_position < m_stream.size())
+            m_stream[m_position++] = byte;
         else {
-            m_instructions.append(byte);
+            m_stream.append(byte);
             m_position++;
         }
     }
@@ -241,28 +279,28 @@ public:
 
     void rewind(MutableRef& ref)
     {
-        ASSERT(ref.offset() < m_instructions.size());
-        m_instructions.shrink(ref.offset());
+        ASSERT(ref.offset() < m_stream.size());
+        m_stream.shrink(ref.offset());
         m_position = ref.offset();
     }
 
     std::unique_ptr<InstructionStream> finalize()
     {
         m_finalized = true;
-        m_instructions.shrinkToFit();
-        return std::unique_ptr<InstructionStream> { new InstructionStream(WTFMove(m_instructions)) };
+        m_stream.shrinkToFit();
+        return std::unique_ptr<InstructionStreamReader> { new InstructionStreamReader(WTFMove(m_stream)) };
     }
 
     MutableRef ref()
     {
-        return MutableRef { m_instructions, m_position };
+        return MutableRef { *this, m_position };
     }
 
     void swap(InstructionStreamWriter& other)
     {
         std::swap(m_finalized, other.m_finalized);
         std::swap(m_position, other.m_position);
-        m_instructions.swap(other.m_instructions);
+        m_stream.swap(other.m_stream);
     }
 
 private:
@@ -288,17 +326,18 @@ private:
 public:
     iterator begin()
     {
-        return iterator { m_instructions, 0 };
+        return iterator { *this, 0 };
     }
 
     iterator end()
     {
-        return iterator { m_instructions, m_instructions.size() };
+        return iterator { *this, m_stream.size() };
     }
 
 private:
     unsigned m_position { 0 };
     bool m_finalized { false };
+    InstructionVector m_stream;
 };
 
 

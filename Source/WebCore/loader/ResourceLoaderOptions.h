@@ -128,6 +128,12 @@ enum class LoadedFromOpaqueSource : uint8_t {
     No
 };
 
+enum class ScriptMode : uint8_t {
+    None,
+    Classic,
+    Module,
+};
+
 struct ResourceLoaderOptions : public FetchOptions {
     ResourceLoaderOptions() { }
 
@@ -173,6 +179,7 @@ struct ResourceLoaderOptions : public FetchOptions {
     ClientCredentialPolicy clientCredentialPolicy { ClientCredentialPolicy::CannotAskClientForCredentials };
     PreflightPolicy preflightPolicy { PreflightPolicy::Consider };
     LoadedFromOpaqueSource loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
+    ScriptMode scriptMode { ScriptMode::None };
 };
 
 } // namespace WebCore

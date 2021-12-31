@@ -33,6 +33,10 @@
 #include <wtf/HashSet.h>
 #include <wtf/RunLoop.h>
 
+namespace JSC {
+class BytecodeCacheMetadata;
+}
+
 namespace WebCore {
 struct FetchOptions;
 }
@@ -68,6 +72,8 @@ public:
 
     void preconnectTo(WebCore::FrameLoader&, const URL&, WebCore::StoredCredentialsPolicy, PreconnectCompletionHandler&&) final;
     void didFinishPreconnection(uint64_t preconnectionIdentifier, WebCore::ResourceError&&);
+
+    void cacheBytecodeForScript(const WebCore::CachedScript&, const JSC::BytecodeCacheMetadata&) override;
 
     void setCaptureExtraNetworkLoadMetricsEnabled(bool) final;
 

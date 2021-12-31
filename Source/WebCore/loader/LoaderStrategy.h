@@ -32,9 +32,14 @@
 #include "StoredCredentialsPolicy.h"
 #include <wtf/Forward.h>
 
+namespace JSC {
+class BytecodeCacheMetadata;
+}
+
 namespace WebCore {
 
 class CachedResource;
+class CachedScript;
 class ContentSecurityPolicy;
 class Frame;
 class FrameLoader;
@@ -74,6 +79,8 @@ public:
 
     using PreconnectCompletionHandler = WTF::Function<void(const ResourceError&)>;
     virtual void preconnectTo(FrameLoader&, const URL&, StoredCredentialsPolicy, PreconnectCompletionHandler&&) = 0;
+
+    virtual void cacheBytecodeForScript(const CachedScript&, const JSC::BytecodeCacheMetadata&) = 0;
 
     virtual void setCaptureExtraNetworkLoadMetricsEnabled(bool) = 0;
 

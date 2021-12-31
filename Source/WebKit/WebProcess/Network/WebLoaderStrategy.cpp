@@ -47,8 +47,10 @@
 #include "WebServiceWorkerProvider.h"
 #include "WebURLSchemeHandlerProxy.h"
 #include "WebURLSchemeTaskProxy.h"
+#include <JavaScriptCore/BytecodeCacheMetadata.h>
 #include <WebCore/ApplicationCacheHost.h>
 #include <WebCore/CachedResource.h>
+#include <WebCore/CachedScript.h>
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
@@ -700,6 +702,10 @@ void WebLoaderStrategy::didFinishPreconnection(uint64_t preconnectionIdentifier,
 {
     if (auto completionHandler = m_preconnectCompletionHandlers.take(preconnectionIdentifier))
         completionHandler(WTFMove(error));
+}
+
+void WebLoaderStrategy::cacheBytecodeForScript(const WebCore::CachedScript& script, const JSC::BytecodeCacheMetadata& metadata)
+{
 }
 
 bool WebLoaderStrategy::isOnLine() const

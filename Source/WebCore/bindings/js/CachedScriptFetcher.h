@@ -34,6 +34,7 @@ namespace WebCore {
 
 class CachedScript;
 class Document;
+enum class ScriptMode : uint8_t;
 
 class CachedScriptFetcher : public JSC::ScriptFetcher {
 public:
@@ -56,7 +57,7 @@ protected:
     {
     }
 
-    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, const String& crossOriginMode, String&& integrity) const;
+    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, ScriptMode, const String& crossOriginMode, String&& integrity) const;
 
 private:
     String m_nonce;

@@ -39,6 +39,10 @@ class WebResourceLoadScheduler;
 
 WebResourceLoadScheduler& webResourceLoadScheduler();
 
+namespace JSC {
+class BytecodeCacheMetadata;
+}
+
 class WebResourceLoadScheduler final : public WebCore::LoaderStrategy {
     WTF_MAKE_NONCOPYABLE(WebResourceLoadScheduler); WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -59,6 +63,10 @@ public:
     void startPingLoad(WebCore::Frame&, WebCore::ResourceRequest&, const WebCore::HTTPHeaderMap&, const WebCore::FetchOptions&, WebCore::ContentSecurityPolicyImposition, PingLoadCompletionHandler&&) final;
 
     void preconnectTo(WebCore::FrameLoader&, const URL&, WebCore::StoredCredentialsPolicy, PreconnectCompletionHandler&&) final;
+
+    void cacheBytecodeForScript(const WebCore::CachedScript&, const JSC::BytecodeCacheMetadata&) final {
+        printf("CACHE BYTECODE FOR SCRIPT\n");
+    }
 
     void setCaptureExtraNetworkLoadMetricsEnabled(bool) final { }
 

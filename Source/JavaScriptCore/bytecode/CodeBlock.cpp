@@ -360,7 +360,7 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, ScriptExecutable* ownerExecut
     , m_unlinkedCode(vm, this, unlinkedCodeBlock)
     , m_ownerExecutable(vm, this, ownerExecutable)
     , m_vm(&vm)
-    , m_instructionsRawPointer(unlinkedCodeBlock->instructions().rawPointer())
+    , m_instructionsRawPointer(unlinkedCodeBlock->instructions().instructions())
     , m_osrExitCounter(0)
     , m_optimizationDelayCounter(0)
     , m_reoptimizationRetryCounter(0)

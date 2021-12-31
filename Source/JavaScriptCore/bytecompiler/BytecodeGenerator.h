@@ -1071,7 +1071,7 @@ namespace JSC {
         void allocateAndEmitScope();
 
         template<typename JumpOp>
-        void setTargetForJumpInstruction(InstructionStream::MutableRef&, int target);
+        void setTargetForJumpInstruction(InstructionStreamWriter::MutableRef&, int target);
 
         using BigIntMapEntry = std::tuple<UniquedStringImpl*, uint8_t, bool>;
 
@@ -1304,7 +1304,7 @@ namespace JSC {
         VM& m_vm;
 
         OpcodeID m_lastOpcodeID = op_end;
-        InstructionStream::MutableRef m_lastInstruction { m_writer.ref() };
+        InstructionStreamWriter::MutableRef m_lastInstruction { m_writer.ref() };
 
         bool m_usesExceptions { false };
         bool m_expressionTooDeep { false };

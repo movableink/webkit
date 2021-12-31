@@ -79,6 +79,7 @@ private:
     void didFail(const ResourceError&) override;
     void willCancel(const ResourceError&) override;
     void didCancel(const ResourceError&) override;
+    void didRetrieveDerivedDataFromCache(const String& type, SharedBuffer&) override;
     
     void updateReferrerPolicy(const String&);
 

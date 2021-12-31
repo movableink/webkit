@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CachedResource.h"
+#include <JavaScriptCore/SourceProvider.h>
 
 namespace WebCore {
 
@@ -37,6 +38,7 @@ public:
     virtual ~CachedScript();
 
     StringView script();
+    RefPtr<JSC::CachedBytecode> cachedBytecode();
     unsigned scriptHash();
 
 private:
@@ -48,12 +50,14 @@ private:
     String encoding() const final;
     const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
     void finishLoading(SharedBuffer*) final;
+    void didRetrieveDerivedDataFromCache(const String&, SharedBuffer&) final;
 
     void destroyDecodedData() final;
 
     void setBodyDataFrom(const CachedResource&) final;
 
     String m_script;
+    RefPtr<JSC::CachedBytecode> m_cachedBytecode;
     unsigned m_scriptHash { 0 };
 
     enum DecodingState { NeverDecoded, DataAndDecodedStringHaveSameBytes, DataAndDecodedStringHaveDifferentBytes };
