@@ -114,7 +114,6 @@ class QtWebKitConan(ConanFile):
                 self.requires("libpng/1.6.37")
 
             self.requires("libwebp/1.1.0")
-            self.requires("woff2/1.0.2")
 
     def build(self):
         cmake = CMake(self, set_cmake_flags=True)
