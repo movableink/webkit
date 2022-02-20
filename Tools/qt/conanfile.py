@@ -127,9 +127,9 @@ class QtWebKitConan(ConanFile):
         #    cmake.definitions["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
 
         if self.options.qt:
-            cmake.definitions["Qt5_DIR"] = os.path.join(
-                str(self.options.qt), "lib", "cmake", "Qt5")
-            print("Qt5 directory:" + cmake.definitions["Qt5_DIR"])
+            cmake.definitions["Qt6_DIR"] = os.path.join(
+                str(self.options.qt), "lib", "cmake", "Qt6")
+            print("Qt6 directory:" + cmake.definitions["Qt6_DIR"])
 
         if self.options.build_type:
             cmake.build_type = str(self.options.build_type)

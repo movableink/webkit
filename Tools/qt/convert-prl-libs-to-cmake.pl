@@ -73,17 +73,17 @@ unless ($qmake_prl_libs) {
 my $prl_libs = squash_prl_libs(shellwords($qmake_prl_libs));
 
 my $template = <<'END_CMAKE';
-get_target_property(_link_libs Qt5::${_component} INTERFACE_LINK_LIBRARIES)
+get_target_property(_link_libs Qt6::${_component} INTERFACE_LINK_LIBRARIES)
 if (_link_libs)
     set(_list_sep ";")
 else ()
     set(_list_sep "")
 endif ()
-set_target_properties(Qt5::${_component} PROPERTIES
+set_target_properties(Qt6::${_component} PROPERTIES
     "INTERFACE_LINK_LIBRARIES" "${_link_libs}${_list_sep}${_libs}")
-set(Qt5${_component}_STATIC_LIB_DEPENDENCIES "${_libs}")
+set(Qt6${_component}_STATIC_LIB_DEPENDENCIES "${_libs}")
 list(APPEND STATIC_LIB_DEPENDENCIES
-    ${Qt5${_component}_STATIC_LIB_DEPENDENCIES}
+    ${Qt6${_component}_STATIC_LIB_DEPENDENCIES}
 )
 unset(_component)
 unset(_libs)
