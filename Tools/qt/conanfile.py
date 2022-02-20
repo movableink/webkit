@@ -99,7 +99,7 @@ class QtWebKitConan(ConanFile):
 
         if self.settings.os == 'Windows' or self.settings.os == 'Macos':
             # FIXME: Pass Qt version, handle more versions
-            qt_version = "5.15.1"
+            qt_version = "6.2.3"
             if qt_version == "5.14.1":
                 self.requires("sqlite3/3.30.1")
                 self.requires("libjpeg-turbo/2.0.3")
@@ -107,6 +107,10 @@ class QtWebKitConan(ConanFile):
             if qt_version == "5.15.1":
                 self.requires("sqlite3/3.32.3")
                 self.requires("libjpeg-turbo/2.0.5")
+                self.requires("libpng/1.6.37")
+            if qt_version == "6.2.3":
+                self.requires("sqlite3/3.37.2")
+                self.requires("libjpeg-turbo/2.1.2")
                 self.requires("libpng/1.6.37")
 
             self.requires("libwebp/1.1.0")
