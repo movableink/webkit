@@ -137,8 +137,6 @@ print("Path of build directory:" + build_directory)
 
 run_command("conan remote add -f bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan")
 run_command("conan config set general.revisions_enabled=1")
-run_command("conan remote add -f qtproject https://api.bintray.com/conan/qtproject/conan")
-run_command("conan remote add -f qtproject-testing https://api.bintray.com/conan/qtproject/conan-testing")
 
 if args.profile and args.compiler:
     sys.exit("Error: --compiler and --profile cannot be specified at the same time")
