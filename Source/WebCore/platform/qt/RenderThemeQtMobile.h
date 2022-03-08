@@ -59,14 +59,14 @@ public:
 
 protected:
 
-    void adjustButtonStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustButtonStyle(RenderStyle&, const Element*) const final;
     bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
-    void adjustTextFieldStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
 
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
-    void adjustMenuListStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustMenuListStyle(RenderStyle&, const Element*) const final;
 
     virtual bool paintMenuListButton(RenderObject&, const PaintInfo&, const IntRect&);
 

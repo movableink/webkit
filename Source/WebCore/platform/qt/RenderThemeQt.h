@@ -91,7 +91,7 @@ public:
 
     Seconds caretBlinkInterval() const override;
 
-    bool isControlStyled(const RenderStyle&, const BorderData&, const FillLayer&, const Color&) const override;
+    bool isControlStyled(const RenderStyle&, const RenderStyle&) const override;
 
 #if 0 //ENABLE(VIDEO)
     virtual String extraMediaControlsStyleSheet();
@@ -112,37 +112,37 @@ protected:
 
     void setButtonSize(RenderStyle&) const override;
 
-    void adjustTextFieldStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
 
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
-    void adjustTextAreaStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustTextAreaStyle(RenderStyle&, const Element*) const override;
 
-    void adjustMenuListStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustMenuListStyle(RenderStyle&, const Element*) const override;
 
-    void adjustMenuListButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
 
-    void adjustProgressBarStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
     // Returns the repeat interval of the animation for the progress bar.
     Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const override;
 
-    void adjustSliderTrackStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
 
-    void adjustSliderThumbStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSliderThumbStyle(RenderStyle&, const Element*) const override;
 
     bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    void adjustSearchFieldStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
 
-    void adjustSearchFieldCancelButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const override;
     bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
-    void adjustSearchFieldDecorationPartStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const override;
     bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-    void adjustSearchFieldResultsDecorationPartStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const override;
     bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
 #ifndef QT_NO_SPINBOX
-    void adjustInnerSpinButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
 #endif
 
 #if 0 //ENABLE(VIDEO)

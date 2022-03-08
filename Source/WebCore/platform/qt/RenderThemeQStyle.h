@@ -52,35 +52,35 @@ public:
     QStyleFacade* qStyle() { return m_qStyle.get(); }
 
 protected:
-    void adjustButtonStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustButtonStyle(RenderStyle&, const Element*) const final;
     bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) final;
-    void adjustTextAreaStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustTextAreaStyle(RenderStyle&, const Element*) const final;
 
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
-    void adjustMenuListButtonStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustMenuListButtonStyle(RenderStyle&, const Element*) const final;
 
     // Returns the duration of the animation for the progress bar.
     Seconds animationDurationForProgressBar(RenderProgress&) const final;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    void adjustSliderTrackStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustSliderTrackStyle(RenderStyle&, const Element*) const final;
 
     bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    void adjustSliderThumbStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustSliderThumbStyle(RenderStyle&, const Element*) const final;
 
     bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
-    void adjustSearchFieldDecorationPartStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
-    void adjustSearchFieldResultsDecorationPartStyle(StyleResolver&, RenderStyle&, const Element*) const final;
+    void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) final;
 
 #ifndef QT_NO_SPINBOX
