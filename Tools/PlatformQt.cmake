@@ -10,6 +10,6 @@ if (ENABLE_TEST_SUPPORT)
 endif ()
 
 if (ENABLE_WEBKIT)
-    add_subdirectory(MiniBrowser/qt)
+#    add_subdirectory(MiniBrowser/qt)
 #    add_subdirectory(WebKitTestRunner)
 endif ()
