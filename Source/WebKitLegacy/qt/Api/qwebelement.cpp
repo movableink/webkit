@@ -23,6 +23,7 @@
 #include "qwebelement_p.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/Completion.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <QPainter>
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/FrameView.h>
@@ -671,7 +672,7 @@ QWebFrame *QWebElement::webFrame() const
     return frameAdapter->apiHandle();
 }
 
-static bool setupScriptContext(WebCore::Element* element, JSGlobalObject*& lexicalGlobalObject)
+static bool setupScriptContext(WebCore::Element* element, JSC::JSGlobalObject*& lexicalGlobalObject)
 {
     if (!element)
         return false;
@@ -680,8 +681,8 @@ static bool setupScriptContext(WebCore::Element* element, JSGlobalObject*& lexic
     if (!frame)
         return false;
 
-    state = frame->script().globalObject(mainThreadNormalWorld())->globalExec();
-    if (!state)
+    lexicalGlobalObject = frame->script().globalObject(mainThreadNormalWorld())->globalObject();
+    if (!lexicalGlobalObject)
         return false;
 
     return true;
@@ -702,12 +703,12 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
     if (scriptSource.isEmpty())
         return QVariant();
 
-    JSGlobalObject* lexicalGlobalObject = nullptr;
+    JSC::JSGlobalObject* lexicalGlobalObject = nullptr;
 
     if (!setupScriptContext(m_element, lexicalGlobalObject))
         return QVariant();
 
-    JSC::JSLockHolder lock(state);
+    JSC::JSLockHolder lock(lexicalGlobalObject);
     RefPtr<Element> protect = m_element;
 
     JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
@@ -1981,7 +1982,7 @@ Element* QtWebElementRuntime::get(const QWebElement& element)
     return element.m_element;
 }
 
-static QVariant convertJSValueToWebElementVariant(JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects)
+static QVariant convertJSValueToWebElementVariant(JSC::JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects)
 {
     JSC::VM& vm = lexicalGlobalObject->vm();
     Element* element = 0;
@@ -2003,7 +2004,7 @@ static QVariant convertJSValueToWebElementVariant(JSGlobalObject* lexicalGlobalO
     return QVariant::fromValue<QWebElement>(QtWebElementRuntime::create(element));
 }
 
-static JSC::JSValue convertWebElementVariantToJSValue(JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
+static JSC::JSValue convertWebElementVariantToJSValue(JSC::JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
 {
     return WebCore::toJS(lexicalGlobalObject, globalObject, QtWebElementRuntime::get(variant.value<QWebElement>()));
 }
