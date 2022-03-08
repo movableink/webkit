@@ -52,6 +52,7 @@
 #include <QPalette>
 #include <QStringList>
 #include <WebCore/DOMWindow.h>
+#include <WebCore/DOMWrapperWorld.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FrameLoader.h>

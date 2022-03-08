@@ -183,7 +183,7 @@ QVariant QWebFrameAdapter::evaluateJavaScript(const QString &scriptSource)
     QVariant rc;
     int distance = 0;
     JSC::JSValue value = scriptController.executeScript(ScriptSourceCode(scriptSource));
-    JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorld())->globalExec();
+    JSC::JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorld())->globalObject();
     JSValueRef* ignoredException = 0;
     JSC::JSLockHolder lock(lexicalGlobalObject);
     JSValueRef valueRef = toRef(lexicalGlobalObject, value);
@@ -212,7 +212,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
         return;
     }
 
-    JSCGlobalObject* lexicalGlobalObject = window->globalExec();
+    JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
     JSC::JSLockHolder lock(lexicalGlobalObject);
 
     JSC::JSObject* runtimeObject = JSC::Bindings::QtInstance::getQtInstance(object, root, valueOwnership)->createRuntimeObject(lexicalGlobalObject);

@@ -38,6 +38,7 @@
 
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <WebCore/BackForwardController.h>
 #include <WebCore/CommonVM.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
@@ -146,7 +147,7 @@ WebCore::Node* QtDRTNodeRuntime::get(const QDRTNode& node)
     return node.m_node;
 }
 
-static QVariant convertJSValueToNodeVariant(JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>*)
+static QVariant convertJSValueToNodeVariant(JSC::JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>*)
 {
     JSC::VM& vm = lexicalGlobalObject->vm();
     if (!object || !object->inherits<JSNode>(vm))
@@ -154,7 +155,7 @@ static QVariant convertJSValueToNodeVariant(JSGlobalObject* lexicalGlobalObject,
     return QVariant::fromValue<QDRTNode>(QtDRTNodeRuntime::create(JSNode::toWrapped(vm, object)));
 }
 
-static JSC::JSValue convertNodeVariantToJSValue(JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
+static JSC::JSValue convertNodeVariantToJSValue(JSC::JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
 {
     return toJS(lexicalGlobalObject, globalObject, QtDRTNodeRuntime::get(variant.value<QDRTNode>()));
 }
@@ -748,7 +749,7 @@ void DumpRenderTreeSupportQt::injectInternalsObject(QWebFrameAdapter* adapter)
     JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
-    JSGlobalObject* lexicalGlobalObject = window->globalExec();
+    JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
     Q_ASSERT(lexicalGlobalObject);
     JSC::JSLockHolder lock(lexicalGlobalObject);
 
@@ -767,7 +768,7 @@ void DumpRenderTreeSupportQt::resetInternalsObject(QWebFrameAdapter* adapter)
     JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
-    JSGlobalObject* lexicalGlobalObject = window->globalExec();
+    JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
     Q_ASSERT(lexicalGlobalObject);
     JSC::JSLockHolder lock(lexicalGlobalObject);
 
