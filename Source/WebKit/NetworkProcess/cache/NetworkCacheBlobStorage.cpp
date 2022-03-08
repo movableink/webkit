@@ -68,7 +68,7 @@ void BlobStorage::synchronize()
         auto linkCount = FileSystem::hardLinkCount(path);
         // No clients left for this blob.
         if (linkCount && *linkCount == 1)
-            unlink(filePath.data());
+            FileSystem::deleteFile(path);
         else
             m_approximateSize += FileSystem::fileSize(path).value_or(0);
     });
