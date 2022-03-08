@@ -69,7 +69,7 @@ void BlobStorage::synchronize()
         ::stat(filePath.data(), &stat);
         // No clients left for this blob.
         if (stat.st_nlink == 1)
-            unlink(filePath.data());
+            FileSystem::deleteFile(path);
         else
             m_approximateSize += stat.st_size;
     });
