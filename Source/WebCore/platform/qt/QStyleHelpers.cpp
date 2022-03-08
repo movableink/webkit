@@ -70,7 +70,7 @@ String getCascadedStyleProperty(const Element& element, StringView propertyName)
     // declarations, as well as embedded and inline style declarations.
 
     Document& document = element.document();
-    Vector<RefPtr<StyleRule>> rules = document.styleScope().resolver().styleRulesForElement(&element, StyleResolver::AuthorCSSRules);
+    Vector<RefPtr<StyleRule>> rules = document.styleScope().resolver().styleRulesForElement(&element, Style::Resolver::AuthorCSSRules);
     for (int i = rules.size(); i > 0; --i) {
         if (!rules[i - 1]->isStyleRule())
             continue;
