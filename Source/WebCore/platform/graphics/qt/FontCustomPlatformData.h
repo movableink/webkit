@@ -33,7 +33,6 @@ class FontDescription;
 class FontPlatformData;
 class SharedBuffer;
 struct FontSelectionSpecifiedCapabilities;
-struct FontVariantSettings;
 
 template <typename T> class FontTaggedSettings;
 typedef FontTaggedSettings<int> FontFeatureSettings;
@@ -43,7 +42,7 @@ struct FontCustomPlatformData {
 public:
     FontCustomPlatformData() { }
 
-    FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontFeatureSettings& fontFaceFeatures, const FontVariantSettings& fontFaceVariantSettings, FontSelectionSpecifiedCapabilities fontFaceCapabilities);
+    FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontFeatureSettings& fontFaceFeatures, FontSelectionSpecifiedCapabilities fontFaceCapabilities);
 
     static bool supportsFormat(const String&);
 
