@@ -102,16 +102,16 @@ RenderTheme& RenderTheme::singleton()
 }
 
 // Remove this when SearchFieldPart is style-able in RenderTheme::isControlStyled()
-bool RenderThemeQt::isControlStyled(const RenderStyle& style, const BorderData& border, const FillLayer& fill, const Color& backgroundColor) const
+bool RenderThemeQt::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
     switch (style.appearance()) {
     case SearchFieldPart:
         // Test the style to see if the UA border and background match.
-        return (style.border() != border
-                || style.backgroundLayers() != fill
-                || style.visitedDependentColor(CSSPropertyBackgroundColor) != backgroundColor);
+        return (style.border() != userAgentStyle.border()
+                || style.backgroundLayers() != userAgentStyle.backgroundLayers()
+                || style.visitedDependentColor(CSSPropertyBackgroundColor) != userAgentStyle.backgroundColor());
     default:
-        return RenderTheme::isControlStyled(style, border, fill, backgroundColor);
+        return RenderTheme::isControlStyled(style, userAgentStyle);
     }
 }
 

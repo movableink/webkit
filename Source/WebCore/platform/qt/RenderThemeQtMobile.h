@@ -46,7 +46,7 @@ public:
 
     void adjustSliderThumbSize(RenderStyle&, const Element*) const final;
 
-    bool isControlStyled(const RenderStyle&, const BorderData&, const FillLayer&, const Color& backgroundColor) const final;
+    bool isControlStyled(const RenderStyle&, const RenderStyle&) const final;
 
     LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
 
