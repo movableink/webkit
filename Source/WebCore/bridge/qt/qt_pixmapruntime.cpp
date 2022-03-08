@@ -131,8 +131,8 @@ static JSValueRef assignToHTMLImageElement(JSContextRef context, JSObjectRef /*f
 
     JSObject* jsObject = ::toJS(objectArg);
 
-    JSC::ExecState* exec = ::toJS(context);
-    VM& vm = exec->vm();
+    JSGlobalObject* lexicalGlobalObject = ::toJS(context);
+    VM& vm = lexicalGlobalObject->vm();
 
     if (!jsObject->inherits(vm, JSHTMLImageElement::info()))
         return JSValueMakeUndefined(context);
@@ -153,14 +153,14 @@ static JSValueRef pixmapToImageData(JSContextRef context, JSObjectRef /*function
     int width = image.width();
     int height = image.height();
 
-    JSC::ExecState* exec = ::toJS(context);
-    JSLockHolder locker(exec);
+    JSGlobalObject* lexicalGlobalObject = ::toJS(context);
+    JSLockHolder locker(lexicalGlobalObject);
 
     RefPtr<ImageData> imageData = ImageData::create(IntSize(width, height));
     copyPixelsInto(image, width, height, imageData->data()->data());
 
-    JSDOMGlobalObject* globalObject = static_cast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
-    return ::toRef(exec, toJS(exec, globalObject, imageData.get()));
+    JSDOMGlobalObject* globalObject = static_cast<JSDOMGlobalObject*>(lexicalGlobalObject);
+    return ::toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, globalObject, imageData.get()));
 }
 
 static JSValueRef pixmapToDataUrl(JSContextRef context, JSObjectRef /*function*/, JSObjectRef object, size_t /*argumentCount*/, const JSValueRef /*arguments*/[], JSValueRef* /*exception*/)
@@ -222,8 +222,8 @@ QVariant QtPixmapRuntime::toQt(JSContextRef context, JSObjectRef obj, QMetaType:
 
     JSObject* jsObject = ::toJS(obj);
 
-    JSC::ExecState* exec = ::toJS(context);
-    VM& vm = exec->vm();
+    JSGlobalObject* lexicalGlobalObject = ::toJS(context);
+    VM& vm = lexicalGlobalObject->vm();
 
     if (!jsObject->inherits(vm, JSHTMLImageElement::info()))
         return emptyVariantForHint(hint);

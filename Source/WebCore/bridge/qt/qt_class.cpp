@@ -62,13 +62,13 @@ QtClass* QtClass::classForObject(QObject* o)
 // and not get wrapped in RuntimeMethod). Also, use this for methods,
 // so we can cache the object and return the same object for the same
 // identifier.
-JSValue QtClass::fallbackObject(ExecState* exec, Instance* inst, PropertyName identifier)
+JSValue QtClass::fallbackObject(JSGlobalObject* lexicalGlobalObject, Instance* inst, PropertyName identifier)
 {
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     QtInstance* qtinst = static_cast<QtInstance*>(inst);
-    JSContextRef context = toRef(exec);
+    JSContextRef context = toRef(lexicalGlobalObject);
     JSValueRef exception = 0;
 
     String str(identifier.publicName());
@@ -78,7 +78,7 @@ JSValue QtClass::fallbackObject(ExecState* exec, Instance* inst, PropertyName id
     if (QtRuntimeMethod* method = qtinst->m_methods.value(name)) {
         JSValue obj = toJS(method->jsObjectRef(context, &exception));
         if (exception)
-            return throwException(exec, scope, toJS(exec, exception));
+            return throwException(lexicalGlobalObject, scope, toJS(lexicalGlobalObject, exception));
         return obj;
     }
 
@@ -115,7 +115,7 @@ JSValue QtClass::fallbackObject(ExecState* exec, Instance* inst, PropertyName id
     qtinst->m_methods.insert(name, method);
     JSValue obj = toJS(method->jsObjectRef(context, &exception));
     if (exception)
-        return throwException(exec, scope, toJS(exec, exception));
+        return throwException(lexicalGlobalObject, scope, toJS(lexicalGlobalObject, exception));
     return obj;
 }
 

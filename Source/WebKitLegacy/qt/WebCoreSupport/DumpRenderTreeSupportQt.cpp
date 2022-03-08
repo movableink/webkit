@@ -146,17 +146,17 @@ WebCore::Node* QtDRTNodeRuntime::get(const QDRTNode& node)
     return node.m_node;
 }
 
-static QVariant convertJSValueToNodeVariant(JSC::ExecState* exec, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>*)
+static QVariant convertJSValueToNodeVariant(JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>*)
 {
-    JSC::VM& vm = exec->vm();
+    JSC::VM& vm = lexicalGlobalObject->vm();
     if (!object || !object->inherits<JSNode>(vm))
         return QVariant();
     return QVariant::fromValue<QDRTNode>(QtDRTNodeRuntime::create(JSNode::toWrapped(vm, object)));
 }
 
-static JSC::JSValue convertNodeVariantToJSValue(JSC::ExecState* exec, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
+static JSC::JSValue convertNodeVariantToJSValue(JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
 {
-    return toJS(exec, globalObject, QtDRTNodeRuntime::get(variant.value<QDRTNode>()));
+    return toJS(lexicalGlobalObject, globalObject, QtDRTNodeRuntime::get(variant.value<QDRTNode>()));
 }
 
 void QtDRTNodeRuntime::initialize()
@@ -748,11 +748,11 @@ void DumpRenderTreeSupportQt::injectInternalsObject(QWebFrameAdapter* adapter)
     JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
-    JSC::ExecState* exec = window->globalExec();
-    Q_ASSERT(exec);
-    JSC::JSLockHolder lock(exec);
+    JSGlobalObject* lexicalGlobalObject = window->globalExec();
+    Q_ASSERT(lexicalGlobalObject);
+    JSC::JSLockHolder lock(lexicalGlobalObject);
 
-    JSContextRef context = toRef(exec);
+    JSContextRef context = toRef(lexicalGlobalObject);
     WebCoreTestSupport::injectInternalsObject(context);
 }
 
@@ -767,11 +767,11 @@ void DumpRenderTreeSupportQt::resetInternalsObject(QWebFrameAdapter* adapter)
     JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
-    JSC::ExecState* exec = window->globalExec();
-    Q_ASSERT(exec);
-    JSC::JSLockHolder lock(exec);
+    JSGlobalObject* lexicalGlobalObject = window->globalExec();
+    Q_ASSERT(lexicalGlobalObject);
+    JSC::JSLockHolder lock(lexicalGlobalObject);
 
-    JSContextRef context = toRef(exec);
+    JSContextRef context = toRef(lexicalGlobalObject);
     WebCoreTestSupport::resetInternalsObject(context);
 }
 

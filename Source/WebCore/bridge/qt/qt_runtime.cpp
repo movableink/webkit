@@ -184,18 +184,18 @@ static JSRealType valueRealType(JSContextRef context, JSValueRef value, JSValueR
 
     JSObjectRef object = JSValueToObject(context, value, exception);
 
-    ExecState* exec = toJS(context);
-    JSLockHolder locker(exec);
+    JSGlobalObject* lexicalGlobalObject = toJS(context);
+    JSLockHolder locker(lexicalGlobalObject);
 
-    if (isJSUint8Array(exec->vm(), object))
+    if (isJSUint8Array(lexicalGlobalObect->vm(), object))
         return RTUint8Array;
-    if (isJSUint8ClampedArray(exec->vm(), object))
+    if (isJSUint8ClampedArray(lexicalGlobalObject->vm(), object))
         return RTUint8ClampedArray;
-    if (isJSArray(exec->vm(), object))
+    if (isJSArray(lexicalGlobalObject->vm(), object))
             return Array;
-    if (isJSDate(exec->vm(), object))
+    if (isJSDate(lexicalGlobalObject->vm(), object))
             return Date;
-    if (isQtObject(exec->vm(), object))
+    if (isQtObject(lexicalGlobalObject->vm(), object))
             return QObj;
 
     return Object;
@@ -208,15 +208,15 @@ static QString toString(JSStringRef stringRef)
 
 static JSValueRef unwrapBoxedPrimitive(JSContextRef context, JSValueRef value, JSObjectRef obj)
 {
-    ExecState* exec = toJS(context);
-    JSLockHolder locker(exec);
+    JSGlobalObject* lexicalGlobalObject = toJS(context);
+    JSLockHolder locker(lexicalGlobalObject);
     JSObject* object = toJS(obj);
-    if (object->inherits<NumberObject>(exec->vm()))
-        return toRef(exec, jsNumber(object->toNumber(exec)));
-    if (object->inherits<StringObject>(exec->vm()))
-        return toRef(exec, object->toString(exec));
-    if (object->inherits<BooleanObject>(exec->vm()))
-        return toRef(exec, object->toPrimitive(exec));
+    if (object->inherits<NumberObject>(lexicalGlobalObject->vm()))
+        return toRef(lexicalGlobalObject, jsNumber(object->toNumber(lexicalGlobalObject)));
+    if (object->inherits<StringObject>(lexicalGlobalObject->vm()))
+        return toRef(lexicalGlobalObject, object->toString(lexicalGlobalObject));
+    if (object->inherits<BooleanObject>(lexicalGlobalObject->vm()))
+        return toRef(lexicalGlobalObject, object->toPrimitive(lexicalGlobalObject));
     return value;
 }
 
@@ -290,16 +290,16 @@ static QString toQString(JSContextRef context, JSValueRef value)
 
 static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSValueRef value, JSObjectRef object, JSValueRef* exception, GregorianDateTime* gdt)
 {
-    ExecState* exec = toJS(context);
-    JSLockHolder locker(exec);
+    JSGlobalObject* lexicalGlobalObject = toJS(context);
+    JSLockHolder locker(lexicalGlobalObject);
     if (type == Date) {
         JSObject* jsObject = toJS(object);
-        DateInstance* date = jsDynamicCast<DateInstance*>(exec->vm(), jsObject);
-        gdt->copyFrom(*date->gregorianDateTimeUTC(exec));
+        DateInstance* date = jsDynamicCast<DateInstance*>(lexicalGlobalObject->vm(), jsObject);
+        gdt->copyFrom(*date->gregorianDateTimeUTC(lexicalGlobalObject));
     } else {
         double ms = JSValueToNumber(context, value, exception);
         GregorianDateTime convertedGdt;
-        msToGregorianDateTime(exec->vm(), ms, WTF::UTCTime, convertedGdt);
+        msToGregorianDateTime(lexicalGlobalObject->vm(), ms, WTF::UTCTime, convertedGdt);
         gdt->copyFrom(convertedGdt);
     }
 }
@@ -503,15 +503,15 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
 
         case QMetaType::QByteArray: {
             if (type == RTUint8Array) {
-                ExecState* exec = toJS(context);
-                JSLockHolder locker(exec);
-                RefPtr<JSC::Uint8Array> arr = toPossiblySharedUint8Array(exec->vm(), toJS(toJS(context), value));
+                JSGlobalObject* lexicalGlobalObject = toJS(context);
+                JSLockHolder locker(lexicalGlobalObject);
+                RefPtr<JSC::Uint8Array> arr = toPossiblySharedUint8Array(lexicalGlobalObject->vm(), toJS(toJS(context), value));
                 ret = QVariant(QByteArray(reinterpret_cast<const char*>(arr->data()), arr->length()));
                 dist = 0;
             } else if (type == RTUint8ClampedArray) {
-                ExecState* exec = toJS(context);
-                JSLockHolder locker(exec);
-                RefPtr<JSC::Uint8ClampedArray> arr = toPossiblySharedUint8ClampedArray(exec->vm(), toJS(toJS(context), value));
+                JSGlobalObject* lexicalGlobalObject = toJS(context);
+                JSLockHolder locker(lexicalGlobalObject);
+                RefPtr<JSC::Uint8ClampedArray> arr = toPossiblySharedUint8ClampedArray(lexicalGlobalObject->vm(), toJS(toJS(context), value));
                 ret = QVariant(QByteArray(reinterpret_cast<const char*>(arr->data()), arr->length()));
                 dist = 0;
             } else {
@@ -646,9 +646,9 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
             if (QtPixmapRuntime::canHandle(static_cast<QMetaType::Type>(hint))) {
                 ret = QtPixmapRuntime::toQt(context, object, static_cast<QMetaType::Type>(hint), exception);
             } else if (customRuntimeConversions()->contains(hint)) {
-                ExecState* exec = toJS(context);
-                JSLockHolder locker(exec);
-                ret = customRuntimeConversions()->value(hint).toVariantFunc(exec, toJS(object), &dist, visitedObjects);
+                JSGlobalObject* lexicalGlobalObject = toJS(context);
+                JSLockHolder locker(lexicalGlobalObject);
+                ret = customRuntimeConversions()->value(hint).toVariantFunc(lexicalGlobalObject, toJS(object), &dist, visitedObjects);
                 if (dist == 0)
                     break;
             } else if (hint == (QMetaType::Type) qMetaTypeId<QVariant>()) {
@@ -750,33 +750,33 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         QByteArray qtByteArray = variant.value<QByteArray>();
         WTF::RefPtr<JSC::Uint8ClampedArray> wtfByteArray = JSC::Uint8ClampedArray::createUninitialized(qtByteArray.length());
         memcpy(wtfByteArray->data(), qtByteArray.constData(), qtByteArray.length());
-        ExecState* exec = toJS(context);
-        JSLockHolder locker(exec);
-        return toRef(exec, toJS(exec, static_cast<JSDOMGlobalObject*>(exec->lexicalGlobalObject()), wtfByteArray.get()));
+        JSGlobalObject* lexicalGlobalObject = toJS(context);
+        JSLockHolder locker(lexicalGlobalObject);
+        return toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject->lexicalGlobalObject()), wtfByteArray.get()));
     }
 
     if (QMetaType::typeFlags(type).testFlag(QMetaType::PointerToQObject)) {
         QObject* obj = variant.value<QObject*>();
         if (!obj)
             return JSValueMakeNull(context);
-        ExecState* exec = toJS(context);
-        JSLockHolder locker(exec);
-        return toRef(exec, QtInstance::getQtInstance(obj, WTFMove(root), QtInstance::QtOwnership)->createRuntimeObject(exec));
+        JSGlobalObject* lexicalGlobalObject = toJS(context);
+        JSLockHolder locker(lexicalGlobalObject);
+        return toRef(lexicalGlobalObject, QtInstance::getQtInstance(obj, WTFMove(root), QtInstance::QtOwnership)->createRuntimeObject(lexicalGlobalObject));
     }
 
     if (QtPixmapRuntime::canHandle(static_cast<QMetaType::Type>(variant.type())))
         return QtPixmapRuntime::toJS(context, variant, exception);
 
     if (customRuntimeConversions()->contains(type)) {
-        ExecState* exec = toJS(context);
-        JSLockHolder locker(exec);
-        if (!root->globalObject()->inherits<JSDOMWindow>(exec->vm()))
+        JSGlobalObject* lexicalGlobalObject = toJS(context);
+        JSLockHolder locker(lexicalGlobalObject);
+        if (!root->globalObject()->inherits<JSDOMWindow>(lexicalGlobalObject->vm()))
             return JSValueMakeUndefined(context);
 
-        Document* document = JSDOMWindow::toWrapped(exec->vm(), root->globalObject())->document();
+        Document* document = JSDOMWindow::toWrapped(lexicalGlobalObject->vm(), root->globalObject())->document();
         if (!document)
             return JSValueMakeUndefined(context);
-        return toRef(exec, customRuntimeConversions()->value(type).toJSValueFunc(exec, toJSDOMWindow(document->frame(), currentWorld(*exec)), variant));
+        return toRef(lexicalGlobalObject, customRuntimeConversions()->value(type).toJSValueFunc(lexicalGlobalObject, toJSDOMWindow(document->frame(), currentWorld(*lexicalGlobalObject)), variant));
     }
 
     if (type == QMetaType::QVariantMap) {
@@ -825,10 +825,10 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         QObjectList ol = variant.value<QObjectList>();
         JSObjectRef array = JSObjectMakeArray(context, 0, 0, exception);
         RefPtr<RootObject> rootRef(root);
-        ExecState* exec = toJS(context);
-        JSLockHolder locker(exec);
+        JSGlobalObject* lexicalGlobalObject = toJS(context);
+        JSLockHolder locker(lexicalGlobalObject);
         for (int i = 0; i < ol.count(); ++i) {
-            JSValueRef jsObject = toRef(exec, QtInstance::getQtInstance(ol.at(i), root, QtInstance::QtOwnership)->createRuntimeObject(exec));
+            JSValueRef jsObject = toRef(lexicalGlobalObject, QtInstance::getQtInstance(ol.at(i), root, QtInstance::QtOwnership)->createRuntimeObject(lexicalGlobalObject));
             JSObjectSetPropertyAtIndex(context, array, i, jsObject, /*ignored exception*/0);
         }
         return array;
@@ -1597,11 +1597,11 @@ void QtConnectionObject::execute(void** argv)
     }
 
     JSValueRef callException = 0;
-    ExecState* exec = toJS(m_context);
-    JSLockHolder lock(exec);
+    JSGlobalObject* lexicalGlobalObject = toJS(m_context);
+    JSLockHolder lock(lexicalGlobalObject);
     JSObjectCallAsFunction(m_context, m_receiverFunction, m_receiver, argc, args.data(), &callException);
     if (callException)
-        WebCore::reportException(exec, toJS(exec, callException));
+        WebCore::reportException(lexicalGlobalObject, toJS(lexicalGlobalObject, callException));
 }
 
 bool QtConnectionObject::match(JSContextRef context, QObject* sender, int signalIndex, JSObjectRef receiver, JSObjectRef receiverFunction)

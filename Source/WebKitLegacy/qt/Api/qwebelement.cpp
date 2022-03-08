@@ -671,7 +671,7 @@ QWebFrame *QWebElement::webFrame() const
     return frameAdapter->apiHandle();
 }
 
-static bool setupScriptContext(WebCore::Element* element, JSC::ExecState*& state)
+static bool setupScriptContext(WebCore::Element* element, JSGlobalObject*& lexicalGlobalObject)
 {
     if (!element)
         return false;
@@ -702,29 +702,29 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
     if (scriptSource.isEmpty())
         return QVariant();
 
-    JSC::ExecState* state = nullptr;
+    JSGlobalObject* lexicalGlobalObject = nullptr;
 
-    if (!setupScriptContext(m_element, state))
+    if (!setupScriptContext(m_element, lexicalGlobalObject))
         return QVariant();
 
     JSC::JSLockHolder lock(state);
     RefPtr<Element> protect = m_element;
 
-    JSC::JSValue thisValue = toJS(state, toJSDOMWindow(m_element->document().frame(), currentWorld(*state)), m_element);
+    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
     if (!thisValue)
         return QVariant();
 
     ScriptSourceCode sourceCode(scriptSource);
 
     NakedPtr<JSC::Exception> evaluationException;
-    JSC::JSValue evaluationResult = JSC::evaluate(state, sourceCode.jsSourceCode(), thisValue, evaluationException);
+    JSC::JSValue evaluationResult = JSC::evaluate(lexicalGlobalObject, sourceCode.jsSourceCode(), thisValue, evaluationException);
     if (evaluationException)
         return QVariant();
-    JSValueRef evaluationResultRef = toRef(state, evaluationResult);
+    JSValueRef evaluationResultRef = toRef(lexicalGlobalObject, evaluationResult);
 
     int distance = 0;
     JSValueRef* ignoredException = 0;
-    return JSC::Bindings::convertValueToQVariant(toRef(state), evaluationResultRef, QMetaType::Void, &distance, ignoredException);
+    return JSC::Bindings::convertValueToQVariant(toRef(lexicalGlobalObject), evaluationResultRef, QMetaType::Void, &distance, ignoredException);
 }
 
 /*!
@@ -1981,9 +1981,9 @@ Element* QtWebElementRuntime::get(const QWebElement& element)
     return element.m_element;
 }
 
-static QVariant convertJSValueToWebElementVariant(JSC::ExecState* exec, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects)
+static QVariant convertJSValueToWebElementVariant(JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects)
 {
-    JSC::VM& vm = exec->vm();
+    JSC::VM& vm = lexicalGlobalObject->vm();
     Element* element = 0;
     QVariant ret;
     if (object && object->inherits<JSElement>(vm)) {
@@ -2003,9 +2003,9 @@ static QVariant convertJSValueToWebElementVariant(JSC::ExecState* exec, JSC::JSO
     return QVariant::fromValue<QWebElement>(QtWebElementRuntime::create(element));
 }
 
-static JSC::JSValue convertWebElementVariantToJSValue(JSC::ExecState* exec, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
+static JSC::JSValue convertWebElementVariantToJSValue(JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
 {
-    return WebCore::toJS(exec, globalObject, QtWebElementRuntime::get(variant.value<QWebElement>()));
+    return WebCore::toJS(lexicalGlobalObject, globalObject, QtWebElementRuntime::get(variant.value<QWebElement>()));
 }
 
 void QtWebElementRuntime::initialize()

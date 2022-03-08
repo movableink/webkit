@@ -43,7 +43,7 @@ public:
     Method* methodNamed(PropertyName, Instance*) const final;
     Field* fieldNamed(PropertyName, Instance*) const final;
 
-    JSValue fallbackObject(ExecState*, Instance*, PropertyName) final;
+    JSValue fallbackObject(JSGlobalObject*, Instance*, PropertyName) final;
 
 private:
     QtClass(const QtClass&); // prohibit copying
