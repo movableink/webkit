@@ -54,7 +54,6 @@
 #include "JSAsyncGenerator.h"
 #include "JSBigInt.h"
 #include "JSCInlines.h"
-#include "JSFixedArray.h"
 #include "JSGenericTypedArrayViewConstructorInlines.h"
 #include "JSGlobalObjectFunctions.h"
 #include "JSImmutableButterfly.h"
@@ -2135,6 +2134,23 @@ JSCell* JIT_OPERATION operationCreateClonedArguments(JSGlobalObject* globalObjec
         globalObject, structure, argumentStart, length, callee);
 }
 
+JSCell* JIT_OPERATION operationCreateArgumentsButterfly(JSGlobalObject* globalObject, Register* argumentStart, uint32_t argumentCount)
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), argumentCount);
+    if (!butterfly) {
+        throwOutOfMemoryError(globalObject, scope);
+        return nullptr;
+    }
+    for (unsigned index = 0; index < argumentCount; ++index)
+        butterfly->setIndex(vm, index, argumentStart[index].jsValue());
+    return butterfly;
+}
+
 JSCell* JIT_OPERATION operationCreateDirectArgumentsDuringExit(VM* vmPointer, InlineCallFrame* inlineCallFrame, JSFunction* callee, uint32_t argumentCount)
 {
     VM& vm = *vmPointer;
@@ -2375,7 +2391,7 @@ EncodedJSValue JIT_OPERATION operationHasGenericProperty(JSGlobalObject* globalO
         return JSValue::encode(jsBoolean(false));
 
     JSObject* base = baseValue.toObject(globalObject);
-    ASSERT(!scope.exception() || !base);
+    EXCEPTION_ASSERT(!scope.exception() || !base);
     if (!base)
         return JSValue::encode(JSValue());
     auto propertyName = asString(property)->toIdentifier(globalObject);
@@ -2945,17 +2961,18 @@ int32_t JIT_OPERATION operationArrayIndexOfValueDouble(JSGlobalObject* globalObj
     return -1;
 }
 
-void JIT_OPERATION operationLoadVarargs(JSGlobalObject* globalObject, int32_t firstElementDest, EncodedJSValue encodedArguments, uint32_t offset, uint32_t length, uint32_t mandatoryMinimum)
+void JIT_OPERATION operationLoadVarargs(JSGlobalObject* globalObject, int32_t firstElementDest, EncodedJSValue encodedArguments, uint32_t offset, uint32_t lengthIncludingThis, uint32_t mandatoryMinimum)
 {
+    VirtualRegister firstElement { firstElementDest };
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     JSValue arguments = JSValue::decode(encodedArguments);
     
-    loadVarargs(globalObject, callFrame, VirtualRegister(firstElementDest), arguments, offset, length);
+    loadVarargs(globalObject, bitwise_cast<JSValue*>(&callFrame->r(firstElement)), arguments, offset, lengthIncludingThis - 1);
     
-    for (uint32_t i = length; i < mandatoryMinimum; ++i)
-        callFrame->r(firstElementDest + i) = jsUndefined();
+    for (uint32_t i = lengthIncludingThis - 1; i < mandatoryMinimum; ++i)
+        callFrame->r(firstElement + i) = jsUndefined();
 }
 
 double JIT_OPERATION operationFModOnInts(int32_t a, int32_t b)
@@ -3071,8 +3088,8 @@ JSCell* JIT_OPERATION operationNewArrayWithSpreadSlow(JSGlobalObject* globalObje
     Checked<unsigned, RecordOverflow> checkedLength = 0;
     for (unsigned i = 0; i < numItems; i++) {
         JSValue value = JSValue::decode(values[i]);
-        if (JSFixedArray* array = jsDynamicCast<JSFixedArray*>(vm, value))
-            checkedLength += array->size();
+        if (JSImmutableButterfly* array = jsDynamicCast<JSImmutableButterfly*>(vm, value))
+            checkedLength += array->publicLength();
         else
             ++checkedLength;
     }
@@ -3100,9 +3117,9 @@ JSCell* JIT_OPERATION operationNewArrayWithSpreadSlow(JSGlobalObject* globalObje
     unsigned index = 0;
     for (unsigned i = 0; i < numItems; i++) {
         JSValue value = JSValue::decode(values[i]);
-        if (JSFixedArray* array = jsDynamicCast<JSFixedArray*>(vm, value)) {
+        if (JSImmutableButterfly* array = jsDynamicCast<JSImmutableButterfly*>(vm, value)) {
             // We are spreading.
-            for (unsigned i = 0; i < array->size(); i++) {
+            for (unsigned i = 0; i < array->publicLength(); i++) {
                 result->putDirectIndex(globalObject, index, array->get(i));
                 RETURN_IF_EXCEPTION(scope, nullptr);
                 ++index;
@@ -3118,14 +3135,14 @@ JSCell* JIT_OPERATION operationNewArrayWithSpreadSlow(JSGlobalObject* globalObje
     return result;
 }
 
-JSCell* operationCreateFixedArray(JSGlobalObject* globalObject, unsigned length)
+JSCell* operationCreateImmutableButterfly(JSGlobalObject* globalObject, unsigned length)
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (JSFixedArray* result = JSFixedArray::tryCreate(vm, vm.fixedArrayStructure.get(), length))
+    if (JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length))
         return result;
 
     throwOutOfMemoryError(globalObject, scope);
@@ -3143,7 +3160,7 @@ JSCell* JIT_OPERATION operationSpreadGeneric(JSGlobalObject* globalObject, JSCel
     if (isJSArray(iterable)) {
         JSArray* array = jsCast<JSArray*>(iterable);
         if (array->isIteratorProtocolFastAndNonObservable())
-            RELEASE_AND_RETURN(throwScope, JSFixedArray::createFromArray(globalObject, vm, array));
+            RELEASE_AND_RETURN(throwScope, JSImmutableButterfly::createFromArray(globalObject, vm, array));
     }
 
     // FIXME: we can probably make this path faster by having our caller JS code call directly into
@@ -3164,7 +3181,7 @@ JSCell* JIT_OPERATION operationSpreadGeneric(JSGlobalObject* globalObject, JSCel
         array = jsCast<JSArray*>(arrayResult);
     }
 
-    RELEASE_AND_RETURN(throwScope, JSFixedArray::createFromArray(globalObject, vm, array));
+    RELEASE_AND_RETURN(throwScope, JSImmutableButterfly::createFromArray(globalObject, vm, array));
 }
 
 JSCell* JIT_OPERATION operationSpreadFastArray(JSGlobalObject* globalObject, JSCell* cell)
@@ -3177,7 +3194,7 @@ JSCell* JIT_OPERATION operationSpreadFastArray(JSGlobalObject* globalObject, JSC
     JSArray* array = jsCast<JSArray*>(cell);
     ASSERT(array->isIteratorProtocolFastAndNonObservable());
 
-    return JSFixedArray::createFromArray(globalObject, vm, array);
+    return JSImmutableButterfly::createFromArray(globalObject, vm, array);
 }
 
 void JIT_OPERATION operationProcessTypeProfilerLogDFG(VM* vmPointer) 

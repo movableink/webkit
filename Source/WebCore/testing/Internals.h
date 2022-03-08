@@ -75,7 +75,10 @@ class HTMLSelectElement;
 class HTMLVideoElement;
 class ImageData;
 class InspectorStubFrontend;
+class InternalsMapLike;
 class InternalSettings;
+class InternalsSetLike;
+class Location;
 class MallocStatistics;
 class MediaSession;
 class MediaStream;
@@ -172,7 +175,7 @@ public:
 
     void clearBackForwardCache();
     unsigned backForwardCacheSize() const;
-    void preventDocumentForEnteringBackForwardCache();
+    void preventDocumentFromEnteringBackForwardCache();
 
     void disableTileSizeUpdateDelay();
 
@@ -542,7 +545,6 @@ public:
 
 #if ENABLE(MEDIA_STREAM)
     void setShouldInterruptAudioOnPageVisibilityChange(bool);
-    void setMockMediaCaptureDevicesEnabled(bool);
     void setMediaCaptureRequiresSecureConnection(bool);
     void setCustomPrivateRecorderCreator();
 #endif
@@ -557,6 +559,7 @@ public:
     void applyRotationForOutgoingVideoSources(RTCPeerConnection&);
     void setEnableWebRTCEncryption(bool);
     void setUseDTLS10(bool);
+    void setUseGPUProcessForWebRTC(bool);
 #endif
 
     String getImageSourceURL(Element&);
@@ -744,6 +747,7 @@ public:
     void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack&);
     void setMediaStreamTrackIdentifier(MediaStreamTrack&, String&& id);
     void setMediaStreamSourceInterrupted(MediaStreamTrack&, bool);
+    bool isMockRealtimeMediaSourceCenterEnabled();
 #endif
 
     bool supportsAudioSession() const;
@@ -766,6 +770,7 @@ public:
     using HasRegistrationPromise = DOMPromiseDeferred<IDLBoolean>;
     void hasServiceWorkerRegistration(const String& clientURL, HasRegistrationPromise&&);
     void terminateServiceWorker(ServiceWorker&);
+    void isServiceWorkerRunning(ServiceWorker&, DOMPromiseDeferred<IDLBoolean>&&);
 #endif
 
 #if ENABLE(APPLE_PAY)
@@ -777,6 +782,9 @@ public:
 
     void postTask(RefPtr<VoidCallback>&&);
     ExceptionOr<void> queueTask(ScriptExecutionContext&, const String& source, RefPtr<VoidCallback>&&);
+    ExceptionOr<void> queueTaskToQueueMicrotask(Document&, const String& source, RefPtr<VoidCallback>&&);
+    ExceptionOr<bool> hasSameEventLoopAs(WindowProxy&);
+
     void markContextAsInsecure();
 
     bool usingAppleInternalSDK() const;
@@ -905,6 +913,16 @@ public:
 
     int processIdentifier() const;
 
+    Ref<InternalsSetLike> createInternalsSetLike();
+    Ref<InternalsMapLike> createInternalsMapLike();
+
+    bool hasSandboxMachLookupAccessToGlobalName(const String& process, const String& service);
+    bool hasSandboxMachLookupAccessToXPCServiceName(const String& process, const String& service);
+
+    String highlightPseudoElementColor(const String& highlightName, Element&);
+
+    String windowLocationHost(DOMWindow&);
+
 private:
     explicit Internals(Document&);
     Document* contextDocument() const;
@@ -926,8 +944,6 @@ private:
 
     std::unique_ptr<InspectorStubFrontend> m_inspectorFrontend;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
-
-    RefPtr<UnsuspendableActiveDOMObject> m_unsuspendableActiveDOMObject;
 };
 
 } // namespace WebCore

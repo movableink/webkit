@@ -41,6 +41,7 @@
 #include "WasmOMGForOSREntryPlan.h"
 #include "WasmOMGPlan.h"
 #include "WasmOperations.h"
+#include "WasmSignatureInlines.h"
 #include "WasmThunks.h"
 #include "WasmWorklist.h"
 
@@ -75,7 +76,7 @@ namespace JSC { namespace LLInt {
 
 #define READ(virtualRegister) \
     (virtualRegister.isConstant() \
-        ? JSValue::decode(CODE_BLOCK()->getConstant(virtualRegister.offset())) \
+        ? JSValue::decode(CODE_BLOCK()->getConstant(virtualRegister)) \
         : callFrame->r(virtualRegister))
 
 inline bool jitCompileAndSetHeuristics(Wasm::LLIntCallee* callee, Wasm::FunctionCodeBlock* codeBlock, Wasm::Instance* instance)
@@ -401,10 +402,17 @@ WASM_SLOW_PATH_DECL(set_global_ref)
     WASM_END_IMPL();
 }
 
+WASM_SLOW_PATH_DECL(set_global_ref_portable_binding)
+{
+    auto instruction = pc->as<WasmSetGlobalRefPortableBinding, WasmOpcodeTraits>();
+    instance->setGlobal(instruction.m_globalIndex, READ(instruction.m_value).jsValue());
+    WASM_END_IMPL();
+}
+
 extern "C" SlowPathReturnType slow_path_wasm_throw_exception(CallFrame* callFrame, const Instruction* pc, Wasm::Instance* instance, Wasm::ExceptionType exceptionType)
 {
     UNUSED_PARAM(pc);
-    WASM_RETURN_TWO(Wasm::Thunks::singleton().throwWasmException()(callFrame, exceptionType, instance), 0);
+    WASM_RETURN_TWO(operationWasmToJSException(callFrame, exceptionType, instance), 0);
 }
 
 extern "C" SlowPathReturnType slow_path_wasm_popcount(const Instruction* pc, uint32_t x)

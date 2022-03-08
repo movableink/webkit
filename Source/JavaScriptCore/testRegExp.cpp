@@ -107,12 +107,12 @@ struct RegExpTest {
     Vector<int, 32> expectVector;
 };
 
-class GlobalObject : public JSGlobalObject {
+class GlobalObject final : public JSGlobalObject {
 private:
     GlobalObject(VM&, Structure*, const Vector<String>& arguments);
 
 public:
-    typedef JSGlobalObject Base;
+    using Base = JSGlobalObject;
 
     static GlobalObject* create(VM& vm, Structure* structure, const Vector<String>& arguments)
     {
@@ -122,7 +122,7 @@ public:
 
     DECLARE_INFO;
 
-    static constexpr bool needsDestructor = false;
+    static constexpr bool needsDestructor = true;
 
     static Structure* createStructure(VM& vm, JSValue prototype)
     {
@@ -136,6 +136,7 @@ protected:
         UNUSED_PARAM(arguments);
     }
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(GlobalObject, JSGlobalObject);
 
 const ClassInfo GlobalObject::s_info = { "global", &JSGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(GlobalObject) };
 

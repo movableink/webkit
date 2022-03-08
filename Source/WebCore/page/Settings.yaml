@@ -54,6 +54,10 @@ deviceHeight:
   type: int
   initial: 0
 
+disallowSyncXHRDuringPageDismissalEnabled:
+  type: bool
+  initial: true
+
 # Allow clients concerned with memory consumption to set a quota on session storage
 # since the memory used won't be released until the Page is destroyed.
 sessionStorageQuota:
@@ -140,9 +144,11 @@ acceleratedCompositedAnimationsEnabled:
 showDebugBorders:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
+  inspectorOverride: true
 showRepaintCounter:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
+  inspectorOverride: true
 visibleDebugOverlayRegions:
   type: DebugOverlayRegions
   initial: 0
@@ -322,8 +328,11 @@ shouldDisplayTextDescriptions:
   initial: false
   conditional: VIDEO_TRACK
 genericCueAPIEnabled:
-    initial: false
-    conditional: VIDEO_TRACK
+  initial: false
+  conditional: VIDEO_TRACK
+useGPUProcessForMedia:
+  initial: false
+  conditional: GPU_PROCESS
 scrollingCoordinatorEnabled:
   initial: false
 scrollingTreeIncludesFrames:
@@ -374,9 +383,6 @@ windowFocusRestricted:
   initial: true
 
 diagnosticLoggingEnabled:
-  initial: false
-
-delegatesPageScaling:
   initial: false
 
 plugInSnapshottingEnabled:
@@ -885,12 +891,28 @@ webRTCEncryptionEnabled:
   inspectorOverride: true
 
 isThirdPartyCookieBlockingEnabled:
+  initial: true
+
+isFirstPartyWebsiteDataRemovalEnabled:
+  initial: true
+
+isFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
+  initial: false
+
+isFirstPartyWebsiteDataRemovalReproTestingEnabled:
   initial: false
 
 isLoggedInAPIEnabled:
   initial: false
 
 enterKeyHintEnabled:
+  initial: false
+
+legacyGetUserMediaEnabled:
+  initial: false
+  conditional: MEDIA_STREAM
+
+isInAppBrowserPrivacyEnabled:
   initial: false
 
 # Deprecated
@@ -910,3 +932,6 @@ mediaCaptureRequiresSecureConnection:
   initial: true
   conditional: MEDIA_STREAM
   inspectorOverride: true
+
+shouldUseServiceWorkerShortTimeout:
+  initial: false

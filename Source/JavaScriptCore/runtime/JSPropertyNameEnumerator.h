@@ -37,6 +37,12 @@ public:
     using Base = JSCell;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.propertyNameEnumeratorSpace;
+    }
+
     static JSPropertyNameEnumerator* create(VM&, Structure*, uint32_t, uint32_t, PropertyNameArray&&);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -136,7 +142,7 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
     enumerator = JSPropertyNameEnumerator::create(vm, structureAfterGettingPropertyNames, indexedLength, numberStructureProperties, WTFMove(propertyNames));
     if (!indexedLength && successfullyNormalizedChain && structureAfterGettingPropertyNames == structure) {
         enumerator->setCachedPrototypeChain(vm, structure->prototypeChain(globalObject, base));
-        if (structure->canCachePropertyNameEnumerator())
+        if (structure->canCachePropertyNameEnumerator(vm))
             structure->setCachedPropertyNameEnumerator(vm, enumerator);
     }
     return enumerator;

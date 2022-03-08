@@ -31,6 +31,7 @@
 #include "JSCJSValue.h"
 #include "JSCast.h"
 #include "JSType.h"
+#include "JSTypeInfo.h"
 #include "PropertyName.h"
 #include "PropertyNameArray.h"
 #include "PropertyOffset.h"
@@ -38,7 +39,7 @@
 #include "StructureIDBlob.h"
 #include "StructureRareData.h"
 #include "StructureTransitionTable.h"
-#include "JSTypeInfo.h"
+#include "TinyBloomFilter.h"
 #include "Watchpoint.h"
 #include "WriteBarrierInlines.h"
 #include <wtf/PrintStream.h>
@@ -475,7 +476,7 @@ public:
 
     void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*);
     JSPropertyNameEnumerator* cachedPropertyNameEnumerator() const;
-    bool canCachePropertyNameEnumerator() const;
+    bool canCachePropertyNameEnumerator(VM&) const;
     bool canAccessPropertiesQuicklyForEnumeration() const;
 
     void setCachedOwnKeys(VM&, JSImmutableButterfly*);
@@ -794,6 +795,7 @@ private:
     PropertyOffset m_offset;
 
     uint32_t m_propertyHash;
+    TinyBloomFilter m_seenProperties;
 
     friend class VMInspector;
 };

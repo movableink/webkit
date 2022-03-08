@@ -88,13 +88,11 @@ private:
     void installServiceWorkerContext(const WebCore::ServiceWorkerContextData&, const String& userAgent) final;
     void fireInstallEvent(WebCore::ServiceWorkerIdentifier) final;
     void fireActivateEvent(WebCore::ServiceWorkerIdentifier) final;
-    void softUpdate(WebCore::ServiceWorkerIdentifier) final;
     void terminateWorker(WebCore::ServiceWorkerIdentifier) final;
     void syncTerminateWorker(WebCore::ServiceWorkerIdentifier) final;
     void findClientByIdentifierCompleted(uint64_t requestIdentifier, const Optional<WebCore::ServiceWorkerClientData>&, bool hasSecurityError) final;
     void matchAllCompleted(uint64_t requestIdentifier, const Vector<WebCore::ServiceWorkerClientData>&) final;
     void claimCompleted(uint64_t requestIdentifier) final;
-    void didFinishSkipWaiting(uint64_t callbackID) final;
 
     void connectionIsNoLongerNeeded() final;
 

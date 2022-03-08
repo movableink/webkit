@@ -81,6 +81,7 @@
 
 #if PLATFORM(IOS)
 #import "UIKitSPI.h"
+#import <WebCore/ParentalControlsContentFilter.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -90,6 +91,7 @@
 #if PLATFORM(IOS_FAMILY)
 #import "AccessibilitySupportSPI.h"
 #import "AssertionServicesSPI.h"
+#import "UserInterfaceIdiom.h"
 #import "WKAccessibilityWebPageObjectIOS.h"
 #import <UIKit/UIAccessibility.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
@@ -114,6 +116,10 @@
 
 #if USE(OS_STATE)
 #import <os/state_private.h>
+#endif
+
+#if PLATFORM(COCOA)
+#import <WebCore/NetworkExtensionContentFilter.h>
 #endif
 
 #if HAVE(CSCHECKFIXDISABLE)
@@ -182,6 +188,10 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
     setEnhancedAccessibility(parameters.accessibilityEnhancedUserInterfaceEnabled);
 
+#if PLATFORM(IOS_FAMILY)
+    setCurrentUserInterfaceIdiomIsPad(parameters.currentUserInterfaceIdiomIsPad);
+#endif
+
 #if USE(APPKIT)
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{ @"NSApplicationCrashOnExceptions" : @YES }];
 
@@ -220,6 +230,26 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #if ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
     scrollerStylePreferenceChanged(parameters.useOverlayScrollbars);
 #endif
+#endif
+    
+#if PLATFORM(IOS)
+    if (parameters.compilerServiceExtensionHandle)
+        SandboxExtension::consumePermanently(*parameters.compilerServiceExtensionHandle);
+
+    if (parameters.diagnosticsExtensionHandle)
+        SandboxExtension::consumePermanently(*parameters.diagnosticsExtensionHandle);
+
+    if (parameters.contentFilterExtensionHandle)
+        SandboxExtension::consumePermanently(*parameters.contentFilterExtensionHandle);
+    ParentalControlsContentFilter::setHasConsumedSandboxExtension(parameters.contentFilterExtensionHandle.hasValue());
+#endif
+    
+#if PLATFORM(COCOA)
+    if (parameters.neHelperExtensionHandle)
+        SandboxExtension::consumePermanently(*parameters.neHelperExtensionHandle);
+    if (parameters.neSessionManagerExtensionHandle)
+        SandboxExtension::consumePermanently(*parameters.neSessionManagerExtensionHandle);
+    NetworkExtensionContentFilter::setHasConsumedSandboxExtensions(parameters.neHelperExtensionHandle.hasValue() && parameters.neSessionManagerExtensionHandle.hasValue());
 #endif
 }
 
@@ -854,7 +884,7 @@ void WebProcess::backlightLevelDidChange(float backlightLevel)
 
 void WebProcess::setMediaMIMETypes(const Vector<String> types)
 {
-    AVAssetMIMETypeCache::singleton().setSupportedTypes(types);
+    AVAssetMIMETypeCache::singleton().addSupportedTypes(types);
 }
 
 } // namespace WebKit

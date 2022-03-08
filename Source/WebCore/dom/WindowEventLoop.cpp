@@ -27,38 +27,71 @@
 #include "WindowEventLoop.h"
 
 #include "CommonVM.h"
+#include "CustomElementReactionQueue.h"
 #include "Document.h"
+#include "HTMLSlotElement.h"
 #include "Microtasks.h"
+#include "MutationObserver.h"
+#include "SecurityOrigin.h"
 
 namespace WebCore {
 
-static HashMap<RegistrableDomain, WindowEventLoop*>& windowEventLoopMap()
+static HashMap<String, WindowEventLoop*>& windowEventLoopMap()
 {
     RELEASE_ASSERT(isMainThread());
-    static NeverDestroyed<HashMap<RegistrableDomain, WindowEventLoop*>> map;
+    static NeverDestroyed<HashMap<String, WindowEventLoop*>> map;
     return map.get();
 }
 
-Ref<WindowEventLoop> WindowEventLoop::ensureForRegistrableDomain(const RegistrableDomain& domain)
+static String agentClusterKeyOrNullIfUnique(const SecurityOrigin& origin)
 {
-    auto addResult = windowEventLoopMap().add(domain, nullptr);
+    auto computeKey = [&] {
+        // https://html.spec.whatwg.org/multipage/webappapis.html#obtain-agent-cluster-key
+        if (origin.isUnique())
+            return origin.toString();
+        RegistrableDomain registrableDomain { origin.data() };
+        if (registrableDomain.isEmpty())
+            return origin.toString();
+        return makeString(origin.protocol(), "://", registrableDomain.string());
+    };
+    auto key = computeKey();
+    if (key.isEmpty() || key == "null"_s)
+        return { };
+    return key;
+}
+
+Ref<WindowEventLoop> WindowEventLoop::eventLoopForSecurityOrigin(const SecurityOrigin& origin)
+{
+    auto key = agentClusterKeyOrNullIfUnique(origin);
+    if (key.isNull())
+        return create({ });
+
+    auto addResult = windowEventLoopMap().add(key, nullptr);
     if (UNLIKELY(addResult.isNewEntry)) {
-        auto newEventLoop = adoptRef(*new WindowEventLoop(domain));
+        auto newEventLoop = create(key);
         addResult.iterator->value = newEventLoop.ptr();
         return newEventLoop;
     }
     return *addResult.iterator->value;
 }
 
-inline WindowEventLoop::WindowEventLoop(const RegistrableDomain& domain)
-    : m_domain(domain)
+inline Ref<WindowEventLoop> WindowEventLoop::create(const String& agentClusterKey)
+{
+    return adoptRef(*new WindowEventLoop(agentClusterKey));
+}
+
+inline WindowEventLoop::WindowEventLoop(const String& agentClusterKey)
+    : m_agentClusterKey(agentClusterKey)
     , m_timer(*this, &WindowEventLoop::run)
+    , m_perpetualTaskGroupForSimilarOriginWindowAgents(*this)
 {
 }
 
 WindowEventLoop::~WindowEventLoop()
 {
-    auto didRemove = windowEventLoopMap().remove(m_domain);
+    if (m_agentClusterKey.isNull())
+        return;
+    auto didRemove = windowEventLoopMap().remove(m_agentClusterKey);
     RELEASE_ASSERT(didRemove);
 }
 
@@ -74,9 +107,45 @@ bool WindowEventLoop::isContextThread() const
 
 MicrotaskQueue& WindowEventLoop::microtaskQueue()
 {
-    // MicrotaskQueue must be one per event loop.
-    static NeverDestroyed<MicrotaskQueue> queue(commonVM());
-    return queue;
+    if (!m_microtaskQueue)
+        m_microtaskQueue = makeUnique<MicrotaskQueue>(commonVM());
+    return *m_microtaskQueue;
+}
+
+void WindowEventLoop::queueMutationObserverCompoundMicrotask()
+{
+    if (m_mutationObserverCompoundMicrotaskQueuedFlag)
+        return;
+    m_mutationObserverCompoundMicrotaskQueuedFlag = true;
+    m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([this] {
+        // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
+        auto protectedThis = makeRef(*this);
+        m_mutationObserverCompoundMicrotaskQueuedFlag = false;
+
+        // FIXME: This check doesn't exist in the spec.
+        if (m_deliveringMutationRecords)
+            return;
+        m_deliveringMutationRecords = true;
+        MutationObserver::notifyMutationObservers(*this);
+        m_deliveringMutationRecords = false;
+    });
+}
+
+CustomElementQueue& WindowEventLoop::backupElementQueue()
+{
+    if (!m_processingBackupElementQueue) {
+        m_processingBackupElementQueue = true;
+        m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([this] {
+            // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
+            auto protectedThis = makeRef(*this);
+            m_processingBackupElementQueue = false;
+            ASSERT(m_customElementQueue);
+            CustomElementReactionQueue::processBackupQueue(*m_customElementQueue);
+        });
+    }
+    if (!m_customElementQueue)
+        m_customElementQueue = makeUnique<CustomElementQueue>();
+    return *m_customElementQueue;
 }
 
 } // namespace WebCore

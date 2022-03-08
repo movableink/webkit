@@ -126,6 +126,7 @@ void WebSWContextManagerConnection::updatePreferencesStore(const WebPreferencesS
     RuntimeEnabledFeatures::sharedFeatures().setSecureContextChecksEnabled(store.getBoolValueForKey(WebPreferencesKey::secureContextChecksEnabledKey()));
 
     m_storageBlockingPolicy = static_cast<SecurityOrigin::StorageBlockingPolicy>(store.getUInt32ValueForKey(WebPreferencesKey::storageBlockingPolicyKey()));
+    setShouldUseShortTimeout(store.getBoolValueForKey(WebPreferencesKey::shouldUseServiceWorkerShortTimeoutKey()));
 }
 
 void WebSWContextManagerConnection::installServiceWorker(const ServiceWorkerContextData& data, String&& userAgent)
@@ -256,11 +257,6 @@ void WebSWContextManagerConnection::fireActivateEvent(ServiceWorkerIdentifier id
     SWContextManager::singleton().fireActivateEvent(identifier);
 }
 
-void WebSWContextManagerConnection::softUpdate(WebCore::ServiceWorkerIdentifier identifier)
-{
-    SWContextManager::singleton().softUpdate(identifier);
-}
-
 void WebSWContextManagerConnection::terminateWorker(ServiceWorkerIdentifier identifier)
 {
     SWContextManager::singleton().terminateWorker(identifier, SWContextManager::workerTerminationTimeout, nullptr);
@@ -291,11 +287,9 @@ void WebSWContextManagerConnection::setServiceWorkerHasPendingEvents(ServiceWork
     m_connectionToNetworkProcess->send(Messages::WebSWServerToContextConnection::SetServiceWorkerHasPendingEvents(serviceWorkerIdentifier, hasPendingEvents), 0);
 }
 
-void WebSWContextManagerConnection::skipWaiting(ServiceWorkerIdentifier serviceWorkerIdentifier, WTF::Function<void()>&& callback)
+void WebSWContextManagerConnection::skipWaiting(ServiceWorkerIdentifier serviceWorkerIdentifier, CompletionHandler<void()>&& callback)
 {
-    auto callbackID = ++m_previousRequestIdentifier;
-    m_skipWaitingRequests.add(callbackID, WTFMove(callback));
-    m_connectionToNetworkProcess->send(Messages::WebSWServerToContextConnection::SkipWaiting(serviceWorkerIdentifier, callbackID), 0);
+    m_connectionToNetworkProcess->sendWithAsyncReply(Messages::WebSWServerToContextConnection::SkipWaiting(serviceWorkerIdentifier), WTFMove(callback));
 }
 
 void WebSWContextManagerConnection::setScriptResource(ServiceWorkerIdentifier serviceWorkerIdentifier, const URL& url, const ServiceWorkerContextData::ImportedScript& script)
@@ -352,12 +346,6 @@ void WebSWContextManagerConnection::claimCompleted(uint64_t claimRequestIdentifi
         callback();
 }
 
-void WebSWContextManagerConnection::didFinishSkipWaiting(uint64_t callbackID)
-{
-    if (auto callback = m_skipWaitingRequests.take(callbackID))
-        callback();
-}
-
 void WebSWContextManagerConnection::close()
 {
     RELEASE_LOG(ServiceWorker, "Service worker process is requested to stop all service workers");
@@ -378,6 +366,11 @@ void WebSWContextManagerConnection::setThrottleState(bool isThrottleable)
 bool WebSWContextManagerConnection::isThrottleable() const
 {
     return m_isThrottleable;
+}
+
+void WebSWContextManagerConnection::didFailHeartBeatCheck(ServiceWorkerIdentifier serviceWorkerIdentifier)
+{
+    m_connectionToNetworkProcess->send(Messages::WebSWServerToContextConnection::DidFailHeartBeatCheck { serviceWorkerIdentifier }, 0);
 }
 
 } // namespace WebCore

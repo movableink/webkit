@@ -3,6 +3,7 @@ include(WebKitCommon)
 set_property(DIRECTORY . PROPERTY FOLDER "WebKitLegacy")
 
 set(WebKitLegacy_SOURCES
+    Storage/InprocessIDBServer.cpp
     Storage/StorageAreaImpl.cpp
     Storage/StorageAreaSync.cpp
     Storage/StorageNamespaceImpl.cpp
@@ -107,7 +108,7 @@ if (MSVC AND NOT ${PORT} STREQUAL "Qt")
         COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/version-stamp.pl ${WebKitLegacy_DERIVED_SOURCES_DIR} $<TARGET_FILE:WebKitLegacy>
         VERBATIM)
 
-    if (APPLE AND NOT ${PORT} STREQUAL "Qt")
-         add_subdirectory(win/WebKitQuartzCoreAdditions)
-     endif ()
+    if (USE_CA AND NOT ${PORT} STREQUAL "Qt")
+        add_subdirectory(win/WebKitQuartzCoreAdditions)
+    endif ()
 endif ()

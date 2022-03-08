@@ -30,6 +30,7 @@
 #include "SessionHost.h"
 #include "WebDriverAtoms.h"
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/FileSystem.h>
 #include <wtf/HashSet.h>
 #include <wtf/HexNumber.h>
 #include <wtf/NeverDestroyed.h>
@@ -37,11 +38,11 @@
 namespace WebDriver {
 
 // https://w3c.github.io/webdriver/webdriver-spec.html#dfn-session-script-timeout
-static const Seconds defaultScriptTimeout = 30_s;
+static const double defaultScriptTimeout = 30000;
 // https://w3c.github.io/webdriver/webdriver-spec.html#dfn-session-page-load-timeout
-static const Seconds defaultPageLoadTimeout = 300_s;
+static const double defaultPageLoadTimeout = 300000;
 // https://w3c.github.io/webdriver/webdriver-spec.html#dfn-session-implicit-wait-timeout
-static const Seconds defaultImplicitWaitTimeout = 0_s;
+static const double defaultImplicitWaitTimeout = 0;
 
 const String& Session::webElementIdentifier()
 {
@@ -126,9 +127,12 @@ void Session::close(Function<void (CommandResult&&)>&& completionHandler)
 void Session::getTimeouts(Function<void (CommandResult&&)>&& completionHandler)
 {
     RefPtr<JSON::Object> parameters = JSON::Object::create();
-    parameters->setInteger("script"_s, m_scriptTimeout.millisecondsAs<int>());
-    parameters->setInteger("pageLoad"_s, m_pageLoadTimeout.millisecondsAs<int>());
-    parameters->setInteger("implicit"_s, m_implicitWaitTimeout.millisecondsAs<int>());
+    if (m_scriptTimeout == std::numeric_limits<double>::infinity())
+        parameters->setValue("script"_s, JSON::Value::null());
+    else
+        parameters->setDouble("script"_s, m_scriptTimeout);
+    parameters->setDouble("pageLoad"_s, m_pageLoadTimeout);
+    parameters->setDouble("implicit"_s, m_implicitWaitTimeout);
     completionHandler(CommandResult::success(WTFMove(parameters)));
 }
 
@@ -299,7 +303,7 @@ void Session::go(const String& url, Function<void (CommandResult&&)>&& completio
         RefPtr<JSON::Object> parameters = JSON::Object::create();
         parameters->setString("handle"_s, m_toplevelBrowsingContext.value());
         parameters->setString("url"_s, url);
-        parameters->setInteger("pageLoadTimeout"_s, m_pageLoadTimeout.millisecondsAs<int>());
+        parameters->setDouble("pageLoadTimeout"_s, m_pageLoadTimeout);
         if (auto pageLoadStrategy = pageLoadStrategyString())
             parameters->setString("pageLoadStrategy"_s, pageLoadStrategy.value());
         m_host->sendCommandToBackend("navigateBrowsingContext"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
@@ -362,7 +366,7 @@ void Session::back(Function<void (CommandResult&&)>&& completionHandler)
         }
         RefPtr<JSON::Object> parameters = JSON::Object::create();
         parameters->setString("handle"_s, m_toplevelBrowsingContext.value());
-        parameters->setInteger("pageLoadTimeout"_s, m_pageLoadTimeout.millisecondsAs<int>());
+        parameters->setDouble("pageLoadTimeout"_s, m_pageLoadTimeout);
         if (auto pageLoadStrategy = pageLoadStrategyString())
             parameters->setString("pageLoadStrategy"_s, pageLoadStrategy.value());
         m_host->sendCommandToBackend("goBackInBrowsingContext"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
@@ -390,7 +394,7 @@ void Session::forward(Function<void (CommandResult&&)>&& completionHandler)
         }
         RefPtr<JSON::Object> parameters = JSON::Object::create();
         parameters->setString("handle"_s, m_toplevelBrowsingContext.value());
-        parameters->setInteger("pageLoadTimeout"_s, m_pageLoadTimeout.millisecondsAs<int>());
+        parameters->setDouble("pageLoadTimeout"_s, m_pageLoadTimeout);
         if (auto pageLoadStrategy = pageLoadStrategyString())
             parameters->setString("pageLoadStrategy"_s, pageLoadStrategy.value());
         m_host->sendCommandToBackend("goForwardInBrowsingContext"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
@@ -418,7 +422,7 @@ void Session::refresh(Function<void (CommandResult&&)>&& completionHandler)
         }
         RefPtr<JSON::Object> parameters = JSON::Object::create();
         parameters->setString("handle"_s, m_toplevelBrowsingContext.value());
-        parameters->setInteger("pageLoadTimeout"_s, m_pageLoadTimeout.millisecondsAs<int>());
+        parameters->setDouble("pageLoadTimeout"_s, m_pageLoadTimeout);
         if (auto pageLoadStrategy = pageLoadStrategyString())
             parameters->setString("pageLoadStrategy"_s, pageLoadStrategy.value());
         m_host->sendCommandToBackend("reloadBrowsingContext"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
@@ -727,7 +731,7 @@ void Session::getToplevelBrowsingContextRect(Function<void (CommandResult&&)>&& 
             return;
         }
         RefPtr<JSON::Object> windowOrigin;
-        double x, y;
+        double x = 0, y = 0;
         if (!browsingContext->getObject("windowOrigin"_s, windowOrigin)
             || !windowOrigin->getDouble("x"_s, x)
             || !windowOrigin->getDouble("y"_s, y)) {
@@ -735,7 +739,7 @@ void Session::getToplevelBrowsingContextRect(Function<void (CommandResult&&)>&& 
             return;
         }
         RefPtr<JSON::Object> windowSize;
-        double width, height;
+        double width = 0, height = 0;
         if (!browsingContext->getObject("windowSize"_s, windowSize)
             || !windowSize->getDouble("width"_s, width)
             || !windowSize->getDouble("height"_s, height)) {
@@ -995,7 +999,7 @@ void Session::computeElementLayout(const String& elementID, OptionSet<ElementLay
             completionHandler(rect, WTF::nullopt, isObscured, nullptr);
             return;
         }
-        int inViewCenterPointX, inViewCenterPointY;
+        int inViewCenterPointX = 0, inViewCenterPointY = 0;
         if (!inViewCenterPointObject->getInteger("x"_s, inViewCenterPointX)
             || !inViewCenterPointObject->getInteger("y"_s, inViewCenterPointY)) {
             completionHandler(WTF::nullopt, WTF::nullopt, isObscured, nullptr);
@@ -1026,7 +1030,7 @@ void Session::findElements(const String& strategy, const String& selector, FindE
             arguments->pushString(createElement(rootElementID)->toJSONString());
         arguments->pushString(JSON::Value::create(selector)->toJSONString());
         arguments->pushString(JSON::Value::create(mode == FindElementsMode::Single)->toJSONString());
-        arguments->pushString(JSON::Value::create(m_implicitWaitTimeout.milliseconds())->toJSONString());
+        arguments->pushString(JSON::Value::create(m_implicitWaitTimeout)->toJSONString());
 
         RefPtr<JSON::Object> parameters = JSON::Object::create();
         parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
@@ -1037,7 +1041,7 @@ void Session::findElements(const String& strategy, const String& selector, FindE
         parameters->setBoolean("expectsImplicitCallbackArgument"_s, true);
         // If there's an implicit wait, use one second more as callback timeout.
         if (m_implicitWaitTimeout)
-            parameters->setInteger("callbackTimeout"_s, Seconds(m_implicitWaitTimeout + 1_s).millisecondsAs<int>());
+            parameters->setDouble("callbackTimeout"_s, m_implicitWaitTimeout + 1000);
 
         m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), mode, completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
             if (response.isError || !response.responseObject) {
@@ -1306,7 +1310,7 @@ void Session::isElementEnabled(const String& elementID, Function<void (CommandRe
         parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
         if (m_currentBrowsingContext)
             parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
-        parameters->setString("function"_s, "function(element) { return element.disabled === undefined ? true : !element.disabled }"_s);
+        parameters->setString("function"_s, String(ElementEnabledJavaScript, sizeof(ElementEnabledJavaScript)));
         parameters->setArray("arguments"_s, WTFMove(arguments));
         m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
             if (response.isError || !response.responseObject) {
@@ -1504,7 +1508,7 @@ void Session::waitForNavigationToComplete(Function<void (CommandResult&&)>&& com
     parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
     if (m_currentBrowsingContext)
         parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
-    parameters->setInteger("pageLoadTimeout"_s, m_pageLoadTimeout.millisecondsAs<int>());
+    parameters->setDouble("pageLoadTimeout"_s, m_pageLoadTimeout);
     if (auto pageLoadStrategy = pageLoadStrategyString())
         parameters->setString("pageLoadStrategy"_s, pageLoadStrategy.value());
     m_host->sendCommandToBackend("waitForNavigationToComplete"_s, WTFMove(parameters), [this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
@@ -1526,6 +1530,60 @@ void Session::waitForNavigationToComplete(Function<void (CommandResult&&)>&& com
         }
         completionHandler(CommandResult::success());
     });
+}
+
+void Session::elementIsFileUpload(const String& elementID, Function<void (CommandResult&&)>&& completionHandler)
+{
+    RefPtr<JSON::Array> arguments = JSON::Array::create();
+    arguments->pushString(createElement(elementID)->toJSONString());
+
+    static const char isFileUploadScript[] =
+        "function(element) {"
+        "    if (element.tagName.toLowerCase() === 'input' && element.type === 'file')"
+        "        return { 'fileUpload': true, 'multiple': element.hasAttribute('multiple') };"
+        "    return { 'fileUpload': false };"
+        "}";
+
+    RefPtr<JSON::Object> parameters = JSON::Object::create();
+    parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
+    if (m_currentBrowsingContext)
+        parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
+    parameters->setString("function"_s, isFileUploadScript);
+    parameters->setArray("arguments"_s, WTFMove(arguments));
+    m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
+        if (response.isError || !response.responseObject) {
+            completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+            return;
+        }
+        String valueString;
+        if (!response.responseObject->getString("result"_s, valueString)) {
+            completionHandler(CommandResult::fail(CommandResult::ErrorCode::UnknownError));
+            return;
+        }
+        RefPtr<JSON::Value> resultValue;
+        if (!JSON::Value::parseJSON(valueString, resultValue)) {
+            completionHandler(CommandResult::fail(CommandResult::ErrorCode::UnknownError));
+            return;
+        }
+        completionHandler(CommandResult::success(WTFMove(resultValue)));
+    });
+}
+
+Optional<Session::FileUploadType> Session::parseElementIsFileUploadResult(const RefPtr<JSON::Value>& resultValue)
+{
+    RefPtr<JSON::Object> result;
+    if (!resultValue->asObject(result))
+        return WTF::nullopt;
+
+    bool isFileUpload;
+    if (!result->getBoolean("fileUpload"_s, isFileUpload) || !isFileUpload)
+        return WTF::nullopt;
+
+    bool multiple;
+    if (!result->getBoolean("multiple"_s, multiple) || !multiple)
+        return FileUploadType::Single;
+
+    return FileUploadType::Multiple;
 }
 
 void Session::selectOptionElement(const String& elementID, Function<void (CommandResult&&)>&& completionHandler)
@@ -1555,43 +1613,101 @@ void Session::elementClick(const String& elementID, Function<void (CommandResult
             completionHandler(WTFMove(result));
             return;
         }
-        OptionSet<ElementLayoutOption> options = { ElementLayoutOption::ScrollIntoViewIfNeeded, ElementLayoutOption::UseViewportCoordinates };
-        computeElementLayout(elementID, options, [this, protectedThis = protectedThis.copyRef(), elementID, completionHandler = WTFMove(completionHandler)](Optional<Rect>&& rect, Optional<Point>&& inViewCenter, bool isObscured, RefPtr<JSON::Object>&& error) mutable {
-            if (!rect || error) {
-                completionHandler(CommandResult::fail(WTFMove(error)));
-                return;
-            }
-            if (isObscured) {
-                completionHandler(CommandResult::fail(CommandResult::ErrorCode::ElementClickIntercepted));
-                return;
-            }
-            if (!inViewCenter) {
-                completionHandler(CommandResult::fail(CommandResult::ErrorCode::ElementNotInteractable));
+        elementIsFileUpload(elementID, [this, protectedThis = protectedThis.copyRef(), elementID, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+            if (result.isError()) {
+                completionHandler(WTFMove(result));
                 return;
             }
 
-            getElementTagName(elementID, [this, elementID, inViewCenter = WTFMove(inViewCenter), completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
-                bool isOptionElement = false;
-                if (!result.isError()) {
-                    String tagName;
-                    if (result.result()->asString(tagName))
-                        isOptionElement = tagName == "option";
+            if (parseElementIsFileUploadResult(result.result())) {
+                completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+                return;
+            }
+            OptionSet<ElementLayoutOption> options = { ElementLayoutOption::ScrollIntoViewIfNeeded, ElementLayoutOption::UseViewportCoordinates };
+            computeElementLayout(elementID, options, [this, protectedThis = protectedThis.copyRef(), elementID, completionHandler = WTFMove(completionHandler)](Optional<Rect>&& rect, Optional<Point>&& inViewCenter, bool isObscured, RefPtr<JSON::Object>&& error) mutable {
+                if (!rect || error) {
+                    completionHandler(CommandResult::fail(WTFMove(error)));
+                    return;
+                }
+                if (isObscured) {
+                    completionHandler(CommandResult::fail(CommandResult::ErrorCode::ElementClickIntercepted));
+                    return;
+                }
+                if (!inViewCenter) {
+                    completionHandler(CommandResult::fail(CommandResult::ErrorCode::ElementNotInteractable));
+                    return;
                 }
 
-                Function<void (CommandResult&&)> continueAfterClickFunction = [this, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
-                    if (result.isError()) {
-                        completionHandler(WTFMove(result));
-                        return;
+                getElementTagName(elementID, [this, elementID, inViewCenter = WTFMove(inViewCenter), completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+                    bool isOptionElement = false;
+                    if (!result.isError()) {
+                        String tagName;
+                        if (result.result()->asString(tagName))
+                            isOptionElement = tagName == "option";
                     }
 
-                    waitForNavigationToComplete(WTFMove(completionHandler));
-                };
-                if (isOptionElement)
-                    selectOptionElement(elementID, WTFMove(continueAfterClickFunction));
-                else
-                    performMouseInteraction(inViewCenter.value().x, inViewCenter.value().y, MouseButton::Left, MouseInteraction::SingleClick, WTFMove(continueAfterClickFunction));
+                    Function<void (CommandResult&&)> continueAfterClickFunction = [this, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+                        if (result.isError()) {
+                            completionHandler(WTFMove(result));
+                            return;
+                        }
+
+                        waitForNavigationToComplete(WTFMove(completionHandler));
+                    };
+                    if (isOptionElement)
+                        selectOptionElement(elementID, WTFMove(continueAfterClickFunction));
+                    else
+                        performMouseInteraction(inViewCenter.value().x, inViewCenter.value().y, MouseButton::Left, MouseInteraction::SingleClick, WTFMove(continueAfterClickFunction));
+                });
             });
         });
+    });
+}
+
+void Session::elementIsEditable(const String& elementID, Function<void (CommandResult&&)>&& completionHandler)
+{
+    RefPtr<JSON::Array> arguments = JSON::Array::create();
+    arguments->pushString(createElement(elementID)->toJSONString());
+
+    static const char isEditableScript[] =
+        "function(element) {"
+        "    if (element.disabled || element.readOnly)"
+        "        return false;"
+        "    var tagName = element.tagName.toLowerCase();"
+        "    if (tagName === 'textarea' || element.isContentEditable)"
+        "        return true;"
+        "    if (tagName != 'input')"
+        "        return false;"
+        "    switch (element.type) {"
+        "    case 'color': case 'date': case 'datetime-local': case 'email': case 'file': case 'month': case 'number': "
+        "    case 'password': case 'range': case 'search': case 'tel': case 'text': case 'time': case 'url': case 'week':"
+        "        return true;"
+        "    }"
+        "    return false;"
+        "}";
+
+    RefPtr<JSON::Object> parameters = JSON::Object::create();
+    parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
+    if (m_currentBrowsingContext)
+        parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
+    parameters->setString("function"_s, isEditableScript);
+    parameters->setArray("arguments"_s, WTFMove(arguments));
+    m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
+        if (response.isError || !response.responseObject) {
+            completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+            return;
+        }
+        String valueString;
+        if (!response.responseObject->getString("result"_s, valueString)) {
+            completionHandler(CommandResult::fail(CommandResult::ErrorCode::UnknownError));
+            return;
+        }
+        RefPtr<JSON::Value> resultValue;
+        if (!JSON::Value::parseJSON(valueString, resultValue)) {
+            completionHandler(CommandResult::fail(CommandResult::ErrorCode::UnknownError));
+            return;
+        }
+        completionHandler(CommandResult::success(WTFMove(resultValue)));
     });
 }
 
@@ -1608,22 +1724,83 @@ void Session::elementClear(const String& elementID, Function<void (CommandResult
             return;
         }
 
-        RefPtr<JSON::Array> arguments = JSON::Array::create();
-        arguments->pushString(createElement(elementID)->toJSONString());
-
-        RefPtr<JSON::Object> parameters = JSON::Object::create();
-        parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
-        if (m_currentBrowsingContext)
-            parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
-        parameters->setString("function"_s, String(FormElementClearJavaScript, sizeof(FormElementClearJavaScript)));
-        parameters->setArray("arguments"_s, WTFMove(arguments));
-        m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
-            if (response.isError) {
-                completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+        elementIsEditable(elementID, [this, protectedThis = protectedThis.copyRef(), elementID, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+            if (result.isError()) {
+                completionHandler(WTFMove(result));
                 return;
             }
-            completionHandler(CommandResult::success());
+
+            bool isEditable;
+            if (!result.result()->asBoolean(isEditable) || !isEditable) {
+                completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidElementState));
+                return;
+            }
+
+            OptionSet<ElementLayoutOption> options = { ElementLayoutOption::ScrollIntoViewIfNeeded };
+            computeElementLayout(elementID, options, [this, protectedThis = protectedThis.copyRef(), elementID, completionHandler = WTFMove(completionHandler)](Optional<Rect>&& rect, Optional<Point>&& inViewCenter, bool, RefPtr<JSON::Object>&& error) mutable {
+                if (!rect || error) {
+                    completionHandler(CommandResult::fail(WTFMove(error)));
+                    return;
+                }
+                if (!inViewCenter) {
+                    completionHandler(CommandResult::fail(CommandResult::ErrorCode::ElementNotInteractable));
+                    return;
+                }
+                RefPtr<JSON::Array> arguments = JSON::Array::create();
+                arguments->pushString(createElement(elementID)->toJSONString());
+
+                RefPtr<JSON::Object> parameters = JSON::Object::create();
+                parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
+                if (m_currentBrowsingContext)
+                    parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
+                parameters->setString("function"_s, String(FormElementClearJavaScript, sizeof(FormElementClearJavaScript)));
+                parameters->setArray("arguments"_s, WTFMove(arguments));
+                m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) {
+                    if (response.isError) {
+                        completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+                        return;
+                    }
+                    completionHandler(CommandResult::success());
+                });
+            });
         });
+    });
+}
+
+void Session::setInputFileUploadFiles(const String& elementID, const String& text, bool multiple, Function<void (CommandResult&&)>&& completionHandler)
+{
+    Vector<String> files = text.split('\n');
+    if (files.isEmpty()) {
+        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+        return;
+    }
+
+    if (!multiple && files.size() != 1) {
+        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+        return;
+    }
+
+    RefPtr<JSON::Array> filenames = JSON::Array::create();
+    for (const auto& file : files) {
+        if (!FileSystem::fileExists(file)) {
+            completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidArgument));
+            return;
+        }
+        filenames->pushString(file);
+    }
+
+    RefPtr<JSON::Object> parameters = JSON::Object::create();
+    parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
+    parameters->setString("frameHandle"_s, m_currentBrowsingContext.valueOr(emptyString()));
+    parameters->setString("nodeHandle"_s, elementID);
+    parameters->setArray("filenames"_s, WTFMove(filenames));
+    m_host->sendCommandToBackend("setFilesForInputFileUpload"_s, WTFMove(parameters), [this, protectedThis = makeRef(*this), elementID, completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) mutable {
+        if (response.isError) {
+            completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+            return;
+        }
+
+        completionHandler(CommandResult::success());
     });
 }
 
@@ -1777,74 +1954,92 @@ void Session::elementSendKeys(const String& elementID, const String& text, Funct
             completionHandler(WTFMove(result));
             return;
         }
-        // FIXME: move this to an atom.
-        static const char focusScript[] =
-            "function focus(element) {"
-            "    let doc = element.ownerDocument || element;"
-            "    let prevActiveElement = doc.activeElement;"
-            "    if (element != prevActiveElement && prevActiveElement)"
-            "        prevActiveElement.blur();"
-            "    element.focus();"
-            "    let tagName = element.tagName.toUpperCase();"
-            "    if (tagName === 'BODY' || element === document.documentElement)"
-            "        return;"
-            "    let isTextElement = tagName === 'TEXTAREA' || (tagName === 'INPUT' && element.type === 'text');"
-            "    if (isTextElement && element.selectionEnd == 0)"
-            "        element.setSelectionRange(element.value.length, element.value.length);"
-            "    if (element != doc.activeElement)"
-            "        throw {name: 'ElementNotInteractable', message: 'Element is not focusable.'};"
-            "}";
-
-        RefPtr<JSON::Array> arguments = JSON::Array::create();
-        arguments->pushString(createElement(elementID)->toJSONString());
-        RefPtr<JSON::Object> parameters = JSON::Object::create();
-        parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
-        if (m_currentBrowsingContext)
-            parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
-        parameters->setString("function"_s, focusScript);
-        parameters->setArray("arguments"_s, WTFMove(arguments));
-        m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), text, completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) mutable {
-            if (response.isError || !response.responseObject) {
-                completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+        elementIsFileUpload(elementID, [this, protectedThis = protectedThis.copyRef(), elementID, text, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+            if (result.isError()) {
+                completionHandler(WTFMove(result));
                 return;
             }
 
-            unsigned stickyModifiers = 0;
-            auto textLength = text.length();
-            Vector<KeyboardInteraction> interactions;
-            interactions.reserveInitialCapacity(textLength);
-            for (unsigned i = 0; i < textLength; ++i) {
-                auto key = text[i];
-                KeyboardInteraction interaction;
-                KeyModifier modifier;
-                auto virtualKey = virtualKeyForKey(key, modifier);
-                if (!virtualKey.isNull()) {
-                    interaction.key = virtualKey;
-                    if (modifier != KeyModifier::None) {
-                        stickyModifiers ^= modifier;
-                        if (stickyModifiers & modifier)
-                            interaction.type = KeyboardInteractionType::KeyPress;
-                        else
-                            interaction.type = KeyboardInteractionType::KeyRelease;
+            auto fileUploadType = parseElementIsFileUploadResult(result.result());
+            if (!fileUploadType || capabilities().strictFileInteractability.valueOr(false)) {
+                // FIXME: move this to an atom.
+                static const char focusScript[] =
+                    "function focus(element) {"
+                    "    let doc = element.ownerDocument || element;"
+                    "    let prevActiveElement = doc.activeElement;"
+                    "    if (element != prevActiveElement && prevActiveElement)"
+                    "        prevActiveElement.blur();"
+                    "    element.focus();"
+                    "    let tagName = element.tagName.toUpperCase();"
+                    "    if (tagName === 'BODY' || element === document.documentElement)"
+                    "        return;"
+                    "    let isTextElement = tagName === 'TEXTAREA' || (tagName === 'INPUT' && element.type === 'text');"
+                    "    if (isTextElement && element.selectionEnd == 0)"
+                    "        element.setSelectionRange(element.value.length, element.value.length);"
+                    "    if (element != doc.activeElement)"
+                    "        throw {name: 'ElementNotInteractable', message: 'Element is not focusable.'};"
+                    "}";
+
+                RefPtr<JSON::Array> arguments = JSON::Array::create();
+                arguments->pushString(createElement(elementID)->toJSONString());
+                RefPtr<JSON::Object> parameters = JSON::Object::create();
+                parameters->setString("browsingContextHandle"_s, m_toplevelBrowsingContext.value());
+                if (m_currentBrowsingContext)
+                    parameters->setString("frameHandle"_s, m_currentBrowsingContext.value());
+                parameters->setString("function"_s, focusScript);
+                parameters->setArray("arguments"_s, WTFMove(arguments));
+                m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), fileUploadType, elementID, text, completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) mutable {
+                    if (response.isError || !response.responseObject) {
+                        completionHandler(CommandResult::fail(WTFMove(response.responseObject)));
+                        return;
                     }
-                } else
-                    interaction.text = String(&key, 1);
-                interactions.uncheckedAppend(WTFMove(interaction));
-            }
 
-            // Reset sticky modifiers if needed.
-            if (stickyModifiers) {
-                if (stickyModifiers & KeyModifier::Shift)
-                    interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Shift"_s) });
-                if (stickyModifiers & KeyModifier::Control)
-                    interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Control"_s) });
-                if (stickyModifiers & KeyModifier::Alternate)
-                    interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Alternate"_s) });
-                if (stickyModifiers & KeyModifier::Meta)
-                    interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Meta"_s) });
-            }
+                    if (fileUploadType) {
+                        setInputFileUploadFiles(elementID, text, fileUploadType.value() == FileUploadType::Multiple, WTFMove(completionHandler));
+                        return;
+                    }
 
-            performKeyboardInteractions(WTFMove(interactions), WTFMove(completionHandler));
+                    unsigned stickyModifiers = 0;
+                    auto textLength = text.length();
+                    Vector<KeyboardInteraction> interactions;
+                    interactions.reserveInitialCapacity(textLength);
+                    for (unsigned i = 0; i < textLength; ++i) {
+                        auto key = text[i];
+                        KeyboardInteraction interaction;
+                        KeyModifier modifier;
+                        auto virtualKey = virtualKeyForKey(key, modifier);
+                        if (!virtualKey.isNull()) {
+                            interaction.key = virtualKey;
+                            if (modifier != KeyModifier::None) {
+                                stickyModifiers ^= modifier;
+                                if (stickyModifiers & modifier)
+                                    interaction.type = KeyboardInteractionType::KeyPress;
+                                else
+                                    interaction.type = KeyboardInteractionType::KeyRelease;
+                            }
+                        } else
+                            interaction.text = String(&key, 1);
+                        interactions.uncheckedAppend(WTFMove(interaction));
+                    }
+
+                    // Reset sticky modifiers if needed.
+                    if (stickyModifiers) {
+                        if (stickyModifiers & KeyModifier::Shift)
+                            interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Shift"_s) });
+                        if (stickyModifiers & KeyModifier::Control)
+                            interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Control"_s) });
+                        if (stickyModifiers & KeyModifier::Alternate)
+                            interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Alternate"_s) });
+                        if (stickyModifiers & KeyModifier::Meta)
+                            interactions.append({ KeyboardInteractionType::KeyRelease, WTF::nullopt, Optional<String>("Meta"_s) });
+                    }
+
+                    performKeyboardInteractions(WTFMove(interactions), WTFMove(completionHandler));
+                });
+            } else {
+                setInputFileUploadFiles(elementID, text, fileUploadType.value() == FileUploadType::Multiple, WTFMove(completionHandler));
+                return;
+            }
         });
     });
 }
@@ -1942,8 +2137,8 @@ void Session::executeScript(const String& script, RefPtr<JSON::Array>&& argument
         parameters->setArray("arguments"_s, WTFMove(arguments));
         if (mode == ExecuteScriptMode::Async) {
             parameters->setBoolean("expectsImplicitCallbackArgument"_s, true);
-            if (m_scriptTimeout)
-                parameters->setInteger("callbackTimeout"_s, m_scriptTimeout.millisecondsAs<int>());
+            if (m_scriptTimeout != std::numeric_limits<double>::infinity())
+                parameters->setDouble("callbackTimeout"_s, m_scriptTimeout);
         }
         m_host->sendCommandToBackend("evaluateJavaScriptFunction"_s, WTFMove(parameters), [this, protectedThis = protectedThis.copyRef(), completionHandler = WTFMove(completionHandler)](SessionHost::CommandResponse&& response) mutable {
             if (response.isError || !response.responseObject) {

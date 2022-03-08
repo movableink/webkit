@@ -40,6 +40,11 @@
 #include <WebCore/UserMediaRequest.h>
 #include <wtf/Scope.h>
 
+#if ENABLE(GPU_PROCESS)
+#include "GPUProcessMessages.h"
+#include "GPUProcessProxy.h"
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -79,11 +84,12 @@ UserMediaPermissionRequestManagerProxy::UserMediaPermissionRequestManagerProxy(W
 #if ENABLE(MEDIA_STREAM)
     proxies().add(this);
 #endif
+    syncWithWebCorePrefs();
 }
 
 UserMediaPermissionRequestManagerProxy::~UserMediaPermissionRequestManagerProxy()
 {
-    m_page.process().send(Messages::WebPage::StopMediaCapture { }, m_page.webPageID());
+    m_page.send(Messages::WebPage::StopMediaCapture { });
 #if ENABLE(MEDIA_STREAM)
     UserMediaProcessManager::singleton().revokeSandboxExtensionsIfNeeded(page().process());
     proxies().remove(this);
@@ -239,7 +245,16 @@ void UserMediaPermissionRequestManagerProxy::finishGrantingRequest(UserMediaPerm
     m_hasFilteredDeviceList = false;
 
     ++m_hasPendingCapture;
-    m_page.process().connection()->sendWithAsyncReply(Messages::WebPage::UserMediaAccessWasGranted { request.userMediaID(), request.audioDevice(), request.videoDevice(), request.deviceIdentifierHashSalt() }, [this, weakThis = makeWeakPtr(this)] {
+
+    SandboxExtension::Handle handle;
+#if PLATFORM(IOS)
+    if (!m_hasCreatedSandboxExtensionForTCCD) {
+        SandboxExtension::createHandleForMachLookup("com.apple.tccd", m_page.process().connection()->getAuditToken(), handle);
+        m_hasCreatedSandboxExtensionForTCCD = true;
+    }
+#endif
+
+    m_page.process().connection()->sendWithAsyncReply(Messages::WebPage::UserMediaAccessWasGranted { request.userMediaID(), request.audioDevice(), request.videoDevice(), request.deviceIdentifierHashSalt(), handle }, [this, weakThis = makeWeakPtr(this)] {
         if (!weakThis)
             return;
         if (!--m_hasPendingCapture)
@@ -249,12 +264,15 @@ void UserMediaPermissionRequestManagerProxy::finishGrantingRequest(UserMediaPerm
     processNextUserMediaRequestIfNeeded();
 }
 
-void UserMediaPermissionRequestManagerProxy::resetAccess(FrameIdentifier frameID)
+void UserMediaPermissionRequestManagerProxy::resetAccess(Optional<FrameIdentifier> frameID)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, frameID.loggingString());
-    m_grantedRequests.removeAllMatching([frameID](const auto& grantedRequest) {
-        return grantedRequest->mainFrameID() == frameID;
-    });
+    if (frameID) {
+        ALWAYS_LOG(LOGIDENTIFIER, frameID ? frameID->loggingString() : String { });
+        m_grantedRequests.removeAllMatching([frameID](const auto& grantedRequest) {
+            return grantedRequest->mainFrameID() == frameID;
+        });
+    } else
+        m_grantedRequests.clear();
     m_pregrantedRequests.clear();
     m_deniedRequests.clear();
     m_hasFilteredDeviceList = false;
@@ -674,13 +692,25 @@ void UserMediaPermissionRequestManagerProxy::enumerateMediaDevicesForFrame(Frame
 #endif
 }
 
+void UserMediaPermissionRequestManagerProxy::setMockCaptureDevicesEnabledOverride(Optional<bool> enabled)
+{
+    m_mockDevicesEnabledOverride = enabled;
+    syncWithWebCorePrefs();
+}
+
 void UserMediaPermissionRequestManagerProxy::syncWithWebCorePrefs() const
 {
 #if ENABLE(MEDIA_STREAM)
     // Enable/disable the mock capture devices for the UI process as per the WebCore preferences. Note that
     // this is a noop if the preference hasn't changed since the last time this was called.
     bool mockDevicesEnabled = m_mockDevicesEnabledOverride ? *m_mockDevicesEnabledOverride : m_page.preferences().mockCaptureDevicesEnabled();
+    if (MockRealtimeMediaSourceCenter::mockRealtimeMediaSourceCenterEnabled() == mockDevicesEnabled)
+        return;
     MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(mockDevicesEnabled);
+#if ENABLE(GPU_PROCESS)
+    if (m_page.preferences().captureAudioInGPUProcessEnabled())
+        GPUProcessProxy::singleton().send(Messages::GPUProcess::SetMockCaptureDevicesEnabled { mockDevicesEnabled }, 0);
+#endif
 #endif
 }
 

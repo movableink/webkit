@@ -28,9 +28,12 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "APIDebuggableInfo.h"
 #include "RemoteWebInspectorProxy.h"
 #include <JavaScriptCore/RemoteInspectorUtils.h>
+#include <WebCore/InspectorDebuggableType.h>
 #include <gio/gio.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/Base64.h>
 
@@ -56,7 +59,10 @@ public:
 
     void load()
     {
-        m_proxy->load("web-page", m_inspectorClient.backendCommandsURL());
+        // FIXME <https://webkit.org/b/205536>: this should infer more useful data about the debug target.
+        Ref<API::DebuggableInfo> debuggableInfo = API::DebuggableInfo::create(DebuggableInfoData::empty());
+        debuggableInfo->setDebuggableType(Inspector::DebuggableType::WebPage);
+        m_proxy->load(WTFMove(debuggableInfo), m_inspectorClient.backendCommandsURL());
     }
 
     void show()
@@ -93,7 +99,9 @@ private:
     uint64_t m_targetID;
 };
 
-const SocketConnection::MessageHandlers RemoteInspectorClient::s_messageHandlers = {
+const SocketConnection::MessageHandlers& RemoteInspectorClient::messageHandlers()
+{
+    static NeverDestroyed<const SocketConnection::MessageHandlers> messageHandlers = SocketConnection::MessageHandlers({
     { "DidClose", std::pair<CString, SocketConnection::MessageCallback> { { },
         [](SocketConnection&, GVariant*, gpointer userData) {
             auto& client = *static_cast<RemoteInspectorClient*>(userData);
@@ -138,7 +146,9 @@ const SocketConnection::MessageHandlers RemoteInspectorClient::s_messageHandlers
             client.sendMessageToFrontend(connectionID, targetID, message);
         }}
     }
-};
+    });
+    return messageHandlers;
+}
 
 RemoteInspectorClient::RemoteInspectorClient(const char* address, unsigned port, RemoteInspectorObserver& observer)
     : m_hostAndPort(String::fromUTF8(address) + ':' + String::number(port))
@@ -154,7 +164,7 @@ RemoteInspectorClient::RemoteInspectorClient(const char* address, unsigned port,
                 return;
             auto* client = static_cast<RemoteInspectorClient*>(userData);
             if (connection)
-                client->setupConnection(SocketConnection::create(WTFMove(connection), s_messageHandlers, client));
+                client->setupConnection(SocketConnection::create(WTFMove(connection), messageHandlers(), client));
             else {
                 WTFLogAlways("RemoteInspectorClient failed to connect to inspector server: %s", error->message);
                 client->m_observer.connectionClosed(*client);

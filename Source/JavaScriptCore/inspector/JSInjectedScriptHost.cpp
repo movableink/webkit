@@ -80,9 +80,9 @@
 #include <wtf/PrintStream.h>
 #include <wtf/text/StringConcatenate.h>
 
-using namespace JSC;
-
 namespace Inspector {
+
+using namespace JSC;
 
 const ClassInfo JSInjectedScriptHost::s_info = { "InjectedScriptHost", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSInjectedScriptHost) };
 
@@ -169,8 +169,8 @@ JSValue JSInjectedScriptHost::isPromiseRejectedWithNativeGetterTypeError(JSGloba
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* promise = jsDynamicCast<JSPromise*>(vm, callFrame->argument(0));
-    if (!promise || promise->status(vm) != JSPromise::Status::Rejected)
-        return throwTypeError(globalObject, scope, "InjectedScriptHost.isPromiseRejectedWithNativeGetterTypeError first argument must be a rejected Promise."_s);
+    if (!promise)
+        return throwTypeError(globalObject, scope, "InjectedScriptHost.isPromiseRejectedWithNativeGetterTypeError first argument must be a Promise."_s);
 
     bool result = false;
     if (auto* errorInstance = jsDynamicCast<ErrorInstance*>(vm, promise->result(vm)))

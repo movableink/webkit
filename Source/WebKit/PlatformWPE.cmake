@@ -110,6 +110,7 @@ set(WPE_API_INSTALLED_HEADERS
     ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitGeolocationManager.h
     ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitGeolocationPermissionRequest.h
     ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitHitTestResult.h
+    ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitInputMethodContext.h
     ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitInstallMissingMediaPluginsPermissionRequest.h
     ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitJavascriptResult.h
     ${WEBKIT_DIR}/UIProcess/API/wpe/WebKitMimeInfo.h
@@ -274,13 +275,14 @@ list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
     ${FREETYPE_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
     ${GSTREAMER_INCLUDE_DIRS}
-    ${HARFBUZZ_INCLUDE_DIRS}
     ${LIBSECCOMP_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
     ${WPE_INCLUDE_DIRS}
 )
 
 list(APPEND WebKit_LIBRARIES
+    HarfBuzz::HarfBuzz
+    HarfBuzz::ICU
     ${ATK_LIBRARIES}
     ${ATK_BRIDGE_LIBRARIES}
     ${CAIRO_LIBRARIES}
@@ -288,7 +290,6 @@ list(APPEND WebKit_LIBRARIES
     ${GLIB_LIBRARIES}
     ${GLIB_GMODULE_LIBRARIES}
     ${GSTREAMER_LIBRARIES}
-    ${HARFBUZZ_LIBRARIES}
     ${LIBSECCOMP_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
     ${WPE_LIBRARIES}

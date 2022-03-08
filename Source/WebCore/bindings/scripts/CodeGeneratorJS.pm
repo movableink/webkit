@@ -1618,6 +1618,10 @@ sub GetFullyQualifiedImplementationCallName
         return "forward" . $codeGenerator->WK_ucfirst($property->name) . "ToMapLike";
     }
     
+    if ($property->isSetLike) {
+        return "forward" . $codeGenerator->WK_ucfirst($property->name) . "ToSetLike";
+    }
+
     return "${implExpression}.${implementationName}";
 }
 
@@ -1629,7 +1633,7 @@ sub AddAdditionalArgumentsForImplementationCall
         unshift(@$arguments, $implExpression);
     }
     
-    if ($property->isMapLike) {
+    if ($property->isMapLike or $property->isSetLike) {
         push(@$arguments, $globalObject);
         if (ref($property) eq "IDLOperation") {
             push(@$arguments, $callFrame);
@@ -1766,6 +1770,7 @@ sub IsAcceleratedDOMAttribute
 
     return 0 if $attribute->isStatic;
     return 0 if $attribute->isMapLike;
+    return 0 if $attribute->isSetLike;
     return 0 if $codeGenerator->IsConstructorType($attribute->type);
     return 0 if IsJSBuiltin($interface, $attribute);
     return 0 if $attribute->extendedAttributes->{LenientThis};
@@ -1846,6 +1851,7 @@ sub PrototypeOperationCount
 
     $count += scalar @{$interface->iterable->operations} if $interface->iterable;
     $count += scalar @{$interface->mapLike->operations} if $interface->mapLike;
+    $count += scalar @{$interface->setLike->operations} if $interface->setLike;
     $count += scalar @{$interface->serializable->operations} if $interface->serializable;
 
     return $count;
@@ -2616,8 +2622,6 @@ sub GenerateHeader
         push(@headerContent, "    }\n\n");
     }
 
-    push(@headerContent, "    static constexpr bool needsDestruction = false;\n\n") if IsDOMGlobalObject($interface);
-
     $structureFlags{"JSC::HasStaticPropertyTable"} = 1 if InstancePropertyCount($interface) > 0;
     $structureFlags{"JSC::NewImpurePropertyFiresWatchpoints"} = 1 if $interface->extendedAttributes->{NewImpurePropertyFiresWatchpoints};
     $structureFlags{"JSC::IsImmutablePrototypeExoticObject"} = 1 if $interface->extendedAttributes->{IsImmutablePrototypeExoticObject};
@@ -2787,6 +2791,13 @@ sub GenerateHeader
         }
     }
 
+    # FIXME: We put this unconditionally to put all the WebCore JS wrappers in each IsoSubspace.
+    # https://bugs.webkit.org/show_bug.cgi?id=205107
+    if (IsDOMGlobalObject($interface)) {
+        push(@headerContent, "    template<typename, JSC::SubspaceAccess> static JSC::IsoSubspace* subspaceFor(JSC::VM& vm) { return subspaceForImpl(vm); }\n");
+        push(@headerContent, "    static JSC::IsoSubspace* subspaceForImpl(JSC::VM& vm);\n");
+    }
+
     # visit function
     if ($needsVisitChildren) {
         push(@headerContent, "    static void visitChildren(JSCell*, JSC::SlotVisitor&);\n");
@@ -2806,8 +2817,9 @@ sub GenerateHeader
             # program resumed since the last call to visitChildren or visitOutputConstraints. Since
             # this just calls visitAdditionalChildren, you usually don't have to worry about this.
             push(@headerContent, "    static void visitOutputConstraints(JSCell*, JSC::SlotVisitor&);\n");
-            my $subspaceFunc = IsDOMGlobalObject($interface) ? "globalObjectOutputConstraintSubspaceFor" : "outputConstraintSubspaceFor";
-            push(@headerContent, "    template<typename, JSC::SubspaceAccess> static JSC::CompleteSubspace* subspaceFor(JSC::VM& vm) { return $subspaceFunc(vm); }\n");
+            if (!IsDOMGlobalObject($interface)) {
+                push(@headerContent, "    template<typename, JSC::SubspaceAccess> static JSC::CompleteSubspace* subspaceFor(JSC::VM& vm) { return outputConstraintSubspaceFor(vm); }\n");
+            }
         }
     }
 
@@ -3103,6 +3115,7 @@ sub GeneratePropertiesHashTable
 
     my @attributes = @{$interface->attributes};
     push(@attributes, @{$interface->mapLike->attributes}) if $interface->mapLike;
+    push(@attributes, @{$interface->setLike->attributes}) if $interface->setLike;
 
     foreach my $attribute (@attributes) {
         next if ($attribute->isStatic);
@@ -3148,6 +3161,7 @@ sub GeneratePropertiesHashTable
     my @operations = @{$interface->operations};
     push(@operations, @{$interface->iterable->operations}) if IsKeyValueIterableInterface($interface);
     push(@operations, @{$interface->mapLike->operations}) if $interface->mapLike;
+    push(@operations, @{$interface->setLike->operations}) if $interface->setLike;
     push(@operations, @{$interface->serializable->operations}) if $interface->serializable;
     foreach my $operation (@operations) {
         next if ($operation->extendedAttributes->{PrivateIdentifier} and not $operation->extendedAttributes->{PublicIdentifier});
@@ -3900,7 +3914,7 @@ sub InterfaceNeedsIterator
 {
     my ($interface) = @_;
 
-    # FIXME: This should return 1 for setlike once we support it.
+    return 1 if $interface->setLike;
     return 1 if $interface->mapLike;
     return 1 if $interface->iterable;
 
@@ -3937,6 +3951,7 @@ sub GenerateImplementation
     AddToImplIncludes("<wtf/PointerPreparations.h>");
     AddToImplIncludes("<JavaScriptCore/PropertyNameArray.h>") if $indexedGetterOperation;
     AddToImplIncludes("JSDOMMapLike.h") if $interface->mapLike;
+    AddToImplIncludes("JSDOMSetLike.h") if $interface->setLike;
     AddJSBuiltinIncludesIfNeeded($interface);
 
     my $implType = GetImplClassName($interface);
@@ -3952,10 +3967,12 @@ sub GenerateImplementation
     my @operations = @{$interface->operations};
     push(@operations, @{$interface->iterable->operations}) if IsKeyValueIterableInterface($interface);
     push(@operations, @{$interface->mapLike->operations}) if $interface->mapLike;
+    push(@operations, @{$interface->setLike->operations}) if $interface->setLike;
     push(@operations, @{$interface->serializable->operations}) if $interface->serializable;
 
     my @attributes = @{$interface->attributes};
     push(@attributes, @{$interface->mapLike->attributes}) if $interface->mapLike;
+    push(@attributes, @{$interface->setLike->attributes}) if $interface->setLike;
 
     my $numConstants = @{$interface->constants};
     my $numOperations = @operations;
@@ -4306,7 +4323,7 @@ sub GenerateImplementation
 
         if (InterfaceNeedsIterator($interface)) {
             AddToImplIncludes("<JavaScriptCore/BuiltinNames.h>");
-            if (IsKeyValueIterableInterface($interface) or $interface->mapLike) {
+            if (IsKeyValueIterableInterface($interface) or $interface->mapLike or $interface->setLike) {
                 push(@implContent, "    putDirect(vm, vm.propertyNames->iteratorSymbol, getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
             } else {
                 AddToImplIncludes("<JavaScriptCore/ArrayPrototype.h>");
@@ -4391,10 +4408,6 @@ sub GenerateImplementation
     if ($interfaceName eq "Location") {
         push(@implContent, "    putDirect(vm, vm.propertyNames->valueOf, globalObject()->objectProtoValueOfFunction(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
         push(@implContent, "    putDirect(vm, vm.propertyNames->toPrimitiveSymbol, jsUndefined(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
-    }
-
-    if ($interface->mapLike) {
-        push(@implContent, "    synchronizeBackingMap(*globalObject(), *globalObject(), *this);\n");
     }
 
     # Support for RuntimeEnabled attributes on instances.
@@ -4606,6 +4619,14 @@ sub GenerateImplementation
     
     GenerateIterableDefinition($interface) if $interface->iterable;
     GenerateSerializerDefinition($interface, $className) if $interface->serializable;
+
+    if (IsDOMGlobalObject($interface)) {
+        AddToImplIncludes("WebCoreJSClientData.h");
+        push(@implContent, "JSC::IsoSubspace* ${className}::subspaceForImpl(JSC::VM& vm)\n");
+        push(@implContent, "{\n");
+        push(@implContent, "    return &static_cast<JSVMClientData*>(vm.clientData)->subspaceFor${className}();\n");
+        push(@implContent, "}\n\n");
+    }
 
     if ($needsVisitChildren) {
         push(@implContent, "void ${className}::visitChildren(JSCell* cell, SlotVisitor& visitor)\n");
@@ -4937,7 +4958,7 @@ sub GenerateAttributeGetterBodyDefinition
 
         my $globalObjectReference = $attribute->isStatic ? "*jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)" : "*thisObject.globalObject()";
         my $toJSExpression = NativeToJSValueUsingReferences($attribute, $interface, "${functionName}(" . join(", ", @arguments) . ")", $globalObjectReference);
-        push(@$outputArray, "    auto& impl = thisObject.wrapped();\n") unless $attribute->isStatic or $attribute->isMapLike;
+        push(@$outputArray, "    auto& impl = thisObject.wrapped();\n") unless $attribute->isStatic or $attribute->isMapLike or $attribute->isSetLike;
 
         if (!IsReadonly($attribute)) {
             my $callTracingCallback = $attribute->extendedAttributes->{CallTracingCallback} || $interface->extendedAttributes->{CallTracingCallback};
@@ -5215,7 +5236,7 @@ sub GenerateOperationTrampolineDefinition
 
 sub GenerateOperationBodyDefinition
 {
-    my ($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $functionBodyName, $generatingOverloadDispatcher) = @_;
+    my ($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $functionBodyName, $isOverloaded, $generatingOverloadDispatcher) = @_;
 
     my $hasPromiseReturnType = $codeGenerator->IsPromiseType($operation->type);
     my $idlOperationType = $hasPromiseReturnType ? "IDLOperationReturningPromise" : "IDLOperation";
@@ -5234,9 +5255,11 @@ sub GenerateOperationBodyDefinition
     push(@$outputArray, "    UNUSED_PARAM(callFrame);\n");
     push(@$outputArray, "    UNUSED_PARAM(throwScope);\n");
 
-    if (!$generatingOverloadDispatcher) {
-        GenerateCustomElementReactionsStackIfNeeded($outputArray, $operation, "*lexicalGlobalObject");
+    GenerateCustomElementReactionsStackIfNeeded($outputArray, $operation, "*lexicalGlobalObject") unless $generatingOverloadDispatcher;
 
+    # For overloads, we generate the security check in the overload dispatcher, instead of the body of each overload, as per specification:
+    # https://heycam.github.io/webidl/#dfn-create-operation-function
+    if (!$isOverloaded || $generatingOverloadDispatcher) {
         if ($interface->extendedAttributes->{CheckSecurity} and !$operation->extendedAttributes->{DoNotCheckSecurity}) {
             assert("Security checks are not supported for static operations.") if $operation->isStatic;
             
@@ -5268,7 +5291,7 @@ sub GenerateOperationBodyDefinition
     } elsif (HasCustomMethod($operation)) {
         GenerateImplementationCustomFunctionCall($outputArray, $operation, $interface, $className, $functionImplementationName, $indent);
     } else {
-        if (!$operation->isMapLike && !$operation->isStatic) {
+        if (!$operation->isMapLike && !$operation->isSetLike && !$operation->isStatic) {
             push(@$outputArray, "    auto& impl = castedThis->wrapped();\n");
         }
 
@@ -5328,7 +5351,7 @@ sub GenerateOperationDefinition
     my $functionImplementationName = $operation->extendedAttributes->{ImplementedAs} || $codeGenerator->WK_lcfirst($operation->name);
     my $functionBodyName = ($isOverloaded ? $functionName . $operation->{overloadIndex} : $functionName) . "Body";
 
-    GenerateOperationBodyDefinition($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $functionBodyName);
+    GenerateOperationBodyDefinition($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $functionBodyName, $isOverloaded);
 
     # Overloaded operations don't generate a trampoline for each overload, and instead have a single dispatch trampoline
     # that gets generated after the last overload body has been generated.
@@ -5345,7 +5368,7 @@ sub GenerateOperationDefinition
         push(@$outputArray, "#if ${overloadsConditionalString}\n\n") if $overloadsConditionalString;
 
         my $overloadDispatcherFunctionBodyName = $functionName . "OverloadDispatcher";
-        GenerateOperationBodyDefinition($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $overloadDispatcherFunctionBodyName, 1);
+        GenerateOperationBodyDefinition($outputArray, $interface, $className, $operation, $functionName, $functionImplementationName, $overloadDispatcherFunctionBodyName, $isOverloaded, 1);
         GenerateOperationTrampolineDefinition($outputArray, $interface, $className, $operation, $functionName, $overloadDispatcherFunctionBodyName);
     
         push(@$outputArray, "#endif\n\n") if $overloadsConditionalString;
@@ -7181,7 +7204,8 @@ sub GeneratePrototypeDeclaration
         push(@$outputArray, ";\n");
     }
 
-    push(@$outputArray, "};\n\n");
+    push(@$outputArray, "};\n");
+    push(@$outputArray, "STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(${prototypeClassName}, ${prototypeClassName}::Base);\n\n");
 }
 
 sub GetConstructorTemplateClassName
@@ -7333,6 +7357,7 @@ sub GetRuntimeEnabledStaticProperties
 
     my @attributes = @{$interface->attributes};
     push(@attributes, @{$interface->mapLike->attributes}) if $interface->mapLike;
+    push(@attributes, @{$interface->setLike->attributes}) if $interface->setLike;
 
     foreach my $attribute (@attributes) {
         next if AttributeShouldBeOnInstance($interface, $attribute) != 0;
@@ -7346,6 +7371,7 @@ sub GetRuntimeEnabledStaticProperties
     my @operations = @{$interface->operations};
     push(@operations, @{$interface->iterable->operations}) if IsKeyValueIterableInterface($interface);
     push(@operations, @{$interface->mapLike->operations}) if $interface->mapLike;
+    push(@operations, @{$interface->setLike->operations}) if $interface->setLike;
     push(@operations, @{$interface->serializable->operations}) if $interface->serializable;
     foreach my $operation (@operations) {
         next if ($operation->extendedAttributes->{PrivateIdentifier} and not $operation->extendedAttributes->{PublicIdentifier});

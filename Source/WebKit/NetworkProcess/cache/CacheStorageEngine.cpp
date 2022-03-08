@@ -246,7 +246,7 @@ uint64_t Engine::diskUsage(const String& rootPath, const WebCore::ClientOrigin& 
     return getDirectorySize(directoryPath);
 }
 
-void Engine::requestSpace(const ClientOrigin& origin, uint64_t spaceRequested, CompletionHandler<void(WebCore::StorageQuotaManager::Decision)>&& callback)
+void Engine::requestSpace(const WebCore::ClientOrigin& origin, uint64_t spaceRequested, CompletionHandler<void(WebCore::StorageQuotaManager::Decision)>&& callback)
 {
     ASSERT(isMainThread());
 
@@ -266,7 +266,7 @@ Engine::Engine(PAL::SessionID sessionID, NetworkProcess& process, String&& rootP
     , m_rootPath(WTFMove(rootPath))
 {
     if (!m_rootPath.isNull())
-        m_ioQueue = WorkQueue::create("com.apple.WebKit.CacheStorageEngine.serialBackground", WorkQueue::Type::Serial, WorkQueue::QOS::Background);
+        m_ioQueue = WorkQueue::create("com.apple.WebKit.CacheStorageEngine.serial.default", WorkQueue::Type::Serial, WorkQueue::QOS::Default);
 }
 
 void Engine::open(const WebCore::ClientOrigin& origin, const String& cacheName, CacheIdentifierCallback&& callback)
@@ -466,7 +466,7 @@ void Engine::writeFile(const String& filename, NetworkCache::Data&& data, WebCor
         if (!FileSystem::fileExists(directoryPath))
             FileSystem::makeAllDirectories(directoryPath);
 
-        auto channel = IOChannel::open(filename, IOChannel::Type::Create);
+        auto channel = IOChannel::open(filename, IOChannel::Type::Create, WorkQueue::QOS::Default);
         channel->write(0, data, nullptr, [this, weakThis = WTFMove(weakThis), identifier](int error) mutable {
             ASSERT(RunLoop::isMain());
             if (!weakThis)
@@ -576,7 +576,7 @@ Optional<uint64_t> Engine::readSizeFile(const String& path)
     if (totalBytesRead != bytesToRead)
         return WTF::nullopt;
 
-    return String::fromUTF8(buffer.data()).toUInt64Strict();
+    return charactersToUIntStrict(buffer.data(), totalBytesRead);
 }
 
 class ReadOriginsTaskCounter : public RefCounted<ReadOriginsTaskCounter> {
@@ -802,6 +802,9 @@ void Engine::unlock(uint64_t cacheIdentifier)
 
 String Engine::representation()
 {
+    ASSERT(m_pendingClearCallbacks.isEmpty());
+    ASSERT(m_initializationCallbacks.isEmpty());
+
     bool isFirst = true;
     StringBuilder builder;
     builder.append("{ \"path\": \"");

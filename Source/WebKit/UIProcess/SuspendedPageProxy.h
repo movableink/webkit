@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Connection.h"
+#include "MessageSender.h"
 #include "ProcessThrottler.h"
 #include "WebBackForwardListItem.h"
 #include "WebPageProxyMessagesReplies.h"
@@ -45,9 +46,13 @@ class WebProcessPool;
 class WebProcessProxy;
 class WebsiteDataStore;
 
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+using LayerHostingContextID = uint32_t;
+#endif
+
 enum class ShouldDelayClosingUntilEnteringAcceleratedCompositingMode : bool { No, Yes };
 
-class SuspendedPageProxy final: public IPC::MessageReceiver, public CanMakeWeakPtr<SuspendedPageProxy> {
+class SuspendedPageProxy final: public IPC::MessageReceiver, public IPC::MessageSender, public CanMakeWeakPtr<SuspendedPageProxy> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     SuspendedPageProxy(WebPageProxy&, Ref<WebProcessProxy>&&, WebCore::FrameIdentifier mainFrameID, ShouldDelayClosingUntilEnteringAcceleratedCompositingMode);
@@ -70,6 +75,10 @@ public:
     void pageEnteredAcceleratedCompositingMode();
     void closeWithoutFlashing();
 
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    LayerHostingContextID contextIDForVisibilityPropagation() const { return m_contextIDForVisibilityPropagation; }
+#endif
+
 #if !LOG_DISABLED
     const char* loggingString() const;
 #endif
@@ -85,6 +94,11 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&) final;
 
+    // IPC::MessageSender
+    IPC::Connection* messageSenderConnection() const final;
+    uint64_t messageSenderDestinationID() const final;
+    bool sendMessage(std::unique_ptr<IPC::Encoder>, OptionSet<IPC::SendOption>, Optional<std::pair<CompletionHandler<void(IPC::Decoder*)>, uint64_t>>&&) final;
+
     WebPageProxy& m_page;
     WebCore::PageIdentifier m_webPageID;
     Ref<WebProcessProxy> m_process;
@@ -98,6 +112,9 @@ private:
     RunLoop::Timer<SuspendedPageProxy> m_suspensionTimeoutTimer;
 #if PLATFORM(IOS_FAMILY)
     std::unique_ptr<ProcessThrottler::BackgroundActivity> m_suspensionActivity;
+#endif
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    LayerHostingContextID m_contextIDForVisibilityPropagation { 0 };
 #endif
 };
 

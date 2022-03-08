@@ -333,8 +333,8 @@ WI.contentLoaded = function()
     WI._decreaseZoomKeyboardShortcut2 = new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl | WI.KeyboardShortcut.Modifier.Shift, WI.KeyboardShortcut.Key.Minus, boundDecreaseZoom);
     WI._resetZoomKeyboardShortcut = new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl, "0", WI._resetZoom);
 
-    WI._showTabAtIndexKeyboardShortcuts = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl | WI.KeyboardShortcut.Modifier.Option, `${i}`, (event) => { WI._showTabAtIndex(i); }));
-    WI._openNewTabKeyboardShortcut = new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl | WI.KeyboardShortcut.Modifier.Option, "T", WI.showNewTabTab);
+    WI._showTabAtIndexKeyboardShortcuts = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl | WI.KeyboardShortcut.Modifier.Option, `${i}`, (event) => { WI._showTabAtIndexFromShortcut(i); }));
+    WI._openNewTabKeyboardShortcut = new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl | WI.KeyboardShortcut.Modifier.Option, "T", WI._showNewTabFromShortcut);
 
     WI.tabBrowser = new WI.TabBrowser(document.getElementById("tab-browser"), WI.tabBar, WI.navigationSidebar, WI.detailsSidebar);
     WI.tabBrowser.addEventListener(WI.TabBrowser.Event.SelectedTabContentViewDidChange, WI._tabBrowserSelectedTabContentViewDidChange);
@@ -545,12 +545,16 @@ WI.contentLoaded = function()
     // Store WI on the window in case the WebInspector global gets corrupted.
     window.__frontendCompletedLoad = true;
 
+    WI.frontendCompletedLoadTimestamp = performance.now();
+
     if (WI.runBootstrapOperations)
         WI.runBootstrapOperations();
 
     if (InspectorFrontendHost.supportsDiagnosticLogging) {
         WI.diagnosticController = new WI.DiagnosticController;
+        WI.diagnosticController.addRecorder(new WI.InspectedTargetTypesDiagnosticEventRecorder(WI.diagnosticController));
         WI.diagnosticController.addRecorder(new WI.TabActivityDiagnosticEventRecorder(WI.diagnosticController));
+        WI.diagnosticController.addRecorder(new WI.TabNavigationDiagnosticEventRecorder(WI.diagnosticController));
     }
 };
 
@@ -580,13 +584,9 @@ WI.initializeTarget = function(target)
                 target.PageAgent.overrideSetting(setting, value);
         }
 
-        // COMPATIBILITY (iOS 11.3)
+        // COMPATIBILITY (iOS 11.3): Page.setShowRuleers did not exist yet.
         if (target.hasCommand("Page.setShowRulers") && WI.settings.showRulers.value)
             target.PageAgent.setShowRulers(true);
-
-        // COMPATIBILITY (iOS 8): Page.setShowPaintRects did not exist.
-        if (target.hasCommand("Page.setShowPaintRects") && WI.settings.showPaintRects.value)
-            target.PageAgent.setShowPaintRects(true);
     }
 };
 
@@ -671,8 +671,11 @@ WI._openDefaultTab = function(event)
 
 WI._handleSettingsKeyboardShortcut = function(event)
 {
-    if (event.keyIdentifier === "U+002C") // ","
-        WI.tabBrowser.showTabForContentView(WI.settingsTabContentView);
+    if (event.keyIdentifier === "U+002C") { // ","
+        WI.tabBrowser.showTabForContentView(WI.settingsTabContentView, {
+            initiatorHint: WI.TabBrowser.TabNavigationInitiator.KeyboardShortcut,
+        });
+    }
 };
 
 WI._tryToRestorePendingTabs = function()
@@ -754,10 +757,10 @@ WI.createNewTabWithType = function(tabType, options = {})
     });
 
     if (shouldReplaceTab)
-        WI.tabBrowser.closeTabForContentView(referencedView, {suppressAnimations});
+        WI.tabBrowser.closeTabForContentView(referencedView, {...options, suppressAnimations});
 
     if (shouldShowNewTab)
-        WI.tabBrowser.showTabForContentView(tabContentView);
+        WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
 WI.activateExtraDomains = function(domains)
@@ -924,6 +927,9 @@ WI.openURL = function(url, frame, options = {})
         resource = WI.mainTarget.resourceCollection.resourceForURL(removeURLFragment(url));
 
     if (resource) {
+        // Context menu selections may go through this code path; don't clobber the previously-set hint.
+        if (!options.initiatorHint)
+            options.initiatorHint = WI.TabBrowser.TabNavigationInitiator.LinkClick;
         let positionToReveal = new WI.SourceCodePosition(options.lineNumber, 0);
         WI.showSourceCode(resource, {...options, positionToReveal});
         return;
@@ -1004,7 +1010,7 @@ WI.hideSplitConsole = function()
     WI.consoleDrawer.collapsed = true;
 };
 
-WI.showConsoleTab = function(requestedScope)
+WI.showConsoleTab = function(requestedScope, options = {})
 {
     requestedScope = requestedScope || WI.LogContentView.Scopes.All;
 
@@ -1012,7 +1018,8 @@ WI.showConsoleTab = function(requestedScope)
 
     WI.consoleContentView.scopeBar.item(requestedScope).selected = true;
 
-    WI.showRepresentedObject(WI._consoleRepresentedObject);
+    const cookie = null;
+    WI.showRepresentedObject(WI._consoleRepresentedObject, cookie, options);
 
     console.assert(WI.isShowingConsoleTab());
 };
@@ -1022,12 +1029,12 @@ WI.isShowingConsoleTab = function()
     return WI.tabBrowser.selectedTabContentView instanceof WI.ConsoleTabContentView;
 };
 
-WI.showElementsTab = function()
+WI.showElementsTab = function(options = {})
 {
     var tabContentView = WI.tabBrowser.bestTabContentViewForClass(WI.ElementsTabContentView);
     if (!tabContentView)
         tabContentView = new WI.ElementsTabContentView;
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
 WI.isShowingElementsTab = function()
@@ -1047,7 +1054,7 @@ WI.showSourcesTab = function(options = {})
     if (options.showScopeChainSidebar)
         tabContentView.showScopeChainDetailsSidebarPanel();
 
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
 WI.isShowingSourcesTab = function()
@@ -1055,21 +1062,21 @@ WI.isShowingSourcesTab = function()
     return WI.tabBrowser.selectedTabContentView instanceof WI.SourcesTabContentView;
 };
 
-WI.showStorageTab = function()
+WI.showStorageTab = function(options = {})
 {
     var tabContentView = WI.tabBrowser.bestTabContentViewForClass(WI.StorageTabContentView);
     if (!tabContentView)
         tabContentView = new WI.StorageTabContentView;
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
-WI.showNetworkTab = function()
+WI.showNetworkTab = function(options = {})
 {
     let tabContentView = WI.tabBrowser.bestTabContentViewForClass(WI.NetworkTabContentView);
     if (!tabContentView)
         tabContentView = new WI.NetworkTabContentView;
 
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
 WI.isShowingNetworkTab = function()
@@ -1082,12 +1089,12 @@ WI.isShowingSearchTab = function()
     return WI.tabBrowser.selectedTabContentView instanceof WI.SearchTabContentView;
 };
 
-WI.showTimelineTab = function()
+WI.showTimelineTab = function(options = {})
 {
     var tabContentView = WI.tabBrowser.bestTabContentViewForClass(WI.TimelineTabContentView);
     if (!tabContentView)
         tabContentView = new WI.TimelineTabContentView;
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
 WI.isShowingTimelineTab = function()
@@ -1107,7 +1114,7 @@ WI.showLayersTab = function(options = {})
         tabContentView = new WI.LayersTabContentView;
     if (options.nodeToSelect)
         tabContentView.selectLayerForNode(options.nodeToSelect);
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, options);
 };
 
 WI.isShowingLayersTab = function()
@@ -1117,7 +1124,7 @@ WI.isShowingLayersTab = function()
 
 WI.showSettingsTab = function(options = {})
 {
-    WI.tabBrowser.showTabForContentView(WI.settingsTabContentView);
+    WI.tabBrowser.showTabForContentView(WI.settingsTabContentView, options);
 
     if (options.blackboxPatternToSelect)
         WI.settingsTabContentView.selectBlackboxPattern(options.blackboxPatternToSelect);
@@ -1255,12 +1262,11 @@ WI.showRepresentedObject = function(representedObject, cookie, options = {})
     tabContentView.showRepresentedObject(representedObject, cookie);
 };
 
-WI.showLocalResourceOverride = function(localResourceOverride)
+WI.showLocalResourceOverride = function(localResourceOverride, options = {})
 {
     console.assert(localResourceOverride instanceof WI.LocalResourceOverride);
     const cookie = null;
-    const options = {ignoreNetworkTab: true, ignoreSearchTab: true};
-    WI.showRepresentedObject(localResourceOverride, cookie, options);
+    WI.showRepresentedObject(localResourceOverride, cookie, {...options, ignoreNetworkTab: true, ignoreSearchTab: true});
 };
 
 WI.showMainFrameDOMTree = function(nodeToSelect, options = {})
@@ -1281,7 +1287,8 @@ WI.showSourceCodeForFrame = function(frameIdentifier, options = {})
 
     WI._frameIdentifierToShowSourceCodeWhenAvailable = undefined;
 
-    WI.showRepresentedObject(frame, null, options);
+    const cookie = null;
+    WI.showRepresentedObject(frame, cookie, options);
 };
 
 WI.showSourceCode = function(sourceCode, options = {})
@@ -1377,7 +1384,10 @@ WI._searchTextDidChange = function(event)
     var searchQuery = WI._searchToolbarItem.text;
     WI._searchToolbarItem.text = "";
 
-    WI.tabBrowser.showTabForContentView(tabContentView);
+    WI.tabBrowser.showTabForContentView(tabContentView, {
+        // Classify this as a keyboard shortcut, as the only other way to get to Search Tab is via TabBar itself.
+        initiatorHint: WI.TabBrowser.TabNavigationInitiator.KeyboardShortcut,
+    });
 
     tabContentView.performSearch(searchQuery);
 };
@@ -1958,13 +1968,13 @@ WI._moveWindowMouseDown = function(event)
 
 WI._domStorageWasInspected = function(event)
 {
-    WI.showStorageTab();
+    WI.showStorageTab({initiatorHint: WI.TabBrowser.TabNavigationInitiator.Inspect});
     WI.showRepresentedObject(event.data.domStorage, null, {ignoreSearchTab: true});
 };
 
 WI._databaseWasInspected = function(event)
 {
-    WI.showStorageTab();
+    WI.showStorageTab({initiatorHint: WI.TabBrowser.TabNavigationInitiator.Inspect});
     WI.showRepresentedObject(event.data.database, null, {ignoreSearchTab: true});
 };
 
@@ -1974,8 +1984,12 @@ WI._domNodeWasInspected = function(event)
 
     InspectorFrontendHost.bringToFront();
 
-    WI.showElementsTab();
-    WI.showMainFrameDOMTree(event.data.node, {ignoreSearchTab: true});
+    // The event can override the initiator, in cases where the Inspect code path is used internally.
+    let options = {
+        initiatorHint: event.data.initiatorHint || WI.TabBrowser.TabNavigationInitiator.Inspect,
+    };
+    WI.showElementsTab(options);
+    WI.showMainFrameDOMTree(event.data.node, {...options, ignoreSearchTab: true});
 };
 
 WI._inspectModeStateChanged = function(event)
@@ -2259,7 +2273,7 @@ WI._reloadPage = function(event)
 
     event.preventDefault();
 
-    if (InspectorFrontendHost.inspectionLevel() > 1) {
+    if (InspectorFrontendHost.inspectionLevel > 1) {
         WI._reloadInspectedInspector();
         return;
     }
@@ -2275,7 +2289,7 @@ WI._reloadPageFromOrigin = function(event)
 
     event.preventDefault();
 
-    if (InspectorFrontendHost.inspectionLevel() > 1) {
+    if (InspectorFrontendHost.inspectionLevel > 1) {
         WI._reloadInspectedInspector();
         return;
     }
@@ -2285,7 +2299,7 @@ WI._reloadPageFromOrigin = function(event)
 
 WI._reloadToolbarButtonClicked = function(event)
 {
-    if (InspectorFrontendHost.inspectionLevel() > 1) {
+    if (InspectorFrontendHost.inspectionLevel > 1) {
         WI._reloadInspectedInspector();
         return;
     }
@@ -2318,11 +2332,6 @@ WI._updateDownloadToolbarButton = function()
 WI._updateInspectModeToolbarButton = function()
 {
     WI._inspectModeToolbarButton.hidden = !InspectorBackend.hasDomain("DOM");
-};
-
-WI._toggleInspectMode = function(event)
-{
-    WI.domManager.inspectModeEnabled = !WI.domManager.inspectModeEnabled;
 };
 
 WI._showConsoleTab = function(event)
@@ -2641,7 +2650,7 @@ WI.setZoomFactor = function(factor)
 WI.resolvedLayoutDirection = function()
 {
     let layoutDirection = WI.settings.debugLayoutDirection.value;
-    if (!WI.isDebugUIEnabled() || layoutDirection === WI.LayoutDirection.System)
+    if (layoutDirection === WI.LayoutDirection.System)
         layoutDirection = InspectorFrontendHost.userInterfaceLayoutDirection();
     return layoutDirection;
 };
@@ -2679,10 +2688,18 @@ WI.setLayoutDirection = function(value)
     InspectorFrontendHost.reopen();
 };
 
-WI._showTabAtIndex = function(i)
+WI._showNewTabFromShortcut = function()
 {
-    if (i <= WI.tabBar.tabBarItems.length)
-        WI.tabBar.selectedTabBarItem = i - 1;
+    WI.showNewTabTab({initiatorHint: WI.TabBrowser.TabNavigationInitiator.KeyboardShortcut});
+}
+
+WI._showTabAtIndexFromShortcut = function(i)
+{
+    if (i <= WI.tabBar.tabBarItems.length) {
+        WI.tabBar.selectTabBarItem(i - 1, {
+            initiatorHint: WI.TabBrowser.TabNavigationInitiator.KeyboardShortcut,
+        });
+    }
 };
 
 WI._showJavaScriptTypeInformationSettingChanged = function(event)
@@ -2868,6 +2885,9 @@ WI.linkifySourceCode = function(sourceCode, sourceCodePosition, options = {})
 
 WI.linkifyElement = function(linkElement, sourceCodeLocation, options = {}) {
     console.assert(sourceCodeLocation);
+
+    if (!options.initiatorHint)
+        options.initiatorHint = WI.TabBrowser.TabNavigationInitiator.LinkClick;
 
     function showSourceCodeLocation(event)
     {

@@ -368,40 +368,9 @@ void NetworkProcess::initializeConnection(IPC::Connection* connection)
         supplement->initializeConnection(connection);
 }
 
-static inline Optional<std::pair<IPC::Connection::Identifier, IPC::Attachment>> createIPCConnectionToWebProcess()
-{
-#if USE(UNIX_DOMAIN_SOCKETS)
-    IPC::Connection::SocketPair socketPair = IPC::Connection::createPlatformConnection();
-    return std::make_pair(socketPair.server, IPC::Attachment { socketPair.client });
-#elif OS(DARWIN)
-    // Create the listening port.
-    mach_port_t listeningPort = MACH_PORT_NULL;
-    auto kr = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &listeningPort);
-    if (kr != KERN_SUCCESS) {
-        RELEASE_LOG_ERROR(Process, "NetworkProcess::createNetworkConnectionToWebProcess: Could not allocate mach port, error %x", kr);
-        CRASH();
-    }
-    if (!MACH_PORT_VALID(listeningPort)) {
-        RELEASE_LOG_ERROR(Process, "NetworkProcess::createNetworkConnectionToWebProcess: Could not allocate mach port, returned port was invalid");
-        CRASH();
-    }
-    return std::make_pair(IPC::Connection::Identifier { listeningPort }, IPC::Attachment { listeningPort, MACH_MSG_TYPE_MAKE_SEND });
-#elif OS(WINDOWS)
-    IPC::Connection::Identifier serverIdentifier, clientIdentifier;
-    if (!IPC::Connection::createServerAndClientIdentifiers(serverIdentifier, clientIdentifier)) {
-        LOG_ERROR("Failed to create server and client identifiers");
-        CRASH();
-    }
-    return std::make_pair(serverIdentifier, IPC::Attachment { clientIdentifier });
-#else
-    notImplemented();
-    return { };
-#endif
-}
-
 void NetworkProcess::createNetworkConnectionToWebProcess(ProcessIdentifier identifier, PAL::SessionID sessionID, CompletionHandler<void(Optional<IPC::Attachment>&&)>&& completionHandler)
 {
-    auto ipcConnection = createIPCConnectionToWebProcess();
+    auto ipcConnection = createIPCConnectionPair();
     if (!ipcConnection) {
         completionHandler({ });
         return;
@@ -418,6 +387,8 @@ void NetworkProcess::createNetworkConnectionToWebProcess(ProcessIdentifier ident
     connection.setOnLineState(NetworkStateNotifier::singleton().onLine());
 
     m_storageManagerSet->addConnection(connection.connection());
+
+    webIDBServer(sessionID).addConnection(connection.connection(), identifier);
 }
 
 void NetworkProcess::clearCachedCredentials()
@@ -458,9 +429,9 @@ void NetworkProcess::addWebsiteDataStore(WebsiteDataStoreParameters&& parameters
 void NetworkProcess::addSessionStorageQuotaManager(PAL::SessionID sessionID, uint64_t defaultQuota, uint64_t defaultThirdPartyQuota, const String& cacheRootPath, SandboxExtension::Handle& cacheRootPathHandle)
 {
     LockHolder locker(m_sessionStorageQuotaManagersLock);
-    auto [iter, isNewEntry] = m_sessionStorageQuotaManagers.ensure(sessionID, [defaultQuota, defaultThirdPartyQuota, &cacheRootPath] {
+    auto isNewEntry = m_sessionStorageQuotaManagers.ensure(sessionID, [defaultQuota, defaultThirdPartyQuota, &cacheRootPath] {
         return makeUnique<SessionStorageQuotaManager>(cacheRootPath, defaultQuota, defaultThirdPartyQuota);
-    });
+    }).isNewEntry;
     if (isNewEntry)
         SandboxExtension::consumePermanently(cacheRootPathHandle);
 }
@@ -778,6 +749,19 @@ void NetworkProcess::scheduleClearInMemoryAndPersistent(PAL::SessionID sessionID
     } else {
         ASSERT_NOT_REACHED();
         completionHandler();
+    }
+}
+
+void NetworkProcess::getResourceLoadStatisticsDataSummary(PAL::SessionID sessionID, CompletionHandler<void(Vector<WebResourceLoadStatisticsStore::ThirdPartyData>&&)>&& completionHandler)
+{
+    if (auto* networkSession = this->networkSession(sessionID)) {
+        if (auto* resourceLoadStatistics = networkSession->resourceLoadStatistics())
+            resourceLoadStatistics->aggregatedThirdPartyData(WTFMove(completionHandler));
+        else
+            completionHandler({ });
+    } else {
+        ASSERT_NOT_REACHED();
+        completionHandler({ });
     }
 }
 
@@ -1265,13 +1249,26 @@ void NetworkProcess::setShouldDowngradeReferrerForTesting(bool enabled, Completi
     completionHandler();
 }
 
-void NetworkProcess::setShouldBlockThirdPartyCookiesForTesting(PAL::SessionID sessionID, bool enabled, CompletionHandler<void()>&& completionHandler)
+void NetworkProcess::setShouldBlockThirdPartyCookiesForTesting(PAL::SessionID sessionID, WebCore::ThirdPartyCookieBlockingMode blockingMode, CompletionHandler<void()>&& completionHandler)
 {
     if (auto* networkSession = this->networkSession(sessionID))
-        networkSession->setIsThirdPartyCookieBlockingEnabled(enabled);
+        networkSession->setThirdPartyCookieBlockingMode(blockingMode);
     else
         ASSERT_NOT_REACHED();
     completionHandler();
+}
+
+void NetworkProcess::setFirstPartyWebsiteDataRemovalModeForTesting(PAL::SessionID sessionID, WebCore::FirstPartyWebsiteDataRemovalMode mode, CompletionHandler<void()>&& completionHandler)
+{
+    if (auto* networkSession = this->networkSession(sessionID)) {
+        if (auto* resourceLoadStatistics = networkSession->resourceLoadStatistics())
+            resourceLoadStatistics->setFirstPartyWebsiteDataRemovalMode(mode, WTFMove(completionHandler));
+        else
+            completionHandler();
+    } else {
+        ASSERT_NOT_REACHED();
+        completionHandler();
+    }
 }
 #endif // ENABLE(RESOURCE_LOAD_STATISTICS)
 
@@ -1452,7 +1449,7 @@ void NetworkProcess::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<Websi
 
 #if ENABLE(INDEXED_DATABASE)
     if (websiteDataTypes.contains(WebsiteDataType::IndexedDBDatabases) && !sessionID.isEphemeral())
-        idbServer(sessionID).closeAndDeleteDatabasesModifiedSince(modifiedSince, [clearTasksHandler = clearTasksHandler.copyRef()] { });
+        webIDBServer(sessionID).closeAndDeleteDatabasesModifiedSince(modifiedSince, [clearTasksHandler = clearTasksHandler.copyRef()] { });
 #endif
 
 #if ENABLE(SERVICE_WORKER)
@@ -1548,7 +1545,7 @@ void NetworkProcess::deleteWebsiteDataForOrigins(PAL::SessionID sessionID, Optio
 
 #if ENABLE(INDEXED_DATABASE)
     if (websiteDataTypes.contains(WebsiteDataType::IndexedDBDatabases) && !sessionID.isEphemeral())
-        idbServer(sessionID).closeAndDeleteDatabasesForOrigins(originDatas, [clearTasksHandler = clearTasksHandler.copyRef()] { });
+        webIDBServer(sessionID).closeAndDeleteDatabasesForOrigins(originDatas, [clearTasksHandler = clearTasksHandler.copyRef()] { });
 #endif
 
 #if ENABLE(SERVICE_WORKER)
@@ -1758,7 +1755,7 @@ void NetworkProcess::deleteWebsiteDataForRegistrableDomains(PAL::SessionID sessi
                     callbackAggregator->m_domains.add(domain);
                 }
 
-                idbServer(sessionID).closeAndDeleteDatabasesForOrigins(entriesToDelete, [callbackAggregator = callbackAggregator.copyRef()] { });
+                webIDBServer(sessionID).closeAndDeleteDatabasesForOrigins(entriesToDelete, [callbackAggregator = callbackAggregator.copyRef()] { });
             });
         }));
     }
@@ -2091,8 +2088,8 @@ void NetworkProcess::prepareToSuspend(bool isSuspensionImminent, CompletionHandl
     RELEASE_LOG(ProcessSuspension, "%p - NetworkProcess::prepareToSuspend(), isSuspensionImminent: %d", this, isSuspensionImminent);
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(INDEXED_DATABASE)
-    for (auto& server : m_idbServers.values())
-        server->tryStop(isSuspensionImminent ? IDBServer::ShouldForceStop::Yes : IDBServer::ShouldForceStop::No);
+    for (auto& server : m_webIDBServers.values())
+        server->suspend(isSuspensionImminent ? WebIDBServer::ShouldForceStop::Yes : WebIDBServer::ShouldForceStop::No);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -2153,7 +2150,7 @@ void NetworkProcess::resume()
         server->endSuspension();
 #endif
 #if PLATFORM(IOS_FAMILY) && ENABLE(INDEXED_DATABASE)
-    for (auto& server : m_idbServers.values())
+    for (auto& server : m_webIDBServers.values())
         server->resume();
 #endif
 
@@ -2212,7 +2209,7 @@ void NetworkProcess::didSyncAllCookies()
 }
 
 #if ENABLE(INDEXED_DATABASE)
-Ref<IDBServer::IDBServer> NetworkProcess::createIDBServer(PAL::SessionID sessionID)
+Ref<WebIDBServer> NetworkProcess::createWebIDBServer(PAL::SessionID sessionID)
 {
     String path;
     if (!sessionID.isEphemeral()) {
@@ -2220,16 +2217,16 @@ Ref<IDBServer::IDBServer> NetworkProcess::createIDBServer(PAL::SessionID session
         path = m_idbDatabasePaths.get(sessionID);
     }
 
-    return IDBServer::IDBServer::create(sessionID, path, [this, weakThis = makeWeakPtr(this), sessionID](const auto& origin, uint64_t spaceRequested) {
+    return WebIDBServer::create(sessionID, path, [this, weakThis = makeWeakPtr(this), sessionID](const auto& origin, uint64_t spaceRequested) {
         RefPtr<StorageQuotaManager> storageQuotaManager = weakThis ? this->storageQuotaManager(sessionID, origin) : nullptr;
         return storageQuotaManager ? storageQuotaManager->requestSpaceOnBackgroundThread(spaceRequested) : StorageQuotaManager::Decision::Deny;
     });
 }
 
-IDBServer::IDBServer& NetworkProcess::idbServer(PAL::SessionID sessionID)
+WebIDBServer& NetworkProcess::webIDBServer(PAL::SessionID sessionID)
 {
-    return *m_idbServers.ensure(sessionID, [this, sessionID] {
-        return this->createIDBServer(sessionID);
+    return *m_webIDBServers.ensure(sessionID, [this, sessionID] {
+        return this->createWebIDBServer(sessionID);
     }).iterator->value;
 }
 
@@ -2374,7 +2371,9 @@ SWServer& NetworkProcess::swServerForSession(PAL::SessionID sessionID)
         // If there's not, then where did this PAL::SessionID come from?
         ASSERT(sessionID.isEphemeral() || !path.isEmpty());
 
-        return makeUnique<SWServer>(makeUniqueRef<WebSWOriginStore>(), info.processTerminationDelayEnabled, WTFMove(path), sessionID, [this, sessionID](auto& registrableDomain) {
+        return makeUnique<SWServer>(makeUniqueRef<WebSWOriginStore>(), info.processTerminationDelayEnabled, WTFMove(path), sessionID, [this, sessionID](auto&& jobData, bool shouldRefreshCache, auto&& request, auto&& completionHandler) mutable {
+            ServiceWorkerSoftUpdateLoader::start(networkSession(sessionID), WTFMove(jobData), shouldRefreshCache, WTFMove(request), WTFMove(completionHandler));
+        }, [this, sessionID](auto& registrableDomain) {
             ASSERT(!registrableDomain.isEmpty());
             parentProcessConnection()->send(Messages::NetworkProcessProxy::EstablishWorkerContextConnectionToNetworkProcess { registrableDomain, sessionID }, 0);
         });
@@ -2550,9 +2549,10 @@ void NetworkProcess::getLocalStorageOriginDetails(PAL::SessionID sessionID, Comp
     });
 }
 
-void NetworkProcess::connectionToWebProcessClosed(IPC::Connection& connection)
+void NetworkProcess::connectionToWebProcessClosed(IPC::Connection& connection, PAL::SessionID sessionID)
 {
     m_storageManagerSet->removeConnection(connection);
+    webIDBServer(sessionID).removeConnection(connection);
 }
 
 NetworkConnectionToWebProcess* NetworkProcess::webProcessConnection(ProcessIdentifier identifier) const

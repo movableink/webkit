@@ -1,3 +1,1323 @@
+2019-12-21  Brian Burg  <bburg@apple.com>
+
+        Web Inspector: add InspectedTargetTypes diagnostic event and related hooks
+        https://bugs.webkit.org/show_bug.cgi?id=205174
+        <rdar://problem/57887953>
+
+        Reviewed by Devin Rousso.
+
+        This change adds a new diagnostic recorder that reports information about
+        inspected targets and their type / version information.
+
+        * UserInterface/Base/DebuggableType.js:
+        (WI.DebuggableType.fromString):
+        Move the static parsing factory method to DebuggableType class.
+
+        * UserInterface/Main.html: Add new files.
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded): Add new diagnostic recorder.
+
+        * UserInterface/Protocol/InspectorBackend.js:
+        (InspectorBackendClass.prototype.activateDomain):
+        Adapt to InspectorFrontendHost changes.
+
+        * UserInterface/Test/TestAppController.js:
+        (WI.TestAppController):
+        * UserInterface/Controllers/AppController.js:
+        (WI.AppController):
+        Adapt to InspectorFrontendHost changes.
+
+2019-12-20  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Gradient editor: opacity slider is too close to the right edge of the popover
+        https://bugs.webkit.org/show_bug.cgi?id=203643
+        <rdar://problem/56762879>
+
+        Reviewed by Devin Rousso.
+
+        Replace absolute positioning in the color picker with static layout.
+
+        * UserInterface/Views/ColorPicker.css:
+        (.color-picker .wrapper):
+        (.color-picker :matches(.color-square, .slider)):
+        (.color-picker .slider):
+        (.color-picker .hue):
+        (@media (color-gamut: p3) .color-picker.gamut-p3 > .hue):
+        (.color-picker > .color-inputs):
+        (.color-picker > .color-inputs > div):
+        (.color-picker > .color-inputs > div:not([hidden]) + div):
+        The 1st visible div should have no left margin even if it's preceded by a hidden div.
+
+        * UserInterface/Views/ColorPicker.js:
+        (WI.ColorPicker):
+        (WI.ColorPicker.prototype._updateOpacitySlider):
+        * UserInterface/Views/GradientEditor.css:
+        (.gradient-editor.editing-color):
+        (.gradient-editor > .color-picker .slider):
+        * UserInterface/Views/GradientEditor.js:
+        (WI.GradientEditor):
+        * UserInterface/Views/Slider.css:
+        (.slider):
+        (.slider > img):
+        (body[dir=ltr] .slider > img):
+        (body[dir=rtl] .slider > img):
+        * UserInterface/Views/Slider.js:
+        (WI.Slider):
+        (WI.Slider.prototype.set value):
+        (WI.Slider.prototype.set knobY):
+        (WI.Slider.prototype.get maxY):
+        (WI.Slider.prototype.recalculateKnobY):
+        (WI.Slider.prototype._handleMousedown):
+        (WI.Slider.prototype._handleMousemove):
+        * UserInterface/Views/Variables.css:
+        (:root):
+        Convert WI.Slider to be vertical by default. WI.Slider used to define a hozirontal slider.
+        It is only used by the color picker, where it's vertical. The slider was rotated with CSS
+        transformation. This made it problematic to use in the static layout.
+
+2019-12-20  Brian Burg  <bburg@apple.com>
+
+        Web Inspector: convert some InspectorFrontendHost methods to getters
+        https://bugs.webkit.org/show_bug.cgi?id=205475
+
+        Reviewed by Devin Rousso.
+
+        No reason for these to be method calls, so expose as getters / attributes instead.
+
+        * UserInterface/Base/LoadLocalizedStrings.js:
+        * UserInterface/Base/Main.js:
+        * UserInterface/Base/ObjectStore.js:
+        (WI.ObjectStore.get _databaseName):
+        * UserInterface/Base/Platform.js:
+        * UserInterface/Base/Setting.js:
+        (WI.Setting._localStorageKey):
+        * UserInterface/Debug/Bootstrap.js:
+        (WI.runBootstrapOperations):
+        * UserInterface/Protocol/LoadInspectorBackendCommands.js:
+
+2019-12-19  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Enable p3 color picker by default
+        https://bugs.webkit.org/show_bug.cgi?id=203931
+        <rdar://problem/56965236>
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Base/Setting.js:
+        * UserInterface/Views/InlineSwatch.js:
+
+2019-12-19  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Console: the clear console button is hidden at smaller widths
+        https://bugs.webkit.org/show_bug.cgi?id=205438
+
+        Reviewed by Brian Burg.
+
+        Ever since r242604, we no longer "need" to show the text filter bar or message type scope
+        bar since new messages will show a warning banner that there's an active filter. Instead, we
+        should prefer showing the navigation items that control functionality that cannot be reached
+        anywhere else (visually), such as clearing the console or evaluating as a user gesture.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView):
+        Make the text find banner and type scope bar both low priority, the preserve log and
+        evaluate as user gesture toggles normal priority, and the clear log high priority.
+
+2019-12-19  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Audit: exiting edit mode with the same selection as before entering edit mode doesn't reselect
+        https://bugs.webkit.org/show_bug.cgi?id=205435
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/AuditNavigationSidebarPanel.js:
+        (WI.AuditNavigationSidebarPanel.prototype.initialLayout):
+        Set `allowsRepeatSelection` so that selecting the previously selected tree element after
+        leaving edit mode will actually work.
+
+2019-12-19  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Elements: Styles: bezier keywords don't show a swatch
+        https://bugs.webkit.org/show_bug.cgi?id=205436
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/SpreadsheetStyleProperty.js:
+        (WI.SpreadsheetStyleProperty.prototype._addTimingFunctionTokens):
+        Check if the current token is a direct match with one of the timing function keywords.
+
+2019-12-19  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Audit: importing a result with DOM nodes that don't match the inspected page appear as empty lines
+        https://bugs.webkit.org/show_bug.cgi?id=205437
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/AuditTestCaseContentView.js:
+        (WI.AuditTestCaseContentView.prototype.layout):
+        Call `refresh` on the `CodeMirror` instance after a timeout to give it a chance to be added
+        to the DOM tree.
+
+2019-12-18  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Elements: restrict showing paint flashing and compositing borders to the Web Inspector session
+        https://bugs.webkit.org/show_bug.cgi?id=205201
+
+        Reviewed by Timothy Hatcher.
+
+        We often get bugs from users who turn on paint flashing or compositing borders, close Web
+        Inspector, reopen Web Inspector, and are then surprised when the page flashes red or these
+        borders exist all over the page.
+
+        Given that the dark mode and print styles toggles are limited to the Web Inspector session,
+        we should make these have the same behavior.
+
+        * UserInterface/Base/Main.js:
+        (WI.initializeTarget):
+        * UserInterface/Base/Setting.js:
+        * UserInterface/Controllers/LayerTreeManager.js:
+        (WI.LayerTreeManager): Added.
+        (WI.LayerTreeManager.prototype.initializeTarget):
+        (WI.LayerTreeManager.supportsShowingPaintRects): Added.
+        (WI.LayerTreeManager.supportsVisibleCompositingBorders): Added.
+        (WI.LayerTreeManager.prototype.get showPaintRects): Added.
+        (WI.LayerTreeManager.prototype.set showPaintRects): Added.
+        (WI.LayerTreeManager.prototype.get compositingBordersVisible): Added.
+        (WI.LayerTreeManager.prototype.set compositingBordersVisible): Added.
+        (WI.LayerTreeManager.prototype.updateCompositingBordersVisibleFromPageIfNeeded): Added.
+        Use `WI.LayerTreeManager` to control the state of paint flashing and compositing borders, as
+        they're both related to the concept of layers.
+
+        * UserInterface/Views/DOMTreeContentView.js:
+        (WI.DOMTreeContentView):
+        (WI.DOMTreeContentView.prototype.shown):
+        (WI.DOMTreeContentView.prototype.closed):
+        (WI.DOMTreeContentView.prototype.attached): Added.
+        (WI.DOMTreeContentView.prototype.detached): Added.
+        (WI.DOMTreeContentView.prototype._handleCompositingBordersVisibleChanged): Added.
+        (WI.DOMTreeContentView.prototype._handleCompositingBordersButtonClicked): Added.
+        (WI.DOMTreeContentView.prototype._handleShowPaintRectsChanged): Added.
+        (WI.DOMTreeContentView.prototype._handlePaingFlashingButtonClicked): Added.
+        (WI.DOMTreeContentView.prototype._toggleCompositingBorders): Deleted.
+        (WI.DOMTreeContentView.prototype._togglePaintFlashing): Deleted.
+        (WI.DOMTreeContentView.prototype._updateCompositingBordersButtonToMatchPageSettings): Deleted.
+        (WI.DOMTreeContentView.prototype._showPaintRectsSettingChanged): Deleted.
+
+        * UserInterface/Views/Layers3DContentView.js:
+        (WI.Layers3DContentView):
+        (WI.Layers3DContentView.prototype.shown):
+        (WI.Layers3DContentView.prototype.hidden):
+        (WI.Layers3DContentView.prototype.attached): Added.
+        (WI.Layers3DContentView.prototype.detached): Added.
+        (WI.Layers3DContentView.prototype._handleCompositingBordersVisibleChanged): Added.
+        (WI.Layers3DContentView.prototype._handleCompositingBordersButtonClicked): Added.
+        (WI.Layers3DContentView.prototype._handleShowPaintRectsChanged): Added.
+        (WI.Layers3DContentView.prototype._handlePaingFlashingButtonClicked): Added.
+        (WI.Layers3DContentView.prototype.closed): Deleted.
+        (WI.Layers3DContentView.prototype._showPaintRectsSettingChanged): Deleted.
+        (WI.Layers3DContentView.prototype._togglePaintFlashing): Deleted.
+        (WI.Layers3DContentView.prototype._updateCompositingBordersButtonState): Deleted.
+        (WI.Layers3DContentView.prototype._toggleCompositingBorders): Deleted.
+
+2019-12-18  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: Runtime.enable reports duplicates (non existent) contexts
+        https://bugs.webkit.org/show_bug.cgi?id=204859
+
+        Reviewed by Devin Rousso.
+
+        Assert that all contexts added to the list are unique.
+
+        * UserInterface/Models/ExecutionContextList.js:
+        (WI.ExecutionContextList.prototype.add):
+
+2019-12-18  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Elements: remove the "Show/Hide Shadow DOM" navigation item
+        https://bugs.webkit.org/show_bug.cgi?id=205199
+
+        Reviewed by Timothy Hatcher.
+
+        There's really no good reason to hide shadow DOM, especially for non-user-agent shadow trees.
+        The user has full control over whether to expand/collapse shadow trees (and their hosts), so
+        having a setting that entirely removes the shadow trees from view throughout Web Inspector
+        seems overkill.
+
+        * UserInterface/Base/Setting.js:
+
+        * UserInterface/Models/DOMNode.js:
+        (WI.DOMNode):
+        (WI.DOMNode.prototype.get nextSibling):
+        (WI.DOMNode.prototype.get previousSibling):
+        (WI.DOMNode.prototype.get children):
+        (WI.DOMNode.prototype.get childNodeCount):
+
+        * UserInterface/Views/DOMTreeContentView.js:
+        (WI.DOMTreeContentView):
+        (WI.DOMTreeContentView.prototype.get navigationItems):
+        (WI.DOMTreeContentView.prototype.closed):
+        (WI.DOMTreeContentView.prototype._showShadowDOMSettingChanged): Deleted.
+        (WI.DOMTreeContentView.prototype._toggleShowsShadowDOMSetting): Deleted.
+
+        * UserInterface/Views/DOMTreeOutline.js:
+        (WI.DOMTreeOutline.prototype.close):
+        (WI.DOMTreeOutline.prototype._revealAndSelectNode):
+        (WI.DOMTreeOutline.prototype._showShadowDOMSettingChanged): Deleted.
+
+        * UserInterface/Views/LayerTreeDetailsSidebarPanel.js:
+        (WI.LayerTreeDetailsSidebarPanel.prototype.initialLayout):
+        (WI.LayerTreeDetailsSidebarPanel.prototype._updateDisplayWithLayers):
+        (WI.LayerTreeDetailsSidebarPanel.prototype._showShadowDOMSettingChanged): Deleted.
+
+        * UserInterface/Images/ShadowDOM.svg: Removed.
+        * Localizations/en.lproj/localizedStrings.js:
+
+2019-12-11  Brian Burg  <bburg@apple.com>
+
+        Web Inspector: add TabNavigation diagnostic event and related hooks
+        https://bugs.webkit.org/show_bug.cgi?id=205138
+        <rdar://problem/57855456>
+
+        Reviewed by Devin Rousso.
+
+        This patch adds a new recorder for the TabNavigation diagnostic event.
+
+        The bulk of this patch is to find all callsites that can possibly change the active
+        tab and annotate them with the type of interaction (tab click, link click,
+        keyboard shortcut, inspect, and others). This patch was developed through
+        trial and error by logging the diagnostic events and debugging any scenarios
+        where a tab navigation is not correctly annotated with the initiating interaction.
+
+        * UserInterface/Main.html: Add new file.
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded): Register new recorder.
+        (WI._handleSettingsKeyboardShortcut): Annotate as keyboard shortcut.
+        - Add options argument to most WI.show*Tab functions, and forward to the underlying
+        TabBrowser or TabBar calls. This allows initiatorHint to be used in these cases.
+        - Add other annotations to linkifyElement
+
+        * UserInterface/Views/TabBrowser.js:
+        (WI.TabBrowser.prototype.showTabForContentView):
+        (WI.TabBrowser.prototype._tabBarItemSelected):
+        - Try to infer an initiator for the tab navigation from TabBrowser API arguments or from TabBar's event.
+        - Add an enum with TabNavigationInitiator values.
+
+        * UserInterface/Base/DOMUtilities.js:
+        Clickable element links should be reported as link clicks. Add an annotation
+        so that it isn't reported as "Inspect" (due to going through DOMManager.inspectElement).
+
+        * UserInterface/Controllers/CallFrameTreeController.js:
+        (WI.CallFrameTreeController):
+        (WI.CallFrameTreeController.prototype._showSourceCodeLocation):
+        This is mainly used by Canvas tab. Annotate call frame links as link clicks.
+
+        * UserInterface/Controllers/DOMManager.js:
+        (WI.DOMManager.prototype.inspectElement):
+        Accept an options argument. This is used to forward the initiatorHint to
+        the listener of this event, WI._domNodeWasInspected, so it can forward the
+        initiatorHint further on.
+
+        * UserInterface/Protocol/InspectorFrontendAPI.js:
+        (InspectorFrontendAPI.setTimelineProfilingEnabled):
+        (InspectorFrontendAPI.showConsole):
+        (InspectorFrontendAPI.showResources):
+        (InspectorFrontendAPI.showTimelines):
+        (InspectorFrontendAPI.showMainResourceForFrame):
+        Annotate these as FrontendAPI calls. Mainly used by Develop menu items in Safari.
+
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForSourceCode):
+        (WI.appendContextMenuItemsForURL):
+        Annotate as context menu.
+
+        * UserInterface/Views/DOMNodeTreeElement.js:
+        (WI.DOMNodeTreeElement):
+        (WI.DOMNodeTreeElement.prototype.populateContextMenu):
+        Annotate as context menu.
+
+        * UserInterface/Views/DOMTreeElement.js:
+        (WI.DOMTreeElement.prototype._buildTagDOM):
+
+
+        * UserInterface/Views/DefaultDashboardView.js:
+        (WI.DefaultDashboardView.prototype._resourcesItemWasClicked):
+        (WI.DefaultDashboardView.prototype._networkItemWasClicked):
+        (WI.DefaultDashboardView.prototype._timelineItemWasClicked):
+        (WI.DefaultDashboardView.prototype._consoleItemWasClicked):
+        Annotate as dashboard.
+
+        * UserInterface/Views/LegacyTabBar.js:
+        (WI.LegacyTabBar.prototype.set selectedTabBarItem):
+        Include the inferred initiator in the event that is dispatched.
+
+        (WI.LegacyTabBar.prototype.selectTabBarItemWithInitiator):
+        Added. This is a convenience method that temporarily sets the
+        initiator before invoking the setter (which reads the initator).
+
+        (WI.LegacyTabBar.prototype._handleMouseDown):
+        (WI.LegacyTabBar.prototype._handleClick):
+        (WI.LegacyTabBar.prototype._handleNewTabClick):
+        Treat these as "tab clicks".
+
+        * UserInterface/Views/TabBar.js:
+        (WI.TabBar.prototype.set selectedTabBarItem):
+        (WI.TabBar.prototype.selectTabBarItemWithInitiator):
+        (WI.TabBar.prototype._handleMouseDown):
+        (WI.TabBar.prototype._handleClick):
+        Changes from LegacyTabBar have been copied to this version, as it's a
+        drop-in replacement.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView.prototype._showConsoleTab):
+        Treat the console chevron as a "button click".
+
+        * UserInterface/Views/NewTabContentView.js:
+        (WI.NewTabContentView.prototype._createNewTabWithType):
+        Treat each tab button as a "button click".
+
+        * UserInterface/Views/RecordingActionTreeElement.js:
+        (WI.RecordingActionTreeElement.prototype.populateContextMenu):
+        Annotate as context menu.
+
+        * UserInterface/Views/ResourceTimelineDataGridNode.js:
+        (WI.ResourceTimelineDataGridNode.prototype._dataGridNodeGoToArrowClicked):
+        Annotate as link click.
+
+        * UserInterface/Views/SearchResultTreeElement.js:
+        (WI.SearchResultTreeElement):
+        (WI.SearchResultTreeElement.prototype.populateContextMenu):
+        Annotate as context menu.
+
+        * UserInterface/Views/SourceCodeTextEditor.js:
+        (WI.SourceCodeTextEditor.prototype.textEditorGutterContextMenu):
+        Annotate as context menu.
+
+        (WI.SourceCodeTextEditor.prototype._showPopoverForObject.):
+        (WI.SourceCodeTextEditor.prototype._showPopoverForObject):
+        Annotate elements in popover as link click.
+
+        * UserInterface/Views/SourceCodeTreeElement.js:
+        (WI.SourceCodeTreeElement):
+        (WI.SourceCodeTreeElement.prototype._handleToggleBlackboxedImageElementClicked):
+        Annotate as context menu.
+
+        * UserInterface/Views/SpreadsheetCSSStyleDeclarationSection.js:
+        (WI.SpreadsheetCSSStyleDeclarationSection.prototype._populateIconElementContextMenu):
+        Annotate as context menu.
+
+        * UserInterface/Views/SpreadsheetStyleProperty.js:
+        (WI.SpreadsheetStyleProperty.prototype._setupJumpToSymbol):
+        Annotate as link click.
+
+2019-12-15  Emilio Cobos Álvarez  <emilio@crisal.io>
+
+        Remove -webkit-marquee.
+        https://bugs.webkit.org/show_bug.cgi?id=117769
+
+        Reviewed by Simon Fraser.
+
+        * UserInterface/Models/CSSKeywordCompletions.js:
+
+2019-12-12  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: Error: Can't make a ContentView for an unknown representedObject of type: CallFrame
+        https://bugs.webkit.org/show_bug.cgi?id=204823
+
+        Reviewed by Devin Rousso.
+
+        If no type is stored in the cookie matching by type should fail.
+
+        * UserInterface/Views/NavigationSidebarPanel.js:
+        (WI.NavigationSidebarPanel.prototype._checkElementsForPendingViewStateCookie.treeElementMatchesCookie):
+        (WI.NavigationSidebarPanel.prototype._checkElementsForPendingViewStateCookie):
+
+2019-12-12  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r251227): Uncaught Exception: undefined is not an object (evaluating 'target.DOMAgent.setInspectModeEnabled')
+        https://bugs.webkit.org/show_bug.cgi?id=205148
+
+        Reviewed by Joseph Pecoraro.
+
+        * UserInterface/Protocol/InspectorFrontendAPI.js:
+        (InspectorFrontendAPI.setTimelineProfilingEnabled):
+        (InspectorFrontendAPI.setElementSelectionEnabled):
+        If there are no targets available yet (`WI.targetsAvailable()`), then wait for targets to
+        be available (`WI.whenTargetsAvailable()`) before performing the intended logic, as the
+        `InspectorFrontendAPI` only waits for the backend connection to be established before
+        dispatching, meaning that there may not be a page target yet. Other `InspectorFrontendAPI`
+        functions don't need to be changed because they don't cause commands to be invoked.
+
+        * UserInterface/Controllers/DOMManager.js:
+        (WI.DOMManager.prototype.set inspectModeEnabled):
+        Drive-by: don't assume that inspect mode is disabled if an error is thrown.
+
+        * UserInterface/Base/Main.js:
+        Drive-by: remove duplicate function `WI._toggleInspectMode` as it already exists.
+
+2019-12-11  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION: Console: unable to switch execution contexts
+        https://bugs.webkit.org/show_bug.cgi?id=205102
+        <rdar://problem/57748393>
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/QuickConsole.js:
+        (WI.QuickConsole):
+        Wait to initialize the main execution context path component until we actually have a main
+        execution context.
+
+        (WI.QuickConsole.prototype._pageTargetTransitioned):
+        Remove unnecessary duplicate early return.
+
+        (WI.QuickConsole.prototype._initializeMainExecutionContextPathComponent):
+        Restore the link to the next path component if the main execution context path component is
+        recreated when there already exist other execution contexts.
+
+        (WI.QuickConsole.prototype._selectExecutionContext):
+        Remove unnecessary assertion.
+
+        (WI.QuickConsole.prototype._removeExecutionContextPathComponentForFrame):
+        When the execution context of the main frame changes, recreate the main execution context
+        path component so it has the right `representedObject`.
+
+        * UserInterface/Views/HierarchicalPathNavigationItem.js:
+        (WI.HierarchicalPathNavigationItem.prototype.update):
+        Only hide the tooltip if we're not `sizeToFit` as otherwise we never unhide it due to an
+        early return (`sizeToFit` just makes everything visible).
+
+2019-12-11  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Elements: Styles: hovering over an invalid value while holding ⌘ doesn't change the color of the text
+        https://bugs.webkit.org/show_bug.cgi?id=205039
+
+        Reviewed by Brian Burg.
+
+        Only apply a `color` or `-webkit-text-decoration-color` when either the ⌘ key is not pressed
+        or if the mouse is not actively hovering over the node when the ⌘ is pressed.
+
+        * UserInterface/Views/SpreadsheetCSSStyleDeclarationEditor.css:
+        (body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .name:not(.editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .name:not(:hover, .editing)): Added.
+        (.spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value): Added.
+        (body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(.editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(:hover, .editing)): Added.
+        (.spreadsheet-style-declaration-editor .property.disabled):
+        (.spreadsheet-style-declaration-editor > .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) > .content > *:not(.name, .value-container), .spreadsheet-style-declaration-editor > .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) > .content > .value-container > *:not(.value), body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) > .content > :matches(.name,  value-container):not(.editing), body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) > .content > .value-container >  value:not(.editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) > .content > :matches(.name,  value-container):not(:hover, .editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) > .content > .value-container > .value:not(:hover, .editing)): Added.
+        (.spreadsheet-style-declaration-editor > .property.invalid-name:not(.disabled) > .content > *:not(.name, .value-container), .spreadsheet-style-declaration-editor > .property.invalid-name:not(.disabled) > .content > .value-container > *:not(.value), body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property.invalid-name:not(.disabled) > .content > :matches(.name, .value-container):not(.editing), body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property.invalid-name:not(.disabled) > .content > .value-container > .value:not(.editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property.invalid-name:not(.disabled) > .content > :matches(.name, .value-container):not(:hover, .editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property.invalid-name:not(.disabled) > .content > .value-container > .value:not(:hover, .editing)): Added.
+        (body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property.invalid-value:not(.disabled) > .content > .value:not(.editing), body.meta-key-pressed .spreadsheet-style-declaration-editor > .property.invalid-value:not(.disabled) > .content > .value:not(:hover, .editing)): Added.
+        (body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(.editing) .token-link, body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(:hover, .editing) .token-link): Added.
+        (body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(.editing) .token-string, body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(:hover, .editing) .token-string): Added.
+        (body.meta-key-pressed .spreadsheet-css-declaration:not(.locked) > .spreadsheet-style-declaration-editor > .property > .content :matches(.name, .value):not(.editing):hover): Added.
+        (body:not(.meta-key-pressed) .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(.editing) .token-comment, body.meta-key-pressed .spreadsheet-style-declaration-editor > .property:not(.disabled) > .content > .value:not(:hover, .editing) .token-comment): Added.
+        (.spreadsheet-style-declaration-editor .property:not(.disabled) .name): Deleted.
+        (.spreadsheet-style-declaration-editor .property:not(.disabled) .value): Deleted.
+        (.spreadsheet-style-declaration-editor .property:matches(.invalid-name, .other-vendor, .overridden):not(.disabled) .content > *): Deleted.
+        (.spreadsheet-style-declaration-editor .property.invalid-name:not(.disabled) .content > *): Deleted.
+        (.spreadsheet-style-declaration-editor .property.invalid-value:not(.disabled) .content .value): Deleted.
+        (.spreadsheet-style-declaration-editor .property:not(.disabled) .token-link): Deleted.
+        (.spreadsheet-style-declaration-editor .property:not(.disabled) .token-string): Deleted.
+        (.meta-key-pressed .spreadsheet-css-declaration:not(.locked) :matches(.name, .value):not(.editing):hover): Deleted.
+        (.spreadsheet-style-declaration-editor .property:not(.disabled) .token-comment): Deleted.
+
+2019-12-11  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r253173): Console: evaluating a command should automatically scroll to it's result
+        https://bugs.webkit.org/show_bug.cgi?id=205105
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView):
+        (WI.LogContentView.prototype.get scrollableElements):
+        (WI.LogContentView.prototype._updateMessagesSelection):
+        (WI.LogContentView.prototype._highlightSearchMatchAtIndex):
+        (WI.LogContentView.prototype.layout): Deleted.
+        (WI.LogContentView.prototype._ensureMessageIsVisible): Deleted.
+        (WI.LogContentView.prototype._positionForMessage): Deleted.
+        Now that this uses `display: flex;`, the actual scrollable element is the `messagesElement`,
+        so use that instead when manually setting the `scrollTop`. Use `scrollIntoViewIfNeeded` when
+        revealing search results instead of any custom scroll offset calculations.
+
+        * UserInterface/Views/LogContentView.css:
+        (.content-view.log > .hidden-messages-banner):
+        Drive-by: ensure that the hidden messages banner doesn't shrink.
+
+2019-12-11  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: simplify the text of the script blackboxing context menu item
+        https://bugs.webkit.org/show_bug.cgi?id=205099
+
+        Reviewed by Brian Burg.
+
+        "Blackbox script to ignore it when debugging" is a bit too long for a context menu item.
+        We should use something simpler, like "Blackbox Script".
+
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForSourceCode):
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2019-12-11  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: replace all "Remove" context menu items with "Delete" to be consistent
+        https://bugs.webkit.org/show_bug.cgi?id=205098
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/BlackboxSettingsView.js:
+        (WI.BlackboxSettingsView.prototype._addRow):
+        * UserInterface/Views/BootstrapScriptTreeElement.js:
+        (WI.BootstrapScriptTreeElement.prototype.populateContextMenu):
+        * UserInterface/Views/BreakpointActionView.js:
+        (WI.BreakpointActionView):
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForSourceCode):
+        Drive-by: if a local override exists for the given source code, add an item for
+                  enabling/disabling and deleting it.
+        * UserInterface/Views/LocalResourceOverrideTreeElement.js:
+        (WI.LocalResourceOverrideTreeElement.prototype.populateContextMenu):
+        * UserInterface/Views/ProbeSetDetailsSection.js:
+        (WI.ProbeSetDetailsSection):
+        * UserInterface/Views/ResourceContentView.js:
+        (WI.ResourceContentView):
+        * UserInterface/Views/ScopeChainDetailsSidebarPanel.js:
+        (WI.ScopeChainDetailsSidebarPanel.prototype._objectTreeElementAddContextMenuItems):
+        * Localizations/en.lproj/localizedStrings.js:
+
+2019-12-11  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Uncaught Exception: Missing frame for given frameId (on techcrunch.com)
+        https://bugs.webkit.org/show_bug.cgi?id=205130
+        <rdar://problem/57847699>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Controllers/ApplicationCacheManager.js:
+        (WI.ApplicationCacheManager.prototype._manifestForFrameLoaded):
+        A frame can go away between `ApplicationCache.getManifestForFrame` being called and the
+        response being received, so don't re-throw the error if the frontend no longer has a
+        matching `WI.Frame` for the given `frameId`.
+
+2019-12-10  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r251038): Elements: Computed: implicit shorthands are not shown when "Prefer Shorthands" is enabled
+        https://bugs.webkit.org/show_bug.cgi?id=205035
+        <rdar://problem/57773470>
+
+        Reviewed by Brian Burg.
+
+        The computed style treats most shorthand properties as "implicit", meaning that if "Prefer
+        Shorthands" is enabled, we won't show the shorthand properties unless "Show All" is also
+        enabled. The frontend can fix this by checking to see if there are any non-implicit longhand
+        values for each shorthand value, and therefore decide not to hide the "implicit" shorthand.
+
+        * UserInterface/Views/ComputedStyleSection.js:
+        (WI.ComputedStyleSection.prototype.get propertiesToRender):
+        (WI.ComputedStyleSection.prototype.get propertiesToRender.hasNonImplicitLonghand): Added.
+        Drive-by: filter the list of properties to render before sorting them for performance.
+
+2019-12-10  Devin Rousso  <drousso@apple.com>
+
+        REGRESSION(r252523): Web Inspector: Styles: semicolon is wrongly positioned in multiline values
+        https://bugs.webkit.org/show_bug.cgi?id=205034
+        <rdar://problem/57772846>
+
+        Reviewed by Brian Burg.
+
+        Wrap the value node in another `<span class="value-container">` so that the semicolon can be
+        included as part of the `display: inline-block;` when there are multiple lines in the value.
+
+        * UserInterface/Views/SpreadsheetStyleProperty.js:
+        (WI.SpreadsheetStyleProperty.prototype.update):
+
+        * UserInterface/Views/SpreadsheetCSSStyleDeclarationEditor.css:
+        (.spreadsheet-style-declaration-editor .property:not(.disabled).has-newline .value-container): Added.
+        (.spreadsheet-style-declaration-editor .property:not(.disabled).has-newline .value): Deleted.
+
+2019-12-10  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Elements: Styles: there is a double border between the last rule and the class list area or filter area
+        https://bugs.webkit.org/show_bug.cgi?id=205040
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/GeneralStyleDetailsSidebarPanel.css:
+        (.sidebar > .panel.details.css-style.style-rules > .content ~ :matches(.options-container, .class-list-container)): Added.
+        (.sidebar > .panel.details.css-style > .content ~ .options-container):
+        Use a CSS transform to move the class list area and filter area up when the Styles panel is
+        selected in the details sidebar of the Elements Tab.
+
+2019-12-10  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r253167): Elements: class list toggle doesn't stay sticky to the bottom of the sidebar
+        https://bugs.webkit.org/show_bug.cgi?id=205033
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/GeneralStyleDetailsSidebarPanel.css:
+        (.sidebar > .panel.details.css-style > .content):
+        Ensure that the main content of the sidebar panel takes up as much space as possible.
+
+2019-12-10  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Uncaught Exception: this._objectTree.resetPropertyPath is not a function. (In 'this._objectTree.resetPropertyPath()', 'this._objectTree.resetPropertyPath' is undefined)
+        https://bugs.webkit.org/show_bug.cgi?id=205026
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/ConsoleMessageView.js:
+        (WI.ConsoleMessageView.prototype.clearSessionState):
+        The `_objectTree` can also be an `WI.ErrorObjectView`, which doesn't have a property path.
+
+2019-12-06  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Uncaught Exception: Missing node for given nodeId
+        https://bugs.webkit.org/show_bug.cgi?id=204519
+
+        Reviewed by Timothy Hatcher.
+
+        When a DOM node is removed from the main DOM tree, the `InspectorDOMAgent` invalidates the
+        `DOM.NodeId` that was previously assigned to that DOM node, meaning that any future commands
+        sent by the frontend with that `DOM.NodeId` will fail.
+
+        Add logic to mark `WI.DOMNode` as being `destroyed` when this happens so the frontend can
+        decide to not invoke any commands with that `DOM.NodeId`.
+
+        Many functions have also switched to expecting a `WI.DOMNode` instead of a `DOM.NodeId` or
+        have been moved to `WI.DOMNode.prototype` in order to also be able to use `destroyed`.
+
+        This issue will eventually be mitigated by <https://webkit.org/b/189687>.
+
+        * UserInterface/Models/DOMNode.js:
+        (WI.DOMNode):
+        (WI.DOMNode.prototype.get destroyed): Added.
+        (WI.DOMNode.prototype.get attached):
+        (WI.DOMNode.prototype.markDestroyed): Added.
+        (WI.DOMNode.prototype.setNodeName):
+        (WI.DOMNode.prototype.setNodeValue):
+        (WI.DOMNode.prototype.setAttribute):
+        (WI.DOMNode.prototype.setAttributeValue):
+        (WI.DOMNode.prototype.querySelector): Added.
+        (WI.DOMNode.prototype.querySelectorAll): Added.
+        (WI.DOMNode.prototype.highlight): Added.
+        (WI.DOMNode.prototype.getOuterHTML):
+        (WI.DOMNode.prototype.setOuterHTML):
+        (WI.DOMNode.prototype.removeNode):
+        (WI.DOMNode.prototype.getEventListeners):
+
+        * UserInterface/Base/DOMUtilities.js:
+        (WI.bindInteractionsForNodeToElement):
+        * UserInterface/Controllers/DOMManager.js:
+        (WI.DOMManager.buildHighlightConfig):
+        (WI.DOMManager.wrapClientCallback):
+        (WI.DOMManager.prototype._loadNodeAttributes):
+        (WI.DOMManager.prototype._setDocument):
+        (WI.DOMManager.prototype._unbind):
+        (WI.DOMManager.prototype.highlightDOMNodeList):
+        (WI.DOMManager.prototype.highlightSelector):
+        (WI.DOMManager.prototype.hideDOMNodeHighlight):
+        (WI.DOMManager.prototype.highlightDOMNodeForTwoSeconds):
+        (WI.DOMManager.prototype.set inspectModeEnabled):
+        (WI.DOMManager.prototype.setInspectedNode):
+        (WI.DOMManager.prototype.setEventListenerDisabled):
+        (WI.DOMManager.prototype._wrapClientCallback): Deleted.
+        (WI.DOMManager.prototype.querySelector): Deleted.
+        (WI.DOMManager.prototype.querySelectorAll): Deleted.
+        (WI.DOMManager.prototype.highlightDOMNode): Deleted.
+        (WI.DOMManager.prototype._buildHighlightConfig): Deleted.
+        * UserInterface/Models/AuditTestCaseResult.js:
+        (WI.AuditTestCaseResult.async fromPayload):
+        * UserInterface/Models/MediaTimelineRecord.js:
+        (WI.MediaTimelineRecord.async fromJSON):
+        * UserInterface/Protocol/RemoteObject.js:
+        (WI.RemoteObject.resolveNode):
+        * UserInterface/Views/BoxModelDetailsSectionRow.js:
+        (WI.BoxModelDetailsSectionRow.prototype._highlightDOMNode):
+        * UserInterface/Views/CanvasOverviewContentView.js:
+        (WI.CanvasOverviewContentView.prototype._contentViewMouseEnter):
+        * UserInterface/Views/CanvasTreeElement.js:
+        (WI.CanvasTreeElement.prototype._handleMouseOver):
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForDOMNode):
+        * UserInterface/Views/DOMNodeDetailsSidebarPanel.js:
+        (WI.DOMNodeDetailsSidebarPanel.prototype.layout):
+        * UserInterface/Views/DOMTreeContentView.js:
+        (WI.DOMTreeContentView.prototype._domTreeSelectionDidChange):
+        * UserInterface/Views/DOMTreeElement.js:
+        (WI.DOMTreeElement.prototype.get editable):
+        (WI.DOMTreeElement.prototype.populateDOMNodeContextMenu):
+        * UserInterface/Views/DOMTreeElementPathComponent.js:
+        (WI.DOMTreeElementPathComponent.prototype.mouseOver):
+        * UserInterface/Views/DOMTreeOutline.js:
+        (WI.DOMTreeOutline.prototype.get editable):
+        (WI.DOMTreeOutline.prototype.populateContextMenu):
+        (WI.DOMTreeOutline.prototype._onmousemove):
+        (WI.DOMTreeOutline.prototype._ondragstart):
+        (WI.DOMTreeOutline.prototype._ondragover):
+        (WI.DOMTreeOutline.prototype._ondragleave):
+        (WI.DOMTreeOutline.prototype._ondragend):
+        (WI.DOMTreeOutline.prototype._hideElements):
+        * UserInterface/Views/FormattedValue.js:
+        (WI.FormattedValue.createElementForNodePreview):
+        * UserInterface/Views/GeneralStyleDetailsSidebarPanel.js:
+        (WI.GeneralStyleDetailsSidebarPanel.prototype.layout):
+        * UserInterface/Views/LayerDetailsSidebarPanel.js:
+        (WI.LayerDetailsSidebarPanel.prototype._dataGridMouseMove):
+        * UserInterface/Views/LayerTreeDetailsSidebarPanel.js:
+        (WI.LayerTreeDetailsSidebarPanel.prototype.layout):
+        (WI.LayerTreeDetailsSidebarPanel.prototype._highlightSelectedNode):
+        * UserInterface/Views/SpreadsheetCSSStyleDeclarationSection.js:
+        (WI.SpreadsheetCSSStyleDeclarationSection.prototype._highlightNodesWithSelector):
+
+2019-12-06  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: saving a file with the url "/" suggest the name "Untitled"
+        https://bugs.webkit.org/show_bug.cgi?id=204910
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Base/FileUtilities.js:
+        (WI.FileUtilities.save):
+        Allow callers to specify a `suggestedName` that is used if possible.
+
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForSourceCode):
+        (WI.appendContextMenuItemsForDOMNode):
+        * UserInterface/Views/TextResourceContentView.js:
+        (WI.TextResourceContentView.prototype.get saveData):
+        * UserInterface/Views/ResourceContentView.js:
+        (WI.ResourceContentView.prototype.get saveData):
+        If the path of the selected source code is just "/", set the `suggestedName` to "index" and
+        use an extension derived from the MIME type (if able).
+
+        * UserInterface/Controllers/AuditManager.js:
+        (WI.AuditManager.prototype.export):
+        * UserInterface/Views/ConsoleMessageView.js:
+        (WI.ConsoleMessageView.prototype._handleContextMenu):
+        * UserInterface/Views/HeapSnapshotContentView.js:
+        (WI.HeapSnapshotContentView.prototype._exportSnapshot):
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView.prototype.get saveData):
+        (WI.LogContentView.prototype._handleContextMenuEvent):
+        * UserInterface/Views/NetworkTableContentView.js:
+        (WI.NetworkTableContentView.prototype._exportHAR):
+        * UserInterface/Views/RecordingContentView.js:
+        (WI.RecordingContentView.prototype._exportRecording):
+        (WI.RecordingContentView.prototype._exportReduction):
+        * UserInterface/Views/ScriptContentView.js:
+        (WI.ScriptContentView.prototype.get saveData):
+        * UserInterface/Views/ShaderProgramContentView.js:
+        (WI.ShaderProgramContentView.prototype.get saveData):
+        * UserInterface/Views/TextContentView.js:
+        (WI.TextContentView.prototype.get saveData):
+        * UserInterface/Views/TimelineRecordingContentView.js:
+        (WI.TimelineRecordingContentView.prototype._exportTimelineRecording):
+        * UserInterface/Debug/ProtocolTrace.js:
+        (WI.ProtocolTrace.prototype.get saveData):
+        Prefer `suggestedName` vs `WI.FileUtilities.inspectorURLForFilename`, which is now always
+        called inside `WI.FileUtilities.save` anyways.
+
+2019-12-06  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r252652): Local Overrides: creating a local override for a resource loaded before Web Inspector was opened shows NaN for the Status Code
+        https://bugs.webkit.org/show_bug.cgi?id=204965
+
+        Reviewed by Joseph Pecoraro.
+
+        * UserInterface/Views/LocalResourceOverridePopover.js:
+        (WI.LocalResourceOverridePopover.prototype.show):
+        Make sure to update the object that holds the resource's original data in addition to the
+        object that holds the current edited values.
+        Drive-by: update the popover once all of the `CodeMirror`s have updated to hide scrollbars.
+
+2019-11-25  Brian Burg  <bburg@apple.com>
+
+        Web Inspector: TabActivity diagnostic event should sample the active tab uniformly
+        https://bugs.webkit.org/show_bug.cgi?id=204531
+
+        Reviewed by Devin Rousso.
+
+        Rewrite this class to use a uniform sampling approach. Every n seconds, a timer fires and
+        samples what the current tab is. If the last user interaction happened up to n seconds ago,
+        report a TabActivity diagnostic event. Keeping with the previous implementation, samples
+        are taken every n=60 seconds.
+
+        To account for bias in the initial sample when Web Inspector is open, wait m seconds for
+        the first sample. This accounts for the time between opening Web Inspector and choosing the
+        desired tab. In my testing, m=10 is enough time to load Web Inspector and switch
+        immediately to a different tab. In that case, the initial tab would not be sampled as the
+        active tab even if the last user interaction (clicking tab bar) happened while the initial
+        tab was displayed. If the recorder's setup() method is called some time after Web Inspector is
+        opened, then the initial delay will shrink to ensure at least 10s has elapsed since the frontend
+        finished loading.
+
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded): Keep a timestamp of when the frontend finished loading.
+
+        * UserInterface/Controllers/TabActivityDiagnosticEventRecorder.js:
+        (WI.TabActivityDiagnosticEventRecorder):
+        (WI.TabActivityDiagnosticEventRecorder.prototype.setup):
+        (WI.TabActivityDiagnosticEventRecorder.prototype.teardown):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._startInitialDelayBeforeSamplingTimer):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._stopInitialDelayBeforeSamplingTimer):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._startEventSamplingTimer):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._stopEventSamplingTimer):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._sampleCurrentTabActivity):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._didObserveUserInteraction):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._handleWindowFocus):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._handleWindowBlur):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._handleWindowKeyDown):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._handleWindowMouseDown):
+        (WI.TabActivityDiagnosticEventRecorder.prototype._didInteractWithTabContent): Deleted.
+        (WI.TabActivityDiagnosticEventRecorder.prototype._clearTabActivityTimeout): Deleted.
+        (WI.TabActivityDiagnosticEventRecorder.prototype._beginTabActivityTimeout): Deleted.
+        (WI.TabActivityDiagnosticEventRecorder.prototype._stopTrackingTabActivity): Deleted.
+        (WI.TabActivityDiagnosticEventRecorder.prototype._handleTabBrowserSelectedTabContentViewDidChange): Deleted.
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r242604): Console: unread indicator overlaps selection background of previous scope bar item
+        https://bugs.webkit.org/show_bug.cgi?id=204630
+
+        Reviewed by Timothy Hatcher.
+
+        When a new message is added that is immediately filtered, such as from an existing filter or
+        previously selected scope bar items, rather than show a blinking circle next to the level of
+        the new message in the scope bar (which doesn't cover the case where there's a filter and
+        was often hard to notice), add a dismissable warning banner explaning that the message had
+        been filtered with a button to clear all filters.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView):
+        (WI.LogContentView.prototype.didAppendConsoleMessageView):
+        (WI.LogContentView.prototype._previousMessageRepeatCountUpdated):
+        (WI.LogContentView.prototype._logCleared):
+        (WI.LogContentView.prototype._messageSourceBarSelectionDidChange):
+        (WI.LogContentView.prototype._scopeBarSelectionDidChange):
+        (WI.LogContentView.prototype._filterMessageElements):
+        (WI.LogContentView.prototype._showHiddenMessagesBannerIfNeeded): Added.
+        (WI.LogContentView.prototype._markScopeBarItemUnread): Deleted.
+        (WI.LogContentView.prototype._markScopeBarItemForMessageLevelUnread): Deleted.
+        * UserInterface/Views/LogContentView.css:
+        (.content-view.log):
+        (.content-view.log > .hidden-messages-banner): Added.
+        (.content-view.log > .hidden-messages-banner > button): Added.
+        (.content-view.log > .hidden-messages-banner > .dismiss): Added.
+        (body[dir=ltr] .content-view.log > .hidden-messages-banner > .dismiss): Added.
+        (body[dir=rtl] .content-view.log > .hidden-messages-banner > .dismiss): Added.
+        (.console-messages):
+        (.log-scope-bar > li:not(.unread) > .indicator): Deleted.
+        (.log-scope-bar > li.unread > .indicator): Deleted.
+        (.log-scope-bar > li.unread:hover > .indicator): Deleted.
+        (.log-scope-bar > li.unread.evaluations > .indicator): Deleted.
+        (.log-scope-bar > li.unread.errors > .indicator): Deleted.
+        (.log-scope-bar > li.unread.warnings > .indicator): Deleted.
+        (.log-scope-bar > li.unread.logs > .indicator): Deleted.
+        (@keyframes unread-background-pulse): Deleted.
+
+        * UserInterface/Views/FindBanner.js:
+        (WI.FindBanner):
+        (WI.FindBanner.prototype.clearAndBlur): Added.
+        (WI.FindBanner.prototype._clearAndBlur): Deleted.
+        Expose a public way to clear the find banner.
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: add WI.EngineeringSetting and WI.DebugSetting to avoid callsite checking
+        https://bugs.webkit.org/show_bug.cgi?id=204785
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Base/Setting.js:
+        (WI.Setting.prototype.get defaultValue): Added.
+        (WI.EngineeringSetting.prototype.get value): Added.
+        (WI.EngineeringSetting.prototype.set value): Added.
+        (WI.DebugSetting.prototype.get value): Added.
+        (WI.DebugSetting.prototype.set value): Added.
+        (WI.Setting.prototype.get valueRespectingDebugUIAvailability): Deleted.
+        Only get/set the `_value` if the `WI.isEngineeringBuild`/`WI.isDebugUIEnabled()`.
+
+        * UserInterface/Base/Main.js:
+        (WI.resolvedLayoutDirection):
+        * UserInterface/Protocol/RemoteObject.js:
+        (WI.RemoteObject.prototype.findFunctionSourceCodeLocation):
+        * UserInterface/Models/CSSProperty.js:
+        (WI.CSSProperty.prototype._updateOwnerStyleText):
+        * UserInterface/Models/CSSStyleDeclaration.js:
+        (WI.CSSStyleDeclaration.prototype.update):
+        * UserInterface/Proxies/HeapSnapshotEdgeProxy.js:
+        (WI.HeapSnapshotEdgeProxy.prototype.isPrivateSymbol):
+        * UserInterface/Controllers/DOMManager.js:
+        (WI.DOMManager.prototype.supportsEditingUserAgentShadowTrees):
+        * UserInterface/Controllers/DebuggerManager.js:
+        (WI.DebuggerManager.prototype.get knownNonResourceScripts):
+        (WI.DebuggerManager.prototype.debuggerDidPause):
+        (WI.DebuggerManager.prototype.scriptDidParse):
+        * UserInterface/Controllers/DiagnosticController.js:
+        (WI.DiagnosticController):
+        (WI.DiagnosticController.prototype._debugAutoLogDiagnosticEventsSettingDidChange):
+        (WI.DiagnosticController.prototype._updateRecorderStates):
+        * UserInterface/Views/ConsoleMessageView.js:
+        (WI.ConsoleMessageView.prototype._appendLocationLink):
+        * UserInterface/Views/HeapSnapshotDataGridTree.js:
+        (WI.HeapSnapshotInstancesDataGridTree.prototype.populateTopLevel):
+        * UserInterface/Views/OpenResourceDialog.js:
+        (WI.OpenResourceDialog.prototype._addScriptsForTarget):
+        * UserInterface/Views/SpreadsheetCSSStyleDeclarationEditor.js:
+        (WI.SpreadsheetCSSStyleDeclarationEditor):
+        * UserInterface/Views/StackTraceView.js:
+        (WI.StackTraceView):
+        * UserInterface/Views/View.js:
+        (WI.View.prototype._layoutSubtree):
+        * UserInterface/Debug/UncaughtExceptionReporter.js:
+        (handleUncaughtExceptionRecord):
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Console: copying an evaluation result shouldn't include the saved variable index
+        https://bugs.webkit.org/show_bug.cgi?id=204906
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/ConsoleMessageView.js:
+        (WI.ConsoleMessageView.prototype.toClipboardString):
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Elements: the Classes toggle is drawn on top of other content with no other way of scrolling to it
+        https://bugs.webkit.org/show_bug.cgi?id=204690
+
+        Reviewed by Timothy Hatcher.
+
+        Use a vertical flexbox for the contents of sidebar panels instead of absolute positioning so
+        that the variable height Classes "drawer" can have it's own scroll area and doesn't take up
+        any space from the rest of the panel's contents.
+
+        * UserInterface/Views/GeneralStyleDetailsSidebarPanel.js:
+        (WI.GeneralStyleDetailsSidebarPanel.prototype.initialLayout):
+        * UserInterface/Views/GeneralStyleDetailsSidebarPanel.css:
+        (.sidebar > .panel.details.css-style > .content):
+        (.sidebar > .panel.details.css-style > .content ~ :matches(.options-container, .class-list-container)):
+        (.sidebar > .panel.details.css-style > .content ~ .options-container):
+        (.sidebar > .panel.details.css-style > .content ~ .class-list-container):
+        (.sidebar > .panel.details.css-style > .content.has-filter-bar): Deleted.
+
+        * UserInterface/Views/Sidebar.css:
+        (.sidebar > .panel):
+        (.sidebar > .panel.selected): Deleted.
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Search: there should be some default content when there is no search string
+        https://bugs.webkit.org/show_bug.cgi?id=204631
+
+        Reviewed by Timothy Hatcher.
+
+        It's very odd to switch to the Search Tab and find it completely empty, especially if you've
+        never used it before.
+
+        Add basic "No Search String" and "No Search Results" text with a clickable help navigation
+        item that reveals and focuses the sidebar search input.
+
+        * UserInterface/Views/SearchSidebarPanel.js:
+        (WI.SearchSidebarPanel.prototype.showDefaultContentView): Added.
+        (WI.SearchSidebarPanel.prototype.performSearch):
+        (WI.SearchSidebarPanel.prototype._handleDefaultContentViewSearchNavigationItemClicked): Added.
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: move the "Add Breakpoint" context menu to be next to the blackboxing context menu item
+        https://bugs.webkit.org/show_bug.cgi?id=204833
+
+        Reviewed by Timothy Hatcher.
+
+        Both items are related to JavaScript debugging, so they should be closer together.
+
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForSourceCode):
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Support search on IndexedDB stores and indexes
+        https://bugs.webkit.org/show_bug.cgi?id=129208
+        <rdar://problem/16142046>
+
+        Reviewed by Timothy Hatcher.
+
+        Add filter bars to the navigation bars for `IndexedDB`, `LocalStorage`, and `SessionStorage`.
+
+        * UserInterface/Views/StorageTabContentView.js:
+        (WI.StorageTabContentView.prototype.get canHandleFindEvent): Added.
+        (WI.StorageTabContentView.prototype.handleFindEvent): Added.
+
+        * UserInterface/Views/DOMStorageContentView.js:
+        (WI.DOMStorageContentView):
+        (WI.DOMStorageContentView.prototype.get navigationItems): Added.
+        (WI.DOMStorageContentView.prototype.get canFocusFilterBar): Added.
+        (WI.DOMStorageContentView.prototype.focusFilterBar): Added.
+        (WI.DOMStorageContentView.prototype._handleFilterBarFilterDidChange): Added.
+
+        * UserInterface/Views/IndexedDatabaseObjectStoreContentView.js:
+        (WI.IndexedDatabaseObjectStoreContentView):
+        (WI.IndexedDatabaseObjectStoreContentView.prototype.get navigationItems):
+        (WI.IndexedDatabaseObjectStoreContentView.prototype.get canFocusFilterBar): Added.
+        (WI.IndexedDatabaseObjectStoreContentView.prototype.focusFilterBar): Added.
+        (WI.IndexedDatabaseObjectStoreContentView.prototype.dataGridMatchNodeAgainstCustomFilters): Added.
+        (WI.IndexedDatabaseObjectStoreContentView.prototype._handleFilterBarFilterDidChange): Added.
+        Check against the `textContent` of each cell for a given `WI.DataGridNode` to see if it
+        matches the filter text as all of the pieces of data are `WI.RemoteObject`s.
+
+        * UserInterface/Views/FilterBar.css:
+        (.filter-bar):
+        * UserInterface/Views/NetworkTableContentView.css:
+        (.content-view.network .navigation-bar .filter-bar): Deleted.
+        Remove the `background-color` to let it match the background content.
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Network: pressing ⌘F when no network item is selected should focus the filter bar
+        https://bugs.webkit.org/show_bug.cgi?id=204862
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/NetworkTabContentView.js:
+        (WI.NetworkTabContentView.prototype.get canHandleFindEvent): Added.
+        (WI.NetworkTabContentView.prototype.handleFindEvent): Added.
+
+        * UserInterface/Views/NetworkTableContentView.js:
+        (WI.NetworkTableContentView.prototype.get canFocusFilterBar): Added.
+        (WI.NetworkTableContentView.prototype.focusFilterBar): Added.
+
+2019-12-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Quick Console: pressing ⌘F shows a second find banner
+        https://bugs.webkit.org/show_bug.cgi?id=204861
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView.prototype.get supportsCustomFindBanner):
+
+2019-12-05  Simon Fraser  <simon.fraser@apple.com>
+
+        Fix inspector/css test assertions after r253158 
+        https://bugs.webkit.org/show_bug.cgi?id=204924
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Controllers/CSSManager.js:
+        (WI.CSSManager.displayNameForPseudoId):
+
+2019-12-04  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: allow inspector to pause provisional page load and restore its state
+        https://bugs.webkit.org/show_bug.cgi?id=204170
+
+        Reviewed by Devin Rousso.
+
+        All new targets are now automatically paused on start. For such provisional targets target
+        manager will run regular initilization code (enable agents etc.) and then resume loading of
+        the target. Responses and events from the target are defferred until the target is committed
+        and becomes current main target. When the target manager receives event that the provisional
+        target has been committed all accumulated protocol messages are replayed and going forward all
+        new missages will be dispatched as usual.
+
+        * UserInterface/Controllers/TargetManager.js:
+        (WI.TargetManager):
+        (WI.TargetManager.prototype.targetCreated):
+        (WI.TargetManager.prototype.didCommitProvisionalTarget):
+        (WI.TargetManager.prototype.targetDestroyed):
+        (WI.TargetManager.prototype.dispatchMessageFromTarget):
+        (WI.TargetManager.prototype._createTarget):
+        (WI.TargetManager.prototype._checkAndHandlePageTargetTransition):
+        (WI.TargetManager.prototype._checkAndHandlePageTargetTermination):
+        * UserInterface/Protocol/Connection.js:
+        (InspectorBackend.Connection):
+        (InspectorBackend.Connection.prototype.addProvisionalMessage):
+        (InspectorBackend.Connection.prototype.dispatchProvisionalMessages):
+        * UserInterface/Protocol/MultiplexingBackendTarget.js:
+        (WI.MultiplexingBackendTarget.prototype.initialize):
+        * UserInterface/Protocol/PageTarget.js:
+        (WI.PageTarget):
+        * UserInterface/Protocol/Target.js:
+        (WI.Target.prototype.initialize):
+        (WI.Target.prototype.get isProvisional):
+        (WI.Target.prototype.get isPaused):
+        (WI.Target.prototype.didCommitProvisionalTarget):
+        * UserInterface/Protocol/WorkerTarget.js:
+
+2019-12-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: prefer non-blackboxed scripts when showing a source code location link
+        https://bugs.webkit.org/show_bug.cgi?id=204811
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Models/StackTrace.js:
+        (WI.StackTrace.prototype.get firstNonNativeNonAnonymousNotBlackboxedCallFrame): Added.
+        (WI.StackTrace.prototype.get firstNonNativeCallFrame): Deleted.
+        (WI.StackTrace.prototype.get firstNonNativeNonAnonymousCallFrame): Deleted.
+        Include logic to skip call frames that are blackboxed, unless there are no non-blackboxed
+        call frames, in which case fall back to the first non-native non-anonymous call frame.
+        Drive-by: remove unused function.
+
+        * UserInterface/Views/ConsoleMessageView.js:
+        (WI.ConsoleMessageView.prototype.render):
+        (WI.ConsoleMessageView.prototype.clearSessionState): Added.
+        (WI.ConsoleMessageView.prototype._appendLocationLink):
+        (WI.ConsoleMessageView.prototype._handleDebuggerBlackboxChanged): Added.
+        (WI.ConsoleMessageView.prototype.clearSavedVariableState): Deleted.
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView.prototype._sessionStarted):
+        (WI.LogContentView.prototype._logCleared):
+        Listen for changes to the debugger blackbox to re-render the location link.
+
+        * UserInterface/Views/StackTraceView.js:
+        (WI.StackTraceView):
+        * UserInterface/Views/CallFrameView.js:
+        (WI.CallFrameView):
+        * UserInterface/Views/CallFrameView.css:
+        (.call-frame.blackboxed > .title, .call-frame.blackboxed:not(:hover, :focus) > .subtitle): Added.
+        Add a constructor option to control whether blackboxed frames are indicated visually.
+
+2019-12-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Uncaught Exception: undefined is not an object (evaluating 'navigationItem.parentNavigationBar')
+        https://bugs.webkit.org/show_bug.cgi?id=204830
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Controllers/CSSManager.js:
+        (WI.CSSManager.prototype._mainResourceDidChange):
+        When the main resource changes, make sure to clear the `_forcedAppearance` member variable.
+        This way, when the main `WI.DOMTreeContentView` reloads, it isn't left in an unknown state.
+
+        * UserInterface/Views/DOMTreeContentView.js:
+        (WI.DOMTreeContentView):
+        (WI.DOMTreeContentView.prototype._defaultAppearanceDidChange):
+        (WI.DOMTreeContentView.prototype._toggleAppearance):
+        Always create the Force Appearance navigation item, rather than destroying and recreating it
+        each time the page navigates. Instead, just update the tooltip (which was all that really
+        changed) whenever the default appearance changes. Depending on the timing of events during a
+        page navigation, `_forceAppearanceButtonNavigationItem` could be `null`.
+
+        * UserInterface/Views/ActivateButtonNavigationItem.js:
+        (WI.ActivateButtonNavigationItem.prototype.set defaultToolTip): Added.
+        (WI.ActivateButtonNavigationItem.prototype.set activatedToolTip): Added.
+        Allow the various tooltips to be updated after creation.
+
+2019-12-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Timelines: stopping time marker is permanently removed when the current recording is cleared
+        https://bugs.webkit.org/show_bug.cgi?id=204827
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/TimelineOverview.js:
+        (WI.TimelineOverview.prototype._recordingReset):
+        Re-add the marker (and ensure that it's hidden) when the active recording is reset.
+
+2019-12-02  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Provide UI to convert between sRGB and p3 color spaces
+        https://bugs.webkit.org/show_bug.cgi?id=203534
+        <rdar://problem/56688523>
+
+        Reviewed by Devin Rousso.
+
+        Add context menus:
+        - "Convert to sRGB" and "Clamp to sRGB" for p3 colors, such as `color(display-p3 0 1 0)`.
+        - "Convert to Display-P3" for sRGB colors, such as `rgb(0, 255, 0)`.
+
+        Shift-clicking the color swatch of sRGB colors now goes through the color function syntax as well.
+        Shift-clicking the color swatch of Display-P3 colors converts the color to sRGB when it can be lossless.
+        When the convertion cannot be lossless, Web Inspector beeps.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/Base/Utilities.js:
+        * UserInterface/Models/Color.js:
+        (WI.Color):
+        Introduce `_normalizedRGB` property, which stores rgb values from 0 to 1.
+        Previously, `_rgba` stored values from 0 to 1 for color function format, and from 0 to 255 otherwise.
+        That required format checks before every `rgb` value access and resulted in silent errors when
+        the values were in the wrong format.
+
+        Store alpha as a separate property to simplify format conversion. Previously, alpha was duplicated between `_rgba` and `_hsla`.
+
+        (WI.Color.displayP3toSRGB):
+        (WI.Color.srgbToDisplayP3): Added.
+        (WI.Color.prototype.nextFormat):
+        (WI.Color.prototype.get rgb):
+        (WI.Color.prototype.get hsl):
+        (WI.Color.prototype.get normalizedRGB):
+        (WI.Color.prototype.get rgba):
+        (WI.Color.prototype.get hsla):
+        (WI.Color.prototype.get normalizedRGBA):
+        (WI.Color.prototype.get gamut):
+        (WI.Color.prototype.set gamut):
+        (WI.Color.prototype.copy):
+        (WI.Color.prototype.isKeyword):
+        (WI.Color.prototype.isOutsideSRGB): Added.
+        (WI.Color.prototype.canBeSerializedAsShortHEX):
+        (WI.Color.prototype._toKeywordString):
+        (WI.Color.prototype._toShortHEXString):
+        (WI.Color.prototype._toHEXString):
+        (WI.Color.prototype._toShortHEXAlphaString):
+        (WI.Color.prototype._toHEXAlphaString):
+        (WI.Color.prototype._toRGBString):
+        (WI.Color.prototype._toRGBAString):
+        (WI.Color.prototype._toFunctionString):
+        Limit the values to 4 decimals.
+
+        (WI.Color.prototype._toHSLString):
+        (WI.Color.prototype._toHSLAString):
+        (WI.Color.prototype._hslToRGB):
+        * UserInterface/Views/ColorPicker.js:
+        (WI.ColorPicker.prototype._updateColor):
+        (WI.ColorPicker.prototype._updateOpacitySlider):
+        * UserInterface/Views/ColorSquare.css:
+        (.color-square > .svg-root):
+        (.color-square > .svg-root > .srgb-edge):
+        (.color-square > .srgb-label):
+        (.color-square > .srgb-label:hover):
+        (.color-square > .srgb-label:hover + .svg-root > .srgb-edge):
+        (@media (-webkit-device-pixel-ratio: 1)):
+        (.color-square > .srgb-edge):
+        * UserInterface/Views/ColorSquare.js:
+        (WI.ColorSquare.prototype.set tintedColor):
+        (WI.ColorSquare.prototype._drawSRGBOutline):
+        (WI.ColorSquare):
+
+        * UserInterface/Views/InlineSwatch.js:
+        (WI.InlineSwatch):
+        (WI.InlineSwatch.prototype._updateSwatch):
+        (WI.InlineSwatch.prototype._allowShiftClickColor): Added.
+        (WI.InlineSwatch.prototype._handleContextMenuEvent):
+
+2019-12-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Console: the saved result value is still shown after page reload
+        https://bugs.webkit.org/show_bug.cgi?id=204532
+
+        Reviewed by Brian Burg.
+
+        Add additional plumbing to remove any `.console-saved-variable` elements whenever a new
+        session is created, as well as reset the base of the property path to `this`.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView.prototype._sessionStarted):
+        (WI.LogContentView.prototype._logCleared):
+
+        * UserInterface/Views/ConsoleMessageView.js:
+        (WI.ConsoleMessageView.prototype.clearSavedVariableState): Added.
+        (WI.ConsoleMessageView.prototype.removeEventListeners): Deleted.
+
+        * UserInterface/Views/ObjectTreeView.js:
+        (WI.ObjectTreeView.prototype.resetPropertyPath): Added.
+
 2019-11-22  Devin Rousso  <drousso@apple.com>
 
         Web Inspector: Uncaught Exception: TypeError: undefined is not an object (evaluating 'target.PageAgent.getCompositingBordersVisible')

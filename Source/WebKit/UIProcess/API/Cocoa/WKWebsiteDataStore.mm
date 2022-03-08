@@ -39,6 +39,7 @@
 #import "WebResourceLoadStatisticsStore.h"
 #import "WebResourceLoadStatisticsTelemetry.h"
 #import "WebsiteDataFetchOption.h"
+#import "_WKResourceLoadStatisticsThirdPartyInternal.h"
 #import "_WKWebsiteDataStoreConfigurationInternal.h"
 #import "_WKWebsiteDataStoreDelegate.h"
 #import <WebCore/Credential.h>
@@ -280,6 +281,17 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     _websiteDataStore->setResourceLoadStatisticsEnabled(enabled);
 }
 
+- (void)_setUseITPDatabase:(BOOL)enabled completionHandler:(void (^)(void))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    _websiteDataStore->setUseITPDatabase(enabled, [completionHandler = makeBlockPtr(completionHandler)]() {
+        completionHandler();
+    });
+#else
+    completionHandler();
+#endif
+}
+
 - (BOOL)_resourceLoadStatisticsDebugMode
 {
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
@@ -515,6 +527,21 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     });
 #else
     completionHandler();
+#endif
+}
+
+- (void)_getResourceLoadStatisticsDataSummary:(void (^)(NSArray<_WKResourceLoadStatisticsThirdParty *> *))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    _websiteDataStore->getResourceLoadStatisticsDataSummary([completionHandler = makeBlockPtr(completionHandler)] (auto&& thirdPartyDomains) {
+        NSMutableArray<_WKResourceLoadStatisticsThirdParty *> *apiThirdParties = [[[NSMutableArray alloc] initWithCapacity:thirdPartyDomains.size()] autorelease];
+        for (auto& thirdParty : thirdPartyDomains)
+            [apiThirdParties addObject:wrapper(API::ResourceLoadStatisticsThirdParty::create(WTFMove(thirdParty)))];
+
+        completionHandler(apiThirdParties);
+    });
+#else
+    completionHandler(nil);
 #endif
 }
 

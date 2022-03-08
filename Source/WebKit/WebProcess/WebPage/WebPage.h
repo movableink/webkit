@@ -202,6 +202,7 @@ struct GlobalWindowIdentifier;
 struct Highlight;
 struct KeypressCommand;
 struct PromisedAttachmentInfo;
+struct RunJavaScriptParameters;
 struct TextCheckingResult;
 struct ViewportArguments;
 
@@ -730,7 +731,7 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(IOS_TOUCH_EVENTS)
-    void dispatchAsynchronousTouchEvents(const Vector<WebTouchEvent, 1>& queue);
+    void dispatchAsynchronousTouchEvents(const Vector<std::pair<WebTouchEvent, Optional<CallbackID>>, 1>& queue);
 #endif
 
     bool hasRichlyEditableSelection() const;
@@ -742,12 +743,16 @@ public:
         PageSuspended           = 1 << 3,
         Printing                = 1 << 4,
         ProcessSwap             = 1 << 5,
+        SwipeAnimation          = 1 << 6,
     };
     void freezeLayerTree(LayerTreeFreezeReason);
     void unfreezeLayerTree(LayerTreeFreezeReason);
 
     void markLayersVolatile(Function<void(bool)>&& completionHandler = { });
     void cancelMarkLayersVolatile();
+
+    void freezeLayerTreeDueToSwipeAnimation();
+    void unfreezeLayerTreeDueToSwipeAnimation();
 
     NotificationPermissionRequestManager* notificationPermissionRequestManager();
 
@@ -786,10 +791,11 @@ public:
 
     SandboxExtensionTracker& sandboxExtensionTracker() { return m_sandboxExtensionTracker; }
 
-#if PLATFORM(QT) || PLATFORM(GTK)
-    void setComposition(const String&, const Vector<WebCore::CompositionUnderline>&, const EditingRange& selectionRange);
-    void confirmComposition(const String& text);
+#if PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(WPE)
+    void cancelComposition(const String& text);
+#endif
 
+#if PLATFORM(GTK)
     void collapseSelectionInFrame(WebCore::FrameIdentifier);
     void showEmojiPicker(WebCore::Frame&);
 
@@ -1096,7 +1102,7 @@ public:
     void postSynchronousMessageForTesting(const String& messageName, API::Object* messageBody, RefPtr<API::Object>& returnData);
     void postMessageIgnoringFullySynchronousMode(const String& messageName, API::Object* messageBody);
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     void setInputMethodState(bool);
 #endif
 
@@ -1352,7 +1358,7 @@ private:
     void loadDataImpl(uint64_t navigationID, bool shouldTreatAsContinuingLoad, Optional<WebsitePoliciesData>&&, Ref<WebCore::SharedBuffer>&&, const String& MIMEType, const String& encodingName, const URL& baseURL, const URL& failingURL, const UserData&, WebCore::ShouldOpenExternalURLsPolicy = WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow);
 
     // Actions
-    void tryClose();
+    void tryClose(CompletionHandler<void(bool)>&&);
     void platformDidReceiveLoadParameters(const LoadParameters&);
     void loadRequest(LoadParameters&&);
     NO_RETURN void loadRequestWaitingForProcessLaunch(LoadParameters&&, URL&&, WebPageProxyIdentifier, bool);
@@ -1450,8 +1456,8 @@ private:
     void getSelectionAsWebArchiveData(CallbackID);
     void getSourceForFrame(WebCore::FrameIdentifier, CallbackID);
     void getWebArchiveOfFrame(WebCore::FrameIdentifier, CallbackID);
-    void runJavaScript(WebFrame*, const String&, bool forceUserGesture, const Optional<String>& worldName, CallbackID);
-    void runJavaScriptInMainFrameScriptWorld(const String&, bool forceUserGesture, const Optional<String>& worldName, CallbackID);
+    void runJavaScript(WebFrame*, WebCore::RunJavaScriptParameters&&, const Optional<String>& worldName, CallbackID);
+    void runJavaScriptInMainFrameScriptWorld(WebCore::RunJavaScriptParameters&&, const Optional<String>& worldName, CallbackID);
     void runJavaScriptInFrame(WebCore::FrameIdentifier, const String&, bool forceUserGesture, CallbackID);
     void forceRepaint(CallbackID);
     void takeSnapshot(WebCore::IntRect snapshotRect, WebCore::IntSize bitmapSize, uint32_t options, CallbackID);
@@ -1537,7 +1543,7 @@ private:
     void didReceiveNotificationPermissionDecision(uint64_t notificationID, bool allowed);
 
 #if ENABLE(MEDIA_STREAM)
-    void userMediaAccessWasGranted(uint64_t userMediaID, WebCore::CaptureDevice&& audioDeviceUID, WebCore::CaptureDevice&& videoDeviceUID, String&& mediaDeviceIdentifierHashSalt, CompletionHandler<void()>&&);
+    void userMediaAccessWasGranted(uint64_t userMediaID, WebCore::CaptureDevice&& audioDeviceUID, WebCore::CaptureDevice&& videoDeviceUID, String&& mediaDeviceIdentifierHashSalt, SandboxExtension::Handle&&, CompletionHandler<void()>&&);
     void userMediaAccessWasDenied(uint64_t userMediaID, uint64_t reason, String&& invalidConstraint);
 
 #endif
@@ -1980,7 +1986,7 @@ private:
     enum class EditorStateIsContentEditable { No, Yes, Unset };
     mutable EditorStateIsContentEditable m_lastEditorStateWasContentEditable { EditorStateIsContentEditable::Unset };
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     bool m_inputMethodEnabled { false };
 #endif
 

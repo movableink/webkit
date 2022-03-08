@@ -510,6 +510,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 - (void)setGamepadsEnabled:(BOOL)flag;
 - (BOOL)gamepadsEnabled;
 
+- (void)setHighlightAPIEnabled:(BOOL)flag;
+- (BOOL)highlightAPIEnabled;
+
 - (void)setMediaPreloadingEnabled:(BOOL)flag;
 - (BOOL)mediaPreloadingEnabled;
 
@@ -573,6 +576,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 - (void)setWebAnimationsEnabled:(BOOL)flag;
 - (BOOL)webAnimationsEnabled;
 
+- (void)setWebAnimationsCompositeOperationsEnabled:(BOOL)flag;
+- (BOOL)webAnimationsCompositeOperationsEnabled;
+
 - (void)setPointerEventsEnabled:(BOOL)flag;
 - (BOOL)pointerEventsEnabled;
 
@@ -624,6 +630,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 - (void)setCSSShadowPartsEnabled:(BOOL)flag;
 - (BOOL)cssShadowPartsEnabled;
 
+- (BOOL)isInAppBrowserPrivacyEnabled;
+- (void)setInAppBrowserPrivacyEnabled:(BOOL)flag;
+
 @property (nonatomic) BOOL visualViewportAPIEnabled;
 @property (nonatomic) BOOL CSSOMViewScrollingAPIEnabled;
 @property (nonatomic) BOOL largeImageAsyncDecodingEnabled;
@@ -636,7 +645,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL intersectionObserverEnabled;
 @property (nonatomic) BOOL menuItemElementEnabled;
 @property (nonatomic) BOOL keygenElementEnabled;
-@property (nonatomic) BOOL displayContentsEnabled;
 @property (nonatomic) BOOL userTimingEnabled;
 @property (nonatomic) BOOL resourceTimingEnabled;
 @property (nonatomic) BOOL linkPreloadEnabled;
@@ -646,6 +654,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL encryptedMediaAPIEnabled;
 @property (nonatomic) BOOL pictureInPictureAPIEnabled;
 @property (nonatomic) BOOL genericCueAPIEnabled;
+@property (nonatomic) BOOL useGPUProcessForMedia;
 @property (nonatomic) BOOL viewportFitEnabled;
 @property (nonatomic) BOOL constantPropertiesEnabled;
 @property (nonatomic) BOOL colorFilterEnabled;

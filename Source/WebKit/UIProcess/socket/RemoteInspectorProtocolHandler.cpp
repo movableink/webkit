@@ -81,18 +81,55 @@ private:
     Function<void()> m_loadedCallback;
 };
 
+static Optional<Inspector::DebuggableType> parseDebuggableTypeFromString(const String& debuggableTypeString)
+{
+    if (debuggableTypeString == "javascript"_s)
+        return Inspector::DebuggableType::JavaScript;
+    if (debuggableTypeString == "page"_s)
+        return Inspector::DebuggableType::Page;
+    if (debuggableTypeString == "service-worker"_s)
+        return Inspector::DebuggableType::ServiceWorker;
+    if (debuggableTypeString == "web-page"_s)
+        return Inspector::DebuggableType::WebPage;
+
+    return WTF::nullopt;
+}
+
+static String debuggableTypeToString(Inspector::DebuggableType debuggableType)
+{
+    switch (debuggableType) {
+    case Inspector::DebuggableType::JavaScript:
+        return "javascript"_s;
+    case Inspector::DebuggableType::Page:
+        return "page"_s;
+    case Inspector::DebuggableType::ServiceWorker:
+        return "service-worker"_s;
+    case Inspector::DebuggableType::WebPage:
+        return "web-page"_s;
+    }
+
+    ASSERT_NOT_REACHED();
+    return String();
+}
+
 void RemoteInspectorProtocolHandler::inspect(const String& hostAndPort, ConnectionID connectionID, TargetID targetID, const String& type)
 {
+    auto debuggableType = parseDebuggableTypeFromString(type);
+    if (!debuggableType) {
+        LOG_ERROR("Unknown debuggable type: \"%s\"", type.utf8().data());
+        return;
+    }
+
     if (m_inspectorClient)
-        m_inspectorClient->inspect(connectionID, targetID, type);
+        m_inspectorClient->inspect(connectionID, targetID, debuggableType.value());
 }
 
 void RemoteInspectorProtocolHandler::runScript(const String& script)
 {
-    m_page.runJavaScriptInMainFrame(script, false,
-        [](API::SerializedScriptValue*, bool hadException, const WebCore::ExceptionDetails& exceptionDetails, CallbackBase::Error) {
-            if (hadException)
-                LOG_ERROR("Exception running script \"%s\"", exceptionDetails.message.utf8().data());
+    m_page.runJavaScriptInMainFrame({ script, false, WTF::nullopt, false }, 
+        [](API::SerializedScriptValue*, Optional<WebCore::ExceptionDetails> exceptionDetails, CallbackBase::Error) {
+            if (exceptionDetails)
+                LOG_ERROR("Exception running script \"%s\"", exceptionDetails->message.utf8().data());
     });
 }
 
@@ -108,7 +145,7 @@ void RemoteInspectorProtocolHandler::targetListChanged(RemoteInspectorClient& cl
                 html.append(makeString(
                     "<tbody><tr>"
                     "<td class=\"data\"><div class=\"targetname\">", target.name, "</div><div class=\"targeturl\">", target.url, "</div></td>"
-                    "<td class=\"input\"><input type=\"button\" value=\"Inspect\" onclick=\"window.webkit.messageHandlers.inspector.postMessage(\\'", connectionID, ":", target.id, ":", target.type, "\\');\"></td>"
+                    "<td class=\"input\"><input type=\"button\" value=\"Inspect\" onclick=\"window.webkit.messageHandlers.inspector.postMessage(\\'", connectionID, ":", target.id, ":", debuggableTypeToString(target.type), "\\');\"></td>"
                     "</tr></tbody>"
                 ));
             }
@@ -156,13 +193,13 @@ void RemoteInspectorProtocolHandler::platformStartTask(WebPageProxy& pageProxy, 
         "  html { font-family: -webkit-system-font; font-size: 11pt; color: #2e3436; padding: 20px 20px 0 20px; background-color: #f6f6f4; "
         "         background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #eeeeec), color-stop(1, #f6f6f4));"
         "         background-size: 100% 5em; background-repeat: no-repeat; }"
-        "  table { width: 100%; border-collapse: collapse; }"
+        "  table { width: 100%; border-collapse: collapse; table-layout: fixed; }"
         "  table, td { border: 1px solid #d3d7cf; border-left: none; border-right: none; }"
         "  p { margin-bottom: 30px; }"
         "  td { padding: 15px; }"
         "  td.data { width: 200px; }"
-        "  .targetname { font-weight: bold; }"
-        "  .targeturl { color: #babdb6; }"
+        "  .targetname { font-weight: bold; overflow: hidden; white-space:nowrap; text-overflow: ellipsis; }"
+        "  .targeturl { color: #babdb6; background: #eee; word-wrap: break-word; overflow-wrap: break-word; }"
         "  td.input { width: 64px; }"
         "  input { width: 100%; padding: 8px; }"
         "</style>"

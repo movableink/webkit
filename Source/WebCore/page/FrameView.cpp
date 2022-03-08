@@ -799,6 +799,18 @@ void FrameView::willRecalcStyle()
     renderView->compositor().willRecalcStyle();
 }
 
+void FrameView::styleDidChange()
+{
+    ScrollView::styleDidChange();
+    RenderView* renderView = this->renderView();
+    if (!renderView)
+        return;
+
+    RenderLayer* layerTreeMutationRoot = renderView->takeStyleChangeLayerTreeMutationRoot();
+    if (layerTreeMutationRoot && !needsLayout())
+        layerTreeMutationRoot->updateLayerPositionsAfterStyleChange();
+}
+
 bool FrameView::updateCompositingLayersAfterStyleChange()
 {
     // If we expect to update compositing after an incipient layout, don't do so here.
@@ -2795,14 +2807,12 @@ void FrameView::layoutOrVisualViewportChanged()
     }
 }
 
-#if PLATFORM(IOS_FAMILY)
-
 void FrameView::unobscuredContentSizeChanged()
 {
+#if PLATFORM(IOS_FAMILY)
     updateTiledBackingAdaptiveSizing();
-}
-
 #endif
+}
 
 static LayerFlushThrottleState::Flags determineLayerFlushThrottleState(Page& page)
 {
@@ -3697,7 +3707,8 @@ void FrameView::invalidateScrollbarRect(Scrollbar& scrollbar, const IntRect& rec
 
 float FrameView::visibleContentScaleFactor() const
 {
-    if (!frame().isMainFrame() || !frame().settings().delegatesPageScaling())
+    // FIXME: This !delegatesPageScaling() is confusing. This function should probably be renamed to delegatedPageScaleFactor().
+    if (!frame().isMainFrame() || !delegatesPageScaling())
         return 1;
 
     Page* page = frame().page();

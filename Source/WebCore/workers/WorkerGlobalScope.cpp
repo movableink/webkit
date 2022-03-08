@@ -28,12 +28,13 @@
 #include "config.h"
 #include "WorkerGlobalScope.h"
 
+#include "CSSValueList.h"
+#include "CSSValuePool.h"
 #include "ContentSecurityPolicy.h"
 #include "Crypto.h"
 #include "IDBConnectionProxy.h"
 #include "ImageBitmapOptions.h"
 #include "InspectorInstrumentation.h"
-#include "Microtasks.h"
 #include "Performance.h"
 #include "RuntimeEnabledFeatures.h"
 #include "ScheduledAction.h"
@@ -525,6 +526,13 @@ void WorkerGlobalScope::createImageBitmap(ImageBitmap::Source&& source, ImageBit
 void WorkerGlobalScope::createImageBitmap(ImageBitmap::Source&& source, int sx, int sy, int sw, int sh, ImageBitmapOptions&& options, ImageBitmap::Promise&& promise)
 {
     ImageBitmap::createPromise(*this, WTFMove(source), WTFMove(options), sx, sy, sw, sh, WTFMove(promise));
+}
+
+CSSValuePool& WorkerGlobalScope::cssValuePool()
+{
+    if (!m_cssValuePool)
+        m_cssValuePool = makeUnique<CSSValuePool>();
+    return *m_cssValuePool;
 }
 
 } // namespace WebCore

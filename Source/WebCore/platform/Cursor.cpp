@@ -26,8 +26,6 @@
 #include "config.h"
 #include "Cursor.h"
 
-#if !PLATFORM(IOS_FAMILY)
-
 #include "Image.h"
 #include "IntRect.h"
 #include "NotImplemented.h"
@@ -193,7 +191,7 @@ PlatformCursor Cursor::platformCursor() const
     ensurePlatformCursor();
     return m_platformCursor ? &m_platformCursor.value() : nullptr;
 }
-#elif !PLATFORM(COCOA)
+#elif !HAVE(NSCURSOR)
 
 PlatformCursor Cursor::platformCursor() const
 {
@@ -461,14 +459,18 @@ const Cursor& grabbingCursor()
     return c;
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
+#if !HAVE(NSCURSOR) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
 void Cursor::ensurePlatformCursor() const
 {
     notImplemented();
 }
 #endif
 
+#if !HAVE(NSCURSOR)
+void Cursor::setAsPlatformCursor() const
+{
+    notImplemented();
+}
+#endif
+
 } // namespace WebCore
-
-#endif // !PLATFORM(IOS_FAMILY)
-

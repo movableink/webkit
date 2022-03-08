@@ -150,6 +150,20 @@ Ref<WebProcessProxy> WebProcessProxy::createForServiceWorkers(WebProcessPool& pr
 }
 #endif
 
+#if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
+class UIProxyForCapture final : public UserMediaCaptureManagerProxy::ConnectionProxy {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    explicit UIProxyForCapture(WebProcessProxy& process) : m_process(process) { }
+private:
+    void addMessageReceiver(IPC::StringReference messageReceiverName, IPC::MessageReceiver& receiver) final { m_process.addMessageReceiver(messageReceiverName, receiver); }
+    void removeMessageReceiver(IPC::StringReference messageReceiverName) final { m_process.removeMessageReceiver(messageReceiverName); }
+    IPC::Connection& connection() final { return *m_process.connection(); }
+
+    WebProcessProxy& m_process;
+};
+#endif
+
 WebProcessProxy::WebProcessProxy(WebProcessPool& processPool, WebsiteDataStore* websiteDataStore, IsPrewarmed isPrewarmed)
     : AuxiliaryProcessProxy(processPool.alwaysRunsAtBackgroundPriority())
     , m_responsivenessTimer(*this)
@@ -162,7 +176,7 @@ WebProcessProxy::WebProcessProxy(WebProcessPool& processPool, WebsiteDataStore* 
     , m_visiblePageCounter([this](RefCounterEvent) { updateBackgroundResponsivenessTimer(); })
     , m_websiteDataStore(websiteDataStore)
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
-    , m_userMediaCaptureManagerProxy(makeUnique<UserMediaCaptureManagerProxy>(*this))
+    , m_userMediaCaptureManagerProxy(makeUnique<UserMediaCaptureManagerProxy>(makeUniqueRef<UIProxyForCapture>(*this)))
 #endif
     , m_isPrewarmed(isPrewarmed == IsPrewarmed::Yes)
 {
@@ -678,6 +692,13 @@ void WebProcessProxy::getNetworkProcessConnection(Messages::WebProcessProxy::Get
     m_processPool->getNetworkProcessConnection(*this, WTFMove(reply));
 }
 
+#if ENABLE(GPU_PROCESS)
+void WebProcessProxy::getGPUProcessConnection(Messages::WebProcessProxy::GetGPUProcessConnection::DelayedReply&& reply)
+{
+    m_processPool->getGPUProcessConnection(*this, WTFMove(reply));
+}
+#endif
+
 #if !PLATFORM(COCOA)
 bool WebProcessProxy::platformIsBeingDebugged() const
 {
@@ -754,6 +775,9 @@ void WebProcessProxy::processDidTerminateOrFailedToLaunch()
         processPool().webProcessCache().removeProcess(*this, WebProcessCache::ShouldShutDownProcess::No);
         ASSERT(!m_isInProcessCache);
     }
+
+    if (isStandaloneServiceWorkerProcess())
+        processPool().serviceWorkerProcessCrashed(*this);
 
     shutDown();
 
@@ -1504,11 +1528,14 @@ PAL::SessionID WebProcessProxy::sessionID() const
 
 void WebProcessProxy::addPlugInAutoStartOriginHash(String&& pageOrigin, uint32_t hash)
 {
+    MESSAGE_CHECK(PlugInAutoStartProvider::AutoStartTable::isValidKey(pageOrigin));
+    MESSAGE_CHECK(PlugInAutoStartProvider::HashToOriginMap::isValidKey(hash));
     processPool().plugInAutoStartProvider().addAutoStartOriginHash(WTFMove(pageOrigin), hash, sessionID());
 }
 
 void WebProcessProxy::plugInDidReceiveUserInteraction(uint32_t hash)
 {
+    MESSAGE_CHECK(PlugInAutoStartProvider::HashToOriginMap::isValidKey(hash));
     processPool().plugInAutoStartProvider().didReceiveUserInteraction(hash, sessionID());
 }
 

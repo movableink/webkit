@@ -41,6 +41,7 @@
 #include "WebSWServerConnection.h"
 #include "WebSWServerToContextConnection.h"
 #include <WebCore/CrossOriginAccessControl.h>
+#include <WebCore/SWServerRegistration.h>
 
 #define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(m_loader.sessionID().isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorkerFetchTask::" fmt, this, ##__VA_ARGS__)
 #define RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(m_loader.sessionID().isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorkerFetchTask::" fmt, this, ##__VA_ARGS__)
@@ -49,13 +50,15 @@ using namespace WebCore;
 
 namespace WebKit {
 
-ServiceWorkerFetchTask::ServiceWorkerFetchTask(NetworkResourceLoader& loader, ResourceRequest&& request, SWServerConnectionIdentifier serverConnectionIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, ServiceWorkerRegistrationIdentifier serviceWorkerRegistrationIdentifier)
+ServiceWorkerFetchTask::ServiceWorkerFetchTask(NetworkResourceLoader& loader, ResourceRequest&& request, SWServerConnectionIdentifier serverConnectionIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, ServiceWorkerRegistrationIdentifier serviceWorkerRegistrationIdentifier, bool shouldSoftUpdate)
     : m_loader(loader)
     , m_fetchIdentifier(WebCore::FetchIdentifier::generate())
     , m_serverConnectionIdentifier(serverConnectionIdentifier)
     , m_serviceWorkerIdentifier(serviceWorkerIdentifier)
     , m_currentRequest(WTFMove(request))
     , m_timeoutTimer(*this, &ServiceWorkerFetchTask::timeoutTimerFired)
+    , m_serviceWorkerRegistrationIdentifier(serviceWorkerRegistrationIdentifier)
+    , m_shouldSoftUpdate(shouldSoftUpdate)
 {
     m_timeoutTimer.startOneShot(loader.connectionToWebProcess().networkProcess().serviceWorkerFetchTimeout());
 }
@@ -86,12 +89,19 @@ void ServiceWorkerFetchTask::start(WebSWServerToContextConnection& serviceWorker
 
 void ServiceWorkerFetchTask::contextClosed()
 {
-    m_serviceWorkerConnection = nullptr;
-    didFail(ResourceError { errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
+    if (m_isDone)
+        return;
+
+    if (m_wasHandled) {
+        didFail(ResourceError { errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
+        return;
+    }
+    cannotHandle();
 }
 
 void ServiceWorkerFetchTask::startFetch()
 {
+    m_loader.consumeSandboxExtensionsIfNeeded();
     auto& options = m_loader.parameters().options;
     auto referrer = m_currentRequest.httpReferrer();
 
@@ -105,8 +115,13 @@ void ServiceWorkerFetchTask::startFetch()
 
 void ServiceWorkerFetchTask::didReceiveRedirectResponse(ResourceResponse&& response)
 {
+    if (m_isDone)
+        return;
+
     RELEASE_LOG_IF_ALLOWED("didReceiveRedirectResponse: %s", m_fetchIdentifier.loggingString().utf8().data());
     m_wasHandled = true;
+    m_timeoutTimer.stop();
+    softUpdateIfNeeded();
 
     response.setSource(ResourceResponse::Source::ServiceWorker);
     auto newRequest = m_currentRequest.redirectedRequest(response, m_loader.parameters().shouldClearReferrerOnHTTPSToHTTPRedirect);
@@ -116,9 +131,13 @@ void ServiceWorkerFetchTask::didReceiveRedirectResponse(ResourceResponse&& respo
 
 void ServiceWorkerFetchTask::didReceiveResponse(ResourceResponse&& response, bool needsContinueDidReceiveResponseMessage)
 {
+    if (m_isDone)
+        return;
+
     RELEASE_LOG_IF_ALLOWED("didReceiveResponse: %s", m_fetchIdentifier.loggingString().utf8().data());
-    m_timeoutTimer.stop();
     m_wasHandled = true;
+    m_timeoutTimer.stop();
+    softUpdateIfNeeded();
 
     response.setSource(ResourceResponse::Source::ServiceWorker);
     sendToClient(Messages::WebResourceLoader::DidReceiveResponse { response, needsContinueDidReceiveResponseMessage });
@@ -126,12 +145,18 @@ void ServiceWorkerFetchTask::didReceiveResponse(ResourceResponse&& response, boo
 
 void ServiceWorkerFetchTask::didReceiveData(const IPC::DataReference& data, int64_t encodedDataLength)
 {
+    if (m_isDone)
+        return;
+
     ASSERT(!m_timeoutTimer.isActive());
     sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferDataReference { data.data(), data.size() }, encodedDataLength });
 }
 
 void ServiceWorkerFetchTask::didReceiveFormData(const IPC::FormDataReference& formData)
 {
+    if (m_isDone)
+        return;
+
     ASSERT(!m_timeoutTimer.isActive());
     // FIXME: Allow WebResourceLoader to receive form data.
 }
@@ -140,13 +165,19 @@ void ServiceWorkerFetchTask::didFinish()
 {
     ASSERT(!m_timeoutTimer.isActive());
     RELEASE_LOG_IF_ALLOWED("didFinishFetch: fetchIdentifier: %s", m_fetchIdentifier.loggingString().utf8().data());
+
+    m_isDone = true;
     m_timeoutTimer.stop();
     sendToClient(Messages::WebResourceLoader::DidFinishResourceLoad { { } });
 }
 
 void ServiceWorkerFetchTask::didFail(const ResourceError& error)
 {
-    m_timeoutTimer.stop();
+    m_isDone = true;
+    if (m_timeoutTimer.isActive()) {
+        m_timeoutTimer.stop();
+        softUpdateIfNeeded();
+    }
     RELEASE_LOG_ERROR_IF_ALLOWED("didFailFetch: fetchIdentifier: %s", m_fetchIdentifier.loggingString().utf8().data());
     m_loader.didFailLoading(error);
 }
@@ -154,8 +185,24 @@ void ServiceWorkerFetchTask::didFail(const ResourceError& error)
 void ServiceWorkerFetchTask::didNotHandle()
 {
     RELEASE_LOG_IF_ALLOWED("didNotHandleFetch: fetchIdentifier: %s", m_fetchIdentifier.loggingString().utf8().data());
+    if (m_isDone)
+        return;
+
+    m_isDone = true;
     m_timeoutTimer.stop();
-    m_loader.serviceWorkerDidNotHandle();
+    softUpdateIfNeeded();
+
+    m_loader.serviceWorkerDidNotHandle(this);
+}
+
+void ServiceWorkerFetchTask::cannotHandle()
+{
+    RELEASE_LOG_IF_ALLOWED("cannotHandle: fetchIdentifier: %s", m_fetchIdentifier.loggingString().utf8().data());
+    // Make sure we call didNotHandle asynchronously because failing synchronously would get the NetworkResourceLoader in a bad state.
+    RunLoop::main().dispatch([weakThis = makeWeakPtr(this)] {
+        if (weakThis)
+            weakThis->didNotHandle();
+    });
 }
 
 void ServiceWorkerFetchTask::cancelFromClient()
@@ -172,18 +219,29 @@ void ServiceWorkerFetchTask::continueDidReceiveFetchResponse()
 void ServiceWorkerFetchTask::continueFetchTaskWith(ResourceRequest&& request)
 {
     if (!m_serviceWorkerConnection) {
-        m_loader.serviceWorkerDidNotHandle();
+        m_loader.serviceWorkerDidNotHandle(this);
         return;
     }
+    m_timeoutTimer.startOneShot(m_loader.connectionToWebProcess().networkProcess().serviceWorkerFetchTimeout());
     m_currentRequest = WTFMove(request);
     startFetch();
 }
 
 void ServiceWorkerFetchTask::timeoutTimerFired()
 {
+    softUpdateIfNeeded();
+
     RELEASE_LOG_IF_ALLOWED("timeoutTimerFired: fetchIdentifier: %s", m_fetchIdentifier.loggingString().utf8().data());
     if (m_serviceWorkerConnection)
         m_serviceWorkerConnection->fetchTaskTimedOut(serviceWorkerIdentifier());
+}
+
+void ServiceWorkerFetchTask::softUpdateIfNeeded()
+{
+    if (!m_shouldSoftUpdate)
+        return;
+    if (auto* registration = m_loader.connectionToWebProcess().swConnection().server().getRegistration(m_serviceWorkerRegistrationIdentifier))
+        registration->scheduleSoftUpdate();
 }
 
 } // namespace WebKit

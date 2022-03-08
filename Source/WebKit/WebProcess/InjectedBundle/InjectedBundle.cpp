@@ -240,9 +240,18 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
 
 #if ENABLE(VIDEO_TRACK)
     if (preference == "WebKitGenericCueAPIEnabled") {
-        WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::imageControlsEnabledKey(), enabled);
+        WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::genericCueAPIEnabledKey(), enabled);
         for (auto* page : pages)
             page->settings().setGenericCueAPIEnabled(enabled);
+        return;
+    }
+#endif
+
+#if ENABLE(GPU_PROCESS)
+    if (preference == "WebKitUseGPUProcessForMedia" || preference == "WebKitCaptureAudioInGPUProcessEnabledKey") {
+        WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::useGPUProcessForMediaKey(), enabled);
+        for (auto* page : pages)
+            page->settings().setUseGPUProcessForMedia(enabled);
         return;
     }
 #endif
@@ -261,6 +270,8 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (preference == "LayoutFormattingContextEnabled")
         RuntimeEnabledFeatures::sharedFeatures().setLayoutFormattingContextEnabled(enabled);
+    if (preference == "LayoutFormattingContextIntegrationEnabled")
+        RuntimeEnabledFeatures::sharedFeatures().setLayoutFormattingContextIntegrationEnabled(enabled);
 #endif
 
 #if ENABLE(CSS_PAINTING_API)

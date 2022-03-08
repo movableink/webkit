@@ -43,8 +43,14 @@ public:
     using Base = JSCell;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.structureChainSpace;
+    }
+
     static StructureChain* create(VM&, JSObject*);
-    WriteBarrier<Structure>* head() { return m_vector.get(); }
+    StructureID* head() { return m_vector.get(); }
     static void visitChildren(JSCell*, SlotVisitor&);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -59,8 +65,8 @@ private:
 
     void finishCreation(VM&, JSObject* head);
 
-    StructureChain(VM&, Structure*, WriteBarrier<Structure>*);
-    AuxiliaryBarrier<WriteBarrier<Structure>*> m_vector;
+    StructureChain(VM&, Structure*, StructureID*);
+    AuxiliaryBarrier<StructureID*> m_vector;
 };
 
 } // namespace JSC

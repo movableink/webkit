@@ -96,12 +96,14 @@ protected:
     WorkResult work() override
     {
         WorkScope workScope(*this);
-        
+
         LockHolder locker(m_data.m_rightToRun);
         {
             LockHolder locker(*m_worklist.m_lock);
-            if (m_plan->stage() == Plan::Cancelled)
+            if (m_plan->stage() == Plan::Cancelled) {
+                m_worklist.m_cancelledPlansPendingDestruction.append(WTFMove(m_plan));
                 return WorkResult::Continue;
+            }
             m_plan->notifyCompiling();
         }
         
@@ -110,7 +112,7 @@ protected:
         
         // There's no way for the GC to be safepointing since we own rightToRun.
         if (m_plan->vm()->heap.worldIsStopped()) {
-            dataLog("Heap is stoped but here we are! (1)\n");
+            dataLog("Heap is stopped but here we are! (1)\n");
             RELEASE_ASSERT_NOT_REACHED();
         }
         m_plan->compileInThread(&m_data);
@@ -123,8 +125,10 @@ protected:
         
         {
             LockHolder locker(*m_worklist.m_lock);
-            if (m_plan->stage() == Plan::Cancelled)
+            if (m_plan->stage() == Plan::Cancelled) {
+                m_worklist.m_cancelledPlansPendingDestruction.append(WTFMove(m_plan));
                 return WorkResult::Continue;
+            }
             
             m_plan->notifyReady();
             
@@ -133,9 +137,8 @@ protected:
                 dataLog(": Compiled ", m_plan->key(), " asynchronously\n");
             }
             
-            m_worklist.m_readyPlans.append(m_plan);
-
             RELEASE_ASSERT(!m_plan->vm()->heap.worldIsStopped());
+            m_worklist.m_readyPlans.append(WTFMove(m_plan));
             m_worklist.m_planCompiled.notifyAll();
         }
         
@@ -301,10 +304,47 @@ void Worklist::waitUntilAllPlansForVMAreReady(VM& vm)
     }
 }
 
+void Worklist::deleteCancelledPlansForVM(LockHolder&, VM& vm)
+{
+    RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
+    HashSet<RefPtr<Plan>> removedPlans;
+
+    // The following scenario can occur:
+    // 1. The DFG thread started compiling a plan.
+    // 2. The GC thread cancels the plan, and adds it to m_cancelledPlansPendingDestruction.
+    // 3. The DFG thread finishes compiling, and discovers that the thread is cancelled.
+    //    To avoid destructing the plan in the DFG thread, it adds it to
+    //    m_cancelledPlansPendingDestruction.
+    // 4. The above occurs before the mutator runs deleteCancelledPlansForVM().
+    //
+    // Hence, the same cancelled plan can appear in m_cancelledPlansPendingDestruction
+    // more than once. This is why we need to filter the cancelled plans through
+    // the removedPlans HashSet before we do the refCount check below.
+
+    for (size_t i = 0; i < m_cancelledPlansPendingDestruction.size(); ++i) {
+        RefPtr<Plan> plan = m_cancelledPlansPendingDestruction[i];
+        if (plan->unnukedVM() != &vm)
+            continue;
+        m_cancelledPlansPendingDestruction[i--] = m_cancelledPlansPendingDestruction.last();
+        m_cancelledPlansPendingDestruction.removeLast();
+        removedPlans.add(WTFMove(plan));
+    }
+
+    while (!removedPlans.isEmpty()) {
+        RefPtr<Plan> plan = removedPlans.takeAny();
+        ASSERT(plan->stage() == Plan::Cancelled);
+        if (plan->refCount() > 1)
+            m_cancelledPlansPendingDestruction.append(WTFMove(plan));
+    }
+}
+
 void Worklist::removeAllReadyPlansForVM(VM& vm, Vector<RefPtr<Plan>, 8>& myReadyPlans)
 {
     DeferGC deferGC(vm.heap);
     LockHolder locker(*m_lock);
+    ASSERT(vm.currentThreadIsHoldingAPILock());
+
+    deleteCancelledPlansForVM(locker, vm);
     for (size_t i = 0; i < m_readyPlans.size(); ++i) {
         RefPtr<Plan> plan = m_readyPlans[i];
         if (plan->vm() != &vm)
@@ -407,6 +447,8 @@ void Worklist::removeDeadPlans(VM& vm)
     {
         LockHolder locker(*m_lock);
         HashSet<CompilationKey> deadPlanKeys;
+        bool isInMutator = vm.currentThreadIsHoldingAPILock();
+
         for (PlanMap::iterator iter = m_plans.begin(); iter != m_plans.end(); ++iter) {
             Plan* plan = iter->value.get();
             if (plan->vm() != &vm)
@@ -420,8 +462,12 @@ void Worklist::removeDeadPlans(VM& vm)
             deadPlanKeys.add(plan->key());
         }
         if (!deadPlanKeys.isEmpty()) {
-            for (HashSet<CompilationKey>::iterator iter = deadPlanKeys.begin(); iter != deadPlanKeys.end(); ++iter)
-                m_plans.take(*iter)->cancel();
+            for (HashSet<CompilationKey>::iterator iter = deadPlanKeys.begin(); iter != deadPlanKeys.end(); ++iter) {
+                RefPtr<Plan> plan = m_plans.take(*iter);
+                plan->cancel();
+                if (!isInMutator)
+                    m_cancelledPlansPendingDestruction.append(WTFMove(plan));
+            }
             Deque<RefPtr<Plan>> newQueue;
             while (!m_queue.isEmpty()) {
                 RefPtr<Plan> plan = m_queue.takeFirst();
@@ -457,6 +503,9 @@ void Worklist::removeNonCompilingPlansForVM(VM& vm)
     LockHolder locker(*m_lock);
     HashSet<CompilationKey> deadPlanKeys;
     Vector<RefPtr<Plan>> deadPlans;
+    ASSERT(vm.currentThreadIsHoldingAPILock());
+
+    deleteCancelledPlansForVM(locker, vm);
     for (auto& entry : m_plans) {
         Plan* plan = entry.value.get();
         if (plan->vm() != &vm)

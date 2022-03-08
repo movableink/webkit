@@ -85,6 +85,7 @@ struct WebProcessCreationParameters {
 #if ENABLE(MEDIA_STREAM)
     SandboxExtension::Handle audioCaptureExtensionHandle;
     bool shouldCaptureAudioInUIProcess { false };
+    bool shouldCaptureAudioInGPUProcess { false };
     bool shouldCaptureVideoInUIProcess { false };
     bool shouldCaptureDisplayInUIProcess { false };
 #endif
@@ -196,6 +197,21 @@ struct WebProcessCreationParameters {
 #endif
 
     Optional<WebProcessDataStoreParameters> websiteDataStoreParameters;
+    
+#if PLATFORM(IOS)
+    Optional<SandboxExtension::Handle> compilerServiceExtensionHandle;
+    Optional<SandboxExtension::Handle> contentFilterExtensionHandle;
+    Optional<SandboxExtension::Handle> diagnosticsExtensionHandle;
+#endif
+
+#if PLATFORM(COCOA)
+    Optional<SandboxExtension::Handle> neHelperExtensionHandle;
+    Optional<SandboxExtension::Handle> neSessionManagerExtensionHandle;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    bool currentUserInterfaceIdiomIsPad { false };
+#endif
 };
 
 } // namespace WebKit

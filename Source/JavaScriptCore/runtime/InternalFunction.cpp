@@ -35,7 +35,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(InternalFunction);
 const ClassInfo InternalFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(InternalFunction) };
 
 InternalFunction::InternalFunction(VM& vm, Structure* structure, NativeFunction functionForCall, NativeFunction functionForConstruct)
-    : JSDestructibleObject(vm, structure)
+    : Base(vm, structure)
     , m_functionForCall(functionForCall)
     , m_functionForConstruct(functionForConstruct ? functionForConstruct : callHostFunctionAsConstructor)
     , m_globalObject(vm, this, structure->globalObject())
@@ -124,7 +124,8 @@ Structure* InternalFunction::createSubclassStructureSlow(JSGlobalObject* globalO
     JSGlobalObject* baseGlobalObject = baseClass->globalObject();
 
     if (LIKELY(targetFunction)) {
-        Structure* structure = targetFunction->rareData(vm)->internalFunctionAllocationStructure();
+        FunctionRareData* rareData = targetFunction->ensureRareData(vm);
+        Structure* structure = rareData->internalFunctionAllocationStructure();
         if (LIKELY(structure && structure->classInfo() == baseClass->classInfo() && structure->globalObject() == baseGlobalObject))
             return structure;
 
@@ -132,7 +133,7 @@ Structure* InternalFunction::createSubclassStructureSlow(JSGlobalObject* globalO
         JSValue prototypeValue = targetFunction->get(globalObject, vm.propertyNames->prototype);
         RETURN_IF_EXCEPTION(scope, nullptr);
         if (JSObject* prototype = jsDynamicCast<JSObject*>(vm, prototypeValue))
-            return targetFunction->rareData(vm)->createInternalFunctionAllocationStructureFromBase(vm, baseGlobalObject, prototype, baseClass);
+            return rareData->createInternalFunctionAllocationStructureFromBase(vm, baseGlobalObject, prototype, baseClass);
     } else {
         JSValue prototypeValue = newTarget.get(globalObject, vm.propertyNames->prototype);
         RETURN_IF_EXCEPTION(scope, nullptr);

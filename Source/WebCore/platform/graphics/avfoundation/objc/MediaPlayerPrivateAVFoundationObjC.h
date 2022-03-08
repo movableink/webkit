@@ -125,7 +125,7 @@ public:
     void canPlayFastReverseDidChange(bool);
     void canPlayFastForwardDidChange(bool);
 
-    void setBufferingPolicy(MediaPlayerEnums::BufferingPolicy) override;
+    void setBufferingPolicy(MediaPlayer::BufferingPolicy) override;
 
 #if HAVE(AVFOUNDATION_VIDEO_OUTPUT)
     void outputMediaDataWillChange(AVPlayerItemVideoOutput*);
@@ -162,6 +162,7 @@ public:
 
 private:
     // engine support
+    friend class MediaPlayerFactoryAVFoundationObjC;
     static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
     static bool supportsKeySystem(const String& keySystem, const String& mimeType);
@@ -176,7 +177,6 @@ private:
     bool platformPaused() const override;
     void setVolume(float) override;
     void setMuted(bool) override;
-    void setClosedCaptionsVisible(bool) override;
     void paint(GraphicsContext&, const FloatRect&) override;
     void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
     PlatformLayer* platformLayer() const override;
@@ -196,7 +196,6 @@ private:
 
     bool supportsAcceleratedRendering() const override { return true; }
     MediaTime mediaTimeForTimeValue(const MediaTime&) const override;
-    double maximumDurationToCacheMediaTime() const override;
 
     void createAVPlayer() override;
     void createAVPlayerItem() override;

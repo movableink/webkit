@@ -100,11 +100,6 @@ void WebSWServerToContextConnection::fireActivateEvent(ServiceWorkerIdentifier s
     send(Messages::WebSWContextManagerConnection::FireActivateEvent(serviceWorkerIdentifier));
 }
 
-void WebSWServerToContextConnection::softUpdate(ServiceWorkerIdentifier serviceWorkerIdentifier)
-{
-    send(Messages::WebSWContextManagerConnection::SoftUpdate(serviceWorkerIdentifier));
-}
-
 void WebSWServerToContextConnection::terminateWorker(ServiceWorkerIdentifier serviceWorkerIdentifier)
 {
     send(Messages::WebSWContextManagerConnection::TerminateWorker(serviceWorkerIdentifier));
@@ -128,11 +123,6 @@ void WebSWServerToContextConnection::matchAllCompleted(uint64_t requestIdentifie
 void WebSWServerToContextConnection::claimCompleted(uint64_t requestIdentifier)
 {
     send(Messages::WebSWContextManagerConnection::ClaimCompleted { requestIdentifier });
-}
-
-void WebSWServerToContextConnection::didFinishSkipWaiting(uint64_t callbackID)
-{
-    send(Messages::WebSWContextManagerConnection::DidFinishSkipWaiting { callbackID });
 }
 
 void WebSWServerToContextConnection::connectionIsNoLongerNeeded()
@@ -174,20 +164,16 @@ void WebSWServerToContextConnection::unregisterFetch(ServiceWorkerFetchTask& tas
 
 void WebSWServerToContextConnection::fetchTaskTimedOut(ServiceWorkerIdentifier serviceWorkerIdentifier)
 {
-    // Gather all fetches in this service worker
+    // Gather all fetches in this service worker.
     Vector<ServiceWorkerFetchTask*> fetches;
     for (auto& fetchTask : m_ongoingFetches.values()) {
         if (fetchTask->serviceWorkerIdentifier() == serviceWorkerIdentifier)
             fetches.append(fetchTask.get());
     }
 
-    // Signal load failure for them
-    for (auto* fetchTask : fetches) {
-        if (fetchTask->wasHandled())
-            fetchTask->fail({ errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
-        else
-            fetchTask->didNotHandle();
-    }
+    // Signal load failure for them.
+    for (auto* fetchTask : fetches)
+        fetchTask->contextClosed();
 
     if (m_server) {
         if (auto* worker = m_server->workerByID(serviceWorkerIdentifier)) {

@@ -23,10 +23,12 @@
 
 #include "FrameLoaderTypes.h"
 #include "JSWindowProxy.h"
+#include "SerializedScriptValue.h"
 #include "WindowProxy.h"
 #include <JavaScriptCore/JSBase.h>
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
+#include <wtf/Optional.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/TextPosition.h>
@@ -62,13 +64,19 @@ class ModuleFetchParameters;
 class ScriptSourceCode;
 class SecurityOrigin;
 class Widget;
+
+enum class RunAsAsyncFunction : bool;
+
 struct ExceptionDetails;
+struct RunJavaScriptParameters;
 
 enum ReasonForCallingCanExecuteScripts {
     AboutToCreateEventListener,
     AboutToExecuteScript,
     NotAboutToExecuteScript
 };
+
+using ValueOrException = Expected<JSC::JSValue, ExceptionDetails>;
 
 class ScriptController : public CanMakeWeakPtr<ScriptController> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -88,22 +96,24 @@ public:
 
     static void getAllWorlds(Vector<Ref<DOMWrapperWorld>>&);
 
-    JSC::JSValue executeScript(const ScriptSourceCode&, ExceptionDetails* = nullptr);
-    WEBCORE_EXPORT JSC::JSValue executeScript(const String& script, bool forceUserGesture = false, ExceptionDetails* = nullptr);
-    JSC::JSValue executeScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture = false, ExceptionDetails* = nullptr);
-    WEBCORE_EXPORT JSC::JSValue executeUserAgentScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture, ExceptionDetails* = nullptr);
+    using ResolveFunction = CompletionHandler<void(ValueOrException)>;
+
+    WEBCORE_EXPORT JSC::JSValue executeScriptIgnoringException(const String& script, bool forceUserGesture = false);
+    JSC::JSValue executeScriptInWorldIgnoringException(DOMWrapperWorld&, const String& script, bool forceUserGesture = false);
+    WEBCORE_EXPORT JSC::JSValue executeUserAgentScriptInWorldIgnoringException(DOMWrapperWorld&, const String& script, bool forceUserGesture);
+    WEBCORE_EXPORT ValueOrException executeUserAgentScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture);
+    WEBCORE_EXPORT void executeAsynchronousUserAgentScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&, ResolveFunction&&);
+    JSC::JSValue evaluateIgnoringException(const ScriptSourceCode&);
+    JSC::JSValue evaluateInWorldIgnoringException(const ScriptSourceCode&, DOMWrapperWorld&);
 
     bool shouldAllowUserAgentScripts(Document&) const;
 
     // Returns true if argument is a JavaScript URL.
-    bool executeIfJavaScriptURL(const URL&, ShouldReplaceDocumentIfJavaScriptURL shouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
+    bool executeIfJavaScriptURL(const URL&, RefPtr<SecurityOrigin> = nullptr, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
 
     // This function must be called from the main thread. It is safe to call it repeatedly.
     // Darwin is an exception to this rule: it is OK to call this function from any thread, even reentrantly.
     static void initializeThreading();
-
-    JSC::JSValue evaluate(const ScriptSourceCode&, ExceptionDetails* = nullptr);
-    JSC::JSValue evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&, ExceptionDetails* = nullptr);
 
     void loadModuleScriptInWorld(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&, DOMWrapperWorld&);
     void loadModuleScript(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&);
@@ -166,6 +176,11 @@ public:
     bool willReplaceWithResultOfExecutingJavascriptURL() const { return m_willReplaceWithResultOfExecutingJavascriptURL; }
 
 private:
+    ValueOrException executeUserAgentScriptInWorldInternal(DOMWrapperWorld&, RunJavaScriptParameters&&);
+    ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);
+    ValueOrException evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&);
+    ValueOrException callInWorld(RunJavaScriptParameters&&, DOMWrapperWorld&);
+    
     void setupModuleScriptHandlers(LoadableModuleScript&, JSC::JSInternalPromise&, DOMWrapperWorld&);
 
     void disconnectPlatformScriptObjects();

@@ -285,8 +285,11 @@ public:
 #endif
 #endif
 
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     virtual void selectionDidChange() = 0;
+#endif
+
+#if PLATFORM(COCOA) || PLATFORM(GTK)
     virtual RefPtr<ViewSnapshot> takeViewSnapshot() = 0;
 #endif
 
@@ -318,6 +321,9 @@ public:
 #endif
 #if ENABLE(TOUCH_EVENTS)
     virtual void doneWithTouchEvent(const NativeWebTouchEvent&, bool wasEventHandled) = 0;
+#endif
+#if ENABLE(IOS_TOUCH_EVENTS)
+    virtual void doneDeferringNativeGestures(bool preventNativeGestures) = 0;
 #endif
 
     virtual RefPtr<WebPopupMenuProxy> createPopupMenuProxy(WebPageProxy&) = 0;

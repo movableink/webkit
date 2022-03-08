@@ -128,11 +128,11 @@ OSStatus MockAudioSharedUnit::reconfigureAudioUnit()
         return 0;
 
     m_timer.stop();
-    m_startTime = MonotonicTime::nan();
+    m_lastRenderTime = MonotonicTime::nan();
     m_workQueue->dispatch([this] {
         reconfigure();
         callOnMainThread([this] {
-            m_startTime = MonotonicTime::now();
+            m_lastRenderTime = MonotonicTime::now();
             m_timer.startRepeating(renderInterval());
         });
     });
@@ -143,18 +143,15 @@ void MockAudioSharedUnit::cleanupAudioUnit()
 {
     m_hasAudioUnit = false;
     m_timer.stop();
-    m_startTime = MonotonicTime::nan();
+    m_lastRenderTime = MonotonicTime::nan();
 }
 
 OSStatus MockAudioSharedUnit::startInternal()
 {
-#if PLATFORM(IOS_FAMILY)
-    ASSERT(AudioSession::sharedSession().category() == AudioSession::PlayAndRecord);
-#endif
     if (!m_hasAudioUnit)
         m_hasAudioUnit = true;
 
-    m_startTime = MonotonicTime::now();
+    m_lastRenderTime = MonotonicTime::now();
     m_timer.startRepeating(renderInterval());
     return 0;
 }
@@ -164,7 +161,7 @@ void MockAudioSharedUnit::stopInternal()
     if (!m_hasAudioUnit)
         return;
     m_timer.stop();
-    m_startTime = MonotonicTime::nan();
+    m_lastRenderTime = MonotonicTime::nan();
 }
 
 bool MockAudioSharedUnit::isProducingData() const

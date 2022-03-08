@@ -44,11 +44,14 @@
 #include <WebCore/DOMRect.h>
 #include <WebCore/DOMRectList.h>
 #include <WebCore/DOMWindow.h>
+#include <WebCore/File.h>
+#include <WebCore/FileList.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameTree.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/HTMLFrameElement.h>
 #include <WebCore/HTMLIFrameElement.h>
+#include <WebCore/HTMLInputElement.h>
 #include <WebCore/HTMLOptGroupElement.h>
 #include <WebCore/HTMLOptionElement.h>
 #include <WebCore/HTMLSelectElement.h>
@@ -232,7 +235,7 @@ void WebAutomationSessionProxy::didClearWindowObjectForFrame(WebFrame& frame)
         WebProcess::singleton().parentProcessConnection()->send(Messages::WebAutomationSession::DidEvaluateJavaScriptFunction(callbackID, errorMessage, errorType), 0);
 }
 
-void WebAutomationSessionProxy::evaluateJavaScriptFunction(WebCore::PageIdentifier pageID, Optional<WebCore::FrameIdentifier> optionalFrameID, const String& function, Vector<String> arguments, bool expectsImplicitCallbackArgument, int callbackTimeout, uint64_t callbackID)
+void WebAutomationSessionProxy::evaluateJavaScriptFunction(WebCore::PageIdentifier pageID, Optional<WebCore::FrameIdentifier> optionalFrameID, const String& function, Vector<String> arguments, bool expectsImplicitCallbackArgument, Optional<double> callbackTimeout, uint64_t callbackID)
 {
     WebPage* page = WebProcess::singleton().webPage(pageID);
     if (!page) {
@@ -266,7 +269,7 @@ void WebAutomationSessionProxy::evaluateJavaScriptFunction(WebCore::PageIdentifi
         JSValueMakeNumber(context, frameID.toUInt64()),
         JSValueMakeNumber(context, callbackID),
         JSObjectMakeFunctionWithCallback(context, nullptr, evaluateJavaScriptCallback),
-        JSValueMakeNumber(context, callbackTimeout)
+        JSValueMakeNumber(context, callbackTimeout.valueOr(-1))
     };
 
     {
@@ -679,6 +682,44 @@ void WebAutomationSessionProxy::selectOptionElement(WebCore::PageIdentifier page
         // optionSelectedByUser() will fire input and change events if needed, but all other events should be fired manually here.
         selectElement->optionSelectedByUser(optionElement.index(), true, selectElement->multiple());
     }
+    completionHandler(WTF::nullopt);
+}
+
+void WebAutomationSessionProxy::setFilesForInputFileUpload(WebCore::PageIdentifier pageID, Optional<WebCore::FrameIdentifier> frameID, String nodeHandle, Vector<String>&& filenames, CompletionHandler<void(Optional<String>)>&& completionHandler)
+{
+    WebPage* page = WebProcess::singleton().webPage(pageID);
+    if (!page) {
+        String windowNotFoundErrorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::WindowNotFound);
+        completionHandler(windowNotFoundErrorType);
+        return;
+    }
+
+    WebFrame* frame = frameID ? WebProcess::singleton().webFrame(*frameID) : page->mainWebFrame();
+    if (!frame || !frame->coreFrame() || !frame->coreFrame()->view()) {
+        String frameNotFoundErrorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::FrameNotFound);
+        completionHandler(frameNotFoundErrorType);
+        return;
+    }
+
+    WebCore::Element* coreElement = elementForNodeHandle(*frame, nodeHandle);
+    if (!coreElement || !is<WebCore::HTMLInputElement>(coreElement) || !downcast<WebCore::HTMLInputElement>(*coreElement).isFileUpload()) {
+        String nodeNotFoundErrorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::NodeNotFound);
+        completionHandler(nodeNotFoundErrorType);
+        return;
+    }
+
+    auto& inputElement = downcast<WebCore::HTMLInputElement>(*coreElement);
+    Vector<Ref<WebCore::File>> fileObjects;
+    if (inputElement.multiple()) {
+        if (auto* files = inputElement.files()) {
+            for (auto& file : files->files())
+                fileObjects.append(file.copyRef());
+        }
+    }
+    for (const auto& path : filenames)
+        fileObjects.append(WebCore::File::create(path));
+    inputElement.setFiles(WebCore::FileList::create(WTFMove(fileObjects)));
+
     completionHandler(WTF::nullopt);
 }
 

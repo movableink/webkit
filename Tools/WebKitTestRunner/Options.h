@@ -32,7 +32,10 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <wtf/HashMap.h>
 #include <wtf/Vector.h>
+#include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WTR {
 
@@ -51,6 +54,8 @@ struct Options {
     bool allowAnyHTTPSCertificateForAllowedHosts { false };
     std::vector<std::string> paths;
     std::set<std::string> allowedHosts;
+    HashMap<String, bool> internalFeatures;
+    HashMap<String, bool> experimentalFeatures;
 };
 
 class Option {

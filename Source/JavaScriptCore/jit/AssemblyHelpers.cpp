@@ -211,7 +211,7 @@ void AssemblyHelpers::jitAssertIsNull(GPRReg gpr)
 
 void AssemblyHelpers::jitAssertArgumentCountSane()
 {
-    Jump ok = branch32(Below, payloadFor(CallFrameSlot::argumentCount), TrustedImm32(10000000));
+    Jump ok = branch32(Below, payloadFor(CallFrameSlot::argumentCountIncludingThis), TrustedImm32(10000000));
     abortWithReason(AHInsaneArgumentCount);
     ok.link(this);
 }
@@ -633,7 +633,7 @@ void AssemblyHelpers::emitDumbVirtualCall(VM& vm, JSGlobalObject* globalObject, 
     addLinkTask(
         [=, &vm] (LinkBuffer& linkBuffer) {
             MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = virtualThunkFor(vm, *info);
-            info->setSlowStub(createJITStubRoutine(virtualThunk, vm, nullptr, true));
+            info->setSlowStub(GCAwareJITStubRoutine::create(virtualThunk, vm));
             linkBuffer.link(call, CodeLocationLabel<JITStubRoutinePtrTag>(virtualThunk.code()));
         });
 }

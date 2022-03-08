@@ -94,6 +94,8 @@ using namespace Inspector;
     macro(MockCaptureDevicesEnabled) \
     macro(NeedsSiteSpecificQuirks) \
     macro(ScriptEnabled) \
+    macro(ShowDebugBorders) \
+    macro(ShowRepaintCounter) \
     macro(WebRTCEncryptionEnabled) \
     macro(WebSecurityEnabled)
 
@@ -644,9 +646,11 @@ void InspectorPageAgent::searchInResources(ErrorString&, const String& text, con
 {
     result = JSON::ArrayOf<Inspector::Protocol::Page::SearchResult>::create();
 
-    bool isRegex = optionalIsRegex ? *optionalIsRegex : false;
     bool caseSensitive = optionalCaseSensitive ? *optionalCaseSensitive : false;
-    JSC::Yarr::RegularExpression regex = ContentSearchUtilities::createSearchRegex(text, caseSensitive, isRegex);
+    bool isRegex = optionalIsRegex ? *optionalIsRegex : false;
+
+    auto searchStringType = isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ContainsString;
+    auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(text, caseSensitive, searchStringType);
 
     for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         for (auto* cachedResource : cachedResourcesForFrame(frame)) {
@@ -771,7 +775,7 @@ void InspectorPageAgent::didClearWindowObjectInWorld(Frame& frame)
     if (m_bootstrapScript.isEmpty())
         return;
 
-    frame.script().evaluate(ScriptSourceCode(m_bootstrapScript, URL { URL(), "web-inspector://bootstrap.js"_s }));
+    frame.script().evaluateIgnoringException(ScriptSourceCode(m_bootstrapScript, URL { URL(), "web-inspector://bootstrap.js"_s }));
 }
 
 void InspectorPageAgent::didPaint(RenderObject& renderer, const LayoutRect& rect)
@@ -922,17 +926,6 @@ void InspectorPageAgent::applyEmulatedMedia(String& media)
 {
     if (!m_emulatedMedia.isEmpty())
         media = m_emulatedMedia;
-}
-
-void InspectorPageAgent::getCompositingBordersVisible(ErrorString&, bool* outParam)
-{
-    *outParam = m_inspectedPage.settings().showDebugBorders() || m_inspectedPage.settings().showRepaintCounter();
-}
-
-void InspectorPageAgent::setCompositingBordersVisible(ErrorString&, bool visible)
-{
-    m_inspectedPage.settings().setShowDebugBorders(visible);
-    m_inspectedPage.settings().setShowRepaintCounter(visible);
 }
 
 void InspectorPageAgent::snapshotNode(ErrorString& errorString, int nodeId, String* outDataURL)

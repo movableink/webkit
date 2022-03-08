@@ -146,14 +146,6 @@ ALWAYS_INLINE VM& CallFrame::deprecatedVM() const
     return callee->vm();
 }
 
-template<typename CellType, SubspaceAccess>
-CompleteSubspace* JSCell::subspaceFor(VM& vm)
-{
-    if (CellType::needsDestruction)
-        return &vm.destructibleCellSpace;
-    return &vm.cellSpace;
-}
-
 template<typename Type>
 inline Allocator allocatorForNonVirtualConcurrently(VM& vm, size_t allocationSize, AllocatorForMode mode)
 {
@@ -422,9 +414,9 @@ ALWAYS_INLINE bool JSCell::putInline(JSGlobalObject* globalObject, PropertyName 
     return putMethod(this, globalObject, propertyName, value, slot);
 }
 
-inline bool isWebAssemblyToJSCallee(const JSCell* cell)
+inline bool isWebAssemblyModule(const JSCell* cell)
 {
-    return cell->type() == WebAssemblyToJSCalleeType;
+    return cell->type() == WebAssemblyModuleType;
 }
 
 } // namespace JSC

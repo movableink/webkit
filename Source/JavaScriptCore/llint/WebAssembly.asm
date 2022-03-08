@@ -100,13 +100,13 @@ macro wasmNextInstruction()
 end
 
 macro wasmNextInstructionWide16()
-    loadh 1[PB, PC, 1], t0
+    loadb OpcodeIDNarrowSize[PB, PC, 1], t0
     leap _g_opcodeMapWide16, t1
     jmp NumberOfJSOpcodeIDs * PtrSize[t1, t0, PtrSize], BytecodePtrTag
 end
 
 macro wasmNextInstructionWide32()
-    loadi 1[PB, PC, 1], t0
+    loadb OpcodeIDNarrowSize[PB, PC, 1], t0
     leap _g_opcodeMapWide32, t1
     jmp NumberOfJSOpcodeIDs * PtrSize[t1, t0, PtrSize], BytecodePtrTag
 end
@@ -150,7 +150,7 @@ macro checkSwitchToJITForLoop()
     checkSwitchToJIT(
         1,
         macro()
-            storei PC, ArgumentCount + TagOffset[cfr]
+            storei PC, ArgumentCountIncludingThis + TagOffset[cfr]
             prepareStateForCCall()
             move cfr, a0
             move PC, a1
@@ -163,7 +163,7 @@ macro checkSwitchToJITForLoop()
             move r0, a0
             jmp r1, WasmEntryPtrTag
         .recover:
-            loadi ArgumentCount + TagOffset[cfr], PC
+            loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
         end)
 end
 
@@ -229,7 +229,7 @@ macro reloadMemoryRegistersFromInstance(instance, scratch1, scratch2)
 end
 
 macro throwException(exception)
-    storei constexpr Wasm::ExceptionType::%exception%, ArgumentCount + PayloadOffset[cfr]
+    storei constexpr Wasm::ExceptionType::%exception%, ArgumentCountIncludingThis + PayloadOffset[cfr]
     jmp _wasm_throw_from_slow_path_trampoline
 end
 
@@ -243,7 +243,7 @@ macro callWasmSlowPath(slowPath)
 end
 
 macro callWasmCallSlowPath(slowPath, action)
-    storei PC, ArgumentCount + TagOffset[cfr]
+    storei PC, ArgumentCountIncludingThis + TagOffset[cfr]
     prepareStateForCCall()
     move cfr, a0
     move PC, a1
@@ -494,8 +494,8 @@ op(wasm_throw_from_slow_path_trampoline, macro ()
     move cfr, a0
     addp PB, PC, a1
     move wasmInstance, a2
-    # Slow paths and the throwException macro store the exception code in the ArgumentCount slot
-    loadi ArgumentCount + PayloadOffset[cfr], a3
+    # Slow paths and the throwException macro store the exception code in the ArgumentCountIncludingThis slot
+    loadi ArgumentCountIncludingThis + PayloadOffset[cfr], a3
     cCall4(_slow_path_wasm_throw_exception)
 
     jmp r0, ExceptionHandlerPtrTag
@@ -515,6 +515,7 @@ slowWasmOp(table_size)
 slowWasmOp(table_fill)
 slowWasmOp(table_grow)
 slowWasmOp(set_global_ref)
+slowWasmOp(set_global_ref_portable_binding)
 
 wasmOp(grow_memory, WasmGrowMemory, macro(ctx)
     callWasmSlowPath(_slow_path_wasm_grow_memory)
@@ -654,6 +655,23 @@ wasmOp(set_global, WasmSetGlobal, macro(ctx)
     dispatch(ctx)
 end)
 
+wasmOp(get_global_portable_binding, WasmGetGlobalPortableBinding, macro(ctx)
+    loadp Wasm::Instance::m_globals[wasmInstance], t0
+    wgetu(ctx, m_globalIndex, t1)
+    loadq [t0, t1, 8], t0
+    loadq [t0], t0
+    returnq(ctx, t0)
+end)
+
+wasmOp(set_global_portable_binding, WasmSetGlobalPortableBinding, macro(ctx)
+    loadp Wasm::Instance::m_globals[wasmInstance], t0
+    wgetu(ctx, m_globalIndex, t1)
+    mloadq(ctx, m_value, t2)
+    loadq [t0, t1, 8], t0
+    storeq t2, [t0]
+    dispatch(ctx)
+end)
+
 macro slowPathForWasmCall(ctx, slowPath, storeWasmInstance)
     callWasmCallSlowPath(
         slowPath,
@@ -661,7 +679,7 @@ macro slowPathForWasmCall(ctx, slowPath, storeWasmInstance)
         macro (callee, targetWasmInstance)
             move callee, ws0
 
-            loadi ArgumentCount + TagOffset[cfr], PC
+            loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
 
             # the call might throw (e.g. indirect call with bad signature)
             btpz targetWasmInstance, .throw
@@ -700,7 +718,7 @@ macro slowPathForWasmCall(ctx, slowPath, storeWasmInstance)
             # need to preserve its current value since it might contain a return value
             move PC, memoryBase
             move PB, wasmInstance
-            loadi ArgumentCount + TagOffset[cfr], PC
+            loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
             loadp CodeBlock[cfr], PB
             loadp Wasm::FunctionCodeBlock::m_instructionsRawPointer[PB], PB
 
@@ -722,7 +740,7 @@ macro slowPathForWasmCall(ctx, slowPath, storeWasmInstance)
                 stored fpr, CallFrameHeaderSize + offset[ws1, ws0, 8]
             end)
 
-            loadi ArgumentCount + TagOffset[cfr], PC
+            loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
 
             storeWasmInstance(wasmInstance)
             reloadMemoryRegistersFromInstance(wasmInstance, ws0, ws1)

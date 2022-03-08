@@ -70,7 +70,6 @@ public:
     virtual void removeServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier) = 0;
 
     WEBCORE_EXPORT virtual void scheduleJob(DocumentOrWorkerIdentifier, const ServiceWorkerJobData&);
-    void failedFetchingScript(ServiceWorkerJobIdentifier, const ServiceWorkerRegistrationKey&, const ResourceError&);
 
     virtual void didResolveRegistrationPromise(const ServiceWorkerRegistrationKey&) = 0;
 
@@ -86,6 +85,7 @@ public:
     virtual void finishFetchingScriptInServer(const ServiceWorkerFetchResult&) = 0;
 
     virtual void storeRegistrationsOnDiskForTesting(CompletionHandler<void()>&& callback) { callback(); }
+    virtual void isServiceWorkerRunning(ServiceWorkerIdentifier, CompletionHandler<void(bool)>&& callback) { callback(false); }
 
 protected:
     WEBCORE_EXPORT SWClientConnection();

@@ -257,7 +257,7 @@ inline static Ref<CSSPrimitiveValue> zoomAdjustedNumberValue(double value, const
     return CSSValuePool::singleton().createValue(value / style.effectiveZoom(), CSSUnitType::CSS_NUMBER);
 }
 
-static Ref<CSSValue> zoomAdjustedPixelValueForLength(const Length& length, const RenderStyle& style)
+static Ref<CSSPrimitiveValue> zoomAdjustedPixelValueForLength(const Length& length, const RenderStyle& style)
 {
     if (length.isFixed())
         return zoomAdjustedPixelValue(length.value(), style);
@@ -454,7 +454,7 @@ static Ref<CSSPrimitiveValue> percentageOrZoomAdjustedValue(Length length, const
     if (length.isPercent())
         return CSSValuePool::singleton().createValue(length.percent(), CSSUnitType::CSS_PERCENTAGE);
     
-    return zoomAdjustedPixelValue(valueForLength(length, 0), style);
+    return zoomAdjustedPixelValueForLength(length, style);
 }
 
 static Ref<CSSPrimitiveValue> autoOrZoomAdjustedValue(Length length, const RenderStyle& style)
@@ -462,7 +462,7 @@ static Ref<CSSPrimitiveValue> autoOrZoomAdjustedValue(Length length, const Rende
     if (length.isAuto())
         return CSSValuePool::singleton().createIdentifierValue(CSSValueAuto);
 
-    return zoomAdjustedPixelValue(valueForLength(length, 0), style);
+    return zoomAdjustedPixelValueForLength(length, style);
 }
 
 static Ref<CSSValueList> borderRadiusCornerValues(const LengthSize& radius, const RenderStyle& style)
@@ -2949,16 +2949,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return zoomAdjustedPaddingOrMarginPixelValue<&RenderStyle::marginBottom, &RenderBoxModelObject::marginBottom>(style, renderer);
         case CSSPropertyMarginLeft:
             return zoomAdjustedPaddingOrMarginPixelValue<&RenderStyle::marginLeft, &RenderBoxModelObject::marginLeft>(style, renderer);
-        case CSSPropertyWebkitMarqueeDirection:
-            return cssValuePool.createValue(style.marqueeDirection());
-        case CSSPropertyWebkitMarqueeIncrement:
-            return cssValuePool.createValue(style.marqueeIncrement());
-        case CSSPropertyWebkitMarqueeRepetition:
-            if (style.marqueeLoopCount() < 0)
-                return cssValuePool.createIdentifierValue(CSSValueInfinite);
-            return cssValuePool.createValue(style.marqueeLoopCount(), CSSUnitType::CSS_NUMBER);
-        case CSSPropertyWebkitMarqueeStyle:
-            return cssValuePool.createValue(style.marqueeBehavior());
         case CSSPropertyWebkitUserModify:
             return cssValuePool.createValue(style.userModify());
         case CSSPropertyMaxHeight: {
@@ -3812,7 +3802,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         /* Unimplemented -webkit- properties */
         case CSSPropertyWebkitBorderRadius:
         case CSSPropertyWebkitMarginCollapse:
-        case CSSPropertyWebkitMarquee:
+        case CSSPropertyWebkitMarqueeDirection:
+        case CSSPropertyWebkitMarqueeIncrement:
+        case CSSPropertyWebkitMarqueeRepetition:
+        case CSSPropertyWebkitMarqueeStyle:
         case CSSPropertyWebkitMarqueeSpeed:
         case CSSPropertyWebkitMask:
         case CSSPropertyWebkitMaskRepeatX:

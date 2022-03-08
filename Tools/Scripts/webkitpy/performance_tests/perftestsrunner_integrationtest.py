@@ -28,7 +28,6 @@
 
 """Integration tests for run_perf_tests."""
 
-import StringIO
 import datetime
 import json
 import re
@@ -36,6 +35,7 @@ import unittest
 
 from webkitpy.common.host_mock import MockHost
 from webkitpy.common.system.outputcapture import OutputCapture
+from webkitpy.common.unicode_compatibility import StringIO
 from webkitpy.port.driver import DriverOutput
 from webkitpy.port.test import TestPort
 from webkitpy.performance_tests.perftest import PerfTest
@@ -299,7 +299,7 @@ class MainTest(unittest.TestCase):
 
         if not expected_exit_code and compare_logs:
             expected_logs = ''
-            for i in xrange(repeat):
+            for i in range(repeat):
                 runs = ' (Run %d of %d)' % (i + 1, repeat) if repeat > 1 else ''
                 expected_logs += 'Running 2 tests%s\n' % runs + EventTargetWrapperTestData.output + SomeParserTestData.output
             if results_shown:
@@ -509,10 +509,10 @@ class MainTest(unittest.TestCase):
         self.assertEqual(output['builderName'], 'builder1')
         self.assertEqual(output['builderKey'], 'value1')
         self.assertEqual(output['revisions'], {'WebKit': {'revision': '5678', 'timestamp': '2013-02-01 08:48:05 +0000'}})
-        self.assertEqual(output['tests'].keys(), ['Bindings', 'Parser'])
+        self.assertEqual(list(output['tests'].keys()), ['Bindings', 'Parser'])
         self.assertEqual(sorted(output['tests']['Bindings'].keys()), ['tests', 'url'])
         self.assertEqual(output['tests']['Bindings']['url'], 'https://trac.webkit.org/browser/trunk/PerformanceTests/Bindings')
-        self.assertEqual(output['tests']['Bindings']['tests'].keys(), ['event-target-wrapper'])
+        self.assertEqual(list(output['tests']['Bindings']['tests'].keys()), ['event-target-wrapper'])
         self.assertEqual(output['tests']['Bindings']['tests']['event-target-wrapper'], {
             'url': 'https://trac.webkit.org/browser/trunk/PerformanceTests/Bindings/event-target-wrapper.html',
             'metrics': {'Time': {'current': [[1486.0, 1471.0, 1510.0, 1505.0, 1478.0, 1490.0]] * 4}}})

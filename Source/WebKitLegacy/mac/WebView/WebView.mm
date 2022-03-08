@@ -305,6 +305,8 @@
 #import <WebCore/WebSQLiteDatabaseTrackerClient.h>
 #import <WebCore/WebVideoFullscreenControllerAVKit.h>
 #import <libkern/OSAtomic.h>
+#import <pal/ios/ManagedConfigurationSoftLink.h>
+#import <pal/spi/ios/ManagedConfigurationSPI.h>
 #import <pal/spi/ios/MobileGestaltSPI.h>
 #import <wtf/FastMalloc.h>
 #endif
@@ -1418,10 +1420,17 @@ static void WebKitInitializeGamepadProviderIfNecessary()
             WebCore::DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(true);
 #endif
 
+        bool enableLegacyTLS = false;
         if (id value = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKitEnableLegacyTLS"])
-            WebCore::SocketStreamHandleImpl::setLegacyTLSEnabled([value boolValue]);
-        else
-            WebCore::SocketStreamHandleImpl::setLegacyTLSEnabled(true);
+            enableLegacyTLS = [value boolValue];
+        if (!enableLegacyTLS) {
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+            enableLegacyTLS = [[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitTLS"] == MCRestrictedBoolExplicitYes;
+#elif PLATFORM(MAC)
+            enableLegacyTLS = CFPreferencesGetAppBooleanValue(CFSTR("allowDeprecatedWebKitTLS"), CFSTR("com.apple.applicationaccess"), nullptr);
+#endif
+        }
+        WebCore::SocketStreamHandleImpl::setLegacyTLSEnabled(enableLegacyTLS);
 
         didOneTimeInitialization = true;
     }
@@ -1437,7 +1446,8 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         WebCore::LibWebRTCProvider::create(),
         WebCore::CacheStorageProvider::create(),
         BackForwardList::create(self),
-        WebCore::CookieJar::create(storageProvider.copyRef())
+        WebCore::CookieJar::create(storageProvider.copyRef()),
+        makeUniqueRef<WebProgressTrackerClient>(self)
     );
 #if !PLATFORM(IOS_FAMILY)
     pageConfiguration.chromeClient = new WebChromeClient(self);
@@ -1451,16 +1461,15 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
-    pageConfiguration.dragClient = new WebDragClient(self);
+    pageConfiguration.dragClient = makeUnique<WebDragClient>(self);
 #endif
 
 #if ENABLE(APPLE_PAY)
     pageConfiguration.paymentCoordinatorClient = new WebPaymentCoordinatorClient();
 #endif
 
-    pageConfiguration.alternativeTextClient = new WebAlternativeTextClient(self);
+    pageConfiguration.alternativeTextClient = makeUnique<WebAlternativeTextClient>(self);
     pageConfiguration.loaderClientForMainFrame = new WebFrameLoaderClient;
-    pageConfiguration.progressTrackerClient = new WebProgressTrackerClient(self);
     pageConfiguration.applicationCacheStorage = &webApplicationCacheStorage();
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
     pageConfiguration.pluginInfoProvider = &WebPluginInfoProvider::singleton();
@@ -1706,11 +1715,12 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         WebCore::LibWebRTCProvider::create(),
         WebCore::CacheStorageProvider::create(),
         BackForwardList::create(self),
-        WebCore::CookieJar::create(storageProvider.copyRef())
+        WebCore::CookieJar::create(storageProvider.copyRef()),
+        makeUniqueRef<WebProgressTrackerClient>(self)
     );
     pageConfiguration.chromeClient = new WebChromeClientIOS(self);
 #if ENABLE(DRAG_SUPPORT)
-    pageConfiguration.dragClient = new WebDragClient(self);
+    pageConfiguration.dragClient = makeUnique<WebDragClient>(self);
 #endif
 
 #if ENABLE(APPLE_PAY)
@@ -1719,7 +1729,6 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 
     pageConfiguration.inspectorClient = new WebInspectorClient(self);
     pageConfiguration.loaderClientForMainFrame = new WebFrameLoaderClient;
-    pageConfiguration.progressTrackerClient = new WebProgressTrackerClient(self);
     pageConfiguration.applicationCacheStorage = &webApplicationCacheStorage();
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
     pageConfiguration.storageNamespaceProvider = &_private->group->storageNamespaceProvider();
@@ -3044,7 +3053,6 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setPasswordEchoDurationInSeconds([preferences _passwordEchoDuration]);
 
     ASSERT_WITH_MESSAGE(settings.backForwardCacheSupportsPlugins(), "BackForwardCacheSupportsPlugins should be enabled on iOS.");
-    settings.setDelegatesPageScaling(true);
 
 #if ENABLE(TEXT_AUTOSIZING)
     settings.setMinimumZoomFontSize([preferences _minimumZoomFontSize]);
@@ -3132,6 +3140,8 @@ static bool needsSelfRetainWhileLoadingQuirk()
     RuntimeEnabledFeatures::sharedFeatures().setGamepadsEnabled([preferences gamepadsEnabled]);
 #endif
 
+    RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled([preferences highlightAPIEnabled]);
+
     RuntimeEnabledFeatures::sharedFeatures().setShadowDOMEnabled([preferences shadowDOMEnabled]);
     RuntimeEnabledFeatures::sharedFeatures().setCustomElementsEnabled([preferences customElementsEnabled]);
     RuntimeEnabledFeatures::sharedFeatures().setDataTransferItemsEnabled([preferences dataTransferItemsEnabled]);
@@ -3166,6 +3176,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
 #endif
 
     RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsEnabled([preferences webAnimationsEnabled]);
+    RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsCompositeOperationsEnabled([preferences webAnimationsCompositeOperationsEnabled]);
 
 #if ENABLE(POINTER_EVENTS)
     RuntimeEnabledFeatures::sharedFeatures().setPointerEventsEnabled([preferences pointerEventsEnabled]);
@@ -3174,7 +3185,6 @@ static bool needsSelfRetainWhileLoadingQuirk()
 #if ENABLE(INTERSECTION_OBSERVER)
     RuntimeEnabledFeatures::sharedFeatures().setIntersectionObserverEnabled(preferences.intersectionObserverEnabled);
 #endif
-    RuntimeEnabledFeatures::sharedFeatures().setDisplayContentsEnabled(preferences.displayContentsEnabled);
 
     RuntimeEnabledFeatures::sharedFeatures().setUserTimingEnabled(preferences.userTimingEnabled);
     RuntimeEnabledFeatures::sharedFeatures().setResourceTimingEnabled(preferences.resourceTimingEnabled);
@@ -3191,6 +3201,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     RuntimeEnabledFeatures::sharedFeatures().setDialogElementEnabled([preferences dialogElementEnabled]);
     RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled([preferences keygenElementEnabled]);
     RuntimeEnabledFeatures::sharedFeatures().setCSSShadowPartsEnabled([preferences cssShadowPartsEnabled]);
+    RuntimeEnabledFeatures::sharedFeatures().setIsInAppBrowserPrivacyEnabled([preferences isInAppBrowserPrivacyEnabled]);
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     RuntimeEnabledFeatures::sharedFeatures().setLegacyEncryptedMediaAPIEnabled(preferences.legacyEncryptedMediaAPIEnabled);
@@ -3206,6 +3217,10 @@ static bool needsSelfRetainWhileLoadingQuirk()
 
 #if ENABLE(VIDEO_TRACK)
     settings.setGenericCueAPIEnabled(preferences.genericCueAPIEnabled);
+#endif
+
+#if ENABLE(GPU_PROCESS)
+    settings.setUseGPUProcessForMedia(preferences.useGPUProcessForMedia);
 #endif
 
     RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(preferences.inspectorAdditionsEnabled);
@@ -7901,7 +7916,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(JSC::JSGlobalObject* lexicalGlo
         return nil;
     if (!coreFrame->document())
         return nil;
-    JSC::JSValue result = coreFrame->script().executeScript(script, true);
+    JSC::JSValue result = coreFrame->script().executeScriptIgnoringException(script, true);
     if (!result) // FIXME: pass errors
         return 0;
     JSC::JSLockHolder lock(coreFrame->script().globalObject(WebCore::mainThreadNormalWorld()));

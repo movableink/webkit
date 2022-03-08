@@ -30,10 +30,15 @@
 import json
 import logging
 import re
+import sys
 
 from webkitpy.common.host import Host
 from webkitpy.common.webkit_finder import WebKitFinder
-from HTMLParser import HTMLParser
+
+if sys.version_info > (3, 0):
+    from html.parser import HTMLParser
+else:
+    from HTMLParser import HTMLParser
 
 _log = logging.getLogger(__name__)
 
@@ -42,10 +47,16 @@ def convert_for_webkit(new_path, filename, reference_support_info, host=Host(), 
     """ Converts a file's |contents| so it will function correctly in its |new_path| in Webkit.
 
     Returns the list of modified properties and the modified text if the file was modifed, None otherwise."""
-    contents = host.filesystem.read_binary_file(filename)
+    contents = host.filesystem.read_text_file(filename)
+
+    # WebKit does not have a www test domain.
+    contents = contents.replace('{{domains[www]}}', '{{hosts[alt][]}}')
+
     converter = _W3CTestConverter(new_path, filename, reference_support_info, host, convert_test_harness_links, webkit_test_runner_options)
     if filename.endswith('.css'):
         return converter.add_webkit_prefix_to_unprefixed_properties_and_values(contents)
+    elif filename.endswith('.js'):
+        return ([], [], contents)
     else:
         converter.feed(contents)
         converter.close()
@@ -101,7 +112,7 @@ class _W3CTestConverter(HTMLParser):
             return []
         properties = json.loads(contents)['properties']
         property_names = []
-        for property_name, property_dict in properties.iteritems():
+        for property_name, property_dict in properties.items():
             property_names.append(property_name)
             if 'codegen-properties' in property_dict:
                 codegen_options = property_dict['codegen-properties']
@@ -253,7 +264,7 @@ class _W3CTestConverter(HTMLParser):
         self.converted_data.extend(['&#', name, ';'])
 
     def handle_comment(self, data):
-        self.converted_data.extend(['<!-- ', data, ' -->'])
+        self.converted_data.extend(['<!--', data, '-->'])
         self.add_webkit_test_runner_options_if_needed()
 
     def handle_decl(self, decl):

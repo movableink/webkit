@@ -52,7 +52,7 @@ class ArchiveContext(object):
     MEMORY_LIMIT = 2 * 1024 * 1024 * 1024  # Don't allow more than 2 gigs of archives in memory at one time
 
     class ArchiveMetaDataByCommit(ClusteredByConfiguration):
-        __table_name__ = 'archive_metadata_by_commit'
+        __table_name__ = 'archive_metadata_by_commit_01'
         suite = columns.Text(partition_key=True, required=True)
         branch = columns.Text(partition_key=True, required=True)
         uuid = columns.BigInt(primary_key=True, required=True, clustering_order='DESC')
@@ -72,7 +72,7 @@ class ArchiveContext(object):
     # According to https://cwiki.apache.org/confluence/display/CASSANDRA2/CassandraLimitations, we should shard
     # large data blobs.
     class ArchiveChunks(Model):
-        __table_name__ = 'archive_chunks'
+        __table_name__ = 'archive_chunks_01'
         digest = columns.Text(partition_key=True, required=True)
         index = columns.Integer(primary_key=True, required=True)
         chunk = columns.Blob(required=True)
@@ -177,35 +177,40 @@ class ArchiveContext(object):
                     if memory_used > self.MEMORY_LIMIT:
                         raise RuntimeError('Hit soft-memory cap when fetching archives, aborting')
 
+            archive_by_digest = {}
             result = {}
             for config, values in metadata_by_config.items():
                 for value in values:
                     if not value.get('digest'):
                         continue
 
-                    rows = self.cassandra.select_from_table(
-                        self.ArchiveChunks.__table_name__,
-                        digest=value.get('digest'),
-                        limit=1 + int(value.get('size', 0) / self.CHUNK_SIZE),
-                    )
-                    if len(rows) == 0:
-                        continue
+                    if not archive_by_digest.get(value.get('digest')):
+                        rows = self.cassandra.select_from_table(
+                            self.ArchiveChunks.__table_name__,
+                            digest=value.get('digest'),
+                            limit=1 + int(value.get('size', 0) / self.CHUNK_SIZE),
+                        )
+                        if len(rows) == 0:
+                            continue
 
-                    digest = hashlib.md5()
-                    archive = io.BytesIO()
-                    archive_size = 0
-                    for row in rows:
-                        archive_size += len(row.chunk)
-                        digest.update(row.chunk)
-                        archive.write(row.chunk)
+                        digest = hashlib.md5()
+                        archive = io.BytesIO()
+                        archive_size = 0
+                        for row in rows:
+                            archive_size += len(row.chunk)
+                            digest.update(row.chunk)
+                            archive.write(row.chunk)
 
-                    if archive_size != value.get('size', 0) or value.get('digest', '') != digest.hexdigest():
-                        raise RuntimeError('Failed to reconstruct archive from chunks')
+                        if archive_size != value.get('size', 0) or value.get('digest', '') != digest.hexdigest():
+                            raise RuntimeError('Failed to reconstruct archive from chunks')
 
-                    archive.seek(0)
+                        archive_by_digest[value.get('digest')] = archive
+
+                    archive_by_digest.get(value.get('digest')).seek(0)
                     result.setdefault(config, [])
                     result[config].append(dict(
-                        archive=archive,
+                        archive=archive_by_digest.get(value.get('digest')),
+                        digest=digest.hexdigest(),
                         uuid=value['uuid'],
                         start_time=value['start_time'],
                     ))
@@ -216,15 +221,35 @@ class ArchiveContext(object):
     def _files_for_archive(cls, archive):
         master = None
         files = set()
+
+        archive_list = []
+        is_mastered = True
         for item in archive.namelist():
             if item.startswith('__'):
                 continue
 
             if not master:
                 master = item
-                continue
+            else:
+                if is_mastered and not item.startswith(master):
+                    is_mastered = False
+                    archive_list.append(master)
+                archive_list.append(item)
 
-            files.add(item[len(master):])
+        if not is_mastered:
+            master = None
+        for item in archive_list:
+            if master:
+                item_to_add = item[len(master):]
+            else:
+                item_to_add = item
+
+            files.add(item_to_add)
+            built = ''
+            for partial in item_to_add.split('/')[:-1]:
+                built = f'{built}{partial}/'
+                files.add(built)
+
         return master, sorted([*files])
 
     def ls(self, *args, **kwargs):
@@ -259,7 +284,28 @@ class ArchiveContext(object):
                     elif path[-1] == '/':
                         file = [f[len(path):] for f in files if f.startswith(path)]
                     elif path in files:
-                        file = unpacked.open(master + path).read()
+                        file = unpacked.open('{}{}'.format(master or '', path)).read()
+                        query = f'?{config.to_query()}'
+                        if len(query) > 1:
+                            query += '&'
+                        if archive['uuid']:
+                            query += f"uuid={archive['uuid']}&"
+                        if archive['start_time']:
+                            query += f"after_time={archive['start_time']}&before_time={archive['start_time']}&"
+
+                        query = query[:-1]
+
+                        # If we find references to other files in the archive, we need to replace those references
+                        # with references that include the query
+                        parent_path = '/'.join(path.split('/')[:-1])
+                        for f in files:
+                            if f[-1] == '/' or f == path or not query:
+                                continue
+                            if f.startswith(parent_path):
+                                file = file.replace(f[len(parent_path):].encode('utf-8'), f'{f[len(parent_path):]}{query}'.encode('utf-8'))
+                            else:
+                                file = file.replace(f.encode('utf-8'), f'{f}{query}'.encode('utf-8'))
+
 
                 if file:
                     result[config].append(dict(

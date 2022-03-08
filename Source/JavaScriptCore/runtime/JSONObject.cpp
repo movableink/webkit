@@ -65,7 +65,7 @@ void JSONObject::finishCreation(VM& vm)
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
 
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "JSON"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsNontrivialString(vm, "JSON"_s), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
 // PropertyNameForFunctionCall objects must be on the stack, since the JSValue that they create is not marked.
@@ -185,6 +185,7 @@ static inline String gap(JSGlobalObject* globalObject, JSValue space)
 
     // If the space value is a string, use it as the gap string, otherwise use no gap string.
     String spaces = space.getString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
     if (spaces.length() <= maxGapLength)
         return spaces;
     return spaces.substringSharingImpl(0, maxGapLength);

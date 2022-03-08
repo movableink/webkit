@@ -25,9 +25,6 @@
 
 #pragma once
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-#include "AXIsolatedTree.h"
-#endif
 #include "AXTextStateChangeIntent.h"
 #include "AccessibilityObject.h"
 #include "Range.h"
@@ -48,6 +45,7 @@ namespace WebCore {
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 class AXIsolatedObject;
+class AXIsolatedTree;
 #endif
 class Document;
 class HTMLAreaElement;
@@ -195,8 +193,10 @@ public:
     WEBCORE_EXPORT static bool clientSupportsIsolatedTree();
 private:
     AXCoreObject* isolatedTreeRootObject();
-    Ref<AXIsolatedTree> generateIsolatedTree(PageIdentifier);
-    Ref<AXIsolatedObject> createIsolatedTreeHierarchy(AXCoreObject&, AXID, AXIsolatedTree&, Vector<Ref<AXIsolatedObject>>&);
+    static AXCoreObject* isolatedTreeFocusedObject(Document&);
+    void setIsolatedTreeFocusedObject(Node*);
+    static Ref<AXIsolatedTree> generateIsolatedTree(PageIdentifier, Document&);
+    static Ref<AXIsolatedObject> createIsolatedTreeHierarchy(AXCoreObject&, AXID, AXObjectCache*, AXIsolatedTree&, Vector<Ref<AXIsolatedObject>>&, bool isRoot);
 #endif
 
 public:
@@ -413,6 +413,7 @@ private:
     AccessibilityObject* rootWebArea();
 
     static AccessibilityObject* focusedImageMapUIElement(HTMLAreaElement*);
+    static AXCoreObject* focusedObject(Document&);
 
     AXID getAXID(AccessibilityObject*);
 
@@ -450,6 +451,7 @@ private:
     void handleModalChange(Node*);
 
     Document& m_document;
+    const Optional<PageIdentifier> m_pageID; // constant for object's lifetime.
     HashMap<AXID, RefPtr<AccessibilityObject>> m_objects;
     HashMap<RenderObject*, AXID> m_renderObjectMapping;
     HashMap<Widget*, AXID> m_widgetObjectMapping;

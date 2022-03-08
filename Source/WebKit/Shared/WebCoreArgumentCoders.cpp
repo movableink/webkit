@@ -41,6 +41,7 @@
 #include <WebCore/DatabaseDetails.h>
 #include <WebCore/DictationAlternative.h>
 #include <WebCore/DictionaryPopupInfo.h>
+#include <WebCore/DisplayListItems.h>
 #include <WebCore/DragData.h>
 #include <WebCore/EventTrackingRegions.h>
 #include <WebCore/FetchOptions.h>
@@ -56,8 +57,8 @@
 #include <WebCore/Length.h>
 #include <WebCore/LengthBox.h>
 #include <WebCore/MediaSelectionOption.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/Pasteboard.h>
-#include <WebCore/Path.h>
 #include <WebCore/PluginData.h>
 #include <WebCore/PromisedAttachmentInfo.h>
 #include <WebCore/ProtectionSpace.h>
@@ -731,121 +732,6 @@ bool ArgumentCoder<LayoutPoint>::decode(Decoder& decoder, LayoutPoint& layoutPoi
     return SimpleArgumentCoder<LayoutPoint>::decode(decoder, layoutPoint);
 }
 
-
-static void pathEncodeApplierFunction(Encoder& encoder, const PathElement& element)
-{
-    encoder.encodeEnum(element.type);
-
-    switch (element.type) {
-    case PathElementMoveToPoint: // The points member will contain 1 value.
-        encoder << element.points[0];
-        break;
-    case PathElementAddLineToPoint: // The points member will contain 1 value.
-        encoder << element.points[0];
-        break;
-    case PathElementAddQuadCurveToPoint: // The points member will contain 2 values.
-        encoder << element.points[0];
-        encoder << element.points[1];
-        break;
-    case PathElementAddCurveToPoint: // The points member will contain 3 values.
-        encoder << element.points[0];
-        encoder << element.points[1];
-        encoder << element.points[2];
-        break;
-    case PathElementCloseSubpath: // The points member will contain no values.
-        break;
-    }
-}
-
-void ArgumentCoder<Path>::encode(Encoder& encoder, const Path& path)
-{
-    uint64_t numPoints = 0;
-    path.apply([&numPoints](const PathElement&) {
-        ++numPoints;
-    });
-
-    encoder << numPoints;
-
-    path.apply([&encoder](const PathElement& pathElement) {
-        pathEncodeApplierFunction(encoder, pathElement);
-    });
-}
-
-bool ArgumentCoder<Path>::decode(Decoder& decoder, Path& path)
-{
-    uint64_t numPoints;
-    if (!decoder.decode(numPoints))
-        return false;
-    
-    path.clear();
-
-    for (uint64_t i = 0; i < numPoints; ++i) {
-    
-        PathElementType elementType;
-        if (!decoder.decodeEnum(elementType))
-            return false;
-        
-        switch (elementType) {
-        case PathElementMoveToPoint: { // The points member will contain 1 value.
-            FloatPoint point;
-            if (!decoder.decode(point))
-                return false;
-            path.moveTo(point);
-            break;
-        }
-        case PathElementAddLineToPoint: { // The points member will contain 1 value.
-            FloatPoint point;
-            if (!decoder.decode(point))
-                return false;
-            path.addLineTo(point);
-            break;
-        }
-        case PathElementAddQuadCurveToPoint: { // The points member will contain 2 values.
-            FloatPoint controlPoint;
-            if (!decoder.decode(controlPoint))
-                return false;
-
-            FloatPoint endPoint;
-            if (!decoder.decode(endPoint))
-                return false;
-
-            path.addQuadCurveTo(controlPoint, endPoint);
-            break;
-        }
-        case PathElementAddCurveToPoint: { // The points member will contain 3 values.
-            FloatPoint controlPoint1;
-            if (!decoder.decode(controlPoint1))
-                return false;
-
-            FloatPoint controlPoint2;
-            if (!decoder.decode(controlPoint2))
-                return false;
-
-            FloatPoint endPoint;
-            if (!decoder.decode(endPoint))
-                return false;
-
-            path.addBezierCurveTo(controlPoint1, controlPoint2, endPoint);
-            break;
-        }
-        case PathElementCloseSubpath: // The points member will contain no values.
-            path.closeSubpath();
-            break;
-        }
-    }
-
-    return true;
-}
-
-Optional<Path> ArgumentCoder<Path>::decode(Decoder& decoder)
-{
-    Path path;
-    if (!decode(decoder, path))
-        return WTF::nullopt;
-
-    return path;
-}
-
 void ArgumentCoder<RecentSearch>::encode(Encoder& encoder, const RecentSearch& recentSearch)
 {
     encoder << recentSearch.string << recentSearch.time;
@@ -1096,8 +982,11 @@ static void encodeImage(Encoder& encoder, Image& image)
 {
     RefPtr<ShareableBitmap> bitmap = ShareableBitmap::createShareable(IntSize(image.size()), { });
     auto graphicsContext = bitmap->createGraphicsContext();
-    if (graphicsContext)
-        graphicsContext->drawImage(image, IntPoint());
+    encoder << !!graphicsContext;
+    if (!graphicsContext)
+        return;
+
+    graphicsContext->drawImage(image, IntPoint());
 
     ShareableBitmap::Handle handle;
     bitmap->createHandle(handle);
@@ -1107,6 +996,11 @@ static void encodeImage(Encoder& encoder, Image& image)
 
 static bool decodeImage(Decoder& decoder, RefPtr<Image>& image)
 {
+    Optional<bool> didCreateGraphicsContext;
+    decoder >> didCreateGraphicsContext;
+    if (!didCreateGraphicsContext.hasValue() || !didCreateGraphicsContext.value())
+        return false;
+
     ShareableBitmap::Handle handle;
     if (!decoder.decode(handle))
         return false;
@@ -1143,7 +1037,94 @@ static bool decodeOptionalImage(Decoder& decoder, RefPtr<Image>& image)
     return decodeImage(decoder, image);
 }
 
-#if !PLATFORM(IOS_FAMILY)
+void ArgumentCoder<ImageHandle>::encode(Encoder& encoder, const ImageHandle& imageHandle)
+{
+    encodeOptionalImage(encoder, imageHandle.image.get());
+}
+
+bool ArgumentCoder<ImageHandle>::decode(Decoder& decoder, ImageHandle& imageHandle)
+{
+    if (!decodeOptionalImage(decoder, imageHandle.image))
+        return false;
+    return true;
+}
+
+static void encodeNativeImage(Encoder& encoder, NativeImagePtr image)
+{
+    auto imageSize = nativeImageSize(image);
+    auto bitmap = ShareableBitmap::createShareable(imageSize, { });
+    auto graphicsContext = bitmap->createGraphicsContext();
+    encoder << !!graphicsContext;
+    if (!graphicsContext)
+        return;
+
+    graphicsContext->drawNativeImage(image, { }, FloatRect({ }, imageSize), FloatRect({ }, imageSize));
+
+    ShareableBitmap::Handle handle;
+    bitmap->createHandle(handle);
+
+    encoder << handle;
+}
+
+static bool decodeNativeImage(Decoder& decoder, NativeImagePtr& nativeImage)
+{
+    Optional<bool> didCreateGraphicsContext;
+    decoder >> didCreateGraphicsContext;
+    if (!didCreateGraphicsContext.hasValue() || !didCreateGraphicsContext.value())
+        return false;
+
+    ShareableBitmap::Handle handle;
+    if (!decoder.decode(handle))
+        return false;
+
+    auto bitmap = ShareableBitmap::create(handle);
+    if (!bitmap)
+        return false;
+
+    auto image = bitmap->createImage();
+    if (!image)
+        return false;
+
+    nativeImage = image->nativeImage();
+    if (!nativeImage)
+        return false;
+
+    return true;
+}
+
+static void encodeOptionalNativeImage(Encoder& encoder, NativeImagePtr image)
+{
+    bool hasImage = !!image;
+    encoder << hasImage;
+
+    if (hasImage)
+        encodeNativeImage(encoder, image);
+}
+
+static bool decodeOptionalNativeImage(Decoder& decoder, NativeImagePtr& image)
+{
+    image = nullptr;
+
+    bool hasImage;
+    if (!decoder.decode(hasImage))
+        return false;
+
+    if (!hasImage)
+        return true;
+
+    return decodeNativeImage(decoder, image);
+}
+
+void ArgumentCoder<NativeImageHandle>::encode(Encoder& encoder, const NativeImageHandle& imageHandle)
+{
+    encodeOptionalNativeImage(encoder, imageHandle.image.get());
+}
+
+bool ArgumentCoder<NativeImageHandle>::decode(Decoder& decoder, NativeImageHandle& imageHandle)
+{
+    return decodeOptionalNativeImage(decoder, imageHandle.image);
+}
+
 void ArgumentCoder<Cursor>::encode(Encoder& encoder, const Cursor& cursor)
 {
     encoder.encodeEnum(cursor.type());
@@ -1214,7 +1195,6 @@ bool ArgumentCoder<Cursor>::decode(Decoder& decoder, Cursor& cursor)
 #endif
     return true;
 }
-#endif
 
 void ArgumentCoder<ResourceRequest>::encode(Encoder& encoder, const ResourceRequest& resourceRequest)
 {
@@ -3034,13 +3014,14 @@ bool ArgumentCoder<Vector<RefPtr<SecurityOrigin>>>::decode(Decoder& decoder, Vec
     if (!decoder.decode(dataSize))
         return false;
 
-    origins.reserveInitialCapacity(dataSize);
     for (uint64_t i = 0; i < dataSize; ++i) {
         auto decodedOriginRefPtr = SecurityOrigin::decode(decoder);
         if (!decodedOriginRefPtr)
             return false;
-        origins.uncheckedAppend(decodedOriginRefPtr.releaseNonNull());
+        origins.append(decodedOriginRefPtr.releaseNonNull());
     }
+    origins.shrinkToFit();
+
     return true;
 }
 

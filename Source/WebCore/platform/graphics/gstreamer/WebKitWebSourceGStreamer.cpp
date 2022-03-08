@@ -28,12 +28,14 @@
 #include "MainThreadNotifier.h"
 #include "MediaPlayer.h"
 #include "PlatformMediaResourceLoader.h"
+#include "PolicyChecker.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include <cstdint>
 #include <wtf/Condition.h>
 #include <wtf/Scope.h>
+#include <wtf/glib/WTFGType.h>
 #include <wtf/text/CString.h>
 
 using namespace WebCore;
@@ -64,7 +66,7 @@ private:
     void checkUpdateBlocksize(unsigned bytesRead);
 
     // PlatformMediaResourceClient virtual methods.
-    void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinue)>&&) override;
+    void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(PolicyChecker::ShouldContinue)>&&) override;
     void dataReceived(PlatformMediaResource&, const char*, int) override;
     void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) override;
     void loadFailed(PlatformMediaResource&, const ResourceError&) override;
@@ -90,7 +92,6 @@ enum MainThreadSourceNotification {
     Dispose = 1 << 2,
 };
 
-#define WEBKIT_WEB_SRC_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), WEBKIT_TYPE_WEB_SRC, WebKitWebSrcPrivate))
 struct _WebKitWebSrcPrivate {
     ~_WebKitWebSrcPrivate()
     {
@@ -164,7 +165,7 @@ GST_DEBUG_CATEGORY_STATIC(webkit_web_src_debug);
 
 static void webKitWebSrcUriHandlerInit(gpointer gIface, gpointer ifaceData);
 
-static void webKitWebSrcDispose(GObject*);
+static void webKitWebSrcConstructed(GObject*);
 static void webKitWebSrcSetProperty(GObject*, guint propertyID, const GValue*, GParamSpec*);
 static void webKitWebSrcGetProperty(GObject*, guint propertyID, GValue*, GParamSpec*);
 static GstStateChangeReturn webKitWebSrcChangeState(GstElement*, GstStateChange);
@@ -181,17 +182,16 @@ static gboolean webKitWebSrcUnLockStop(GstBaseSrc*);
 static void webKitWebSrcSetContext(GstElement*, GstContext*);
 
 #define webkit_web_src_parent_class parent_class
-// We split this out into another macro to avoid a check-webkit-style error.
-#define WEBKIT_WEB_SRC_CATEGORY_INIT GST_DEBUG_CATEGORY_INIT(webkit_web_src_debug, "webkitwebsrc", 0, "websrc element");
-G_DEFINE_TYPE_WITH_CODE(WebKitWebSrc, webkit_web_src, GST_TYPE_PUSH_SRC,
+WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitWebSrc, webkit_web_src, GST_TYPE_PUSH_SRC,
     G_IMPLEMENT_INTERFACE(GST_TYPE_URI_HANDLER, webKitWebSrcUriHandlerInit);
-    WEBKIT_WEB_SRC_CATEGORY_INIT);
+    GST_DEBUG_CATEGORY_INIT(webkit_web_src_debug, "webkitwebsrc", 0, "websrc element");
+)
 
 static void webkit_web_src_class_init(WebKitWebSrcClass* klass)
 {
     GObjectClass* oklass = G_OBJECT_CLASS(klass);
 
-    oklass->dispose = webKitWebSrcDispose;
+    oklass->constructed = webKitWebSrcConstructed;
     oklass->set_property = webKitWebSrcSetProperty;
     oklass->get_property = webKitWebSrcGetProperty;
 
@@ -242,14 +242,11 @@ static void webkit_web_src_class_init(WebKitWebSrcClass* klass)
 
     GstPushSrcClass* pushSrcClass = GST_PUSH_SRC_CLASS(klass);
     pushSrcClass->create = GST_DEBUG_FUNCPTR(webKitWebSrcCreate);
-
-    g_type_class_add_private(klass, sizeof(WebKitWebSrcPrivate));
 }
-
 
 static void webkitWebSrcReset(WebKitWebSrc* src)
 {
-    WebKitWebSrcPrivate* priv = WEBKIT_WEB_SRC_GET_PRIVATE(src);
+    WebKitWebSrcPrivate* priv = src->priv;
 
     GST_DEBUG_OBJECT(src, "Resetting internal state");
     priv->haveSize = false;
@@ -261,12 +258,12 @@ static void webkitWebSrcReset(WebKitWebSrc* src)
     priv->size = 0;
 }
 
-static void webkit_web_src_init(WebKitWebSrc* src)
+static void webKitWebSrcConstructed(GObject* object)
 {
-    WebKitWebSrcPrivate* priv = WEBKIT_WEB_SRC_GET_PRIVATE(src);
+    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
 
-    src->priv = priv;
-    new (priv) WebKitWebSrcPrivate();
+    WebKitWebSrc* src = WEBKIT_WEB_SRC(object);
+    WebKitWebSrcPrivate* priv = src->priv;
 
     priv->notifier = MainThreadNotifier<MainThreadSourceNotification>::create();
     priv->adapter = adoptGRef(gst_adapter_new());
@@ -275,15 +272,6 @@ static void webkit_web_src_init(WebKitWebSrc* src)
     webkitWebSrcReset(src);
     gst_base_src_set_automatic_eos(GST_BASE_SRC_CAST(src), FALSE);
     gst_base_src_set_async(GST_BASE_SRC_CAST(src), TRUE);
-}
-
-static void webKitWebSrcDispose(GObject* object)
-{
-    WebKitWebSrcPrivate* priv = WEBKIT_WEB_SRC(object)->priv;
-
-    priv->~WebKitWebSrcPrivate();
-
-    GST_CALL_PARENT(G_OBJECT_CLASS, dispose, (object));
 }
 
 static void webKitWebSrcSetProperty(GObject* object, guint propID, const GValue* value, GParamSpec* pspec)
@@ -957,7 +945,7 @@ void CachedResourceStreamingClient::checkUpdateBlocksize(unsigned bytesRead)
     }
 }
 
-void CachedResourceStreamingClient::responseReceived(PlatformMediaResource&, const ResourceResponse& response, CompletionHandler<void(ShouldContinue)>&& completionHandler)
+void CachedResourceStreamingClient::responseReceived(PlatformMediaResource&, const ResourceResponse& response, CompletionHandler<void(PolicyChecker::ShouldContinue)>&& completionHandler)
 {
     WebKitWebSrc* src = WEBKIT_WEB_SRC(m_src.get());
     WebKitWebSrcPrivate* priv = src->priv;
@@ -1011,7 +999,7 @@ void CachedResourceStreamingClient::responseReceived(PlatformMediaResource&, con
         GST_ELEMENT_ERROR(src, RESOURCE, READ, ("Received %d HTTP error code", response.httpStatusCode()), (nullptr));
         priv->doesHaveEOS = true;
         webKitWebSrcStop(GST_BASE_SRC_CAST(src));
-        completionHandler(ShouldContinue::No);
+        completionHandler(PolicyChecker::ShouldContinue::No);
         return;
     }
 
@@ -1025,7 +1013,7 @@ void CachedResourceStreamingClient::responseReceived(PlatformMediaResource&, con
             GST_ELEMENT_ERROR(src, RESOURCE, READ, ("Received unexpected %d HTTP status code", response.httpStatusCode()), (nullptr));
             priv->doesHaveEOS = true;
             webKitWebSrcStop(GST_BASE_SRC_CAST(src));
-            completionHandler(ShouldContinue::No);
+            completionHandler(PolicyChecker::ShouldContinue::No);
             return;
         } else {
             GST_DEBUG_OBJECT(src, "Range request succeeded");
@@ -1071,7 +1059,7 @@ void CachedResourceStreamingClient::responseReceived(PlatformMediaResource&, con
         priv->wereHeadersReceived = true;
         priv->headersCondition.notifyOne();
     }
-    completionHandler(ShouldContinue::Yes);
+    completionHandler(PolicyChecker::ShouldContinue::Yes);
 }
 
 void CachedResourceStreamingClient::dataReceived(PlatformMediaResource&, const char* data, int length)

@@ -159,8 +159,8 @@ static inline PropertyWhitelistType determinePropertyWhitelistType(const CSSSele
     return PropertyWhitelistNone;
 }
 
-RuleData::RuleData(StyleRule* rule, unsigned selectorIndex, unsigned selectorListIndex, unsigned position)
-    : m_rule(rule)
+RuleData::RuleData(const StyleRule& styleRule, unsigned selectorIndex, unsigned selectorListIndex, unsigned position)
+    : m_styleRule(&styleRule)
     , m_selectorIndex(selectorIndex)
     , m_selectorListIndex(selectorListIndex)
     , m_position(position)
@@ -169,6 +169,7 @@ RuleData::RuleData(StyleRule* rule, unsigned selectorIndex, unsigned selectorLis
     , m_containsUncommonAttributeSelector(computeContainsUncommonAttributeSelector(*selector()))
     , m_linkMatchType(SelectorChecker::determineLinkMatchType(selector()))
     , m_propertyWhitelistType(determinePropertyWhitelistType(selector()))
+    , m_isEnabled(true)
     , m_descendantSelectorIdentifierHashes(SelectorFilter::collectHashes(*selector()))
 {
     ASSERT(m_position == position);

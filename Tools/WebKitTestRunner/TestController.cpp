@@ -472,6 +472,8 @@ void TestController::initialize(int argc, const char* argv[])
     m_shouldShowTouches = options.shouldShowTouches;
     m_checkForWorldLeaks = options.checkForWorldLeaks;
     m_allowAnyHTTPSCertificateForAllowedHosts = options.allowAnyHTTPSCertificateForAllowedHosts;
+    m_internalFeatures = options.internalFeatures;
+    m_experimentalFeatures = options.experimentalFeatures;
 
     m_usingServerMode = (m_paths.size() == 1 && m_paths[0] == "-");
     if (m_usingServerMode)
@@ -573,12 +575,14 @@ WKRetainPtr<WKPageConfigurationRef> TestController::generatePageConfiguration(co
     };
     WKContextSetInjectedBundleClient(m_context.get(), &injectedBundleClient.base);
 
-    WKContextClientV2 contextClient = {
-        { 2, this },
+    WKContextClientV3 contextClient = {
+        { 3, this },
         0, // plugInAutoStartOriginHashesChanged
         networkProcessDidCrash,
         0, // plugInInformationBecameAvailable
         0, // copyWebCryptoMasterKey
+        serviceWorkerProcessDidCrash,
+        gpuProcessDidCrash
     };
     WKContextSetClient(m_context.get(), &contextClient.base);
 
@@ -813,6 +817,10 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
     for (const auto& internalDebugFeature : options.internalDebugFeatures)
         WKPreferencesSetInternalDebugFeatureForKey(preferences, internalDebugFeature.value, toWK(internalDebugFeature.key).get());
 
+#if PLATFORM(COCOA)
+    WKPreferencesSetCaptureVideoInUIProcessEnabled(preferences, options.enableCaptureVideoInUIProcess);
+    WKPreferencesSetCaptureAudioInGPUProcessEnabled(preferences, options.enableCaptureAudioInGPUProcess);
+#endif
     WKPreferencesSetProcessSwapOnNavigationEnabled(preferences, options.contextOptions.shouldEnableProcessSwapOnNavigation());
     WKPreferencesSetPageVisibilityBasedProcessSuppressionEnabled(preferences, options.enableAppNap);
     WKPreferencesSetOfflineWebApplicationCacheEnabled(preferences, true);
@@ -881,6 +889,7 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
     WKPreferencesSetMediaSourceEnabled(preferences, true);
     WKPreferencesSetSourceBufferChangeTypeEnabled(preferences, true);
 #endif
+    WKPreferencesSetHighlightAPIEnabled(preferences, true);
 
     WKPreferencesSetHiddenPageDOMTimerThrottlingEnabled(preferences, false);
     WKPreferencesSetHiddenPageCSSAnimationSuspensionEnabled(preferences, false);
@@ -924,6 +933,8 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
     WKPreferencesSetMediaPlaybackRequiresUserGesture(preferences, false);
     WKPreferencesSetVideoPlaybackRequiresUserGesture(preferences, false);
     WKPreferencesSetAudioPlaybackRequiresUserGesture(preferences, false);
+
+    WKPreferencesSetShouldUseServiceWorkerShortTimeout(preferences, true);
 
     platformResetPreferencesToConsistentValues();
 }
@@ -990,6 +1001,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     WKContextClearCurrentModifierStateForTesting(TestController::singleton().context());
 
     WKContextSetUseSeparateServiceWorkerProcess(TestController::singleton().context(), false);
+
+    WKPageSetMockCameraOrientation(m_mainWebView->page(), 0);
 
     // FIXME: This function should also ensure that there is only one page open.
 
@@ -1446,6 +1459,10 @@ static void updateTestOptionsFromTestHeader(TestOptions& testOptions, const std:
             testOptions.enableLazyImageLoading = parseBooleanTestHeaderValue(value);
         else if (key == "allowsLinkPreview")
             testOptions.allowsLinkPreview = parseBooleanTestHeaderValue(value);
+        else if (key == "enableCaptureVideoInUIProcess")
+            testOptions.enableCaptureVideoInUIProcess = parseBooleanTestHeaderValue(value);
+        else if (key == "enableCaptureAudioInGPUProcess")
+            testOptions.enableCaptureAudioInGPUProcess = parseBooleanTestHeaderValue(value);
         pairStart = pairEnd + 1;
     }
 }
@@ -1456,6 +1473,11 @@ TestOptions TestController::testOptionsForTest(const TestCommand& command) const
 
     options.useRemoteLayerTree = m_shouldUseRemoteLayerTree;
     options.shouldShowWebView = m_shouldShowWebView;
+
+    for (auto& feature : m_internalFeatures)
+        options.internalDebugFeatures.add(feature.key, feature.value);
+    for (auto& feature : m_experimentalFeatures)
+        options.experimentalFeatures.add(feature.key, feature.value);
 
     updatePlatformSpecificTestOptionsForTest(options, command.pathOrURL);
     updateTestOptionsFromTestHeader(options, command.pathOrURL, command.absolutePath);
@@ -1808,6 +1830,16 @@ void TestController::didReceiveSynchronousPageMessageFromInjectedBundleWithListe
 void TestController::networkProcessDidCrash(WKContextRef context, const void *clientInfo)
 {
     static_cast<TestController*>(const_cast<void*>(clientInfo))->networkProcessDidCrash();
+}
+
+void TestController::serviceWorkerProcessDidCrash(WKContextRef context, const void *clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->serviceWorkerProcessDidCrash();
+}
+
+void TestController::gpuProcessDidCrash(WKContextRef context, const void *clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->gpuProcessDidCrash();
 }
 
 void TestController::didReceiveKeyDownMessageFromInjectedBundle(WKDictionaryRef messageBodyDictionary, bool synchronous)
@@ -2167,6 +2199,20 @@ void TestController::networkProcessDidCrash()
     pid_t pid = WKContextGetNetworkProcessIdentifier(m_context.get());
     fprintf(stderr, "#CRASHED - %s (pid %ld)\n", networkProcessName(), static_cast<long>(pid));
     exit(1);
+}
+
+void TestController::serviceWorkerProcessDidCrash()
+{
+    fprintf(stderr, "#CRASHED - ServiceWorkerProcess\n");
+    if (m_shouldExitWhenWebProcessCrashes)
+        exit(1);
+}
+
+void TestController::gpuProcessDidCrash()
+{
+    fprintf(stderr, "#CRASHED - GPUProcess\n");
+    if (m_shouldExitWhenWebProcessCrashes)
+        exit(1);
 }
 
 // WKPageNavigationClient
@@ -2992,9 +3038,9 @@ void TestController::terminateNetworkProcess()
     WKContextTerminateNetworkProcess(platformContext());
 }
 
-void TestController::terminateServiceWorkerProcess()
+void TestController::terminateServiceWorkers()
 {
-    WKContextTerminateServiceWorkerProcess(platformContext());
+    WKContextTerminateServiceWorkers(platformContext());
 }
 
 #if !PLATFORM(COCOA)
@@ -3578,12 +3624,20 @@ void TestController::setStatisticsShouldDowngradeReferrer(bool value)
     m_currentInvocation->didSetShouldDowngradeReferrer();
 }
 
-void TestController::setStatisticsShouldBlockThirdPartyCookies(bool value)
+void TestController::setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction)
 {
     ResourceStatisticsCallbackContext context(*this);
-    WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(TestController::websiteDataStore(), value, &context, resourceStatisticsVoidResultCallback);
+    WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(TestController::websiteDataStore(), value, onlyOnSitesWithoutUserInteraction, &context, resourceStatisticsVoidResultCallback);
     runUntil(context.done, noTimeout);
     m_currentInvocation->didSetShouldBlockThirdPartyCookies();
+}
+
+void TestController::setStatisticsFirstPartyWebsiteDataRemovalMode(bool value)
+{
+    ResourceStatisticsCallbackContext context(*this);
+    WKWebsiteDataStoreSetResourceLoadStatisticsFirstPartyWebsiteDataRemovalModeForTesting(TestController::websiteDataStore(), value, &context, resourceStatisticsVoidResultCallback);
+    runUntil(context.done, noTimeout);
+    m_currentInvocation->didSetFirstPartyWebsiteDataRemovalMode();
 }
 
 void TestController::statisticsResetToConsistentState()
@@ -3612,6 +3666,16 @@ void TestController::removeMockMediaDevice(WKStringRef persistentID)
 void TestController::resetMockMediaDevices()
 {
     WKResetMockMediaDevices(platformContext());
+}
+
+void TestController::setMockCameraOrientation(uint64_t orientation)
+{
+    WKPageSetMockCameraOrientation(m_mainWebView->page(), orientation);
+}
+
+bool TestController::isMockRealtimeMediaSourceCenterEnabled() const
+{
+    return WKPageIsMockRealtimeMediaSourceCenterEnabled(m_mainWebView->page());
 }
 
 #if !PLATFORM(COCOA)

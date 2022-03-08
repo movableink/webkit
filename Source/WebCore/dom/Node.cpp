@@ -1918,8 +1918,8 @@ void Node::showTreeForThisAcrossFrame() const
 
 void NodeListsNodeData::invalidateCaches()
 {
-    for (auto& atomicName : m_atomicNameCaches)
-        atomicName.value->invalidateCache();
+    for (auto& atomName : m_atomNameCaches)
+        atomName.value->invalidateCache();
 
     for (auto& collection : m_cachedCollections)
         collection.value->invalidateCache();
@@ -1930,8 +1930,8 @@ void NodeListsNodeData::invalidateCaches()
 
 void NodeListsNodeData::invalidateCachesForAttribute(const QualifiedName& attrName)
 {
-    for (auto& atomicName : m_atomicNameCaches)
-        atomicName.value->invalidateCacheForAttribute(attrName);
+    for (auto& atomName : m_atomNameCaches)
+        atomName.value->invalidateCacheForAttribute(attrName);
 
     for (auto& collection : m_cachedCollections)
         collection.value->invalidateCacheForAttribute(attrName);

@@ -154,8 +154,22 @@
 #include "WebNotificationManager.h"
 #endif
 
+#if ENABLE(GPU_PROCESS)
+#include "GPUConnectionToWebProcessMessages.h"
+#include "GPUProcessConnection.h"
+#include "GPUProcessConnectionInfo.h"
+#endif
+
 #if ENABLE(REMOTE_INSPECTOR)
 #include <JavaScriptCore/RemoteInspector.h>
+#endif
+
+#if ENABLE(GPU_PROCESS)
+#include "RemoteMediaPlayerManager.h"
+#endif
+
+#if USE(LIBWEBRTC) && PLATFORM(COCOA) && ENABLE(GPU_PROCESS)
+#include "LibWebRTCCodecs.h"
 #endif
 
 // This should be less than plugInAutoStartExpirationTimeThreshold in PlugInAutoStartProvider.
@@ -215,7 +229,11 @@ WebProcess::WebProcess()
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
     addSupplement<UserMediaCaptureManager>();
 #endif
-    
+
+#if ENABLE(GPU_PROCESS)
+    addSupplement<RemoteMediaPlayerManager>();
+#endif
+
     Gigacage::forbidDisablingPrimitiveGigacage();
 }
 
@@ -1238,6 +1256,9 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
     WebSocketStream::networkProcessCrashed();
     m_webSocketChannelManager.networkProcessCrashed();
 
+    if (m_libWebRTCNetwork)
+        m_libWebRTCNetwork->networkProcessCrashed();
+
     for (auto& page : m_pageMap.values()) {
         page->stopAllURLSchemeTasks();
 #if ENABLE(APPLE_PAY)
@@ -1251,6 +1272,58 @@ WebLoaderStrategy& WebProcess::webLoaderStrategy()
 {
     return m_webLoaderStrategy;
 }
+
+#if ENABLE(GPU_PROCESS)
+
+static GPUProcessConnectionInfo getGPUProcessConnection(IPC::Connection& connection)
+{
+    GPUProcessConnectionInfo connectionInfo;
+    if (!connection.sendSync(Messages::WebProcessProxy::GetGPUProcessConnection(), Messages::WebProcessProxy::GetGPUProcessConnection::Reply(connectionInfo), 0))
+        CRASH();
+
+    return connectionInfo;
+}
+
+GPUProcessConnection& WebProcess::ensureGPUProcessConnection()
+{
+    RELEASE_ASSERT(RunLoop::isMain());
+
+    // If we've lost our connection to the GPU process (e.g. it crashed) try to re-establish it.
+    if (!m_gpuProcessConnection) {
+        auto connectionInfo = getGPUProcessConnection(*parentProcessConnection());
+
+        // Retry once if the IPC to get the connectionIdentifier succeeded but the connectionIdentifier we received
+        // is invalid. This may indicate that the GPU process has crashed.
+        if (!IPC::Connection::identifierIsValid(connectionInfo.identifier()))
+            connectionInfo = getGPUProcessConnection(*parentProcessConnection());
+
+        if (!IPC::Connection::identifierIsValid(connectionInfo.identifier()))
+            CRASH();
+
+        m_gpuProcessConnection = GPUProcessConnection::create(connectionInfo.releaseIdentifier());
+    }
+    
+    return *m_gpuProcessConnection;
+}
+
+void WebProcess::gpuProcessConnectionClosed(GPUProcessConnection* connection)
+{
+    ASSERT(m_gpuProcessConnection);
+    ASSERT_UNUSED(connection, m_gpuProcessConnection == connection);
+
+    m_gpuProcessConnection = nullptr;
+}
+
+#if PLATFORM(COCOA) && USE(LIBWEBRTC)
+LibWebRTCCodecs& WebProcess::libWebRTCCodecs()
+{
+    if (!m_libWebRTCCodecs)
+        m_libWebRTCCodecs = makeUnique<LibWebRTCCodecs>();
+    return *m_libWebRTCCodecs;
+}
+#endif
+
+#endif // ENABLE(GPU_PROCESS)
 
 void WebProcess::setEnhancedAccessibility(bool flag)
 {

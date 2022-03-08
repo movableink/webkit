@@ -328,7 +328,7 @@ private:
                         }
                     } else if (childConstant.isSymbol()) {
                         Symbol* symbol = jsCast<Symbol*>(childConstant);
-                        constantUid = &symbol->privateName().uid();
+                        constantUid = &symbol->uid();
                     }
                 }
 
@@ -383,7 +383,7 @@ private:
                 // GetMyArgumentByVal in such statically-out-of-bounds accesses; we just lose CFA unless
                 // GCSE removes the access entirely.
                 if (inlineCallFrame) {
-                    if (index >= inlineCallFrame->argumentCountIncludingThis - 1)
+                    if (index >= static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1))
                         break;
                 } else {
                     if (index >= m_state.numberOfArguments() - 1)
@@ -404,7 +404,7 @@ private:
                         virtualRegisterForArgument(index + 1), FlushedJSValue);
                 }
                 
-                if (inlineCallFrame && !inlineCallFrame->isVarargs() && index < inlineCallFrame->argumentCountIncludingThis - 1) {
+                if (inlineCallFrame && !inlineCallFrame->isVarargs() && index < static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1)) {
                     node->convertToGetStack(data);
                     eliminated = true;
                     break;
@@ -846,6 +846,26 @@ private:
                         if (auto* rareData = structure->rareDataConcurrently()) {
                             if (auto* immutableButterfly = rareData->cachedOwnKeysConcurrently()) {
                                 if (m_graph.isWatchingHavingABadTimeWatchpoint(node)) {
+                                    node->convertToNewArrayBuffer(m_graph.freeze(immutableButterfly));
+                                    changed = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+
+            case NewArrayWithSpread: {
+                if (m_graph.isWatchingHavingABadTimeWatchpoint(node)) {
+                    BitVector* bitVector = node->bitVector();
+                    if (node->numChildren() == 1 && bitVector->get(0)) {
+                        Edge use = m_graph.varArgChild(node, 0);
+                        if (use->op() == PhantomSpread) {
+                            if (use->child1()->op() == PhantomNewArrayBuffer) {
+                                auto* immutableButterfly = use->child1()->castOperand<JSImmutableButterfly*>();
+                                if (hasContiguous(immutableButterfly->indexingType())) {
                                     node->convertToNewArrayBuffer(m_graph.freeze(immutableButterfly));
                                     changed = true;
                                     break;

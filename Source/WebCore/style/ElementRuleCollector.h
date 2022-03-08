@@ -46,8 +46,16 @@ public:
     {
     }
 
+    PseudoElementRequest(PseudoId pseudoId, const AtomString& highlightName)
+        : pseudoId(pseudoId)
+        , highlightName(highlightName)
+    {
+        ASSERT(pseudoId == PseudoId::Highlight);
+    }
+
     PseudoId pseudoId;
     Optional<StyleScrollbarState> scrollbarState;
+    AtomString highlightName;
 };
 
 struct MatchedRule {
@@ -102,7 +110,7 @@ public:
     bool hasAnyMatchingRules(const RuleSet*);
 
     const MatchResult& matchResult() const;
-    const Vector<RefPtr<StyleRule>>& matchedRuleList() const;
+    const Vector<RefPtr<const StyleRule>>& matchedRuleList() const;
 
     void clearMatchedRules();
 
@@ -144,10 +152,10 @@ private:
     const Element& element() const { return m_element.get(); }
 
     const Ref<const Element> m_element;
-    const RuleSet& m_authorStyle;
-    const RuleSet* m_userStyle { nullptr };
-    const RuleSet* m_userAgentMediaQueryStyle { nullptr };
-    const SelectorFilter* m_selectorFilter { nullptr };
+    Ref<const RuleSet> m_authorStyle;
+    RefPtr<const RuleSet> m_userStyle;
+    RefPtr<const RuleSet> m_userAgentMediaQueryStyle;
+    const SelectorFilter* m_selectorFilter;
 
     bool m_shouldIncludeEmptyRules { false };
     bool m_isPrintStyle { false };
@@ -162,7 +170,7 @@ private:
     size_t m_matchedRuleTransferIndex { 0 };
 
     // Output.
-    Vector<RefPtr<StyleRule>> m_matchedRuleList;
+    Vector<RefPtr<const StyleRule>> m_matchedRuleList;
     bool m_didMatchUncommonAttributeSelector { false };
     MatchResult m_result;
     Relations m_styleRelations;

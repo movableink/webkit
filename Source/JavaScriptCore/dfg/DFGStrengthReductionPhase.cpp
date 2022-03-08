@@ -285,17 +285,17 @@ private:
             }
             
             Node* setLocal = nullptr;
-            VirtualRegister local = m_node->local();
+            Operand operand = m_node->operand();
             
             for (unsigned i = m_nodeIndex; i--;) {
                 Node* node = m_block->at(i);
 
-                if (node->op() == SetLocal && node->local() == local) {
+                if (node->op() == SetLocal && node->operand() == operand) {
                     setLocal = node;
                     break;
                 }
 
-                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, local)))
+                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, operand)))
                     break;
 
             }
@@ -903,9 +903,7 @@ private:
             if (!lastIndex && builder.isEmpty())
                 m_node->convertToIdentityOn(stringNode);
             else {
-                if (lastIndex < string.length())
-                    builder.appendSubstring(string, lastIndex, string.length() - lastIndex);
-                
+                builder.appendSubstring(string, lastIndex);
                 m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, builder.toString()));
             }
 

@@ -1,10 +1,10 @@
 include(GNUInstallDirs)
 include(VersioningUtils)
 
-SET_PROJECT_VERSION(2 27 2)
+SET_PROJECT_VERSION(2 27 3)
 set(WPE_API_VERSION 1.0)
 
-CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 10 1 7)
+CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 11 0 8)
 
 # These are shared variables, but we special case their definition so that we can use the
 # CMAKE_INSTALL_* variables that are populated by the GNUInstallDirs macro.
@@ -16,7 +16,7 @@ find_package(Cairo 1.14.0 REQUIRED)
 find_package(Fontconfig 2.8.0 REQUIRED)
 find_package(Freetype 2.4.2 REQUIRED)
 find_package(GLIB 2.44.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
-find_package(HarfBuzz 0.9.18 REQUIRED)
+find_package(HarfBuzz 0.9.18 REQUIRED COMPONENTS ICU)
 find_package(ICU REQUIRED COMPONENTS data i18n uc)
 find_package(JPEG REQUIRED)
 find_package(LibEpoxy 1.4.0 REQUIRED)
@@ -63,6 +63,7 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEB_RTC PRIVATE ${ENABLE_EXPERIMENTAL_FE
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_CSS_PAINTING_API PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_CSS_TYPED_OM PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_POINTER_EVENTS PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_CSS_CONIC_GRADIENTS PRIVATE ON)
 
 # Public options specific to the WPE port. Do not add any options here unless
 # there is a strong reason we should support changing the value of the option,
@@ -124,11 +125,8 @@ if (ENABLE_ACCESSIBILITY)
 endif ()
 
 if (USE_OPENJPEG)
-    find_package(OpenJPEG)
+    find_package(OpenJPEG 2.2.0)
     if (NOT OpenJPEG_FOUND)
-        message(FATAL_ERROR "libopenjpeg is needed for USE_OPENJPEG.")
-    endif ()
-    if ("${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}" VERSION_LESS "2.2.0")
         message(FATAL_ERROR "libopenjpeg 2.2.0 is required for USE_OPENJPEG.")
     endif ()
 endif ()

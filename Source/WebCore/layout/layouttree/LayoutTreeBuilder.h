@@ -27,11 +27,13 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutBox.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class RenderBlockFlow;
 class RenderElement;
 class RenderObject;
 class RenderTable;
@@ -47,32 +49,42 @@ class LayoutTreeContent : public CanMakeWeakPtr<LayoutTreeContent> {
     WTF_MAKE_ISO_ALLOCATED(LayoutTreeContent);
 public:
     LayoutTreeContent(const RenderBox&, std::unique_ptr<Container>);
+    ~LayoutTreeContent();
 
     const Container& rootLayoutBox() const { return *m_rootLayoutBox; }
     Container& rootLayoutBox() { return *m_rootLayoutBox; }
     const RenderBox& rootRenderer() const { return m_rootRenderer; }
 
-    using RenderObjectToLayoutBoxMap = HashMap<const RenderObject*, Box*>;
+    void addBox(std::unique_ptr<Box> box) { m_boxes.add(WTFMove(box)); }
+
     Box* layoutBoxForRenderer(const RenderObject& renderer) { return m_renderObjectToLayoutBox.get(&renderer); }
-    void addLayoutBoxForRenderer(const RenderObject& renderer, Box& layoutBox) { m_renderObjectToLayoutBox.add(&renderer, &layoutBox); }
+    const Box* layoutBoxForRenderer(const RenderObject& renderer) const { return m_renderObjectToLayoutBox.get(&renderer); }
+
+    const RenderObject* rendererForLayoutBox(const Box& box) const { return m_layoutBoxToRenderObject.get(&box); }
+
+    void addLayoutBoxForRenderer(const RenderObject&, Box&);
 
 private:
     const RenderBox& m_rootRenderer;
     std::unique_ptr<Container> m_rootLayoutBox;
-    RenderObjectToLayoutBoxMap m_renderObjectToLayoutBox;
+    HashSet<std::unique_ptr<Box>> m_boxes;
+
+    HashMap<const RenderObject*, Box*> m_renderObjectToLayoutBox;
+    HashMap<const Box*, const RenderObject*> m_layoutBoxToRenderObject;
 };
 
 class TreeBuilder {
 public:
     static std::unique_ptr<Layout::LayoutTreeContent> buildLayoutTree(const RenderView&);
+    static std::unique_ptr<Layout::LayoutTreeContent> buildLayoutTreeForIntegration(const RenderBlockFlow&);
 
 private:
     TreeBuilder(LayoutTreeContent&);
 
     void buildTree();
-    void buildSubTree(const RenderElement& rootRenderer, Container& rootContainer);
+    void buildSubTree(const RenderElement& parentRenderer, Container& parentContainer);
     void buildTableStructure(const RenderTable& tableRenderer, Container& tableWrapperBox);
-    std::unique_ptr<Box> createLayoutBox(const RenderElement& parentRenderer, const RenderObject& childRenderer);
+    std::unique_ptr<Box> createLayoutBox(const Container& parentContainer, const RenderObject& childRenderer);
 
     LayoutTreeContent& m_layoutTreeContent;
 };

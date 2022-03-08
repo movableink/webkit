@@ -1,3 +1,123 @@
+2019-12-23  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: fix handling of session timeouts for values higher than MAX_INT
+        https://bugs.webkit.org/show_bug.cgi?id=204114
+
+        Reviewed by Brian Burg.
+
+        Use double instead of Seconds for handling timeouts.
+
+        * Capabilities.h:
+        * Session.cpp:
+        (WebDriver::Session::getTimeouts): Handle the case of script timeout being null.
+        (WebDriver::Session::go):
+        (WebDriver::Session::back):
+        (WebDriver::Session::forward):
+        (WebDriver::Session::refresh):
+        (WebDriver::Session::findElements):
+        (WebDriver::Session::waitForNavigationToComplete):
+        (WebDriver::Session::executeScript): Do not pass a timeout when it's null.
+        * Session.h:
+        (WebDriver::Session::scriptTimeout const):
+        (WebDriver::Session::pageLoadTimeout const):
+        (WebDriver::Session::implicitWaitTimeout const):
+        * WebDriverService.cpp:
+        (WebDriver::deserializeTimeouts): Add IgnoreUnknownTimeout, since we should only fail when processing
+        capabilities, but not when setting new timeouts. Also handle the case of script timeout being null.
+        (WebDriver::WebDriverService::parseCapabilities const): Pass IgnoreUnknownTimeout::No to deserializeTimeouts.
+        (WebDriver::WebDriverService::validatedCapabilities const): Ditto.
+        (WebDriver::WebDriverService::createSession): Handle the case of script timeout being null.
+        (WebDriver::WebDriverService::setTimeouts): Pass IgnoreUnknownTimeout::Yes to deserializeTimeouts.
+
+2019-12-13  Jim Mason  <jmason@ibinx.com>
+
+        [GTK] WebKitGTK build hangs on g-ir-scanner
+        https://bugs.webkit.org/show_bug.cgi?id=204715
+
+        This patch fixes the static initialization order problem
+        introduced by Bug 204503.
+
+        The patch replaces the static data members with statics that
+        are constructed only upon first access (i.e., the 'construct
+        on first use' idiom).
+
+        Reviewed by Carlos Garcia Campos.
+
+        * SessionHost.h:
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::messageHandlers):
+        (WebDriver::SessionHost::connectToBrowser):
+
+2019-12-12  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: tests is_element_enabled/enabled.py::test_fieldset_disabled_descendant are failing
+        https://bugs.webkit.org/show_bug.cgi?id=204700
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        Fixes: imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[button]
+               imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[input]
+               imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[select]
+               imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[textarea]
+
+        * CMakeLists.txt: Add ElementEnabled.js to compilation.
+        * Session.cpp:
+        (WebDriver::Session::isElementEnabled): Use ElementEnabled atom instead.
+
+2019-12-10  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Win] Fix MSVC warning C4701: potentially uninitialized local variable 'x' used
+        https://bugs.webkit.org/show_bug.cgi?id=205052
+
+        Reviewed by Don Olmstead.
+
+        * Session.cpp:
+        (WebDriver::Session::getToplevelBrowsingContextRect):
+        (WebDriver::Session::computeElementLayout):
+        Zero-initialized local variables.
+
+2019-12-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: handle elements of type file in send keys command
+        https://bugs.webkit.org/show_bug.cgi?id=188514
+
+        Reviewed by Brian Burg.
+
+        Handle the case of inpout element being a file upload in send keys command.
+
+        * Capabilities.h: Add strictFileInteractability.
+        * Session.cpp:
+        (WebDriver::Session::elementIsFileUpload): Helper to check if the given element is a file upload and whether
+        it's multiple or not.
+        (WebDriver::Session::parseElementIsFileUploadResult): Parse the result of elementIsFileUpload().
+        (WebDriver::Session::elementClick): If the element is a file upload, fail with invalid argument error.
+        (WebDriver::Session::setInputFileUploadFiles): Send setFilesForInputFileUpload message to the browser with the
+        selected files.
+        (WebDriver::Session::elementSendKeys): If the element is a file upload, call setInputFileUploadFiles()
+        instead. Also handle the strictFileInteractability capability to decide whether to focus and check
+        interactability on the input element or not.
+        * Session.h:
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::parseCapabilities const): Handle strictFileInteractability.
+        (WebDriver::WebDriverService::validatedCapabilities const): Ditto.
+        (WebDriver::WebDriverService::matchCapabilities const): Ditto.
+        (WebDriver::WebDriverService::createSession): Ditto.
+
+2019-12-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: most of the clear tests are failing
+        https://bugs.webkit.org/show_bug.cgi?id=180404
+
+        Reviewed by Brian Burg.
+
+        Implement the element clear command following the spec.
+        https://w3c.github.io/webdriver/#element-clear
+
+        * Session.cpp:
+        (WebDriver::Session::elementIsEditable): Helper function to check if the element is editable.
+        (WebDriver::Session::elementClear): Check if the element is editable and interactable before executing the clear atom.
+        * Session.h:
+
 2019-11-22  Carlos Garcia Campos  <cgarcia@igalia.com>
 
         Unreviewed. Fix GTK/WPE debug build after r252770

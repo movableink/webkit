@@ -98,6 +98,7 @@ public:
     // FIXME: Make these methods not static.
     static void callOnWebRTCNetworkThread(Function<void()>&&);
     static void callOnWebRTCSignalingThread(Function<void()>&&);
+    static bool hasWebRTCThreads();
 
     // Used for mock testing
     void setPeerConnectionFactory(rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&&);
@@ -118,6 +119,7 @@ public:
     void setEnableLogging(bool);
     void setEnableWebRTCEncryption(bool);
     void setUseDTLS10(bool);
+    void setUseGPUProcess(bool);
 
     class SuspendableSocketFactory : public rtc::PacketSocketFactory {
     public:
@@ -145,6 +147,7 @@ protected:
     bool m_supportsVP8 { false };
     bool m_enableLogging { true };
     bool m_useDTLS10 { false };
+    bool m_useGPUProcess { false };
 #endif
 };
 

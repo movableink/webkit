@@ -33,6 +33,7 @@ WI.LogContentView = class LogContentView extends WI.ContentView
 
         this._nestingLevel = 0;
         this._selectedMessages = [];
+        this._immediatelyHiddenMessages = new Set;
 
         // FIXME: Try to use a marker, instead of a list of messages that get re-added.
         this._provisionalMessages = [];
@@ -56,12 +57,12 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         this._keyboardShortcutCommandA = new WI.KeyboardShortcut(WI.KeyboardShortcut.Modifier.CommandOrControl, "A");
         this._keyboardShortcutEsc = new WI.KeyboardShortcut(null, WI.KeyboardShortcut.Key.Escape);
 
-        this._logViewController = new WI.JavaScriptLogViewController(this.messagesElement, this.element, this.prompt, this, "console-prompt-history");
+        this._logViewController = new WI.JavaScriptLogViewController(this.messagesElement, this.messagesElement, this.prompt, this, "console-prompt-history");
         this._lastMessageView = null;
 
         const fixed = true;
         this._findBanner = new WI.FindBanner(this, "console-find-banner", fixed);
-        this._findBanner.visibilityPriority = WI.NavigationItem.VisibilityPriority.High;
+        this._findBanner.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
         this._findBanner.targetElement = this.element;
 
         this._currentSearchQuery = "";
@@ -70,7 +71,6 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         this._selectedSearchMatchIsValid = false;
 
         this._preserveLogNavigationItem = new WI.CheckboxNavigationItem("preserve-log", WI.UIString("Preserve Log"), !WI.settings.clearLogOnNavigate.value);
-        this._preserveLogNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
         this._preserveLogNavigationItem.tooltip = WI.UIString("Do not clear the console on new page loads");
         this._preserveLogNavigationItem.addEventListener(WI.CheckboxNavigationItem.Event.CheckedDidChange, () => {
             WI.settings.clearLogOnNavigate.value = !WI.settings.clearLogOnNavigate.value;
@@ -78,7 +78,6 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         WI.settings.clearLogOnNavigate.addEventListener(WI.Setting.Event.Changed, this._handleClearLogOnNavigateSettingChanged, this);
 
         this._emulateInUserGestureNavigationItem = new WI.CheckboxNavigationItem("emulate-in-user-gesture", WI.UIString("Emulate User Gesture"), WI.settings.emulateInUserGesture.value);
-        this._emulateInUserGestureNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
         this._emulateInUserGestureNavigationItem.tooltip = WI.UIString("Run console commands as if inside a user gesture");
         this._emulateInUserGestureNavigationItem.addEventListener(WI.CheckboxNavigationItem.Event.CheckedDidChange, () => {
             WI.settings.emulateInUserGesture.value = !WI.settings.emulateInUserGesture.value;
@@ -96,14 +95,8 @@ WI.LogContentView = class LogContentView extends WI.ContentView
             new WI.ScopeBarItem(WI.LogContentView.Scopes.Infos, WI.UIString("Infos"), {className: "infos", hidden: true}),
             new WI.ScopeBarItem(WI.LogContentView.Scopes.Debugs, WI.UIString("Debugs"), {className: "debugs", hidden: true}),
         ];
-
-        for (let scopeBarItem of scopeBarItems) {
-            let indicatorElement = scopeBarItem.element.insertBefore(document.createElement("div"), scopeBarItem.element.firstChild);
-            indicatorElement.className = "indicator";
-        }
-
         this._scopeBar = new WI.ScopeBar("log-scope-bar", scopeBarItems, scopeBarItems[0]);
-        this._scopeBar.visibilityPriority = WI.NavigationItem.VisibilityPriority.High;
+        this._scopeBar.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
         this._scopeBar.addEventListener(WI.ScopeBar.Event.SelectionChanged, this._scopeBarSelectionDidChange, this);
 
         this._hasNonDefaultLogChannelMessage = false;
@@ -123,6 +116,7 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         this._garbageCollectNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._garbageCollect, this);
 
         this._clearLogNavigationItem = new WI.ButtonNavigationItem("clear-log", WI.UIString("Clear log (%s or %s)").format(WI.clearKeyboardShortcut.displayName, this._logViewController.messagesAlternateClearKeyboardShortcut.displayName), "Images/NavigationItemTrash.svg", 15, 15);
+        this._clearLogNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.High;
         this._clearLogNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._clearLog, this);
 
         this._showConsoleTabNavigationItem = new WI.ButtonNavigationItem("show-tab", WI.UIString("Show Console tab"), "Images/SplitToggleUp.svg", 16, 16);
@@ -177,7 +171,7 @@ WI.LogContentView = class LogContentView extends WI.ContentView
 
     get scrollableElements()
     {
-        return [this.element];
+        return [this.messagesElement];
     }
 
     get shouldKeepElementsScrolledToBottom()
@@ -237,12 +231,17 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         if (!this._scopeBar.item(WI.LogContentView.Scopes.All).selected) {
             if (messageView instanceof WI.ConsoleCommandView || messageView.message instanceof WI.ConsoleCommandResultMessage)
                 this._scopeBar.item(WI.LogContentView.Scopes.Evaluations).toggle(true, {extendSelection: true});
-            else
-                this._markScopeBarItemForMessageLevelUnread(messageView.message.level);
         }
 
         console.assert(messageView.element instanceof Element);
         this._filterMessageElements([messageView.element]);
+
+        if (!this._isMessageVisible(messageView.element)) {
+            this._immediatelyHiddenMessages.add(messageView);
+            this._showHiddenMessagesBannerIfNeeded();
+        }
+
+        this._lastMessageView = messageView;
     }
 
     get supportsSearch() { return true; }
@@ -251,7 +250,7 @@ WI.LogContentView = class LogContentView extends WI.ContentView
 
     get supportsCustomFindBanner()
     {
-        return WI.isShowingConsoleTab();
+        return true;
     }
 
     showCustomFindBanner()
@@ -276,8 +275,8 @@ WI.LogContentView = class LogContentView extends WI.ContentView
     get saveData()
     {
         return {
-            url: WI.FileUtilities.inspectorURLForFilename("Console.txt"),
             content: this._formatMessagesAsData(false),
+            suggestedName: WI.UIString("Console") + ".txt",
             forceSaveAs: true,
         };
     }
@@ -354,13 +353,6 @@ WI.LogContentView = class LogContentView extends WI.ContentView
             this.prompt.focus();
     }
 
-    // Protected
-
-    layout()
-    {
-        this._scrollElementHeight = this.messagesElement.getBoundingClientRect().height;
-    }
-
     // Private
 
     _formatMessagesAsData(onlySelected)
@@ -398,7 +390,7 @@ WI.LogContentView = class LogContentView extends WI.ContentView
 
         for (let messageElement of this._allMessageElements()) {
             if (messageElement.__messageView)
-                messageElement.__messageView.removeEventListeners();
+                messageElement.__messageView.clearSessionState();
         }
 
         const isFirstSession = false;
@@ -441,22 +433,6 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         return undefined;
     }
 
-    _markScopeBarItemUnread(scope)
-    {
-        let item = this._scopeBar.item(scope);
-        if (item && !item.selected && !this._scopeBar.item(WI.LogContentView.Scopes.All).selected)
-            item.element.classList.add("unread");
-    }
-
-    _markScopeBarItemForMessageLevelUnread(level)
-    {
-        let scope = this._scopeFromMessageLevel(level);
-        if (!scope)
-            return;
-
-        this._markScopeBarItemUnread(scope);
-    }
-
     _messageAdded(event)
     {
         let message = event.data.message;
@@ -475,8 +451,17 @@ WI.LogContentView = class LogContentView extends WI.ContentView
 
     _previousMessageRepeatCountUpdated(event)
     {
-        if (this._logViewController.updatePreviousMessageRepeatCount(event.data.count) && this._lastMessageView)
-            this._markScopeBarItemForMessageLevelUnread(this._lastMessageView.message.level);
+        if (!this._logViewController.updatePreviousMessageRepeatCount(event.data.count))
+            return;
+
+        if (this._lastMessageView) {
+            if (this._isMessageVisible(this._lastMessageView.element))
+                return;
+
+            this._immediatelyHiddenMessages.add(this._lastMessageView);
+        }
+
+        this._showHiddenMessagesBannerIfNeeded();
     }
 
     _handleContextMenuEvent(event)
@@ -516,8 +501,8 @@ WI.LogContentView = class LogContentView extends WI.ContentView
             contextMenu.appendItem(WI.UIString("Save Selected"), () => {
                 const forceSaveAs = true;
                 WI.FileUtilities.save({
-                    url: WI.FileUtilities.inspectorURLForFilename("Console.txt"),
                     content: this._formatMessagesAsData(true),
+                    suggestedName: WI.UIString("Console") + ".txt",
                 }, forceSaveAs);
             });
 
@@ -724,37 +709,11 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         if (!rangeSelection)
             this._referenceMessageForRangeSelection = message;
 
-        if (shouldScrollIntoView && !alreadySelectedMessage)
-            this._ensureMessageIsVisible(this._selectedMessages.lastValue);
-    }
-
-    _ensureMessageIsVisible(message)
-    {
-        if (!message)
-            return;
-
-        var y = this._positionForMessage(message).y;
-        if (y < 0) {
-            this.element.scrollTop += y;
-            return;
+        if (shouldScrollIntoView && !alreadySelectedMessage) {
+            let lastMessage = this._selectedMessages.lastValue;
+            if (lastMessage)
+                lastMessage.scrollIntoViewIfNeeded();
         }
-
-        var nextMessage = this._nextMessage(message);
-        if (nextMessage) {
-            y = this._positionForMessage(nextMessage).y;
-            if (y > this._scrollElementHeight)
-                this.element.scrollTop += y - this._scrollElementHeight;
-        } else {
-            y += message.getBoundingClientRect().height;
-            if (y > this._scrollElementHeight)
-                this.element.scrollTop += y - this._scrollElementHeight;
-        }
-    }
-
-    _positionForMessage(message)
-    {
-        var pagePoint = window.webkitConvertPointFromNodeToPage(message, new WebKitPoint(0, 0));
-        return window.webkitConvertPointFromPageToNode(this.element, pagePoint);
     }
 
     _isMessageVisible(message)
@@ -831,24 +790,29 @@ WI.LogContentView = class LogContentView extends WI.ContentView
 
     _logCleared(event)
     {
-        for (let item of this._scopeBar.items)
-            item.element.classList.remove("unread");
-
         for (let messageElement of this._allMessageElements()) {
             if (messageElement.__messageView)
-                messageElement.__messageView.removeEventListeners();
+                messageElement.__messageView.clearSessionState();
         }
 
         this._logViewController.clear();
+
         this._nestingLevel = 0;
+        this._selectedMessages = [];
+        this._immediatelyHiddenMessages.clear();
 
         if (this._currentSearchQuery)
             this.performSearch(this._currentSearchQuery);
+
+        this._showHiddenMessagesBannerIfNeeded();
     }
 
     _showConsoleTab()
     {
-        WI.showConsoleTab();
+        const requestedScope = null;
+        WI.showConsoleTab(requestedScope, {
+            initiatorHint: WI.TabBrowser.TabNavigationInitiator.ButtonClick,
+        });
     }
 
     _clearLog()
@@ -884,10 +848,9 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         if (items.some((item) => item.id === WI.LogContentView.Scopes.AllChannels))
             items = this._messageSourceBar.items;
 
-        for (let item of items)
-            item.element.classList.remove("unread");
-
         this._filterMessageElements(this._allMessageElements());
+
+        this._showHiddenMessagesBannerIfNeeded();
     }
 
     _scopeBarSelectionDidChange(event)
@@ -896,10 +859,9 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         if (items.some((item) => item.id === WI.LogContentView.Scopes.All))
             items = this._scopeBar.items;
 
-        for (let item of items)
-            item.element.classList.remove("unread");
-
         this._filterMessageElements(this._allMessageElements());
+
+        this._showHiddenMessagesBannerIfNeeded();
     }
 
     _filterMessageElements(messageElements)
@@ -912,9 +874,10 @@ WI.LogContentView = class LogContentView extends WI.ContentView
                 visible = this._messageShouldBeVisible(messageElement.__message);
 
             let classList = messageElement.classList;
-            if (visible)
+            if (visible) {
                 classList.remove(WI.LogContentView.FilteredOutStyleClassName);
-            else {
+                this._immediatelyHiddenMessages.delete(messageElement.__messageView);
+            } else {
                 this._selectedMessages.remove(messageElement);
                 classList.remove(WI.LogContentView.SelectedStyleClassName);
                 classList.add(WI.LogContentView.FilteredOutStyleClassName);
@@ -1210,7 +1173,7 @@ WI.LogContentView = class LogContentView extends WI.ContentView
         this._selectedSearchMatch = this._searchMatches[index];
         this._selectedSearchMatch.highlight.classList.add(WI.LogContentView.SelectedStyleClassName);
 
-        this._ensureMessageIsVisible(this._selectedSearchMatch.message);
+        this._selectedSearchMatch.message.scrollIntoViewIfNeeded(false);
     }
 
     _provisionalLoadStarted()
@@ -1235,6 +1198,41 @@ WI.LogContentView = class LogContentView extends WI.ContentView
     {
         this._startedProvisionalLoad = false;
         this._provisionalMessages = [];
+    }
+
+    _showHiddenMessagesBannerIfNeeded()
+    {
+        if (!this._immediatelyHiddenMessages.size) {
+            if (this._hiddenMessagesBannerElement)
+                this._hiddenMessagesBannerElement.remove();
+            return;
+        }
+
+        if (!this._hiddenMessagesBannerElement) {
+            this._hiddenMessagesBannerElement = document.createElement("div");
+            this._hiddenMessagesBannerElement.className = "hidden-messages-banner";
+
+            this._hiddenMessagesBannerElement.appendChild(document.createTextNode(WI.UIString("There are unread messages that have been filtered")));
+
+            let clearFiltersButtonElement = this._hiddenMessagesBannerElement.appendChild(document.createElement("button"));
+            clearFiltersButtonElement.textContent = WI.UIString("Clear Filters");
+            clearFiltersButtonElement.addEventListener("click", (event) => {
+                this._findBanner.clearAndBlur();
+                this._scopeBar.resetToDefault();
+                console.assert(!this._immediatelyHiddenMessages.size);
+
+                this._hiddenMessagesBannerElement.remove();
+            });
+
+            let dismissBannerIconElement = this._hiddenMessagesBannerElement.appendChild(WI.ImageUtilities.useSVGSymbol("Images/Close.svg", "dismiss", WI.UIString("Dismiss")));
+            dismissBannerIconElement.addEventListener("click", (event) => {
+                this._immediatelyHiddenMessages.clear();
+                this._hiddenMessagesBannerElement.remove();
+            });
+        }
+
+        if (this.element.firstChild !== this._hiddenMessagesBannerElement)
+            this.element.insertAdjacentElement("afterbegin", this._hiddenMessagesBannerElement);
     }
 };
 

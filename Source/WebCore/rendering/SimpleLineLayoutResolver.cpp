@@ -67,14 +67,7 @@ FloatRect RunResolver::Run::rect() const
     float baseline = computeBaselinePosition();
     FloatPoint position = linePosition(run.logicalLeft, baseline - resolver.m_ascent);
     FloatSize size = lineSize(run.logicalLeft, run.logicalRight, resolver.m_ascent + resolver.m_descent + resolver.m_visualOverflowOffset);
-    bool moveLineBreakToBaseline = false;
-    if (run.start == run.end && m_iterator != resolver.begin() && resolver.m_inQuirksMode) {
-        auto previousRun = m_iterator;
-        --previousRun;
-        moveLineBreakToBaseline = !previousRun.simpleRun().isEndOfLine;
-    }
-    if (moveLineBreakToBaseline)
-        return FloatRect(FloatPoint(position.x(), baseline), FloatSize(size.width(), std::max<float>(0, resolver.m_ascent - resolver.m_baseline.toFloat())));
+
     return FloatRect(position, size);
 }
 
@@ -154,7 +147,6 @@ RunResolver::RunResolver(const RenderBlockFlow& flow, const Layout& layout)
     , m_ascent(flow.style().fontCascade().fontMetrics().ascent())
     , m_descent(flow.style().fontCascade().fontMetrics().descent())
     , m_visualOverflowOffset(visualOverflowForDecorations(flow.style(), nullptr).bottom)
-    , m_inQuirksMode(flow.document().inQuirksMode())
 {
 }
 
@@ -305,8 +297,10 @@ WTF::IteratorRange<RunResolver::Iterator> RunResolver::rangeForRendererWithOffse
         return { end(), end() };
     auto it = range.begin();
     auto localEnd = (*it).start() + endOffset;
-    // Advance to the first run with the start offset inside. Only the first node in a range can have a startOffset.
-    while (it != range.end() && (*it).end() <= startOffset)
+    // Advance to the first run before the start offset. Only the first node in a range can have a startOffset.
+    // Note that the start offset may coincide with the end of a run. The run is still considered so that we
+    // can return an empty rect, which conforms to the behavior of Element.getClientRects().
+    while (it != range.end() && (*it).end() < startOffset)
         ++it;
     if (it == range.end())
         return { end(), end() };

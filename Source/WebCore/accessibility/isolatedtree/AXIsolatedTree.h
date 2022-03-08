@@ -47,6 +47,8 @@ public:
     WEBCORE_EXPORT static Ref<AXIsolatedTree> createTreeForPageID(PageIdentifier);
     WEBCORE_EXPORT static RefPtr<AXIsolatedTree> treeForPageID(PageIdentifier);
     WEBCORE_EXPORT static RefPtr<AXIsolatedTree> treeForID(AXIsolatedTreeID);
+    AXObjectCache* axObjectCache() const { return m_axObjectCache; }
+    void setAXObjectCache(AXObjectCache* axObjectCache) { m_axObjectCache = axObjectCache; }
 
     WEBCORE_EXPORT RefPtr<AXIsolatedObject> rootNode();
     WEBCORE_EXPORT RefPtr<AXIsolatedObject> focusedUIElement();
@@ -57,7 +59,7 @@ public:
     void appendNodeChanges(Vector<Ref<AXIsolatedObject>>&);
     void removeNode(AXID);
 
-    void setRoot(Ref<AXIsolatedObject>&);
+    void setRootNode(Ref<AXIsolatedObject>&);
     void setFocusedNodeID(AXID);
     
     // Call on AX thread
@@ -70,6 +72,8 @@ private:
 
     static HashMap<AXIsolatedTreeID, Ref<AXIsolatedTree>>& treeIDCache();
     static HashMap<PageIdentifier, Ref<AXIsolatedTree>>& treePageCache();
+
+    AXObjectCache* m_axObjectCache { nullptr };
 
     // Only access on AX thread requesting data.
     HashMap<AXID, Ref<AXIsolatedObject>> m_readerThreadNodeMap;

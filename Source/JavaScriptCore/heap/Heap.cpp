@@ -89,7 +89,7 @@
 #include <wtf/SimpleStats.h>
 #include <wtf/Threading.h>
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(BMALLOC_MEMORY_FOOTPRINT_API)
 #include <bmalloc/bmalloc.h>
 #endif
 
@@ -130,7 +130,7 @@ size_t proportionalHeapSize(size_t heapSize, size_t ramSize)
     if (VM::isInMiniMode())
         return Options::miniVMHeapGrowthFactor() * heapSize;
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(BMALLOC_MEMORY_FOOTPRINT_API)
     size_t memoryFootprint = bmalloc::api::memoryFootprint();
     if (memoryFootprint < ramSize * Options::smallHeapRAMFraction())
         return Options::smallHeapGrowthFactor() * heapSize;
@@ -539,10 +539,10 @@ void Heap::deprecatedReportExtraMemorySlowCase(size_t size)
 
 bool Heap::overCriticalMemoryThreshold(MemoryThresholdCallType memoryThresholdCallType)
 {
-#if PLATFORM(IOS_FAMILY)
-    if (memoryThresholdCallType == MemoryThresholdCallType::Direct || ++m_precentAvailableMemoryCachedCallCount >= 100) {
+#if USE(BMALLOC_MEMORY_FOOTPRINT_API)
+    if (memoryThresholdCallType == MemoryThresholdCallType::Direct || ++m_percentAvailableMemoryCachedCallCount >= 100) {
         m_overCriticalMemoryThreshold = bmalloc::api::percentAvailableMemoryInUse() > Options::criticalGCMemoryThreshold();
-        m_precentAvailableMemoryCachedCallCount = 0;
+        m_percentAvailableMemoryCachedCallCount = 0;
     }
 
     return m_overCriticalMemoryThreshold;
@@ -721,6 +721,7 @@ void Heap::gatherScratchBufferRoots(ConservativeRoots& roots)
     if (!VM::canUseJIT())
         return;
     m_vm.gatherScratchBufferRoots(roots);
+    m_vm.scanSideState(roots);
 #else
     UNUSED_PARAM(roots);
 #endif
@@ -2340,7 +2341,7 @@ void Heap::updateAllocationLimits()
         }
     }
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(BMALLOC_MEMORY_FOOTPRINT_API)
     // Get critical memory threshold for next cycle.
     overCriticalMemoryThreshold(MemoryThresholdCallType::Direct);
 #endif
@@ -2435,15 +2436,29 @@ bool Heap::isValidAllocation(size_t)
     return true;
 }
 
-void Heap::addFinalizer(JSCell* cell, Finalizer finalizer)
+void Heap::addFinalizer(JSCell* cell, CFinalizer finalizer)
 {
-    WeakSet::allocate(cell, &m_finalizerOwner, reinterpret_cast<void*>(finalizer)); // Balanced by FinalizerOwner::finalize().
+    WeakSet::allocate(cell, &m_cFinalizerOwner, bitwise_cast<void*>(finalizer)); // Balanced by CFinalizerOwner::finalize().
 }
 
-void Heap::FinalizerOwner::finalize(Handle<Unknown> handle, void* context)
+void Heap::addFinalizer(JSCell* cell, LambdaFinalizer function)
+{
+    WeakSet::allocate(cell, &m_lambdaFinalizerOwner, function.leakImpl()); // Balanced by LambdaFinalizerOwner::finalize().
+}
+
+void Heap::CFinalizerOwner::finalize(Handle<Unknown> handle, void* context)
 {
     HandleSlot slot = handle.slot();
-    Finalizer finalizer = reinterpret_cast<Finalizer>(context);
+    CFinalizer finalizer = bitwise_cast<CFinalizer>(context);
+    finalizer(slot->asCell());
+    WeakSet::deallocate(WeakImpl::asWeakImpl(slot));
+}
+
+void Heap::LambdaFinalizerOwner::finalize(Handle<Unknown> handle, void* context)
+{
+    LambdaFinalizer::Impl* impl = bitwise_cast<LambdaFinalizer::Impl*>(context);
+    LambdaFinalizer finalizer(impl);
+    HandleSlot slot = handle.slot();
     finalizer(slot->asCell());
     WeakSet::deallocate(WeakImpl::asWeakImpl(slot));
 }
@@ -2637,7 +2652,7 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     } else {
         size_t bytesAllowedThisCycle = m_maxEdenSize;
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(BMALLOC_MEMORY_FOOTPRINT_API)
         if (overCriticalMemoryThreshold())
             bytesAllowedThisCycle = std::min(m_maxEdenSizeWhenCritical, bytesAllowedThisCycle);
 #endif

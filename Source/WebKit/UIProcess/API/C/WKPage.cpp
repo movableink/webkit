@@ -76,6 +76,7 @@
 #include "WebProcessProxy.h"
 #include "WebProtectionSpace.h"
 #include <WebCore/ContentRuleListResults.h>
+#include <WebCore/MockRealtimeMediaSourceCenter.h>
 #include <WebCore/Page.h>
 #include <WebCore/SSLKeyGenerator.h>
 #include <WebCore/SecurityOriginData.h>
@@ -1211,7 +1212,7 @@ void WKPageSetPageLoaderClient(WKPageRef pageRef, const WKPageLoaderClientBase* 
         milestones.add(WebCore::DidFirstVisuallyNonEmptyLayout);
 
     if (milestones)
-        webPageProxy->process().send(Messages::WebPage::ListenForLayoutMilestones(milestones), webPageProxy->webPageID());
+        webPageProxy->send(Messages::WebPage::ListenForLayoutMilestones(milestones));
 
     webPageProxy->setLoaderClient(WTFMove(loaderClient));
 }
@@ -2471,7 +2472,7 @@ void WKPageSetPageStateClient(WKPageRef page, WKPageStateClientBase* client)
 
 void WKPageRunJavaScriptInMainFrame(WKPageRef pageRef, WKStringRef scriptRef, void* context, WKPageRunJavaScriptFunction callback)
 {
-    toImpl(pageRef)->runJavaScriptInMainFrame(toImpl(scriptRef)->string(), true, [context, callback](API::SerializedScriptValue* returnValue, bool, const WebCore::ExceptionDetails&, CallbackBase::Error error) {
+    toImpl(pageRef)->runJavaScriptInMainFrame({ toImpl(scriptRef)->string(), false, WTF::nullopt, true }, [context, callback](API::SerializedScriptValue* returnValue, Optional<WebCore::ExceptionDetails>, CallbackBase::Error error) {
         callback(toAPI(returnValue), (error != CallbackBase::Error::None) ? toAPI(API::Error::create().ptr()) : 0, context);
     });
 }
@@ -2929,4 +2930,20 @@ void WKPageMarkAdClickAttributionsAsExpiredForTesting(WKPageRef page, WKPageMark
     toImpl(page)->markAdClickAttributionsAsExpiredForTesting([callbackContext, callback] () {
         callback(callbackContext);
     });
+}
+
+void WKPageSetMockCameraOrientation(WKPageRef page, uint64_t orientation)
+{
+#if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
+    toImpl(page)->setOrientationForMediaCapture(orientation);
+#endif
+}
+
+WK_EXPORT bool WKPageIsMockRealtimeMediaSourceCenterEnabled(WKPageRef)
+{
+#if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
+    return MockRealtimeMediaSourceCenter::mockRealtimeMediaSourceCenterEnabled();
+#else
+    return false;
+#endif
 }

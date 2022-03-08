@@ -221,7 +221,7 @@ static void drawOutlinedQuadWithClip(GraphicsContext& context, const FloatQuad& 
     context.setStrokeThickness(0);
     context.fillPath(quadToPath(quad, bounds));
 
-    context.setCompositeOperation(CompositeDestinationOut);
+    context.setCompositeOperation(CompositeOperator::DestinationOut);
     context.setFillColor(Color::createUnchecked(255, 0, 0));
     context.fillPath(quadToPath(clipQuad, bounds));
 }
@@ -315,23 +315,23 @@ static void drawShapeHighlight(GraphicsContext& context, Node& node, Highlight::
             };
 
             switch (pathElement.type) {
-            case PathElementMoveToPoint:
+            case PathElement::Type::MoveToPoint:
                 newPath.moveTo(localToRoot(0));
                 break;
 
-            case PathElementAddLineToPoint:
+            case PathElement::Type::AddLineToPoint:
                 newPath.addLineTo(localToRoot(0));
                 break;
 
-            case PathElementAddCurveToPoint:
+            case PathElement::Type::AddCurveToPoint:
                 newPath.addBezierCurveTo(localToRoot(0), localToRoot(1), localToRoot(2));
                 break;
 
-            case PathElementAddQuadCurveToPoint:
+            case PathElement::Type::AddQuadCurveToPoint:
                 newPath.addQuadCurveTo(localToRoot(0), localToRoot(1));
                 break;
 
-            case PathElementCloseSubpath:
+            case PathElement::Type::CloseSubpath:
                 newPath.closeSubpath();
                 break;
             }

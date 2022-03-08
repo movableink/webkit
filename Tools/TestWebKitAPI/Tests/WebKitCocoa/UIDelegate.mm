@@ -36,7 +36,7 @@
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKRetainPtr.h>
 #import <WebKit/WKUIDelegatePrivate.h>
-#import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKHitTestResult.h>
 #import <WebKit/_WKInspector.h>
 #import <wtf/RetainPtr.h>
@@ -484,11 +484,11 @@ TEST(WebKit, NotificationPermission)
     NSString *html = @"<script>Notification.requestPermission(function(p){alert('permission '+p)})</script>";
     auto webView = adoptNS([[WKWebView alloc] init]);
     [webView setUIDelegate:[[[NotificationDelegate alloc] initWithAllowNotifications:YES] autorelease]];
-    [webView loadHTMLString:html baseURL:[NSURL URLWithString:@"http://example.org"]];
+    [webView loadHTMLString:html baseURL:[NSURL URLWithString:@"https://example.org"]];
     TestWebKitAPI::Util::run(&done);
     done = false;
     [webView setUIDelegate:[[[NotificationDelegate alloc] initWithAllowNotifications:NO] autorelease]];
-    [webView loadHTMLString:html baseURL:[NSURL URLWithString:@"http://example.com"]];
+    [webView loadHTMLString:html baseURL:[NSURL URLWithString:@"https://example.com"]];
     TestWebKitAPI::Util::run(&done);
 }
 

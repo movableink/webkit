@@ -55,7 +55,7 @@ inline JSCell* getJSFunction(JSValue value)
 {
     if (value.isCell() && (value.asCell()->type() == JSFunctionType))
         return value.asCell();
-    return 0;
+    return nullptr;
 }
 
 class Exception;
@@ -103,7 +103,13 @@ class JSObject : public JSCell {
     };
 
 public:
-    typedef JSCell Base;
+    using Base = JSCell;
+
+    // Don't call this directly. Call JSC::subspaceFor<Type>(vm) instead.
+    // FIXME: Refer to Subspace by reference.
+    // https://bugs.webkit.org/show_bug.cgi?id=166988
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM&);
 
     // This is a super dangerous method for JITs. Sometimes the JITs will want to create either a
     // JSFinalObject or a JSArray. This is the method that will do that.
@@ -1286,20 +1292,6 @@ inline void JSObject::nukeStructureAndSetButterfly(VM& vm, StructureID oldStruct
     m_butterfly.set(vm, this, butterfly);
 }
 
-inline CallType getCallData(VM& vm, JSValue value, CallData& callData)
-{
-    CallType result = value.isCell() ? value.asCell()->methodTable(vm)->getCallData(value.asCell(), callData) : CallType::None;
-    ASSERT(result == CallType::None || value.isValidCallee());
-    return result;
-}
-
-inline ConstructType getConstructData(VM& vm, JSValue value, ConstructData& constructData)
-{
-    ConstructType result = value.isCell() ? value.asCell()->methodTable(vm)->getConstructData(value.asCell(), constructData) : ConstructType::None;
-    ASSERT(result == ConstructType::None || value.isValidCallee());
-    return result;
-}
-
 inline JSObject* asObject(JSCell* cell)
 {
     ASSERT(cell->isObject());
@@ -1627,5 +1619,10 @@ JS_EXPORT_PRIVATE NEVER_INLINE bool ordinarySetSlow(JSGlobalObject*, JSObject*, 
 
 #define JSC_NATIVE_GETTER_WITHOUT_TRANSITION(jsName, cppName, attributes) \
     JSC_NATIVE_INTRINSIC_GETTER_WITHOUT_TRANSITION((jsName), (cppName), (attributes), NoIntrinsic)
+
+
+#define STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(DerivedClass, BaseClass) \
+    static_assert(sizeof(DerivedClass) == sizeof(BaseClass)); \
+    static_assert(DerivedClass::destroy == BaseClass::destroy);
 
 } // namespace JSC

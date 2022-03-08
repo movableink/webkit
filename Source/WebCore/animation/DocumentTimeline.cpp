@@ -36,7 +36,6 @@
 #include "EventNames.h"
 #include "GraphicsLayer.h"
 #include "KeyframeEffect.h"
-#include "Microtasks.h"
 #include "Node.h"
 #include "Page.h"
 #include "PseudoElement.h"
@@ -180,6 +179,10 @@ Vector<RefPtr<WebAnimation>> DocumentTimeline::getAnimations() const
         // Otherwise, sort A and B based on their position in the computed value of the animation-name property of the (common) owning element.
         // In our case, this matches the time at which the animations were created and thus their relative position in m_allAnimations.
         return false;
+    });
+
+    std::sort(webAnimations.begin(), webAnimations.end(), [](auto& lhs, auto& rhs) {
+        return lhs->globalPosition() < rhs->globalPosition();
     });
 
     // Finally, we can concatenate the sorted CSS Transitions, CSS Animations and Web Animations in their relative composite order.
@@ -346,11 +349,15 @@ void DocumentTimeline::updateAnimationsAndSendEvents(DOMHighResTimeStamp timesta
     if (m_isSuspended || !m_animationResolutionScheduled || !shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         return;
 
+    // Updating animations and sending events may invalidate the timing of some animations, so we must set the m_animationResolutionScheduled
+    // flag to false prior to running that procedure to allow animation with timing model updates to schedule updates.
+    m_animationResolutionScheduled = false;
+
     internalUpdateAnimationsAndSendEvents();
     applyPendingAcceleratedAnimations();
 
-    m_animationResolutionScheduled = false;
-    scheduleNextTick();
+    if (!m_animationResolutionScheduled)
+        scheduleNextTick();
 }
 
 void DocumentTimeline::internalUpdateAnimationsAndSendEvents()
@@ -524,13 +531,6 @@ void DocumentTimeline::scheduleNextTick()
     // There is no tick to schedule if we don't have any relevant animations.
     if (m_animations.isEmpty())
         return;
-
-    for (const auto& animation : m_animations) {
-        if (!animation->isRunningAccelerated()) {
-            scheduleAnimationResolution();
-            return;
-        }
-    }
 
     Seconds scheduleDelay = Seconds::infinity();
 

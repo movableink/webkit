@@ -490,6 +490,7 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
             if (JSValue value = data[i].get()) {
                 if (!joiner.appendWithoutSideEffects(globalObject, value))
                     goto generalCase;
+                RETURN_IF_EXCEPTION(scope, { });
             } else {
                 if (sawHoles)
                     *sawHoles = true;
@@ -888,7 +889,9 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncPush(JSGlobalObject* globalObject, Ca
             thisObj->methodTable(vm)->putByIndex(thisObj, globalObject, length + n, callFrame->uncheckedArgument(n), true);
         else {
             PutPropertySlot slot(thisObj);
-            Identifier propertyName = Identifier::fromString(vm, JSValue(static_cast<int64_t>(length) + static_cast<int64_t>(n)).toWTFString(globalObject));
+            auto string = JSValue(static_cast<int64_t>(length) + static_cast<int64_t>(n)).toWTFString(globalObject);
+            RETURN_IF_EXCEPTION(scope, encodedJSValue());
+            Identifier propertyName = Identifier::fromString(vm, string);
             thisObj->methodTable(vm)->put(thisObj, globalObject, propertyName, callFrame->uncheckedArgument(n), slot);
         }
         RETURN_IF_EXCEPTION(scope, encodedJSValue());

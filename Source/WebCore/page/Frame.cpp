@@ -634,7 +634,7 @@ void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript
 
     document->setAsRunningUserScripts();
     loader().client().willInjectUserScript(world);
-    m_script->evaluateInWorld(ScriptSourceCode(script.source(), URL(script.url())), world);
+    m_script->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), URL(script.url())), world);
 }
 
 RenderView* Frame::contentRenderer() const
@@ -919,8 +919,13 @@ float Frame::frameScaleFactor() const
     Page* page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
-    if (!page || &page->mainFrame() != this || settings().delegatesPageScaling())
+    if (!page || !isMainFrame())
         return 1;
+
+    if (FrameView* view = this->view()) {
+        if (view->delegatesPageScaling())
+            return 1;
+    }
 
     return page->pageScaleFactor();
 }

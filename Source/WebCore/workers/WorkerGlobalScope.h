@@ -41,6 +41,7 @@
 
 namespace WebCore {
 
+class CSSValuePool;
 class ContentSecurityPolicyResponseHeaders;
 class Crypto;
 class EventLoopTaskGroup;
@@ -121,6 +122,8 @@ public:
 
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final;
 
+    SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
+
     Crypto& crypto();
     Performance& performance() const;
 
@@ -132,6 +135,8 @@ public:
     void createImageBitmap(ImageBitmap::Source&&, int sx, int sy, int sw, int sh, ImageBitmapOptions&&, ImageBitmap::Promise&&);
 
     unsigned long createUniqueIdentifier() { return m_uniqueIdentifier++; }
+
+    CSSValuePool& cssValuePool();
 
 protected:
     WorkerGlobalScope(const URL&, Ref<SecurityOrigin>&&, const String& identifier, const String& userAgent, bool isOnline, WorkerThread&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*);
@@ -165,7 +170,6 @@ private:
 
     bool shouldBypassMainWorldContentSecurityPolicy() const final { return m_shouldBypassMainWorldContentSecurityPolicy; }
     bool isJSExecutionForbidden() const final;
-    SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
 
 #if ENABLE(WEB_CRYPTO)
     bool wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) final;
@@ -211,6 +215,7 @@ private:
 #if ENABLE(SERVICE_WORKER)
     RefPtr<WorkerSWClientConnection> m_swClientConnection;
 #endif
+    std::unique_ptr<CSSValuePool> m_cssValuePool;
 };
 
 } // namespace WebCore

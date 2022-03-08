@@ -83,6 +83,7 @@ private:
 
     void finishCreation(JSC::VM&);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSReadOnlyMapLikePrototype, JSReadOnlyMapLikePrototype::Base);
 
 using JSReadOnlyMapLikeConstructor = JSDOMConstructorNotConstructable<JSReadOnlyMapLike>;
 
@@ -138,7 +139,6 @@ void JSReadOnlyMapLike::finishCreation(VM& vm)
 
     static_assert(!std::is_base_of<ActiveDOMObject, ReadOnlyMapLike>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
-    synchronizeBackingMap(*globalObject(), *globalObject(), *this);
 }
 
 JSObject* JSReadOnlyMapLike::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)

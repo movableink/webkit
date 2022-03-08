@@ -180,7 +180,10 @@ WI.SpreadsheetStyleProperty = class SpreadsheetStyleProperty extends WI.Object
         colonElement.classList.add("colon");
         colonElement.textContent = ": ";
 
-        this._valueElement = this._contentElement.appendChild(document.createElement("span"));
+        let valueContainer = this._contentElement.appendChild(document.createElement("span"));
+        valueContainer.className = "value-container";
+
+        this._valueElement = valueContainer.appendChild(document.createElement("span"));
         this._valueElement.classList.add("value");
         this._renderValue(this._property.rawValue);
 
@@ -202,7 +205,7 @@ WI.SpreadsheetStyleProperty = class SpreadsheetStyleProperty extends WI.Object
             this._setupJumpToSymbol(this._valueElement);
         }
 
-        let semicolonElement = this._contentElement.appendChild(document.createElement("span"));
+        let semicolonElement = valueContainer.appendChild(document.createElement("span"));
         semicolonElement.classList.add("semicolon");
         semicolonElement.textContent = ";";
 
@@ -680,7 +683,9 @@ WI.SpreadsheetStyleProperty = class SpreadsheetStyleProperty extends WI.Object
                     newTokens.pushAll(rawTokens);
 
                 startIndex = NaN;
-            } else if (isNaN(startIndex))
+            } else if (token.value in WI.CubicBezier.keywordValues)
+                newTokens.push(this._createInlineSwatch(WI.InlineSwatch.Type.Bezier, [token], WI.CubicBezier.fromString(token.value)));
+            else if (isNaN(startIndex))
                 newTokens.push(token);
         }
 
@@ -847,6 +852,7 @@ WI.SpreadsheetStyleProperty = class SpreadsheetStyleProperty extends WI.Object
             const options = {
                 ignoreNetworkTab: true,
                 ignoreSearchTab: true,
+                initiatorHint: WI.TabBrowser.TabNavigationInitiator.LinkClick,
             };
             let sourceCode = sourceCodeLocation.sourceCode;
             WI.showSourceCodeLocation(sourceCode.createSourceCodeLocation(range.startLine, range.startColumn), options);

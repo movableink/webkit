@@ -253,7 +253,8 @@ public:
     void setStatisticsCacheMaxAgeCap(double seconds);
     bool hasStatisticsIsolatedSession(WKStringRef hostName);
     void setStatisticsShouldDowngradeReferrer(bool value);
-    void setStatisticsShouldBlockThirdPartyCookies(bool value);
+    void setStatisticsShouldBlockThirdPartyCookies(bool value, bool onlyOnSitesWithoutUserInteraction);
+    void setStatisticsFirstPartyWebsiteDataRemovalMode(bool value);
     void statisticsResetToConsistentState();
 
     void getAllStorageAccessEntries();
@@ -267,7 +268,7 @@ public:
 #endif
 
     void terminateNetworkProcess();
-    void terminateServiceWorkerProcess();
+    void terminateServiceWorkers();
 
     void resetQuota();
 
@@ -293,6 +294,8 @@ public:
     void clearMockMediaDevices();
     void removeMockMediaDevice(WKStringRef persistentID);
     void resetMockMediaDevices();
+    void setMockCameraOrientation(uint64_t);
+    bool isMockRealtimeMediaSourceCenterEnabled() const;
 
     void injectUserScript(WKStringRef);
     
@@ -404,6 +407,10 @@ private:
     // WKContextClient
     static void networkProcessDidCrash(WKContextRef, const void*);
     void networkProcessDidCrash();
+    static void serviceWorkerProcessDidCrash(WKContextRef, const void*);
+    void serviceWorkerProcessDidCrash();
+    static void gpuProcessDidCrash(WKContextRef, const void*);
+    void gpuProcessDidCrash();
 
     // WKPageNavigationClient
     static void didCommitNavigation(WKPageRef, WKNavigationRef, WKTypeRef userData, const void*);
@@ -502,6 +509,9 @@ private:
     bool m_createdOtherPage { false };
     std::vector<std::string> m_paths;
     std::set<std::string> m_allowedHosts;
+    HashMap<String, bool> m_internalFeatures;
+    HashMap<String, bool> m_experimentalFeatures;
+
     WKRetainPtr<WKStringRef> m_injectedBundlePath;
     WKRetainPtr<WKStringRef> m_testPluginDirectory;
 
@@ -574,7 +584,7 @@ private:
     bool m_checkForWorldLeaks { false };
 
     bool m_allowAnyHTTPSCertificateForAllowedHosts { false };
-    
+
     bool m_shouldDecideNavigationPolicyAfterDelay { false };
     bool m_shouldDecideResponsePolicyAfterDelay { false };
 

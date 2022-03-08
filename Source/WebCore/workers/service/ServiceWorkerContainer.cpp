@@ -285,12 +285,25 @@ void ServiceWorkerContainer::updateRegistrationState(ServiceWorkerRegistrationId
     if (m_isStopped)
         return;
 
-    RefPtr<ServiceWorker> serviceWorker;
-    if (serviceWorkerData)
-        serviceWorker = ServiceWorker::getOrCreate(*scriptExecutionContext(), ServiceWorkerData { *serviceWorkerData });
+    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, identifier, state, serviceWorkerData = Optional<ServiceWorkerData> { serviceWorkerData }]() mutable {
+        RefPtr<ServiceWorker> serviceWorker;
+        if (serviceWorkerData)
+            serviceWorker = ServiceWorker::getOrCreate(*scriptExecutionContext(), WTFMove(*serviceWorkerData));
 
-    if (auto* registration = m_registrations.get(identifier))
-        registration->updateStateFromServer(state, WTFMove(serviceWorker));
+        if (auto* registration = m_registrations.get(identifier))
+            registration->updateStateFromServer(state, WTFMove(serviceWorker));
+    });
+}
+
+void ServiceWorkerContainer::updateWorkerState(ServiceWorkerIdentifier identifier, ServiceWorkerState state)
+{
+    if (m_isStopped)
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, identifier, state] {
+        if (auto* serviceWorker = scriptExecutionContext()->serviceWorker(identifier))
+            serviceWorker->updateState(state);
+    });
 }
 
 void ServiceWorkerContainer::getRegistrations(Ref<DeferredPromise>&& promise)
@@ -342,14 +355,14 @@ void ServiceWorkerContainer::jobFailedWithException(ServiceWorkerJob& job, const
     });
 }
 
-void ServiceWorkerContainer::fireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier identifier)
+void ServiceWorkerContainer::queueTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier identifier)
 {
 #ifndef NDEBUG
     ASSERT(m_creationThread.ptr() == &Thread::current());
 #endif
 
     if (auto* registration = m_registrations.get(identifier))
-        registration->fireUpdateFoundEvent();
+        registration->queueTaskToFireUpdateFoundEvent();
 }
 
 void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, ServiceWorkerRegistrationData&& data, ShouldNotifyWhenResolved shouldNotifyWhenResolved)
@@ -392,7 +405,11 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
         if (shouldNotifyWhenResolved == ShouldNotifyWhenResolved::Yes) {
             m_ongoingSettledRegistrations.add(++m_lastOngoingSettledRegistrationIdentifier, registration->data().key);
             promise->whenSettled([this, protectedThis = WTFMove(protectedThis), identifier = m_lastOngoingSettledRegistrationIdentifier] {
-                notifyRegistrationIsSettled(m_ongoingSettledRegistrations.take(identifier));
+                auto iterator = m_ongoingSettledRegistrations.find(identifier);
+                if (iterator == m_ongoingSettledRegistrations.end())
+                    return;
+                notifyRegistrationIsSettled(iterator->value);
+                m_ongoingSettledRegistrations.remove(iterator);
             });
         }
 
@@ -416,9 +433,7 @@ void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, Serv
 
 void ServiceWorkerContainer::notifyRegistrationIsSettled(const ServiceWorkerRegistrationKey& registrationKey)
 {
-    callOnMainThread([registrationKey = registrationKey.isolatedCopy()] {
-        mainThreadConnection().didResolveRegistrationPromise(registrationKey);
-    });
+    ensureSWClientConnection().didResolveRegistrationPromise(registrationKey);
 }
 
 void ServiceWorkerContainer::jobResolvedWithUnregistrationResult(ServiceWorkerJob& job, bool unregistrationResult)
@@ -473,9 +488,7 @@ void ServiceWorkerContainer::jobFinishedLoadingScript(ServiceWorkerJob& job, con
 
     CONTAINER_RELEASE_LOG_IF_ALLOWED("jobFinishedLoadingScript: Successfuly finished fetching script for job %" PRIu64, job.identifier().toUInt64());
 
-    callOnMainThread([jobDataIdentifier = job.data().identifier(), registrationKey = job.data().registrationKey().isolatedCopy(), script = script.isolatedCopy(), contentSecurityPolicy = contentSecurityPolicy.isolatedCopy(), referrerPolicy = referrerPolicy.isolatedCopy()] {
-        mainThreadConnection().finishFetchingScriptInServer({ jobDataIdentifier, registrationKey, script, contentSecurityPolicy, referrerPolicy, { } });
-    });
+    ensureSWClientConnection().finishFetchingScriptInServer({ job.data().identifier(), job.data().registrationKey(), script, contentSecurityPolicy, referrerPolicy, { } });
 }
 
 void ServiceWorkerContainer::jobFailedLoadingScript(ServiceWorkerJob& job, const ResourceError& error, Exception&& exception)
@@ -499,9 +512,7 @@ void ServiceWorkerContainer::jobFailedLoadingScript(ServiceWorkerJob& job, const
 
 void ServiceWorkerContainer::notifyFailedFetchingScript(ServiceWorkerJob& job, const ResourceError& error)
 {
-    callOnMainThread([jobIdentifier = job.identifier(), registrationKey = job.data().registrationKey().isolatedCopy(), error = error.isolatedCopy()] {
-        mainThreadConnection().failedFetchingScript(jobIdentifier, registrationKey, error);
-    });
+    ensureSWClientConnection().finishFetchingScriptInServer(serviceWorkerFetchError(job.data().identifier(), ServiceWorkerRegistrationKey { job.data().registrationKey() }, ResourceError { error }));
 }
 
 void ServiceWorkerContainer::destroyJob(ServiceWorkerJob& job)
@@ -552,7 +563,7 @@ void ServiceWorkerContainer::removeRegistration(ServiceWorkerRegistration& regis
     m_registrations.remove(registration.identifier());
 }
 
-void ServiceWorkerContainer::fireControllerChangeEvent()
+void ServiceWorkerContainer::queueTaskToDispatchControllerChangeEvent()
 {
 #ifndef NDEBUG
     ASSERT(m_creationThread.ptr() == &Thread::current());

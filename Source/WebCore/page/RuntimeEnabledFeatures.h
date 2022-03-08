@@ -47,9 +47,6 @@ public:
     void setBlankAnchorTargetImpliesNoOpenerEnabled(bool isEnabled) { m_blankAnchorTargetImpliesNoOpenerEnabled = isEnabled; }
     bool blankAnchorTargetImpliesNoOpenerEnabled() const { return m_blankAnchorTargetImpliesNoOpenerEnabled; }
 
-    void setDisplayContentsEnabled(bool isEnabled) { m_isDisplayContentsEnabled = isEnabled; }
-    bool displayContentsEnabled() const { return m_isDisplayContentsEnabled; }
-
     void setLinkPreloadEnabled(bool isEnabled) { m_isLinkPreloadEnabled = isEnabled; }
     bool linkPreloadEnabled() const { return m_isLinkPreloadEnabled; }
 
@@ -112,6 +109,9 @@ public:
     void setWebAnimationsCSSIntegrationEnabled(bool isEnabled) { m_isWebAnimationsCSSIntegrationEnabled = isEnabled; }
     bool webAnimationsCSSIntegrationEnabled() const { return m_areWebAnimationsEnabled && m_isWebAnimationsCSSIntegrationEnabled; }
 
+    void setWebAnimationsCompositeOperationsEnabled(bool areEnabled) { m_areWebAnimationsCompositeOperationsEnabled = areEnabled; }
+    bool webAnimationsCompositeOperationsEnabled() const { return m_areWebAnimationsCompositeOperationsEnabled; }
+
     void setImageBitmapEnabled(bool isEnabled) { m_isImageBitmapEnabled = isEnabled; }
     bool imageBitmapEnabled() const { return m_isImageBitmapEnabled; }
 
@@ -158,9 +158,6 @@ public:
     void setCrossOriginResourcePolicyEnabled(bool isEnabled) { m_crossOriginResourcePolicyEnabled = isEnabled; }
     bool crossOriginResourcePolicyEnabled() const { return m_crossOriginResourcePolicyEnabled; }
 
-    void setWebGLCompressedTextureASTCSupportEnabled(bool isEnabled) { m_isWebGLCompressedTextureASTCSupportEnabled = isEnabled; }
-    bool webGLCompressedTextureASTCSupportEnabled() const { return m_isWebGLCompressedTextureASTCSupportEnabled; }
-
     void setServerTimingEnabled(bool isEnabled) { m_isServerTimingEnabled = isEnabled; }
     bool serverTimingEnabled() const { return m_isServerTimingEnabled; }
 
@@ -188,6 +185,9 @@ public:
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     void setLayoutFormattingContextEnabled(bool isEnabled) { m_layoutFormattingContextEnabled = isEnabled; }
     bool layoutFormattingContextEnabled() const { return m_layoutFormattingContextEnabled; }
+    
+    void setLayoutFormattingContextIntegrationEnabled(bool isEnabled) { m_layoutFormattingContextIntegrationEnabled = isEnabled; }
+    bool layoutFormattingContextIntegrationEnabled() const { return m_layoutFormattingContextIntegrationEnabled; }
 #endif
 
 #if ENABLE(CSS_PAINTING_API)
@@ -208,6 +208,9 @@ public:
 
     void setKeygenElementEnabled(bool isEnabled) { m_keygenElementEnabled = isEnabled; }
     bool keygenElementEnabled() const { return m_keygenElementEnabled; }
+    
+    void setHighlightAPIEnabled(bool isEnabled) { m_highlightAPIEnabled = isEnabled; }
+    bool highlightAPIEnabled() const { return m_highlightAPIEnabled; }
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     void setAttachmentElementEnabled(bool areEnabled) { m_isAttachmentElementEnabled = areEnabled; }
@@ -386,6 +389,9 @@ public:
     bool secureContextChecksEnabled() const { return m_secureContextChecksEnabled; }
     void setSecureContextChecksEnabled(bool isEnabled) { m_secureContextChecksEnabled = isEnabled; }
 
+    void setIsInAppBrowserPrivacyEnabled(bool isEnabled) { m_isInAppBrowserPrivacyEnabled = isEnabled; }
+    bool isInAppBrowserPrivacyEnabled() const { return m_isInAppBrowserPrivacyEnabled; }
+
 private:
     // Never instantiate.
     RuntimeEnabledFeatures();
@@ -401,7 +407,6 @@ private:
     bool m_isWebAuthenticationEnabled { false };
     bool m_isWebAuthenticationLocalAuthenticatorEnabled { false };
     bool m_isSecureContextAttributeEnabled { false };
-    bool m_isDisplayContentsEnabled { true };
     bool m_isShadowDOMEnabled { true };
     bool m_areCustomElementsEnabled { true };
     bool m_isMenuItemElementEnabled { false };
@@ -411,7 +416,8 @@ private:
     bool m_isWebShareEnabled { false };
     bool m_inputEventsEnabled { true };
     bool m_areWebAnimationsEnabled { true };
-    bool m_isWebAnimationsCSSIntegrationEnabled { false };
+    bool m_isWebAnimationsCSSIntegrationEnabled { true };
+    bool m_areWebAnimationsCompositeOperationsEnabled { false };
     bool m_isImageBitmapEnabled { true };
 #if ENABLE(OFFSCREEN_CANVAS)
     bool m_isOffscreenCanvasEnabled { false };
@@ -427,7 +433,6 @@ private:
     bool m_itpDebugMode { false };
     bool m_isRestrictedHTTPResponseAccess { true };
     bool m_crossOriginResourcePolicyEnabled { true };
-    bool m_isWebGLCompressedTextureASTCSupportEnabled { false };
     bool m_isServerTimingEnabled { false };
     bool m_experimentalPlugInSandboxProfilesEnabled { false };
     bool m_disabledAdaptationsMetaTagEnabled { false };
@@ -440,9 +445,11 @@ private:
     bool m_webSQLEnabled { true };
     bool m_keygenElementEnabled { false };
     bool m_pageAtRuleSupportEnabled { false };
+    bool m_highlightAPIEnabled { false };
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     bool m_layoutFormattingContextEnabled { false };
+    bool m_layoutFormattingContextIntegrationEnabled { false };
 #endif
 
 #if ENABLE(CSS_PAINTING_API)
@@ -565,7 +572,7 @@ private:
     Optional<bool> m_touchEventsEnabled;
 #endif
 
-    bool m_isITPDatabaseEnabled { false };
+    bool m_isITPDatabaseEnabled { true };
 
     bool m_referrerPolicyAttributeEnabled { false };
     bool m_interruptAudioOnPageVisibilityChangeEnabled { false };
@@ -579,6 +586,8 @@ private:
     bool m_lazyImageLoadingEnabled { false };
     bool m_secureContextChecksEnabled { true };
     bool m_isCSSShadowPartsEnabled { true };
+
+    bool m_isInAppBrowserPrivacyEnabled { false };
 
     friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;
 };

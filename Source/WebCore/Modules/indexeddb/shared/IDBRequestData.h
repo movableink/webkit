@@ -49,13 +49,13 @@ class IDBRequestData {
 public:
     IDBRequestData(const IDBClient::IDBConnectionProxy&, const IDBOpenDBRequest&);
     explicit IDBRequestData(IDBClient::TransactionOperation&);
-    IDBRequestData(const IDBRequestData&);
+    WEBCORE_EXPORT IDBRequestData(const IDBRequestData&);
     IDBRequestData(IDBRequestData&&) = default;
     IDBRequestData& operator=(IDBRequestData&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBRequestData(const IDBRequestData&, IsolatedCopyTag);
-    IDBRequestData isolatedCopy() const;
+    WEBCORE_EXPORT IDBRequestData isolatedCopy() const;
 
     IDBConnectionIdentifier serverConnectionIdentifier() const;
     IDBResourceIdentifier requestIdentifier() const;

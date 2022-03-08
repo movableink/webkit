@@ -83,6 +83,7 @@ set(WebKit2GTK_INSTALLED_HEADERS
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitGeolocationManager.h
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitGeolocationPermissionRequest.h
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitHitTestResult.h
+    ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitInputMethodContext.h
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitInstallMissingMediaPluginsPermissionRequest.h
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitJavascriptResult.h
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitMimeInfo.h
@@ -426,7 +427,6 @@ list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
     ${GTK_INCLUDE_DIRS}
     ${GTK_UNIX_PRINT_INCLUDE_DIRS}
-    ${HARFBUZZ_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
 )
 

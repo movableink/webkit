@@ -18,6 +18,13 @@ DeviceOrientationPermissionAPIEnabled:
   condition: ENABLE(DEVICE_ORIENTATION)
   webcoreName: deviceOrientationPermissionAPIEnabled
 
+DisallowSyncXHRDuringPageDismissalEnabled:
+  type: bool
+  defaultValue: true
+  humanReadableName: "Disallow sync XHR during page dismissal"
+  humanReadableDescription: "Disallow synchronous XMLHttpRequest during page dismissal"
+  category: experimental
+
 JavaScriptEnabled:
   type: bool
   defaultValue: true
@@ -494,6 +501,9 @@ ThreadedScrollingEnabled:
 SimpleLineLayoutEnabled:
   type: bool
   defaultValue: true
+  humanReadableName: "Simple line layout"
+  humanReadableDescription: "Enable simple line layout path (SLL)"
+  category: internal
 
 ContentChangeObserverEnabled:
   type: bool
@@ -750,6 +760,14 @@ GamepadsEnabled:
   humanReadableDescription: "Web Gamepad API support"
   webcoreBinding: RuntimeEnabledFeatures
   condition: ENABLE(GAMEPAD)
+  
+HighlightAPIEnabled:
+    type: bool
+    defaultValue: false
+    humanReadableName: "Highlight API"
+    humanReadableDescription: "Highlight API support"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: experimental
 
 InputEventsEnabled:
   type: bool
@@ -846,7 +864,7 @@ CustomPasteboardDataEnabled:
 
 AsyncClipboardAPIEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: DEFAULT_ASYNC_CLIPBOARD_API_ENABLED
   humanReadableName: "Async clipboard API"
   humanReadableDescription: "Enable the async clipboard API"
   category: experimental
@@ -863,13 +881,6 @@ ViewportFitEnabled:
   defaultValue: true
   humanReadableName: "Viewport Fit"
   humanReadableDescription: "Enable viewport-fit viewport parameter"
-
-DisplayContentsEnabled:
-  type: bool
-  defaultValue: true
-  humanReadableName: "CSS display: contents"
-  humanReadableDescription: "Enable CSS display: contents support"
-  webcoreBinding: RuntimeEnabledFeatures
 
 IncrementalRenderingSuppressionTimeout:
   type: double
@@ -1199,11 +1210,6 @@ SourceBufferChangeTypeEnabled:
   defaultValue: true
   condition: ENABLE(MEDIA_SOURCE)
 
-DialogElementEnabled:
-  type: bool
-  defaultValue: false
-  webcoreBinding: RuntimeEnabledFeatures
-
 KeygenElementEnabled:
   type: bool
   defaultValue: false
@@ -1228,6 +1234,10 @@ EditableImagesEnabled:
   defaultValue: false
 
 ShouldDecidePolicyBeforeLoadingQuickLookPreview:
+  defaultValue: false
+  type: bool
+
+ShouldUseServiceWorkerShortTimeout:
   defaultValue: false
   type: bool
 
@@ -1319,9 +1329,17 @@ WebAnimationsEnabled:
 
 WebAnimationsCSSIntegrationEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: true
   humanReadableName: "CSS Animations via Web Animations"
   humanReadableDescription: "Expose CSS Animations and CSS Transitions through getAnimations()"
+  category: experimental
+  webcoreBinding: RuntimeEnabledFeatures
+
+WebAnimationsCompositeOperationsEnabled:
+  type: bool
+  defaultValue: DEFAULT_EXPERIMENTAL_FEATURES_ENABLED
+  humanReadableName: "Web Animations composite operations"
+  humanReadableDescription: "Support for the CompositeOperation enum and properties consuming it"
   category: experimental
   webcoreBinding: RuntimeEnabledFeatures
 
@@ -1420,7 +1438,7 @@ MediaCapabilitiesExtensionsEnabled:
 
 HDRMediaCapabilitiesEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: true
   humanReadableName: "HDR Media Capabilities"
   humanReadableDescription: "HDR Media Capabilities"
   category: experimental
@@ -1468,12 +1486,22 @@ CSSShadowPartsEnabled:
 
 GenericCueAPIEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: true
   condition: ENABLE(VIDEO_TRACK)
   humanReadableName: "Generic Text Track Cue API"
   humanReadableDescription: "Enable Generic Text Track Cue API"
   category: experimental
   webcoreName: genericCueAPIEnabled
+
+CaptureVideoInUIProcessEnabled:
+  type: bool
+  defaultValue: false
+  humanReadableName: "Capture video in UIProcess"
+  humanReadableDescription: "Enable video capture in UIProcess"
+  category: experimental
+  webcoreBinding: none
+  condition: ENABLE(MEDIA_STREAM)
+
 
 # For internal features:
 # The type should be boolean.
@@ -1498,7 +1526,7 @@ ItpDebugModeEnabled:
 
 IsITPDatabaseEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: true
   humanReadableName: "ITP Database Backend"
   humanReadableDescription: "Enable Intelligent Tracking Prevention Database Backend"
   webcoreBinding: RuntimeEnabledFeatures
@@ -1535,14 +1563,6 @@ LegacyOverflowScrollingTouchEnabled:
   humanReadableDescription: "Support the legacy -webkit-overflow-scrolling CSS property"
   condition: ENABLE(OVERFLOW_SCROLLING_TOUCH)
   category: internal
-
-WebGLCompressedTextureASTCSupportEnabled:
-  type: bool
-  defaultValue: false
-  humanReadableName: "ASTC Texture Support"
-  humanReadableDescription: "Support for ASTC compressed texture formats in WebGL"
-  category: internal
-  webcoreBinding: RuntimeEnabledFeatures
 
 FullScreenEnabled:
   type: bool
@@ -1642,8 +1662,17 @@ DataListElementEnabled:
 LayoutFormattingContextEnabled:
   type: bool
   defaultValue: false
-  humanReadableName: "Next-gen layout"
-  humanReadableDescription: "Enable next-gen layout"
+  humanReadableName: "Full next-generation layout (LFC)"
+  humanReadableDescription: "Enable full next-generation layout (LFC)"
+  category: internal
+  webcoreBinding: RuntimeEnabledFeatures
+  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
+
+LayoutFormattingContextIntegrationEnabled:
+  type: bool
+  defaultValue: false
+  humanReadableName: "Next-generation line layout integration (LFC)"
+  humanReadableDescription: "Enable next-generation line layout integration (LFC)"
   category: internal
   webcoreBinding: RuntimeEnabledFeatures
   condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
@@ -1657,11 +1686,11 @@ CaptureAudioInUIProcessEnabled:
   webcoreBinding: none
   condition: ENABLE(MEDIA_STREAM)
 
-CaptureVideoInUIProcessEnabled:
+CaptureAudioInGPUProcessEnabled:
   type: bool
   defaultValue: false
-  humanReadableName: "Capture video in UIProcess"
-  humanReadableDescription: "Enable video capture in UIProcess"
+  humanReadableName: "Capture audio in GPUProcess"
+  humanReadableDescription: "Capture audio in GPUProcess"
   category: internal
   webcoreBinding: none
   condition: ENABLE(MEDIA_STREAM)
@@ -1795,10 +1824,31 @@ LazyImageLoadingEnabled:
 
 IsThirdPartyCookieBlockingEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: true
   humanReadableName: "Block All 3rd-Party Cookies (ITP)"
   humanReadableDescription: "Block all third-party cookies when Intelligent Tracking Prevention is enabled"
   category: experimental
+
+IsFirstPartyWebsiteDataRemovalEnabled:
+  type: bool
+  defaultValue: true
+  humanReadableName: "Remove Non-Cookie Data After 7 Days of No User Interaction (ITP)"
+  humanReadableDescription: "Remove all non-cookie website data after seven days of no user interaction when Intelligent Tracking Prevention is enabled"
+  category: experimental
+
+IsFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
+  type: bool
+  defaultValue: false
+  humanReadableName: "[ITP Live-On] 1 Hour Timeout For Non-Cookie Data Removal"
+  humanReadableDescription: "Remove all non-cookie website data after just one hour of no user interaction when Intelligent Tracking Prevention is enabled"
+  category: internal
+
+IsFirstPartyWebsiteDataRemovalReproTestingEnabled:
+  type: bool
+  defaultValue: false
+  humanReadableName: "[ITP Repro] 30 Second Timeout For Non-Cookie Data Removal"
+  humanReadableDescription: "Remove all non-cookie website data after just 30 seconds of no user interaction when Intelligent Tracking Prevention is enabled"
+  category: internal
 
 IsLoggedInAPIEnabled:
     type: bool
@@ -1819,6 +1869,31 @@ RemotePlaybackEnabled:
   defaultValue: true
   humanReadableName: "Remote Playback API"
   humanReadableDescription: "Enable Remote Playback API"
+
+UseGPUProcessForMedia:
+    type: bool
+    defaultValue: false
+    condition: ENABLE(GPU_PROCESS)
+    humanReadableName: "Media in GPU process"
+    humanReadableDescription: "Do all media loading and playback in the GPU process"
+    category: internal
+    webcoreName: useGPUProcessForMedia
+
+IsInAppBrowserPrivacyEnabled:
+    type: bool
+    defaultValue: true
+    humanReadableName: "In-App Browser Privacy"
+    humanReadableDescription: "Enable In-App Browser Privacy"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: internal
+
+DialogElementEnabled:
+    type: bool
+    defaultValue: false
+    humanReadableName: "Dialog Element"
+    humanReadableDescription: "Enable the Dialog Element"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: experimental
 
 # Deprecated
 

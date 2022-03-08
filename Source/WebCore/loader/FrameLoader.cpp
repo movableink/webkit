@@ -77,6 +77,7 @@
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTTPHeaderNames.h"
+#include "HTTPHeaderValues.h"
 #include "HTTPParsers.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
@@ -210,22 +211,46 @@ static bool isDocumentSandboxed(Frame& frame, SandboxFlags mask)
     return frame.document() && frame.document()->isSandboxed(mask);
 }
 
-struct ForbidPromptsScope {
-    ForbidPromptsScope(Page* page) : m_page(page)
+class PageLevelForbidScope {
+protected:
+    explicit PageLevelForbidScope(Page* page)
+        : m_page(makeWeakPtr(page))
     {
-        if (!m_page)
-            return;
-        m_page->forbidPrompts();
+    }
+
+    ~PageLevelForbidScope() = default;
+
+    WeakPtr<Page> m_page;
+};
+
+struct ForbidPromptsScope : public PageLevelForbidScope {
+    explicit ForbidPromptsScope(Page* page)
+        : PageLevelForbidScope(page)
+    {
+        if (m_page)
+            m_page->forbidPrompts();
     }
 
     ~ForbidPromptsScope()
     {
-        if (!m_page)
-            return;
-        m_page->allowPrompts();
+        if (m_page)
+            m_page->allowPrompts();
+    }
+};
+
+struct ForbidSynchronousLoadsScope : public PageLevelForbidScope {
+    explicit ForbidSynchronousLoadsScope(Page* page)
+        : PageLevelForbidScope(page)
+    {
+        if (m_page)
+            m_page->forbidSynchronousLoads();
     }
 
-    Page* m_page;
+    ~ForbidSynchronousLoadsScope()
+    {
+        if (m_page)
+            m_page->allowSynchronousLoads();
+    }
 };
 
 class FrameLoader::FrameProgressTracker {
@@ -400,7 +425,7 @@ void FrameLoader::urlSelected(FrameLoadRequest&& frameRequest, Event* triggering
 
     Ref<Frame> protect(m_frame);
 
-    if (m_frame.script().executeIfJavaScriptURL(frameRequest.resourceRequest().url(), frameRequest.shouldReplaceDocumentIfJavaScriptURL())) {
+    if (m_frame.script().executeIfJavaScriptURL(frameRequest.resourceRequest().url(), &frameRequest.requester().securityOrigin(), frameRequest.shouldReplaceDocumentIfJavaScriptURL())) {
         m_quickRedirectComing = false;
         return;
     }
@@ -438,7 +463,7 @@ void FrameLoader::submitForm(Ref<FormSubmission>&& submission)
             return;
         m_isExecutingJavaScriptFormAction = true;
         Ref<Frame> protect(m_frame);
-        m_frame.script().executeIfJavaScriptURL(submission->action(), DoNotReplaceDocumentIfJavaScriptURL);
+        m_frame.script().executeIfJavaScriptURL(submission->action(), nullptr, DoNotReplaceDocumentIfJavaScriptURL);
         m_isExecutingJavaScriptFormAction = false;
         return;
     }
@@ -461,23 +486,8 @@ void FrameLoader::submitForm(Ref<FormSubmission>&& submission)
     if (!targetFrame->page())
         return;
 
-    // FIXME: We'd like to remove this altogether and fix the multiple form submission issue another way.
-
-    // We do not want to submit more than one form from the same page, nor do we want to submit a single
-    // form more than once. This flag prevents these from happening; not sure how other browsers prevent this.
-    // The flag is reset in each time we start dispatching a new mouse or key down event, and
-    // also in setView since this part may get reused for a page from the back/forward cache.
-    // The form multi-submit logic here is only needed when we are submitting a form that affects this frame.
-
-    // FIXME: Frame targeting is only one of the ways the submission could end up doing something other
-    // than replacing this frame's content, so this check is flawed. On the other hand, the check is hardly
-    // needed any more now that we reset m_submittedFormURL on each mouse or key down event.
-
-    if (m_frame.tree().isDescendantOf(targetFrame)) {
-        if (m_submittedFormURL == submission->requestURL())
-            return;
+    if (m_frame.tree().isDescendantOf(targetFrame))
         m_submittedFormURL = submission->requestURL();
-    }
 
     submission->setReferrer(outgoingReferrer());
     submission->setOrigin(outgoingOrigin());
@@ -880,18 +890,6 @@ void FrameLoader::checkCompleted()
     m_isComplete = true;
     m_requestedHistoryItem = nullptr;
     m_frame.document()->setReadyState(Document::Complete);
-
-#if PLATFORM(IOS_FAMILY)
-    if (m_frame.document()->url().isEmpty()) {
-        // We need to update the document URL of a PDF document to be non-empty so that both back/forward history navigation
-        // between PDF pages and fragment navigation works. See <rdar://problem/9544769> for more details.
-        // FIXME: Is there a better place for this code, say DocumentLoader? Also, we should explicitly only update the URL
-        // of the document when it's a PDFDocument object instead of assuming that a Document object with an empty URL is a PDFDocument.
-        // FIXME: This code is incorrect for a synthesized document (which also has an empty URL). The URL for a synthesized
-        // document should be the URL specified to FrameLoader::initForSynthesizedDocument().
-        m_frame.document()->setURL(activeDocumentLoader()->documentURL());
-    }
-#endif
 
     checkCallImplicitClose(); // if we didn't do it before
 
@@ -1383,7 +1381,7 @@ void FrameLoader::loadURL(FrameLoadRequest&& frameLoadRequest, const String& ref
 
     if (!targetFrame && !effectiveFrameName.isEmpty()) {
         action = action.copyWithShouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicyToApply(m_frame, frameLoadRequest));
-        policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(request), WTFMove(formState), effectiveFrameName, [this, allowNavigationToInvalidURL, openerPolicy, completionHandler = completionHandlerCaller.release()] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const String& frameName, const NavigationAction& action, ShouldContinue shouldContinue) mutable {
+        policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(request), WTFMove(formState), effectiveFrameName, [this, allowNavigationToInvalidURL, openerPolicy, completionHandler = completionHandlerCaller.release()] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const String& frameName, const NavigationAction& action, PolicyChecker::ShouldContinue shouldContinue) mutable {
             continueLoadAfterNewWindowPolicy(request, formState.get(), frameName, action, shouldContinue, allowNavigationToInvalidURL, openerPolicy);
             completionHandler();
         });
@@ -1466,7 +1464,7 @@ void FrameLoader::load(FrameLoadRequest&& request)
 
     if (request.shouldCheckNewWindowPolicy()) {
         NavigationAction action { request.requester(), request.resourceRequest(), InitiatedByMainFrame::Unknown, NavigationType::Other, request.shouldOpenExternalURLsPolicy() };
-        policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(request.resourceRequest()), { }, request.frameName(), [this] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const String& frameName, const NavigationAction& action, ShouldContinue shouldContinue) {
+        policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(request.resourceRequest()), { }, request.frameName(), [this] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const String& frameName, const NavigationAction& action, PolicyChecker::ShouldContinue shouldContinue) {
             continueLoadAfterNewWindowPolicy(request, formState.get(), frameName, action, shouldContinue, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Suppress);
         });
 
@@ -2768,24 +2766,9 @@ String FrameLoader::userAgent(const URL& url) const
 {
     String userAgent;
 
-    if (auto* documentLoader = m_frame.mainFrame().loader().activeDocumentLoader())
-        userAgent = documentLoader->customUserAgent();
-
-    InspectorInstrumentation::applyUserAgentOverride(m_frame, userAgent);
-
-    if (!userAgent.isEmpty())
-        return userAgent;
-
-    return m_client.userAgent(url);
-}
-
-String FrameLoader::userAgentForJavaScript(const URL& url) const
-{
-    String userAgent;
-
     if (auto* documentLoader = m_frame.mainFrame().loader().activeDocumentLoader()) {
         if (m_frame.settings().needsSiteSpecificQuirks())
-            userAgent = documentLoader->customJavaScriptUserAgentAsSiteSpecificQuirks();
+            userAgent = documentLoader->customUserAgentAsSiteSpecificQuirks();
         if (userAgent.isEmpty())
             userAgent = documentLoader->customUserAgent();
     }
@@ -2797,7 +2780,7 @@ String FrameLoader::userAgentForJavaScript(const URL& url) const
 
     return m_client.userAgent(url);
 }
-    
+
 String FrameLoader::navigatorPlatform() const
 {
     if (auto* documentLoader = m_frame.mainFrame().loader().activeDocumentLoader()) {
@@ -2965,10 +2948,10 @@ void FrameLoader::addExtraFieldsToRequest(ResourceRequest& request, FrameLoadTyp
 
     if (!hasSpecificCachePolicy && request.cachePolicy() == ResourceRequestCachePolicy::ReloadIgnoringCacheData) {
         if (loadType == FrameLoadType::Reload)
-            request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
+            request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
         else if (loadType == FrameLoadType::ReloadFromOrigin) {
-            request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache");
-            request.setHTTPHeaderField(HTTPHeaderName::Pragma, "no-cache");
+            request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::noCache());
+            request.setHTTPHeaderField(HTTPHeaderName::Pragma, HTTPHeaderValues::noCache());
         }
     }
 
@@ -3081,7 +3064,7 @@ void FrameLoader::loadPostRequest(FrameLoadRequest&& request, const String& refe
             return;
         }
 
-        policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(workingResourceRequest), WTFMove(formState), frameName, [this, allowNavigationToInvalidURL, openerPolicy, completionHandler = WTFMove(completionHandler)] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const String& frameName, const NavigationAction& action, ShouldContinue shouldContinue) mutable {
+        policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(workingResourceRequest), WTFMove(formState), frameName, [this, allowNavigationToInvalidURL, openerPolicy, completionHandler = WTFMove(completionHandler)] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const String& frameName, const NavigationAction& action, PolicyChecker::ShouldContinue shouldContinue) mutable {
             continueLoadAfterNewWindowPolicy(request, formState.get(), frameName, action, shouldContinue, allowNavigationToInvalidURL, openerPolicy);
             completionHandler();
         });
@@ -3313,6 +3296,7 @@ void FrameLoader::dispatchUnloadEvents(UnloadEventPolicy unloadEventPolicy)
 
     // We store the frame's page in a local variable because the frame might get detached inside dispatchEvent.
     ForbidPromptsScope forbidPrompts(m_frame.page());
+    ForbidSynchronousLoadsScope forbidSynchronousLoads(m_frame.page());
     IgnoreOpensDuringUnloadCountIncrementer ignoreOpensDuringUnloadCountIncrementer(m_frame.document());
 
     if (m_didCallImplicitClose && !m_wasUnloadEventEmitted) {
@@ -3393,6 +3377,7 @@ bool FrameLoader::dispatchBeforeUnloadEvent(Chrome& chrome, FrameLoader* frameLo
     {
         SetForScope<PageDismissalType> change(m_pageDismissalEventBeingDispatched, PageDismissalType::BeforeUnload);
         ForbidPromptsScope forbidPrompts(m_frame.page());
+        ForbidSynchronousLoadsScope forbidSynchronousLoads(m_frame.page());
         domWindow->dispatchEvent(beforeUnloadEvent, domWindow->document());
     }
 
@@ -3557,9 +3542,9 @@ void FrameLoader::continueLoadAfterNavigationPolicy(const ResourceRequest& reque
 }
 
 void FrameLoader::continueLoadAfterNewWindowPolicy(const ResourceRequest& request,
-    FormState* formState, const String& frameName, const NavigationAction& action, ShouldContinue shouldContinue, AllowNavigationToInvalidURL allowNavigationToInvalidURL, NewFrameOpenerPolicy openerPolicy)
+    FormState* formState, const String& frameName, const NavigationAction& action, PolicyChecker::ShouldContinue shouldContinue, AllowNavigationToInvalidURL allowNavigationToInvalidURL, NewFrameOpenerPolicy openerPolicy)
 {
-    if (shouldContinue != ShouldContinue::Yes)
+    if (shouldContinue != PolicyChecker::ShouldContinue::Yes)
         return;
 
     Ref<Frame> frame(m_frame);

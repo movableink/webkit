@@ -26,6 +26,7 @@
 #pragma once
 
 #include "MessageReceiver.h"
+#include "MessageSender.h"
 #include "SandboxExtension.h"
 #include "WebFramePolicyListenerProxy.h"
 #include "WebPageProxyMessagesReplies.h"
@@ -60,7 +61,11 @@ struct NavigationActionData;
 struct URLSchemeTaskParameters;
 struct WebNavigationDataStore;
 
-class ProvisionalPageProxy : public IPC::MessageReceiver, public CanMakeWeakPtr<ProvisionalPageProxy> {
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+using LayerHostingContextID = uint32_t;
+#endif
+
+class ProvisionalPageProxy : public IPC::MessageReceiver, public IPC::MessageSender, public CanMakeWeakPtr<ProvisionalPageProxy> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     ProvisionalPageProxy(WebPageProxy&, Ref<WebProcessProxy>&&, std::unique_ptr<SuspendedPageProxy>, uint64_t navigationID, bool isServerRedirect, const WebCore::ResourceRequest&, ProcessSwapRequestedByClient);
@@ -82,6 +87,9 @@ public:
 #if PLATFORM(COCOA)
     Vector<uint8_t> takeAccessibilityToken() { return WTFMove(m_accessibilityToken); }
 #endif
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    LayerHostingContextID contextIDForVisibilityPropagation() const { return m_contextIDForVisibilityPropagation; }
+#endif
 
     void loadData(API::Navigation&, const IPC::DataReference&, const String& MIMEType, const String& encoding, const String& baseURL, API::Object* userData, Optional<WebsitePoliciesData>&& = WTF::nullopt);
     void loadRequest(API::Navigation&, WebCore::ResourceRequest&&, WebCore::ShouldOpenExternalURLsPolicy, API::Object* userData, Optional<WebsitePoliciesData>&& = WTF::nullopt);
@@ -94,6 +102,11 @@ private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&) final;
+
+    // IPC::MessageSender
+    IPC::Connection* messageSenderConnection() const final;
+    uint64_t messageSenderDestinationID() const final;
+    bool sendMessage(std::unique_ptr<IPC::Encoder>, OptionSet<IPC::SendOption>, Optional<std::pair<CompletionHandler<void(IPC::Decoder*)>, uint64_t>>&&) final;
 
     void decidePolicyForNavigationActionAsync(WebCore::FrameIdentifier, WebCore::SecurityOriginData&&, WebCore::PolicyCheckIdentifier, uint64_t navigationID, NavigationActionData&&, FrameInfoData&&,
         Optional<WebPageProxyIdentifier> originatingPageID, const WebCore::ResourceRequest& originalRequest, WebCore::ResourceRequest&&, IPC::FormDataReference&& requestBody,
@@ -123,6 +136,9 @@ private:
 #if ENABLE(CONTENT_FILTERING)
     void contentFilterDidBlockLoadForFrame(const WebCore::ContentFilterUnblockHandler&, WebCore::FrameIdentifier);
 #endif
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    void didCreateContextForVisibilityPropagation(LayerHostingContextID);
+#endif
 
     void initializeWebPage();
     bool validateInput(WebCore::FrameIdentifier, const Optional<uint64_t>& navigationID = WTF::nullopt);
@@ -144,6 +160,9 @@ private:
 #endif
 #if PLATFORM(IOS_FAMILY)
     UniqueRef<ProcessThrottler::ForegroundActivity> m_provisionalLoadActivity;
+#endif
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    LayerHostingContextID m_contextIDForVisibilityPropagation { 0 };
 #endif
 };
 

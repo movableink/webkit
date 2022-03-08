@@ -31,6 +31,7 @@
 #include "CachedImage.h"
 #include "DisplayBox.h"
 #include "DisplayRun.h"
+#include "HTMLNames.h"
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "InlineFormattingState.h"
@@ -65,6 +66,15 @@ LayoutTreeContent::LayoutTreeContent(const RenderBox& rootRenderer, std::unique_
     : m_rootRenderer(rootRenderer)
     , m_rootLayoutBox(WTFMove(rootLayoutBox))
 {
+}
+
+LayoutTreeContent::~LayoutTreeContent() = default;
+
+
+void LayoutTreeContent::addLayoutBoxForRenderer(const RenderObject& renderer, Box& layoutBox)
+{
+    m_renderObjectToLayoutBox.add(&renderer, &layoutBox);
+    m_layoutBoxToRenderObject.add(&layoutBox, &renderer);
 }
 
 static void appendChild(Container& parent, Box& newChild)
@@ -112,7 +122,7 @@ static String applyTextTransform(const String& text, const RenderStyle& style)
 
 static bool canUseSimplifiedTextMeasuring(const StringView& content, const FontCascade& font, bool whitespaceIsCollapsed)
 {
-    if (!content.is8Bit() && !content.isAllASCII() && FontCascade::characterRangeCodePath(content.characters16(), content.length()) != FontCascade::Simple)
+    if (font.codePath(TextRun(content)) == FontCascade::Complex)
         return false;
 
     if (font.wordSpacing() || font.letterSpacing())
@@ -138,6 +148,18 @@ std::unique_ptr<Layout::LayoutTreeContent> TreeBuilder::buildLayoutTree(const Re
     return layoutTreeContent;
 }
 
+std::unique_ptr<Layout::LayoutTreeContent> TreeBuilder::buildLayoutTreeForIntegration(const RenderBlockFlow& renderBlockFlow)
+{
+    PhaseScope scope(Phase::Type::TreeBuilding);
+
+    auto clonedStyle = RenderStyle::clone(renderBlockFlow.style());
+    clonedStyle.setDisplay(DisplayType::Block);
+
+    auto layoutTreeContent = makeUnique<LayoutTreeContent>(renderBlockFlow, makeUnique<Container>(WTF::nullopt, WTFMove(clonedStyle)));
+    TreeBuilder(*layoutTreeContent).buildTree();
+    return layoutTreeContent;
+}
+
 TreeBuilder::TreeBuilder(LayoutTreeContent& layoutTreeContent)
     : m_layoutTreeContent(layoutTreeContent)
 {
@@ -148,7 +170,7 @@ void TreeBuilder::buildTree()
     buildSubTree(m_layoutTreeContent.rootRenderer(), m_layoutTreeContent.rootLayoutBox());
 }
 
-std::unique_ptr<Box> TreeBuilder::createLayoutBox(const RenderElement& parentRenderer, const RenderObject& childRenderer)
+std::unique_ptr<Box> TreeBuilder::createLayoutBox(const Container& parentContainer, const RenderObject& childRenderer)
 {
     auto elementAttributes = [] (const RenderElement& renderer) -> Optional<Box::ElementAttributes> {
         if (renderer.isDocumentElementRenderer())
@@ -171,28 +193,31 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const RenderElement& parentRen
     std::unique_ptr<Box> childLayoutBox;
     if (is<RenderText>(childRenderer)) {
         auto& textRenderer = downcast<RenderText>(childRenderer);
-        auto text = applyTextTransform(textRenderer.originalText(), parentRenderer.style());
+        auto text = applyTextTransform(textRenderer.text(), parentContainer.style());
         // FIXME: Clearly there must be a helper function for this.
-        auto textContent = TextContext { text, canUseSimplifiedTextMeasuring(text, parentRenderer.style().fontCascade(), parentRenderer.style().collapseWhiteSpace()) };
-        if (parentRenderer.style().display() == DisplayType::Inline)
-            childLayoutBox = makeUnique<Box>(WTFMove(textContent), RenderStyle::clone(parentRenderer.style()));
+        auto textContent = TextContext { text, canUseSimplifiedTextMeasuring(text, parentContainer.style().fontCascade(), parentContainer.style().collapseWhiteSpace()) };
+        if (parentContainer.style().display() == DisplayType::Inline)
+            childLayoutBox = makeUnique<Box>(WTFMove(textContent), RenderStyle::clone(parentContainer.style()));
         else
-            childLayoutBox = makeUnique<Box>(WTFMove(textContent), RenderStyle::createAnonymousStyleWithDisplay(parentRenderer.style(), DisplayType::Inline));
+            childLayoutBox = makeUnique<Box>(WTFMove(textContent), RenderStyle::createAnonymousStyleWithDisplay(parentContainer.style(), DisplayType::Inline));
     } else {
         auto& renderer = downcast<RenderElement>(childRenderer);
         auto displayType = renderer.style().display();
-        if (is<RenderLineBreak>(renderer))
-            return makeUnique<Box>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
 
-        if (is<RenderTable>(renderer)) {
+        auto clonedStyle = RenderStyle::clone(renderer.style());
+
+        if (is<RenderLineBreak>(renderer)) {
+            clonedStyle.setDisplay(DisplayType::Inline);
+            childLayoutBox = makeUnique<Box>(elementAttributes(renderer), WTFMove(clonedStyle));
+        } else if (is<RenderTable>(renderer)) {
             // Construct the principal table wrapper box (and not the table box itself).
-            childLayoutBox = makeUnique<Container>(Box::ElementAttributes { Box::ElementType::TableWrapperBox }, RenderStyle::clone(renderer.style()));
+            childLayoutBox = makeUnique<Container>(Box::ElementAttributes { Box::ElementType::TableWrapperBox }, WTFMove(clonedStyle));
             childLayoutBox->setIsAnonymous();
         } else if (is<RenderReplaced>(renderer)) {
             if (displayType == DisplayType::Block)
-                childLayoutBox = makeUnique<Box>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Box>(elementAttributes(renderer), WTFMove(clonedStyle));
             else
-                childLayoutBox = makeUnique<Box>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Box>(elementAttributes(renderer), WTFMove(clonedStyle));
             // FIXME: We don't yet support all replaced elements and this is temporary anyway.
             if (childLayoutBox->replaced())
                 childLayoutBox->replaced()->setIntrinsicSize(downcast<RenderReplaced>(renderer).intrinsicSize());
@@ -206,23 +231,22 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const RenderElement& parentRen
         } else {
             if (displayType == DisplayType::Block) {
                 if (auto offset = accumulatedOffsetForInFlowPositionedContinuation(downcast<RenderBox>(renderer))) {
-                    auto style = RenderStyle::clonePtr(renderer.style());
-                    style->setTop({ offset->height(), Fixed });
-                    style->setLeft({ offset->width(), Fixed });
-                    childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(*style));
+                    clonedStyle.setTop({ offset->height(), Fixed });
+                    clonedStyle.setLeft({ offset->width(), Fixed });
+                    childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
                 } else
-                    childLayoutBox = makeUnique<Container>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                    childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
             } else if (displayType == DisplayType::Inline)
-                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
             else if (displayType == DisplayType::InlineBlock)
-                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
             else if (displayType == DisplayType::TableCaption || displayType == DisplayType::TableCell) {
-                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
             } else if (displayType == DisplayType::TableRowGroup || displayType == DisplayType::TableHeaderGroup || displayType == DisplayType::TableFooterGroup
                 || displayType == DisplayType::TableRow || displayType == DisplayType::TableColumnGroup) {
-                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
             } else if (displayType == DisplayType::TableColumn) {
-                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), RenderStyle::clone(renderer.style()));
+                childLayoutBox = makeUnique<Container>(elementAttributes(renderer), WTFMove(clonedStyle));
                 auto& tableColElement = static_cast<HTMLTableColElement&>(*renderer.element());
                 auto columnWidth = tableColElement.width();
                 if (!columnWidth.isEmpty())
@@ -259,12 +283,11 @@ void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, Containe
     auto* tableChild = tableRenderer.firstChild();
     while (is<RenderTableCaption>(tableChild)) {
         auto& captionRenderer = *tableChild;
-        auto captionBox = createLayoutBox(tableRenderer, captionRenderer);
+        auto captionBox = createLayoutBox(tableWrapperBox, captionRenderer);
         appendChild(tableWrapperBox, *captionBox);
         auto& captionContainer = downcast<Container>(*captionBox);
         buildSubTree(downcast<RenderElement>(captionRenderer), captionContainer);
-        // Temporary
-        captionBox.release();
+        m_layoutTreeContent.addBox(WTFMove(captionBox));
         tableChild = tableChild->nextSibling();
     }
 
@@ -272,28 +295,27 @@ void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, Containe
     appendChild(tableWrapperBox, *tableBox);
     auto* sectionRenderer = tableChild;
     while (sectionRenderer) {
-        auto sectionBox = createLayoutBox(tableRenderer, *sectionRenderer);
+        auto sectionBox = createLayoutBox(*tableBox, *sectionRenderer);
         appendChild(*tableBox, *sectionBox);
         auto& sectionContainer = downcast<Container>(*sectionBox);
         buildSubTree(downcast<RenderElement>(*sectionRenderer), sectionContainer);
-        sectionBox.release();
+        m_layoutTreeContent.addBox(WTFMove(sectionBox));
         sectionRenderer = sectionRenderer->nextSibling();
     }
-    // Temporary
-    tableBox.release();
+    m_layoutTreeContent.addBox(WTFMove(tableBox));
 }
 
-void TreeBuilder::buildSubTree(const RenderElement& rootRenderer, Container& rootContainer)
+void TreeBuilder::buildSubTree(const RenderElement& parentRenderer, Container& parentContainer)
 {
-    for (auto& childRenderer : childrenOfType<RenderObject>(rootRenderer)) {
-        auto childLayoutBox = createLayoutBox(rootRenderer, childRenderer);
-        appendChild(rootContainer, *childLayoutBox);
+    for (auto& childRenderer : childrenOfType<RenderObject>(parentRenderer)) {
+        auto childLayoutBox = createLayoutBox(parentContainer, childRenderer);
+        appendChild(parentContainer, *childLayoutBox);
         if (childLayoutBox->isTableWrapperBox())
             buildTableStructure(downcast<RenderTable>(childRenderer), downcast<Container>(*childLayoutBox));
         else if (is<Container>(*childLayoutBox))
             buildSubTree(downcast<RenderElement>(childRenderer), downcast<Container>(*childLayoutBox));
-        // Temporary
-        childLayoutBox.release();
+
+        m_layoutTreeContent.addBox(WTFMove(childLayoutBox));
     }
 }
 
@@ -301,8 +323,12 @@ void TreeBuilder::buildSubTree(const RenderElement& rootRenderer, Container& roo
 static void outputInlineRuns(TextStream& stream, const LayoutState& layoutState, const Container& inlineFormattingRoot, unsigned depth)
 {
     auto& inlineFormattingState = downcast<InlineFormattingState>(layoutState.establishedFormattingState(inlineFormattingRoot));
-    auto& inlineRuns = inlineFormattingState.inlineRuns();
-    auto& lineBoxes = inlineFormattingState.lineBoxes();
+    auto* displayInlineContent = inlineFormattingState.displayInlineContent();
+    if (!displayInlineContent)
+        return;
+
+    auto& displayRuns = displayInlineContent->runs;
+    auto& lineBoxes = displayInlineContent->lineBoxes;
 
     unsigned printedCharacters = 0;
     while (++printedCharacters <= depth * 2)
@@ -311,21 +337,21 @@ static void outputInlineRuns(TextStream& stream, const LayoutState& layoutState,
 
     stream << "lines are -> ";
     for (auto& lineBox : lineBoxes)
-        stream << "[" << lineBox->logicalLeft() << "," << lineBox->logicalTop() << " " << lineBox->logicalWidth() << "x" << lineBox->logicalHeight() << "] ";
+        stream << "[" << lineBox.logicalLeft() << "," << lineBox.logicalTop() << " " << lineBox.logicalWidth() << "x" << lineBox.logicalHeight() << "] ";
     stream.nextLine();
 
-    for (auto& inlineRun : inlineRuns) {
+    for (auto& displayRun : displayRuns) {
         unsigned printedCharacters = 0;
         while (++printedCharacters <= depth * 2)
             stream << " ";
         stream << "  ";
-        if (inlineRun->textContext())
+        if (displayRun.textContext())
             stream << "inline text box";
         else
             stream << "inline box";
-        stream << " at (" << inlineRun->logicalLeft() << "," << inlineRun->logicalTop() << ") size " << inlineRun->logicalWidth() << "x" << inlineRun->logicalHeight();
-        if (inlineRun->textContext())
-            stream << " run(" << inlineRun->textContext()->start() << ", " << inlineRun->textContext()->end() << ")";
+        stream << " at (" << displayRun.logicalLeft() << "," << displayRun.logicalTop() << ") size " << displayRun.logicalWidth() << "x" << displayRun.logicalHeight();
+        if (displayRun.textContext())
+            stream << " run(" << displayRun.textContext()->start() << ", " << displayRun.textContext()->end() << ")";
         stream.nextLine();
     }
 }
@@ -440,8 +466,6 @@ void printLayoutTreeForLiveDocuments()
 
         auto& layoutRoot = layoutState.root();
         auto invalidationState = InvalidationState { };
-        auto invalidationContext = InvalidationContext { invalidationState };
-        invalidationContext.styleChanged(*layoutRoot.firstChild(), StyleDifference::Layout);
 
         LayoutContext(layoutState).layout(renderView.size(), invalidationState);
         showLayoutTree(layoutRoot, &layoutState);

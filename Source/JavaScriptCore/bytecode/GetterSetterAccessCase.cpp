@@ -138,11 +138,8 @@ void GetterSetterAccessCase::emitDOMJITGetter(AccessGenerationState& state, cons
     Vector<FPRReg> fpScratch;
     Vector<SnippetParams::Value> regs;
 
-    ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-    allocator.lock(baseGPR);
-#if USE(JSVALUE32_64)
-    allocator.lock(stubInfo.patch.baseTagGPR);
-#endif
+    ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+    allocator.lock(stubInfo.baseRegs());
     allocator.lock(valueRegs);
     allocator.lock(scratchGPR);
 

@@ -949,7 +949,7 @@ class Port(object):
         """Return a newly created Driver subclass for starting/stopping the test driver."""
         return driver.DriverProxy(self, worker_number, self._driver_class(), pixel_tests=self.get_option('pixel_tests'), no_timeout=no_timeout)
 
-    def start_helper(self, pixel_tests=False):
+    def start_helper(self, pixel_tests=False, prefer_integrated_gpu=False):
         """If a port needs to reconfigure graphics settings or do other
         things to ensure a known test configuration, it should override this
         method."""
@@ -1192,6 +1192,12 @@ class Port(object):
 
     def allowed_hosts(self):
         return self.get_option("allowed_host", [])
+
+    def internal_feature(self):
+        return self.get_option("internal_feature", [])
+
+    def experimental_feature(self):
+        return self.get_option("experimental_feature", [])
 
     def default_configuration(self):
         return self._config.default_configuration()

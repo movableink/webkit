@@ -28,6 +28,7 @@
 #include "APIDictionary.h"
 #include "APIObject.h"
 #include "APIProcessPoolConfiguration.h"
+#include "GPUProcessProxy.h"
 #include "GenericCallback.h"
 #include "HiddenPageThrottlingAutoIncreasesCounter.h"
 #include "MessageReceiver.h"
@@ -105,6 +106,7 @@ class WebContextSupplement;
 class WebPageGroup;
 class WebPageProxy;
 class WebProcessCache;
+struct GPUProcessCreationParameters;
 struct NetworkProcessCreationParameters;
 struct StatisticsData;
 struct WebProcessCreationParameters;
@@ -320,9 +322,10 @@ public:
 
     void clearCachedCredentials();
     void terminateNetworkProcess();
+    void terminateAllWebContentProcesses();
     void sendNetworkProcessWillSuspendImminentlyForTesting();
     void sendNetworkProcessDidResume();
-    void terminateServiceWorkerProcesses();
+    void terminateServiceWorkers();
 
     void syncNetworkProcessCookies();
     void syncLocalStorage(CompletionHandler<void()>&& callback);
@@ -380,6 +383,11 @@ public:
     void setPlugInAutoStartOrigins(API::Array&);
     void setPlugInAutoStartOriginsFilteringOutEntriesAddedAfterTime(API::Dictionary&, WallTime);
 
+#if ENABLE(GPU_PROCESS)
+    void gpuProcessCrashed();
+    void getGPUProcessConnection(WebProcessProxy&, Messages::WebProcessProxy::GetGPUProcessConnectionDelayedReply&&);
+#endif
+
     // Network Process Management
     NetworkProcessProxy& ensureNetworkProcess(WebsiteDataStore* withWebsiteDataStore = nullptr);
     NetworkProcessProxy* networkProcess() { return m_networkProcess.get(); }
@@ -399,6 +407,7 @@ public:
     bool hasServiceWorkerForegroundActivityForTesting() const;
     bool hasServiceWorkerBackgroundActivityForTesting() const;
 #endif
+    void serviceWorkerProcessCrashed(WebProcessProxy&);
 
 #if PLATFORM(COCOA)
     bool processSuppressionEnabled() const;
@@ -611,7 +620,7 @@ private:
 
 #if ENABLE(SERVICE_WORKER)
     using RegistrableDomainWithSessionID = std::pair<WebCore::RegistrableDomain, PAL::SessionID>;
-    HashMap<RegistrableDomainWithSessionID, WebProcessProxy*> m_serviceWorkerProcesses;
+    HashMap<RegistrableDomainWithSessionID, WeakPtr<WebProcessProxy>> m_serviceWorkerProcesses;
     bool m_waitingForWorkerContextProcessConnection { false };
     bool m_allowsAnySSLCertificateForServiceWorker { false };
     String m_serviceWorkerUserAgent;

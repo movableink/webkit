@@ -61,6 +61,7 @@ void WebProcessCreationParameters::encode(IPC::Encoder& encoder) const
 #if ENABLE(MEDIA_STREAM)
     encoder << audioCaptureExtensionHandle;
     encoder << shouldCaptureAudioInUIProcess;
+    encoder << shouldCaptureAudioInGPUProcess;
     encoder << shouldCaptureVideoInUIProcess;
     encoder << shouldCaptureDisplayInUIProcess;
 #endif
@@ -158,6 +159,21 @@ void WebProcessCreationParameters::encode(IPC::Encoder& encoder) const
 #endif
 
     encoder << websiteDataStoreParameters;
+    
+#if PLATFORM(IOS)
+    encoder << compilerServiceExtensionHandle;
+    encoder << contentFilterExtensionHandle;
+    encoder << diagnosticsExtensionHandle;
+#endif
+    
+#if PLATFORM(COCOA)
+    encoder << neHelperExtensionHandle;
+    encoder << neSessionManagerExtensionHandle;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    encoder << currentUserInterfaceIdiomIsPad;
+#endif
 }
 
 bool WebProcessCreationParameters::decode(IPC::Decoder& decoder, WebProcessCreationParameters& parameters)
@@ -214,6 +230,8 @@ bool WebProcessCreationParameters::decode(IPC::Decoder& decoder, WebProcessCreat
     parameters.audioCaptureExtensionHandle = WTFMove(*audioCaptureExtensionHandle);
 
     if (!decoder.decode(parameters.shouldCaptureAudioInUIProcess))
+        return false;
+    if (!decoder.decode(parameters.shouldCaptureAudioInGPUProcess))
         return false;
     if (!decoder.decode(parameters.shouldCaptureVideoInUIProcess))
         return false;
@@ -387,6 +405,45 @@ bool WebProcessCreationParameters::decode(IPC::Decoder& decoder, WebProcessCreat
     if (!websiteDataStoreParameters)
         return false;
     parameters.websiteDataStoreParameters = WTFMove(*websiteDataStoreParameters);
+
+#if PLATFORM(IOS)
+    Optional<Optional<SandboxExtension::Handle>> compilerServiceExtensionHandle;
+    decoder >> compilerServiceExtensionHandle;
+    if (!compilerServiceExtensionHandle)
+        return false;
+    parameters.compilerServiceExtensionHandle = WTFMove(*compilerServiceExtensionHandle);
+
+    Optional<Optional<SandboxExtension::Handle>> contentFilterExtensionHandle;
+    decoder >> contentFilterExtensionHandle;
+    if (!contentFilterExtensionHandle)
+        return false;
+    parameters.contentFilterExtensionHandle = WTFMove(*contentFilterExtensionHandle);
+
+    Optional<Optional<SandboxExtension::Handle>> diagnosticsExtensionHandle;
+    decoder >> diagnosticsExtensionHandle;
+    if (!diagnosticsExtensionHandle)
+        return false;
+    parameters.diagnosticsExtensionHandle = WTFMove(*diagnosticsExtensionHandle);
+#endif
+
+#if PLATFORM(COCOA)
+    Optional<Optional<SandboxExtension::Handle>> neHelperExtensionHandle;
+    decoder >> neHelperExtensionHandle;
+    if (!neHelperExtensionHandle)
+        return false;
+    parameters.neHelperExtensionHandle = WTFMove(*neHelperExtensionHandle);
+
+    Optional<Optional<SandboxExtension::Handle>> neSessionManagerExtensionHandle;
+    decoder >> neSessionManagerExtensionHandle;
+    if (!neSessionManagerExtensionHandle)
+        return false;
+    parameters.neSessionManagerExtensionHandle = WTFMove(*neSessionManagerExtensionHandle);
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    if (!decoder.decode(parameters.currentUserInterfaceIdiomIsPad))
+        return false;
+#endif
 
     return true;
 }

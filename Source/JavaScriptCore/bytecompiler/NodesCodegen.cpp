@@ -30,6 +30,7 @@
 
 #include "BuiltinNames.h"
 #include "BytecodeGenerator.h"
+#include "BytecodeGeneratorBaseInlines.h"
 #include "CallFrame.h"
 #include "JIT.h"
 #include "JSAsyncGenerator.h"
@@ -1460,6 +1461,12 @@ RegisterID* BytecodeIntrinsicNode::emit_intrinsic_newPromise(JSC::BytecodeGenera
     bool isInternalPromise = false;
     generator.emitNewPromise(finalDestination.get(), isInternalPromise);
     return finalDestination.get();
+}
+
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_createArgumentsButterfly(JSC::BytecodeGenerator& generator, JSC::RegisterID* dst)
+{
+    ASSERT(!m_args->m_listNode);
+    return generator.emitCreateArgumentsButterfly(generator.finalDestination(dst));
 }
 
 RegisterID* BytecodeIntrinsicNode::emit_intrinsic_defineEnumerableWritableConfigurableDataProperty(JSC::BytecodeGenerator& generator, JSC::RegisterID* dst)

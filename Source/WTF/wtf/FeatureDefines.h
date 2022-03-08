@@ -83,8 +83,8 @@
 #endif
 #endif
 
-#if !defined(ENABLE_CURSOR_SUPPORT)
-#define ENABLE_CURSOR_SUPPORT 0
+#if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
+#define ENABLE_CUSTOM_CURSOR_SUPPORT 0
 #endif
 
 #if !defined(ENABLE_DRAG_SUPPORT)
@@ -333,14 +333,6 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #define ENABLE_FILE_REPLACEMENT 1
 #endif
 
-#if !defined(ENABLE_KEYBOARD_KEY_ATTRIBUTE)
-#define ENABLE_KEYBOARD_KEY_ATTRIBUTE 1
-#endif
-
-#if !defined(ENABLE_KEYBOARD_CODE_ATTRIBUTE)
-#define ENABLE_KEYBOARD_CODE_ATTRIBUTE 1
-#endif
-
 #if !defined(ENABLE_PAYMENT_REQUEST)
 #define ENABLE_PAYMENT_REQUEST 1
 #endif
@@ -395,17 +387,6 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #endif
 
 #endif /* PLATFORM(WIN_CAIRO) */
-
-/* --------- Gtk port (Unix, Windows, Mac) and WPE --------- */
-#if PLATFORM(GTK) || PLATFORM(WPE)
-#if !defined(ENABLE_KEYBOARD_KEY_ATTRIBUTE)
-#define ENABLE_KEYBOARD_KEY_ATTRIBUTE 1
-#endif
-
-#if !defined(ENABLE_KEYBOARD_CODE_ATTRIBUTE)
-#define ENABLE_KEYBOARD_CODE_ATTRIBUTE 1
-#endif
-#endif /* PLATFORM(GTK) || PLATFORM(WPE) */
 
 /* ENABLE macro defaults for WebCore */
 /* Do not use PLATFORM() tests in this section ! */
@@ -474,8 +455,8 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #define ENABLE_CSS_CONIC_GRADIENTS 0
 #endif
 
-#if !defined(ENABLE_CURSOR_SUPPORT)
-#define ENABLE_CURSOR_SUPPORT 1
+#if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
+#define ENABLE_CUSTOM_CURSOR_SUPPORT 1
 #endif
 
 #if !defined(ENABLE_CUSTOM_SCHEME_HANDLER)
@@ -682,6 +663,13 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #define ENABLE_RUBBER_BANDING 0
 #endif
 
+#if !defined(ENABLE_SECURITY_ASSERTIONS)
+/* Enable security assertions on all ASAN builds and debug builds. */
+#if ASAN_ENABLED || !defined(NDEBUG)
+#define ENABLE_SECURITY_ASSERTIONS 1
+#endif
+#endif
+
 #if !defined(ENABLE_SMOOTH_SCROLLING)
 #define ENABLE_SMOOTH_SCROLLING 0
 #endif
@@ -748,14 +736,6 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 
 #if !defined(ENABLE_XSLT)
 #define ENABLE_XSLT 1
-#endif
-
-#if !defined(ENABLE_KEYBOARD_KEY_ATTRIBUTE)
-#define ENABLE_KEYBOARD_KEY_ATTRIBUTE 0
-#endif
-
-#if !defined(ENABLE_KEYBOARD_CODE_ATTRIBUTE)
-#define ENABLE_KEYBOARD_CODE_ATTRIBUTE 0
 #endif
 
 #if !defined(ENABLE_DATA_INTERACTION)

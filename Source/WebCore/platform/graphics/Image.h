@@ -116,6 +116,7 @@ public:
     float width() const { return size().width(); }
     float height() const { return size().height(); }
     virtual Optional<IntPoint> hotSpot() const { return WTF::nullopt; }
+    virtual ImageOrientation orientation() const { return ImageOrientation::FromImage; }
 
     WEBCORE_EXPORT EncodedDataStatus setData(RefPtr<SharedBuffer>&& data, bool allDataReceived);
     virtual EncodedDataStatus dataChanged(bool /*allDataReceived*/) { return EncodedDataStatus::Unknown; }
@@ -201,6 +202,11 @@ private:
     RefPtr<SharedBuffer> m_encodedImageData;
     ImageObserver* m_imageObserver;
     std::unique_ptr<Timer> m_animationStartTimer;
+};
+
+class ImageHandle {
+public:
+    RefPtr<Image> image;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const Image&);

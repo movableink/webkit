@@ -27,7 +27,6 @@
 #include "CachedTypes.h"
 
 #include "BytecodeCacheError.h"
-#include "BytecodeCacheVersion.h"
 #include "BytecodeLivenessAnalysis.h"
 #include "JSCInlines.h"
 #include "JSImmutableButterfly.h"
@@ -64,6 +63,11 @@ struct SourceTypeImpl<T, std::enable_if_t<!std::is_fundamental<T>::value && !std
 
 template<typename T>
 using SourceType = typename SourceTypeImpl<T>::type;
+
+static constexpr unsigned jscBytecodeCacheVersion()
+{
+    return StringHasher::computeHash(__TIMESTAMP__);
+}
 
 class Encoder {
     WTF_MAKE_NONCOPYABLE(Encoder);
@@ -1784,6 +1788,7 @@ public:
     unsigned derivedContextType() const { return m_derivedContextType; }
     unsigned evalContextType() const { return m_evalContextType; }
     unsigned hasTailCalls() const { return m_hasTailCalls; }
+    unsigned hasCheckpoints() const { return m_hasCheckpoints; }
     unsigned lineCount() const { return m_lineCount; }
     unsigned endColumn() const { return m_endColumn; }
 
@@ -1816,6 +1821,7 @@ private:
     unsigned m_evalContextType : 2;
     unsigned m_hasTailCalls : 1;
     unsigned m_codeType : 2;
+    unsigned m_hasCheckpoints : 1;
 
     CodeFeatures m_features;
     SourceParseMode m_parseMode;
@@ -2014,6 +2020,7 @@ ALWAYS_INLINE UnlinkedCodeBlock::UnlinkedCodeBlock(Decoder& decoder, Structure* 
 
     , m_didOptimize(static_cast<unsigned>(MixedTriState))
     , m_age(0)
+    , m_hasCheckpoints(cachedCodeBlock.hasCheckpoints())
 
     , m_features(cachedCodeBlock.features())
     , m_parseMode(cachedCodeBlock.parseMode())
@@ -2202,6 +2209,7 @@ ALWAYS_INLINE void CachedCodeBlock<CodeBlockType>::encode(Encoder& encoder, cons
     m_parseMode = codeBlock.m_parseMode;
     m_codeGenerationMode = codeBlock.m_codeGenerationMode;
     m_codeType = codeBlock.m_codeType;
+    m_hasCheckpoints = codeBlock.m_hasCheckpoints;
 
     m_metadata.encode(encoder, codeBlock.m_metadata.get());
     m_rareData.encode(encoder, codeBlock.m_rareData.get());
@@ -2265,7 +2273,7 @@ protected:
 
     bool isUpToDate(Decoder& decoder) const
     {
-        if (m_cacheVersion != JSC_BYTECODE_CACHE_VERSION)
+        if (m_cacheVersion != jscBytecodeCacheVersion())
             return false;
         if (m_bootSessionUUID.decode(decoder) != bootSessionUUIDString())
             return false;
@@ -2273,7 +2281,7 @@ protected:
     }
 
 private:
-    uint32_t m_cacheVersion { JSC_BYTECODE_CACHE_VERSION };
+    uint32_t m_cacheVersion { jscBytecodeCacheVersion() };
     CachedString m_bootSessionUUID;
     CachedCodeBlockTag m_tag;
 };

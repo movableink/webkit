@@ -98,6 +98,7 @@
 #include "WebInspectorMessages.h"
 #include "WebInspectorUI.h"
 #include "WebInspectorUIMessages.h"
+#include "WebLoaderStrategy.h"
 #include "WebMediaKeyStorageManager.h"
 #include "WebNotificationClient.h"
 #include "WebOpenPanelResultListener.h"
@@ -213,6 +214,7 @@
 #include <WebCore/ResourceLoadStatistics.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
+#include <WebCore/RunJavaScriptParameters.h>
 #include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/SWClientConnection.h>
 #include <WebCore/ScriptController.h>
@@ -314,6 +316,14 @@
 #if ENABLE(WEB_AUTHN)
 #include "WebAuthenticatorCoordinator.h"
 #include <WebCore/AuthenticatorCoordinator.h>
+#endif
+
+#if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
+#include "WebDeviceOrientationUpdateProvider.h"
+#endif
+
+#if ENABLE(GPU_PROCESS)
+#include "RemoteMediaPlayerManager.h"
 #endif
 
 namespace WebKit {
@@ -458,23 +468,23 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
         makeUniqueRef<WebKit::LibWebRTCProvider>(),
         WebProcess::singleton().cacheStorageProvider(),
         WebBackForwardListProxy::create(*this),
-        WebCookieJar::create()
+        WebCookieJar::create(),
+        makeUniqueRef<WebProgressTrackerClient>(*this)
     );
     pageConfiguration.chromeClient = new WebChromeClient(*this);
 #if ENABLE(CONTEXT_MENUS)
     pageConfiguration.contextMenuClient = new WebContextMenuClient(this);
 #endif
 #if ENABLE(DRAG_SUPPORT)
-    pageConfiguration.dragClient = new WebDragClient(this);
+    pageConfiguration.dragClient = makeUnique<WebDragClient>(this);
 #endif
     pageConfiguration.inspectorClient = new WebInspectorClient(this);
 #if USE(AUTOCORRECTION_PANEL)
-    pageConfiguration.alternativeTextClient = new WebAlternativeTextClient(this);
+    pageConfiguration.alternativeTextClient = makeUnique<WebAlternativeTextClient>(this);
 #endif
 
-    pageConfiguration.plugInClient = new WebPlugInClient(*this);
+    pageConfiguration.plugInClient = makeUnique<WebPlugInClient>(*this);
     pageConfiguration.loaderClientForMainFrame = new WebFrameLoaderClient;
-    pageConfiguration.progressTrackerClient = new WebProgressTrackerClient(*this);
     pageConfiguration.diagnosticLoggingClient = makeUnique<WebDiagnosticLoggingClient>(*this);
     pageConfiguration.performanceLoggingClient = makeUnique<WebPerformanceLoggingClient>(*this);
 
@@ -509,6 +519,10 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 
 #if ENABLE(APPLICATION_MANIFEST)
     pageConfiguration.applicationManifest = parameters.applicationManifest;
+#endif
+    
+#if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
+    pageConfiguration.deviceOrientationUpdateProvider = WebDeviceOrientationUpdateProvider::create(*this);
 #endif
 
     m_page = makeUnique<Page>(WTFMove(pageConfiguration));
@@ -1551,19 +1565,15 @@ void WebPage::close()
         RunLoop::main().stop();
 }
 
-void WebPage::tryClose()
+void WebPage::tryClose(CompletionHandler<void(bool)>&& completionHandler)
 {
-    SendStopResponsivenessTimer stopper;
-
-    if (!corePage()->userInputBridge().tryClosePage())
-        return;
-
-    send(Messages::WebPageProxy::ClosePage(true));
+    bool shouldClose = corePage()->userInputBridge().tryClosePage();
+    completionHandler(shouldClose);
 }
 
 void WebPage::sendClose()
 {
-    send(Messages::WebPageProxy::ClosePage(false));
+    send(Messages::WebPageProxy::ClosePage());
 }
 
 void WebPage::suspendForProcessSwap()
@@ -1623,6 +1633,11 @@ void WebPage::platformDidReceiveLoadParameters(const LoadParameters& loadParamet
 void WebPage::loadRequest(LoadParameters&& loadParameters)
 {
     SendStopResponsivenessTimer stopper;
+
+    if (loadParameters.request.url().protocolIsInHTTPFamily() && !SecurityOrigin::isLocalHostOrLoopbackIPAddress(loadParameters.request.url().host())) {
+        ResourceRequest urlOnlyPreconnectRequest { loadParameters.request.url() };
+        WebProcess::singleton().webLoaderStrategy().preconnectTo(WTFMove(urlOnlyPreconnectRequest), *this, *m_mainFrame, StoredCredentialsPolicy::Use);
+    }
 
     m_pendingNavigationID = loadParameters.navigationID;
     m_pendingWebsitePolicies = WTFMove(loadParameters.websitePolicies);
@@ -3478,40 +3493,49 @@ KeyboardUIMode WebPage::keyboardUIMode()
     return static_cast<KeyboardUIMode>((fullKeyboardAccessEnabled ? KeyboardAccessFull : KeyboardAccessDefault) | (m_tabToLinks ? KeyboardAccessTabsToLinks : 0));
 }
 
-void WebPage::runJavaScript(WebFrame* frame, const String& script, bool forceUserGesture, const Optional<String>& worldName, CallbackID callbackID)
+void WebPage::runJavaScript(WebFrame* frame, RunJavaScriptParameters&& parameters, const Optional<String>& worldName, CallbackID callbackID)
 {
     // NOTE: We need to be careful when running scripts that the objects we depend on don't
     // disappear during script execution.
 
-    RefPtr<SerializedScriptValue> serializedResultValue;
-    JSLockHolder lock(commonVM());
-    bool hadException = true;
-    ExceptionDetails details;
     auto* world = worldName ? InjectedBundleScriptWorld::find(worldName.value()) : &InjectedBundleScriptWorld::normalWorld();
-    if (frame && frame->coreFrame() && world) {
-        if (JSValue resultValue = frame->coreFrame()->script().executeUserAgentScriptInWorld(world->coreWorld(), script, forceUserGesture, &details)) {
-            hadException = false;
-            serializedResultValue = SerializedScriptValue::create(frame->jsContextForWorld(world),
-                toRef(frame->coreFrame()->script().globalObject(world->coreWorld()), resultValue), nullptr);
-        }
+    if (!frame || !frame->coreFrame() || !world) {
+        send(Messages::WebPageProxy::ScriptValueCallback({ }, ExceptionDetails { "Unable to execute JavaScript: Page is in invalid state"_s }, callbackID));
+        return;
     }
 
-    IPC::DataReference dataReference;
-    if (serializedResultValue)
-        dataReference = serializedResultValue->data();
-    send(Messages::WebPageProxy::ScriptValueCallback(dataReference, hadException, details, callbackID));
+    auto resolveFunction = [protectedThis = makeRef(*this), this, world = makeRef(*world), frame = makeRef(*frame), callbackID](ValueOrException result) {
+        RefPtr<SerializedScriptValue> serializedResultValue;
+        if (result) {
+            serializedResultValue = SerializedScriptValue::create(frame->jsContextForWorld(world.ptr()),
+                toRef(frame->coreFrame()->script().globalObject(world->coreWorld()), result.value()), nullptr);
+        }
+
+        IPC::DataReference dataReference;
+        if (serializedResultValue)
+            dataReference = serializedResultValue->data();
+
+        Optional<ExceptionDetails> details;
+        if (!result)
+            details = result.error();
+
+        send(Messages::WebPageProxy::ScriptValueCallback(dataReference, details, callbackID));
+    };
+
+    JSLockHolder lock(commonVM());
+    frame->coreFrame()->script().executeAsynchronousUserAgentScriptInWorld(world->coreWorld(), WTFMove(parameters), WTFMove(resolveFunction));
 }
 
-void WebPage::runJavaScriptInMainFrameScriptWorld(const String& script, bool forceUserGesture, const Optional<String>& worldName, CallbackID callbackID)
+void WebPage::runJavaScriptInMainFrameScriptWorld(RunJavaScriptParameters&& parameters, const Optional<String>& worldName, CallbackID callbackID)
 {
-    runJavaScript(mainWebFrame(), script, forceUserGesture, worldName, callbackID);
+    runJavaScript(mainWebFrame(), WTFMove(parameters), worldName, callbackID);
 }
 
 void WebPage::runJavaScriptInFrame(FrameIdentifier frameID, const String& script, bool forceUserGesture, CallbackID callbackID)
 {
     WebFrame* frame = WebProcess::singleton().webFrame(frameID);
     ASSERT(mainWebFrame() != frame);
-    runJavaScript(frame, script, forceUserGesture, WTF::nullopt, callbackID);
+    runJavaScript(frame, { script, false, WTF::nullopt, forceUserGesture }, WTF::nullopt, callbackID);
 }
 
 void WebPage::getContentsAsString(CallbackID callbackID)
@@ -3736,6 +3760,10 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 
     if (m_drawingArea)
         m_drawingArea->updatePreferences(store);
+
+#if ENABLE(GPU_PROCESS)
+    WebProcess::singleton().supplement<RemoteMediaPlayerManager>()->updatePreferences(settings);
+#endif
 }
 
 #if ENABLE(DATA_DETECTION)
@@ -4320,8 +4348,10 @@ void WebPage::didReceiveNotificationPermissionDecision(uint64_t notificationID, 
 
 #if ENABLE(MEDIA_STREAM)
 
-void WebPage::userMediaAccessWasGranted(uint64_t userMediaID, WebCore::CaptureDevice&& audioDevice, WebCore::CaptureDevice&& videoDevice, String&& mediaDeviceIdentifierHashSalt, CompletionHandler<void()>&& completionHandler)
+void WebPage::userMediaAccessWasGranted(uint64_t userMediaID, WebCore::CaptureDevice&& audioDevice, WebCore::CaptureDevice&& videoDevice, String&& mediaDeviceIdentifierHashSalt, SandboxExtension::Handle&& handle, CompletionHandler<void()>&& completionHandler)
 {
+    SandboxExtension::consumePermanently(handle);
+
     m_userMediaPermissionRequestManager->userMediaAccessWasGranted(userMediaID, WTFMove(audioDevice), WTFMove(videoDevice), WTFMove(mediaDeviceIdentifierHashSalt), WTFMove(completionHandler));
 }
 
@@ -4804,6 +4834,16 @@ void WebPage::effectiveAppearanceDidChange(bool useDarkAppearance, bool useEleva
     corePage()->effectiveAppearanceDidChange(useDarkAppearance, useElevatedUserInterfaceLevel);
 }
 #endif
+
+void WebPage::freezeLayerTreeDueToSwipeAnimation()
+{
+    freezeLayerTree(LayerTreeFreezeReason::SwipeAnimation);
+}
+
+void WebPage::unfreezeLayerTreeDueToSwipeAnimation()
+{
+    unfreezeLayerTree(LayerTreeFreezeReason::SwipeAnimation);
+}
 
 void WebPage::beginPrinting(FrameIdentifier frameID, const PrintInfo& printInfo)
 {
@@ -5447,7 +5487,7 @@ void WebPage::confirmCompositionAsync()
 
 #endif // PLATFORM(COCOA)
 
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(WPE)
 static Frame* targetFrameForEditing(WebPage& page)
 {
     Frame& targetFrame = page.corePage()->focusController().focusedOrMainFrame();
@@ -5469,20 +5509,10 @@ static Frame* targetFrameForEditing(WebPage& page)
     return &targetFrame;
 }
 
-void WebPage::confirmComposition(const String& compositionString)
+void WebPage::cancelComposition(const String& compositionString)
 {
     if (auto* targetFrame = targetFrameForEditing(*this))
         targetFrame->editor().confirmComposition(compositionString);
-}
-
-void WebPage::setComposition(const String& text, const Vector<CompositionUnderline>& underlines, const EditingRange& selectionRange)
-{
-    Frame* targetFrame = targetFrameForEditing(*this);
-    if (!targetFrame || !targetFrame->selection().selection().isContentEditable())
-        return;
-
-    Ref<Frame> protector(*targetFrame);
-    targetFrame->editor().setComposition(text, underlines, selectionRange.location, selectionRange.location + selectionRange.length);
 }
 #endif
 
@@ -6567,6 +6597,7 @@ void WebPage::stopAllURLSchemeTasks()
 
 void WebPage::registerURLSchemeHandler(uint64_t handlerIdentifier, const String& scheme)
 {
+    WebCore::LegacySchemeRegistry::registerURLSchemeAsCORSEnabled(scheme);
     auto schemeResult = m_schemeToURLSchemeHandlerProxyMap.add(scheme, WebURLSchemeHandlerProxy::create(*this, handlerIdentifier));
     m_identifierToURLSchemeHandlerProxyMap.add(handlerIdentifier, schemeResult.iterator->value.get());
 }

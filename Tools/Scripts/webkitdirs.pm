@@ -1958,6 +1958,18 @@ sub buildXCodeProject($$@)
     }
 
     chomp($ENV{DSYMUTIL_NUM_THREADS} = `sysctl -n hw.activecpu`);
+
+    # lldbWebKitTester won't work with the wrong CLANG_DEBUG_INFORMATION_LEVEL, so always use the default for that project
+    if ($project eq "lldbWebKitTester") {
+        my $index = 0;
+        while ($index < scalar(@extraOptions)) {
+            if ($extraOptions[$index] =~ /CLANG_DEBUG_INFORMATION_LEVEL=/) {
+                splice @extraOptions, $index, 1;
+            } else {
+                $index += 1;
+            }
+        }
+    }
     return system "xcodebuild", "-project", "$project.xcodeproj", @extraOptions;
 }
 
@@ -2338,7 +2350,7 @@ sub generateBuildSystemFromCMakeProject
     push @args, '-DSHOW_BINDINGS_GENERATION_PROGRESS=1' unless ($willUseNinja && -t STDOUT);
 
     # Some ports have production mode, but build-webkit should always use developer mode.
-    push @args, "-DDEVELOPER_MODE=ON" if isFTW() || isGtk() || isJSCOnly() || isQt() || isWPE() || isWinCairo();
+    push @args, "-DDEVELOPER_MODE=ON" if isGtk() || isJSCOnly() || isQt() || isWPE() || isWin64();
 
     if (architecture() eq "x86_64" && shouldBuild32Bit()) {
         # CMAKE_LIBRARY_ARCHITECTURE is needed to get the right .pc

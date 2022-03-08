@@ -40,7 +40,6 @@
 #include "WasmMemory.h"
 #include "WasmNameSection.h"
 #include "WasmSignatureInlines.h"
-#include "WasmValidate.h"
 #include "WasmWorklist.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
@@ -77,7 +76,6 @@ void OMGPlan::work(CompilationEffort)
 
     SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[m_functionIndex];
     const Signature& signature = SignatureInformation::get(signatureIndex);
-    ASSERT(validateFunction(function, signature, m_moduleInformation.get()));
 
     Vector<UnlinkedWasmToWasmCall> unlinkedCalls;
     unsigned osrEntryScratchBufferSize;
@@ -122,10 +120,11 @@ void OMGPlan::work(CompilationEffort)
                 bbqCallee->setReplacement(callee.copyRef());
                 bbqCallee->tierUpCount()->m_compilationStatusForOMG = TierUpCount::CompilationStatus::Compiled;
             }
-            if (LLIntCallee* llintCallee = m_codeBlock->m_llintCallees[m_functionIndex].get()) {
-                auto locker = holdLock(llintCallee->tierUpCounter().m_lock);
-                llintCallee->setReplacement(callee.copyRef());
-                llintCallee->tierUpCounter().m_compilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
+            if (m_codeBlock->m_llintCallees) {
+                LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(m_functionIndex).get();
+                auto locker = holdLock(llintCallee.tierUpCounter().m_lock);
+                llintCallee.setReplacement(callee.copyRef());
+                llintCallee.tierUpCounter().m_compilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
             }
         }
         for (auto& call : callee->wasmToWasmCallsites()) {
@@ -161,10 +160,11 @@ void OMGPlan::work(CompilationEffort)
 
         for (unsigned i = 0; i < m_codeBlock->m_wasmToWasmCallsites.size(); ++i) {
             repatchCalls(m_codeBlock->m_wasmToWasmCallsites[i]);
-            if (LLIntCallee* llintCallee = m_codeBlock->m_llintCallees[i].get()) {
-                if (JITCallee* replacementCallee = llintCallee->replacement())
+            if (m_codeBlock->m_llintCallees) {
+                LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(i).get();
+                if (JITCallee* replacementCallee = llintCallee.replacement())
                     repatchCalls(replacementCallee->wasmToWasmCallsites());
-                if (OMGForOSREntryCallee* osrEntryCallee = llintCallee->osrEntryCallee())
+                if (OMGForOSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee())
                     repatchCalls(osrEntryCallee->wasmToWasmCallsites());
             }
             if (BBQCallee* bbqCallee = m_codeBlock->m_bbqCallees[i].get()) {

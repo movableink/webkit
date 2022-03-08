@@ -28,8 +28,10 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioSession.h"
 #include "CoreAudioCaptureSource.h"
 #include "Logging.h"
+#include "PlatformMediaSessionManager.h"
 
 namespace WebCore {
 
@@ -77,28 +79,31 @@ void BaseAudioSharedUnit::startProducingData()
     if (isProducingData())
         return;
 
+    if (m_suspended) {
+        RELEASE_LOG_INFO(WebRTC, "BaseAudioSharedUnit::startProducingData - exiting early as suspended");
+        return;
+    }
+
     if (hasAudioUnit()) {
         cleanupAudioUnit();
         ASSERT(!hasAudioUnit());
     }
-
-    if (startInternal())
-        captureFailed();
+    startUnit();
 }
 
-OSStatus BaseAudioSharedUnit::resume()
+OSStatus BaseAudioSharedUnit::startUnit()
 {
-    ASSERT(isMainThread());
-    ASSERT(m_suspended);
-    ASSERT(!isProducingData());
+#if PLATFORM(IOS_FAMILY)
+    if (!m_disableAudioSessionCheck) {
+        PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
+        ASSERT(AudioSession::sharedSession().category() == AudioSession::PlayAndRecord);
+    }
+#endif
 
-    m_suspended = false;
-
-    if (!hasAudioUnit())
-        return 0;
-
-    startInternal();
-
+    if (auto error = startInternal()) {
+        captureFailed();
+        return error;
+    }
     return 0;
 }
 
@@ -142,12 +147,58 @@ void BaseAudioSharedUnit::stopProducingData()
     cleanupAudioUnit();
 }
 
+void BaseAudioSharedUnit::reconfigure()
+{
+    ASSERT(isMainThread());
+    if (m_suspended) {
+        m_needsReconfiguration = true;
+        return;
+    }
+    reconfigureAudioUnit();
+}
+
+OSStatus BaseAudioSharedUnit::resume()
+{
+    ASSERT(isMainThread());
+    ASSERT(m_suspended);
+    ASSERT(!isProducingData());
+
+    RELEASE_LOG_INFO(WebRTC, "BaseAudioSharedUnit::resume");
+
+    m_suspended = false;
+
+    if (m_needsReconfiguration) {
+        m_needsReconfiguration = false;
+        reconfigure();
+    }
+
+    if (!hasAudioUnit())
+        return 0;
+
+    if (m_producingCount) {
+        if (auto error = startUnit())
+            return error;
+    }
+
+    forEachClient([](auto& client) {
+        client.notifyMutedChange(false);
+    });
+
+    return 0;
+}
+
 OSStatus BaseAudioSharedUnit::suspend()
 {
     ASSERT(isMainThread());
 
+    RELEASE_LOG_INFO(WebRTC, "BaseAudioSharedUnit::suspend");
+
     m_suspended = true;
     stopInternal();
+
+    forEachClient([](auto& client) {
+        client.notifyMutedChange(true);
+    });
 
     return 0;
 }

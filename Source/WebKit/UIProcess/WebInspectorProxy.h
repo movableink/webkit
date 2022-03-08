@@ -28,6 +28,7 @@
 
 #include "APIObject.h"
 #include "Attachment.h"
+#include "DebuggableInfoData.h"
 #include "MessageReceiver.h"
 #include "WebInspectorUtilities.h"
 #include <JavaScriptCore/InspectorFrontendChannel.h>
@@ -89,6 +90,7 @@ public:
 
     // Public APIs
     WebPageProxy* inspectedPage() const { return m_inspectedPage; }
+    WebPageProxy* inspectorPage() const { return m_inspectorPage; }
 
     bool isConnected() const { return !!m_inspectorPage; }
     bool isVisible() const { return m_isVisible; }
@@ -165,6 +167,7 @@ public:
     static String inspectorTestPageURL();
     static String inspectorBaseURL();
     static bool isMainOrTestInspectorPage(const URL&);
+    static DebuggableInfoData infoForLocalDebuggable();
 
     static const unsigned minimumWindowWidth;
     static const unsigned minimumWindowHeight;

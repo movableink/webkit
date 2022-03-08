@@ -47,11 +47,17 @@ class RuleData {
 public:
     static const unsigned maximumSelectorComponentCount = 8192;
 
-    RuleData(StyleRule*, unsigned selectorIndex, unsigned selectorListIndex, unsigned position);
+    RuleData(const StyleRule&, unsigned selectorIndex, unsigned selectorListIndex, unsigned position);
 
     unsigned position() const { return m_position; }
-    StyleRule* rule() const { return m_rule.get(); }
-    const CSSSelector* selector() const { return m_rule->selectorList().selectorAt(m_selectorIndex); }
+
+    const StyleRule& styleRule() const { return *m_styleRule; }
+
+    const CSSSelector* selector() const { return m_styleRule->selectorList().selectorAt(m_selectorIndex); }
+#if ENABLE(CSS_SELECTOR_JIT)
+    CompiledSelector& compiledSelector() const { return m_styleRule->compiledSelectorForListIndex(m_selectorListIndex); }
+#endif
+    
     unsigned selectorIndex() const { return m_selectorIndex; }
     unsigned selectorListIndex() const { return m_selectorListIndex; }
 
@@ -60,12 +66,15 @@ public:
     bool containsUncommonAttributeSelector() const { return m_containsUncommonAttributeSelector; }
     unsigned linkMatchType() const { return m_linkMatchType; }
     PropertyWhitelistType propertyWhitelistType() const { return static_cast<PropertyWhitelistType>(m_propertyWhitelistType); }
+    bool isEnabled() const { return m_isEnabled; }
+    void setEnabled(bool value) { m_isEnabled = value; }
+
     const SelectorFilter::Hashes& descendantSelectorIdentifierHashes() const { return m_descendantSelectorIdentifierHashes; }
 
     void disableSelectorFiltering() { m_descendantSelectorIdentifierHashes[0] = 0; }
 
 private:
-    RefPtr<StyleRule> m_rule;
+    RefPtr<const StyleRule> m_styleRule;
     unsigned m_selectorIndex : 16;
     unsigned m_selectorListIndex : 16;
     // This number was picked fairly arbitrarily. We can probably lower it if we need to.
@@ -76,6 +85,7 @@ private:
     unsigned m_containsUncommonAttributeSelector : 1;
     unsigned m_linkMatchType : 2; //  SelectorChecker::LinkMatchMask
     unsigned m_propertyWhitelistType : 2;
+    unsigned m_isEnabled : 1;
     SelectorFilter::Hashes m_descendantSelectorIdentifierHashes;
 };
 

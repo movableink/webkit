@@ -29,7 +29,6 @@
 #include "Document.h"
 
 #include "AXObjectCache.h"
-#include "ApplicationStateChangeListener.h"
 #include "Attr.h"
 #include "BeforeUnloadEvent.h"
 #include "CDATASection.h"
@@ -108,6 +107,7 @@
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "HashChangeEvent.h"
+#include "HighlightMap.h"
 #include "History.h"
 #include "HitTestResult.h"
 #include "IdleCallbackController.h"
@@ -130,7 +130,6 @@
 #include "MediaQueryMatcher.h"
 #include "MediaStream.h"
 #include "MessageEvent.h"
-#include "Microtasks.h"
 #include "MouseEventWithHitTestResults.h"
 #include "MutationEvent.h"
 #include "NameNodeList.h"
@@ -563,9 +562,9 @@ Document::Document(Frame* frame, const URL& url, unsigned documentClasses, unsig
 #endif
     , m_loadEventDelayTimer(*this, &Document::loadEventDelayTimerFired)
 #if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
-    , m_deviceMotionClient(makeUnique<DeviceMotionClientIOS>())
+    , m_deviceMotionClient(makeUnique<DeviceMotionClientIOS>(page() ? page()->deviceOrientationUpdateProvider() : nullptr))
     , m_deviceMotionController(makeUnique<DeviceMotionController>(*m_deviceMotionClient))
-    , m_deviceOrientationClient(makeUnique<DeviceOrientationClientIOS>())
+    , m_deviceOrientationClient(makeUnique<DeviceOrientationClientIOS>(page() ? page()->deviceOrientationUpdateProvider() : nullptr))
     , m_deviceOrientationController(makeUnique<DeviceOrientationController>(*m_deviceOrientationClient))
 #endif
     , m_pendingTasksTimer(*this, &Document::pendingTasksTimerFired)
@@ -607,6 +606,9 @@ Document::Document(Frame* frame, const URL& url, unsigned documentClasses, unsig
         nodeListAndCollectionCount = 0;
 
     InspectorInstrumentation::addEventListenersToNode(*this);
+#if ENABLE(MEDIA_STREAM)
+    m_settings->setLegacyGetUserMediaEnabled(quirks().shouldEnableLegacyGetUserMedia());
+#endif
 }
 
 Ref<Document> Document::create(Document& contextDocument)
@@ -624,6 +626,8 @@ Ref<Document> Document::createNonRenderedPlaceholder(Frame& frame, const URL& ur
 
 Document::~Document()
 {
+    ASSERT(activeDOMObjectsAreStopped());
+
     if (m_logger)
         m_logger->removeObserver(*this);
 
@@ -753,6 +757,7 @@ void Document::removedLastRef()
 #endif
         decrementReferencingNodeCount();
     } else {
+        stopActiveDOMObjects();
 #ifndef NDEBUG
         m_inRemovedLastRefFunction = false;
         m_deletionHasBegun = true;
@@ -763,10 +768,19 @@ void Document::removedLastRef()
 
 void Document::commonTeardown()
 {
+    stopActiveDOMObjects();
+
+#if ENABLE(FULLSCREEN_API)
+    m_fullscreenManager->emptyEventQueue();
+#endif
+
     if (svgExtensions())
         accessSVGExtensions().pauseAnimations();
 
     clearScriptedAnimationController();
+    
+    if (m_highlightMap)
+        m_highlightMap->clear();
 
     m_pendingScrollEventTargetList = nullptr;
 }
@@ -1608,7 +1622,7 @@ void Document::setTitle(const String& title)
             m_titleElement = SVGTitleElement::create(SVGNames::titleTag, *this);
             element->insertBefore(*m_titleElement, element->firstChild());
         }
-        // insertBefore above may have ran scripts which removed m_titleElement
+        // insertBefore above may have ran scripts which removed m_titleElement.
         if (m_titleElement)
             m_titleElement->setTextContent(title);
     } else if (is<HTMLElement>(element)) {
@@ -1619,7 +1633,7 @@ void Document::setTitle(const String& title)
             m_titleElement = HTMLTitleElement::create(HTMLNames::titleTag, *this);
             headElement->appendChild(*m_titleElement);
         }
-        // appendChild above may have ran scripts which removed m_titleElement
+        // appendChild above may have ran scripts which removed m_titleElement.
         if (m_titleElement)
             m_titleElement->setTextContent(title);
     }
@@ -1711,7 +1725,10 @@ void Document::visibilityStateChanged()
     for (auto* client : m_visibilityStateCallbackClients)
         client->visibilityStateChanged();
 
-    notifyMediaCaptureOfVisibilityChanged();
+#if ENABLE(MEDIA_STREAM)
+    if (auto* page = this->page())
+        RealtimeMediaSourceCenter::singleton().setCapturePageState(hidden(), page->isMediaCaptureMuted());
+#endif
 }
 
 VisibilityState Document::visibilityState() const
@@ -1732,20 +1749,23 @@ bool Document::hidden() const
 
 #if ENABLE(VIDEO)
 
-void Document::registerForAllowsMediaDocumentInlinePlaybackChangedCallbacks(HTMLMediaElement& element)
+void Document::registerMediaElement(HTMLMediaElement& element)
 {
-    m_allowsMediaDocumentInlinePlaybackElements.add(&element);
+    m_mediaElements.add(&element);
 }
 
-void Document::unregisterForAllowsMediaDocumentInlinePlaybackChangedCallbacks(HTMLMediaElement& element)
+void Document::unregisterMediaElement(HTMLMediaElement& element)
 {
-    m_allowsMediaDocumentInlinePlaybackElements.remove(&element);
+    m_mediaElements.remove(&element);
 }
 
-void Document::allowsMediaDocumentInlinePlaybackChanged()
+void Document::forEachMediaElement(const Function<void(HTMLMediaElement&)>& function)
 {
-    for (auto* element : m_allowsMediaDocumentInlinePlaybackElements)
-        element->allowsMediaDocumentInlinePlaybackChanged();
+    Vector<Ref<HTMLMediaElement>> elements;
+    for (auto* element : m_mediaElements)
+        elements.append(*element);
+    for (auto& element : elements)
+        function(element);
 }
 
 void Document::stopAllMediaPlayback()
@@ -1777,6 +1797,7 @@ void Document::resumeAllMediaBuffering()
     if (auto* platformMediaSessionManager = PlatformMediaSessionManager::sharedManagerIfExists())
         platformMediaSessionManager->resumeAllMediaBufferingForDocument(*this);
 }
+
 #endif
 
 String Document::nodeName() const
@@ -2027,10 +2048,6 @@ bool Document::needsStyleRecalc() const
         return true;
 
     if (styleScope().hasPendingUpdate())
-        return true;
-
-    // Ensure this happens eventually as it is currently in resolveStyle. This can be removed if the code moves.
-    if (m_gotoAnchorNeededAfterStylesheetsLoad && !styleScope().hasPendingSheets())
         return true;
 
     return false;
@@ -2301,8 +2318,8 @@ void Document::fontsNeedUpdate(FontSelector&)
 
 void Document::invalidateMatchedPropertiesCacheAndForceStyleRecalc()
 {
-    if (auto* resolver = styleScope().resolverIfExists())
-        resolver->invalidateMatchedDeclarationsCache();
+    styleScope().invalidateMatchedDeclarationsCache();
+
     if (backForwardCacheState() != NotInBackForwardCache || !renderView())
         return;
     scheduleFullStyleRebuild();
@@ -2531,11 +2548,6 @@ void Document::prepareForDestruction()
 
     InspectorInstrumentation::documentDetached(*this);
 
-    stopActiveDOMObjects();
-#if ENABLE(FULLSCREEN_API)
-    m_fullscreenManager->emptyEventQueue();
-#endif
-
     commonTeardown();
 
 #if ENABLE(TOUCH_EVENTS)
@@ -2718,6 +2730,13 @@ Ref<DocumentParser> Document::createParser()
 {
     // FIXME: this should probably pass the frame instead
     return XMLDocumentParser::create(*this, view());
+}
+
+HighlightMap& Document::highlightMap()
+{
+    if (!m_highlightMap)
+        m_highlightMap = HighlightMap::create();
+    return *m_highlightMap;
 }
 
 ScriptableDocumentParser* Document::scriptableDocumentParser() const
@@ -3216,6 +3235,9 @@ void Document::setURL(const URL& url)
         return;
 
     m_url = newURL;
+    if (SecurityOrigin::shouldIgnoreHost(m_url))
+        m_url.removeHostAndPort();
+
     m_documentURI = m_url.string();
     updateBaseURL();
 }
@@ -3693,7 +3715,7 @@ void Document::processColorScheme(const String& colorSchemeString)
     bool allowsTransformations = true;
     bool autoEncountered = false;
 
-    processColorSchemeString(colorSchemeString, [&](StringView key) {
+    processColorSchemeString(colorSchemeString, [&] (StringView key) {
         if (equalLettersIgnoringASCIICase(key, "auto")) {
             colorScheme = { };
             allowsTransformations = true;
@@ -4280,6 +4302,11 @@ bool Document::setFocusedElement(Element* element, FocusDirection direction, Foc
     }
 
     if (newFocusedElement && newFocusedElement->isFocusable()) {
+        if (&newFocusedElement->document() != this) {
+            // Bluring oldFocusedElement may have moved newFocusedElement across documents.
+            focusChangeBlocked = true;
+            goto SetFocusedNodeDone;
+        }
         if (newFocusedElement->isRootEditableElement() && !acceptsEditingFocus(*newFocusedElement)) {
             // delegate blocks focus change
             focusChangeBlocked = true;
@@ -4690,6 +4717,8 @@ void Document::setWindowAttributeEventListener(const AtomString& eventType, RefP
 void Document::setWindowAttributeEventListener(const AtomString& eventType, const QualifiedName& attributeName, const AtomString& attributeValue, DOMWrapperWorld& isolatedWorld)
 {
     if (!m_domWindow)
+        return;
+    if (!m_domWindow->frame())
         return;
     setWindowAttributeEventListener(eventType, JSLazyEventListener::create(*m_domWindow, attributeName, attributeValue), isolatedWorld);
 }
@@ -5340,22 +5369,6 @@ void Document::unregisterForDocumentSuspensionCallbacks(Element& element)
     m_documentSuspensionCallbackElements.remove(&element);
 }
 
-void Document::mediaVolumeDidChange() 
-{
-    for (auto* element : m_mediaVolumeCallbackElements)
-        element->mediaVolumeDidChange();
-}
-
-void Document::registerForMediaVolumeCallbacks(Element& element)
-{
-    m_mediaVolumeCallbackElements.add(&element);
-}
-
-void Document::unregisterForMediaVolumeCallbacks(Element& element)
-{
-    m_mediaVolumeCallbackElements.remove(&element);
-}
-
 bool Document::audioPlaybackRequiresUserGesture() const
 {
     if (DocumentLoader* loader = this->loader()) {
@@ -5402,23 +5415,16 @@ void Document::privateBrowsingStateDidChange(PAL::SessionID sessionID)
     if (m_logger)
         m_logger->setEnabled(this, sessionID.isAlwaysOnLoggingAllowed());
 
-    for (auto* element : m_privateBrowsingStateChangedElements)
-        element->privateBrowsingStateDidChange(sessionID);
-}
-
-void Document::registerForPrivateBrowsingStateChangedCallbacks(Element& element)
-{
-    m_privateBrowsingStateChangedElements.add(&element);
-}
-
-void Document::unregisterForPrivateBrowsingStateChangedCallbacks(Element& element)
-{
-    m_privateBrowsingStateChangedElements.remove(&element);
+#if ENABLE(VIDEO)
+    forEachMediaElement([sessionID] (HTMLMediaElement& element) {
+        element.privateBrowsingStateDidChange(sessionID);
+    });
+#endif
 }
 
 #if ENABLE(VIDEO_TRACK)
 
-void Document::registerForCaptionPreferencesChangedCallbacks(Element& element)
+void Document::registerForCaptionPreferencesChangedCallbacks(HTMLMediaElement& element)
 {
     if (page())
         page()->group().captionPreferences().setInterestedInCaptionPreferenceChanges();
@@ -5426,7 +5432,7 @@ void Document::registerForCaptionPreferencesChangedCallbacks(Element& element)
     m_captionPreferencesChangedElements.add(&element);
 }
 
-void Document::unregisterForCaptionPreferencesChangedCallbacks(Element& element)
+void Document::unregisterForCaptionPreferencesChangedCallbacks(HTMLMediaElement& element)
 {
     m_captionPreferencesChangedElements.remove(&element);
 }
@@ -5435,42 +5441,6 @@ void Document::captionPreferencesChanged()
 {
     for (auto* element : m_captionPreferencesChangedElements)
         element->captionPreferencesChanged();
-}
-
-#endif
-
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
-
-void Document::registerForPageScaleFactorChangedCallbacks(HTMLMediaElement& element)
-{
-    m_pageScaleFactorChangedElements.add(&element);
-}
-
-void Document::unregisterForPageScaleFactorChangedCallbacks(HTMLMediaElement& element)
-{
-    m_pageScaleFactorChangedElements.remove(&element);
-}
-
-void Document::pageScaleFactorChangedAndStable()
-{
-    for (HTMLMediaElement* mediaElement : m_pageScaleFactorChangedElements)
-        mediaElement->pageScaleFactorChanged();
-}
-
-void Document::registerForUserInterfaceLayoutDirectionChangedCallbacks(HTMLMediaElement& element)
-{
-    m_userInterfaceLayoutDirectionChangedElements.add(&element);
-}
-
-void Document::unregisterForUserInterfaceLayoutDirectionChangedCallbacks(HTMLMediaElement& element)
-{
-    m_userInterfaceLayoutDirectionChangedElements.remove(&element);
-}
-
-void Document::userInterfaceLayoutDirectionChanged()
-{
-    for (auto* mediaElement : m_userInterfaceLayoutDirectionChangedElements)
-        mediaElement->userInterfaceLayoutDirectionChanged();
 }
 
 #endif
@@ -5795,11 +5765,8 @@ void Document::finishedParsing()
     if (!m_documentTiming.domContentLoadedEventStart)
         m_documentTiming.domContentLoadedEventStart = MonotonicTime::now();
 
-    if (!page() || !page()->isForSanitizingWebContent()) {
-        // FIXME: Schedule a task to fire DOMContentLoaded event instead. See webkit.org/b/82931
-        eventLoop().performMicrotaskCheckpoint();
-    }
-
+    // FIXME: Schedule a task to fire DOMContentLoaded event instead. See webkit.org/b/82931
+    eventLoop().performMicrotaskCheckpoint();
     dispatchEvent(Event::create(eventNames().DOMContentLoadedEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 
     if (!m_documentTiming.domContentLoadedEventEnd)
@@ -6047,10 +6014,12 @@ bool Document::isSecureContext() const
         return true;
     if (!securityOrigin().isPotentiallyTrustworthy())
         return false;
-    for (Frame* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent()) {
+    for (auto* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent()) {
         if (!frame->document()->securityOrigin().isPotentiallyTrustworthy())
             return false;
     }
+    if (topOrigin().isUnique())
+        return false;
     return true;
 }
 
@@ -6255,14 +6224,21 @@ EventLoopTaskGroup& Document::eventLoop()
 {
     ASSERT(isMainThread());
     if (UNLIKELY(!m_documentTaskGroup)) {
-        m_eventLoop = WindowEventLoop::ensureForRegistrableDomain(RegistrableDomain { securityOrigin().data() });
-        m_documentTaskGroup = makeUnique<EventLoopTaskGroup>(*m_eventLoop);
+        m_documentTaskGroup = makeUnique<EventLoopTaskGroup>(windowEventLoop());
         if (activeDOMObjectsAreStopped())
             m_documentTaskGroup->stopAndDiscardAllTasks();
         else if (activeDOMObjectsAreSuspended())
             m_documentTaskGroup->suspend();
     }
     return *m_documentTaskGroup;
+}
+
+WindowEventLoop& Document::windowEventLoop()
+{
+    ASSERT(isMainThread());
+    if (UNLIKELY(!m_eventLoop))
+        m_eventLoop = WindowEventLoop::eventLoopForSecurityOrigin(securityOrigin());
+    return *m_eventLoop;
 }
 
 void Document::suspendScheduledTasks(ReasonForSuspension reason)
@@ -7120,15 +7096,15 @@ OptionSet<StyleColor::Options> Document::styleColorOptions(const RenderStyle* st
 CompositeOperator Document::compositeOperatorForBackgroundColor(const Color& color, const RenderObject& renderer) const
 {
     if (LIKELY(!settings().punchOutWhiteBackgroundsInDarkMode() || !Color::isWhiteColor(color) || !renderer.useDarkAppearance()))
-        return CompositeSourceOver;
+        return CompositeOperator::SourceOver;
 
     auto* frameView = view();
     if (!frameView)
-        return CompositeSourceOver;
+        return CompositeOperator::SourceOver;
 
     // Mail on macOS uses a transparent view, and on iOS it is an opaque view. We need to
     // use different composite modes to get the right results in this case.
-    return frameView->isTransparent() ? CompositeDestinationOut : CompositeDestinationIn;
+    return frameView->isTransparent() ? CompositeOperator::DestinationOut : CompositeOperator::DestinationIn;
 }
 
 void Document::didAssociateFormControl(Element& element)
@@ -7185,7 +7161,7 @@ void Document::ensurePlugInsInjectedScript(DOMWrapperWorld& world)
         jsString = String(plugInsJavaScript, sizeof(plugInsJavaScript));
 
     setHasEvaluatedUserAgentScripts();
-    scriptController.evaluateInWorld(ScriptSourceCode(jsString), world);
+    scriptController.evaluateInWorldIgnoringException(ScriptSourceCode(jsString), world);
 
     m_hasInjectedPlugInsScript = true;
 }
@@ -7330,6 +7306,7 @@ void Document::playbackTargetPickerWasDismissed(uint64_t clientId)
 
     it->value->playbackTargetPickerWasDismissed();
 }
+
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 #if ENABLE(MEDIA_SESSION)
@@ -7360,6 +7337,7 @@ bool Document::shouldEnforceHTTP09Sandbox() const
 }
 
 #if USE(QUICK_LOOK)
+
 bool Document::shouldEnforceQuickLookSandbox() const
 {
     if (m_isSynthesized || !m_frame)
@@ -7389,6 +7367,7 @@ void Document::applyQuickLookSandbox()
 
     setReferrerPolicy(ReferrerPolicy::NoReferrer);
 }
+
 #endif
 
 bool Document::shouldEnforceContentDispositionAttachmentSandbox() const
@@ -7435,6 +7414,7 @@ void Document::scheduleTimedRenderingUpdate()
 }
 
 #if ENABLE(INTERSECTION_OBSERVER)
+
 void Document::addIntersectionObserver(IntersectionObserver& observer)
 {
     ASSERT(m_intersectionObservers.find(&observer) == notFound);
@@ -7664,9 +7644,11 @@ void Document::scheduleInitialIntersectionObservationUpdate()
     else if (!m_intersectionObserversInitialUpdateTimer.isActive())
         m_intersectionObserversInitialUpdateTimer.startOneShot(intersectionObserversInitialUpdateDelay);
 }
+
 #endif
 
 #if ENABLE(RESIZE_OBSERVER)
+
 void Document::addResizeObserver(ResizeObserver& observer)
 {
     if (!m_resizeObservers.contains(&observer))
@@ -7746,6 +7728,7 @@ void Document::updateResizeObservations(Page& page)
         scheduleTimedRenderingUpdate();
     }
 }
+
 #endif
 
 const AtomString& Document::dir() const
@@ -7788,30 +7771,11 @@ void Document::orientationChanged(int orientation)
     m_orientationNotifier.orientationChanged(orientation);
 }
 
-void Document::notifyMediaCaptureOfVisibilityChanged()
-{
 #if ENABLE(MEDIA_STREAM)
-    if (!page())
-        return;
 
-    RealtimeMediaSourceCenter::singleton().setCapturePageState(hidden(), page()->isMediaCaptureMuted());
-#endif
-}
-
-#if ENABLE(MEDIA_STREAM)
 void Document::stopMediaCapture()
 {
     MediaStreamTrack::endCapture(*this);
-}
-
-void Document::registerForMediaStreamStateChangeCallbacks(HTMLMediaElement& element)
-{
-    m_mediaStreamStateChangeElements.add(&element);
-}
-
-void Document::unregisterForMediaStreamStateChangeCallbacks(HTMLMediaElement& element)
-{
-    m_mediaStreamStateChangeElements.remove(&element);
 }
 
 void Document::mediaStreamCaptureStateChanged()
@@ -7819,8 +7783,9 @@ void Document::mediaStreamCaptureStateChanged()
     if (!MediaProducer::isCapturing(m_mediaState))
         return;
 
-    for (auto* mediaElement : m_mediaStreamStateChangeElements)
-        mediaElement->mediaStreamCaptureStarted();
+    forEachMediaElement([] (HTMLMediaElement& element) {
+        element.mediaStreamCaptureStarted();
+    });
 }
 
 void Document::setDeviceIDHashSalt(const String& salt)
@@ -7830,22 +7795,6 @@ void Document::setDeviceIDHashSalt(const String& salt)
 }
 
 #endif
-
-void Document::addApplicationStateChangeListener(ApplicationStateChangeListener& listener)
-{
-    m_applicationStateChangeListeners.add(&listener);
-}
-
-void Document::removeApplicationStateChangeListener(ApplicationStateChangeListener& listener)
-{
-    m_applicationStateChangeListeners.remove(&listener);
-}
-
-void Document::forEachApplicationStateChangeListener(const Function<void(ApplicationStateChangeListener&)>& functor)
-{
-    for (auto* listener : m_applicationStateChangeListeners)
-        functor(*listener);
-}
 
 const AtomString& Document::bgColor() const
 {

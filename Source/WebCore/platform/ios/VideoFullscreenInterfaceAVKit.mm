@@ -334,13 +334,13 @@ static VideoFullscreenInterfaceAVKit::ExitFullScreenReason convertToExitFullScre
     if (![_avPlayerController delegate])
         return;
 
-    WebCore::MediaPlayerEnums::VideoGravity gravity = WebCore::MediaPlayerEnums::VideoGravityResizeAspect;
+    MediaPlayerEnums::VideoGravity gravity = MediaPlayerEnums::VideoGravity::ResizeAspect;
     if (videoGravity == AVLayerVideoGravityResize)
-        gravity = WebCore::MediaPlayerEnums::VideoGravityResize;
+        gravity = MediaPlayerEnums::VideoGravity::Resize;
     if (videoGravity == AVLayerVideoGravityResizeAspect)
-        gravity = WebCore::MediaPlayerEnums::VideoGravityResizeAspect;
+        gravity = MediaPlayerEnums::VideoGravity::ResizeAspect;
     else if (videoGravity == AVLayerVideoGravityResizeAspectFill)
-        gravity = WebCore::MediaPlayerEnums::VideoGravityResizeAspectFill;
+        gravity = MediaPlayerEnums::VideoGravity::ResizeAspectFill;
     else
         ASSERT_NOT_REACHED();
     
@@ -958,6 +958,8 @@ void VideoFullscreenInterfaceAVKit::preparedToReturnToInline(bool visible, const
 {
     LOG(Fullscreen, "VideoFullscreenInterfaceAVKit::preparedToReturnToInline(%p) - visible(%s)", this, boolString(visible));
     setInlineRect(inlineRect, visible);
+    [[m_playerViewController view] setNeedsLayout];
+    [[m_playerViewController view] layoutIfNeeded];
     if (m_prepareToInlineCallback) {
         WTF::Function<void(bool)> callback = WTFMove(m_prepareToInlineCallback);
         callback(visible);

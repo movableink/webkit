@@ -1,3 +1,330 @@
+2019-12-22  Jeff Miller  <jeffm@apple.com>
+
+        Update user-visible copyright strings to include 2020
+        https://bugs.webkit.org/show_bug.cgi?id=205552
+
+        Reviewed by Darin Adler.
+
+        * Info.plist:
+
+2019-12-20  Brian Burg  <bburg@apple.com>
+
+        Web Inspector: convert some InspectorFrontendHost methods to getters
+        https://bugs.webkit.org/show_bug.cgi?id=205475
+
+        Reviewed by Devin Rousso.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::localizedStringsURL const):
+        (WebInspectorFrontendClient::localizedStringsURL): Deleted.
+
+2019-12-20  Alex Christensen  <achristensen@webkit.org>
+
+        Allow a managed configuration to re-enable TLS 1.0 and 1.1
+        https://bugs.webkit.org/show_bug.cgi?id=205479
+        <rdar://problem/54493516>
+
+        Reviewed by Geoffrey Garen.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+2019-12-17  Kate Cheney  <katherine_cheney@apple.com>
+
+        Add run-time flag for in-app browser privacy
+        https://bugs.webkit.org/show_bug.cgi?id=205288
+        <rdar://problem/57569206>
+
+        Reviewed by John Wilander.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences isInAppBrowserPrivacyEnabled]):
+        (-[WebPreferences setInAppBrowserPrivacyEnabled:]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-16  Simon Fraser  <simon.fraser@apple.com>
+
+        Change 'delegatesPageScaling' from a Setting to a flag on ScrollView
+        https://bugs.webkit.org/show_bug.cgi?id=205319
+
+        Reviewed by Tim Horton.
+
+        delegatesPageScaling() is never toggled at runtime (even by tests), and it should
+        be a flag on FrameView just like delegatesScrolling (maybe in future the flags can merge).
+
+        So remove the Setting, and have DrawingArea control whether page scaling is delegated.
+        
+        In WebKit1, WebFrameLoaderClient::transitionToCommittedForNewPage() turns on delegated
+        page scaling for iOS.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::transitionToCommittedForNewPage):
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-16  Antti Koivisto  <antti@apple.com>
+
+        Remove display:contents feature flag
+        https://bugs.webkit.org/show_bug.cgi?id=205276
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences displayContentsEnabled]): Deleted.
+        (-[WebPreferences setDisplayContentsEnabled:]): Deleted.
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-14  David Kilzer  <ddkilzer@apple.com>
+
+        Add release assert for selectedIndex in WebKit::WebPopupMenu::show()
+        <https://webkit.org/b/205223>
+        <rdar://problem/57929078>
+
+        Reviewed by Wenson Hsieh.
+
+        * WebCoreSupport/PopupMenuMac.h:
+        (PopupMenuMac::show):
+        - Rename `index` parameter to `selectedIndex`.
+        * WebCoreSupport/PopupMenuMac.mm:
+        (PopupMenuMac::show):
+        - Rename `index` parameter to `selectedIndex`.
+
+2019-12-13  Brady Eidson  <beidson@apple.com>
+
+        Refactor ScriptController's proliferation of ExceptionDetails*.
+        https://bugs.webkit.org/show_bug.cgi?id=205151
+
+        Reviewed by Alex Christensen.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::save):
+        (WebInspectorFrontendClient::append):
+        
+        * WebView/WebFrame.mm:
+        (-[WebFrame _stringByEvaluatingJavaScriptFromString:forceUserGesture:]):
+        (-[WebFrame _stringByEvaluatingJavaScriptFromString:withGlobalObject:inScriptWorld:]):
+
+        * WebView/WebView.mm:
+        (-[WebView aeDescByEvaluatingJavaScriptFromString:]):
+
+2019-12-12  David Kilzer  <ddkilzer@apple.com>
+
+        REGRESSION (r229930, r231063): WebKitLegacy.xcconfig overwrites OTHER_CFLAGS, OTHER_CPLUSPLUSFLAGS and OTHER_LDFLAGS from Base.xcconfig
+        <https://webkit.org/b/205144>
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/WebKitLegacy.xcconfig:
+        (OTHER_CFLAGS): Add back $(inherited) to fix the bug.
+        (OTHER_CFLAGS_COCOA_TOUCH): Add variable to hold value.
+        (OTHER_CFLAGS_COCOA_TOUCH_YES): Remove unused $(inherited).
+        (OTHER_CFLAGS_COCOA_TOUCH_NO): Ditto.
+        (OTHER_CPLUSPLUSFLAGS): Add back $(inherited) to fix the
+        bug, and don't assume $(OTHER_CFLAGS) is identical to this.
+        (OTHER_LDFLAGS): Add back $(inherited) to fix the bug.
+
+2019-12-09  Eric Carlson  <eric.carlson@apple.com>
+
+        Rename media in the GPU process preference
+        https://bugs.webkit.org/show_bug.cgi?id=205013
+        <rdar://problem/57755319>
+
+        Reviewed by Tim Horton.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences useGPUProcessForMedia]):
+        (-[WebPreferences setUseGPUProcessForMedia:]):
+        (-[WebPreferences outOfProcessMediaEnabled]): Deleted.
+        (-[WebPreferences setOutOfProcessMediaEnabled:]): Deleted.
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-09  Alex Christensen  <achristensen@webkit.org>
+
+        Re-disable TLS1.0 and TLS1.1 by default
+        https://bugs.webkit.org/show_bug.cgi?id=204922
+        <rdar://problem/57677752>
+
+        Reviewed by Youenn Fablet.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+2019-12-07  Tim Horton  <timothy_horton@apple.com>
+
+        Implement encoding for DrawImage and DrawRoundedRect display list items
+        https://bugs.webkit.org/show_bug.cgi?id=204881
+
+        Reviewed by Simon Fraser.
+
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+
+2019-12-06  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r253218.
+        https://bugs.webkit.org/show_bug.cgi?id=204968
+
+        Broke the build (Requested by ap on #webkit).
+
+        Reverted changeset:
+
+        "Remove various .order files."
+        https://bugs.webkit.org/show_bug.cgi?id=204959
+        https://trac.webkit.org/changeset/253218
+
+2019-12-06  Keith Miller  <keith_miller@apple.com>
+
+        Remove various .order files.
+        https://bugs.webkit.org/show_bug.cgi?id=204959
+
+        Reviewed by Yusuke Suzuki.
+
+        These files are all super out of date and likely don't do anything anymore.
+        The signatures of the functions have changed thus the mangled name has changed.
+
+        * WebKit.order: Removed.
+
+2019-12-05  Chris Dumez  <cdumez@apple.com>
+
+        PageConfiguration::dragClient should use a smart pointer
+        https://bugs.webkit.org/show_bug.cgi?id=204816
+
+        Reviewed by Alex Christensen.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (-[WebView initSimpleHTMLDocumentWithStyle:frame:preferences:groupName:]):
+
+2019-12-04  Chris Dumez  <cdumez@apple.com>
+
+        PageConfiguration::progressTrackerClient should use a smart pointer
+        https://bugs.webkit.org/show_bug.cgi?id=204854
+
+        Reviewed by Alex Christensen.
+
+        * WebCoreSupport/WebProgressTrackerClient.h:
+        * WebCoreSupport/WebProgressTrackerClient.mm:
+        (WebProgressTrackerClient::progressTrackerDestroyed): Deleted.
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (-[WebView initSimpleHTMLDocumentWithStyle:frame:preferences:groupName:]):
+
+2019-12-04  Tim Horton  <timothy_horton@apple.com>
+
+        Introduce a GPU process
+        https://bugs.webkit.org/show_bug.cgi?id=204343
+
+        Reviewed by Simon Fraser.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-12-03  Megan Gardner  <megan_gardner@apple.com>
+
+        Add disabled highlight API skeleton
+        https://bugs.webkit.org/show_bug.cgi?id=204809
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences highlightAPIEnabled]):
+        (-[WebPreferences setHighlightAPIEnabled:]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-03  Eric Carlson  <eric.carlson@apple.com>
+
+        Add a runtime setting for media in the GPU process
+        https://bugs.webkit.org/show_bug.cgi?id=204801
+        <rdar://problem/57596199>
+
+        Reviewed by Jer Noble.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences outOfProcessMediaEnabled]):
+        (-[WebPreferences setOutOfProcessMediaEnabled:]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-03  Antoine Quint  <graouts@apple.com>
+
+        [Web Animations] Add a runtime flag for Web Animations composite operations
+        https://bugs.webkit.org/show_bug.cgi?id=204718
+
+        Reviewed by Dean Jackson.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (-[WebPreferences webAnimationsCompositeOperationsEnabled]):
+        (-[WebPreferences setWebAnimationsCompositeOperationsEnabled:]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2019-12-03  Chris Dumez  <cdumez@apple.com>
+
+        PageConfiguration::alternativeTextClient should use a smart pointer
+        https://bugs.webkit.org/show_bug.cgi?id=204777
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebAlternativeTextClient.h:
+        * WebCoreSupport/WebAlternativeTextClient.mm:
+        (WebAlternativeTextClient::pageDestroyed): Deleted.
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+2019-12-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [PSON] Tooltips from previous page shown on new page
+        https://bugs.webkit.org/show_bug.cgi?id=204735
+
+        Reviewed by Chris Dumez.
+
+        Update to the new ChromeClient API.
+
+        * WebCoreSupport/WebChromeClient.h:
+        * WebCoreSupport/WebChromeClient.mm:
+        (WebChromeClient::mouseDidMoveOverElement):
+        (WebChromeClient::setToolTip):
+
+2019-11-28  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Remove ENABLE_KEYBOARD_CODE_ATTRIBUTE and ENABLE_KEYBOARD_KEY_ATTRIBUTE macros
+        https://bugs.webkit.org/show_bug.cgi?id=204666
+
+        Reviewed by Ross Kirsling and Don Olmstead.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-11-26  Chris Dumez  <cdumez@apple.com>
+
+        Drop ActiveDOMObject::shouldPreventEnteringBackForwardCache_DEPRECATED()
+        https://bugs.webkit.org/show_bug.cgi?id=204626
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView/WebFrame.mm:
+        (-[WebFrame _cacheabilityDictionary]):
+
 2019-11-21  Daniel Bates  <dabates@apple.com>
 
         Remove unneeded code that annotated DOMHTMLElement as conforming to UITextInputTraits protocol

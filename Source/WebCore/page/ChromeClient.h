@@ -189,10 +189,9 @@ public:
 
     virtual PlatformPageClient platformPageClient() const = 0;
 
-#if ENABLE(CURSOR_SUPPORT)
     virtual void setCursor(const Cursor&) = 0;
     virtual void setCursorHiddenUntilMouseMoves(bool) = 0;
-#endif
+    virtual bool supportsSettingCursor() { return true; }
 
     virtual FloatSize screenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
     virtual FloatSize availableScreenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
@@ -207,9 +206,7 @@ public:
 
     virtual bool shouldUnavailablePluginMessageBeButton(RenderEmbeddedObject::PluginUnavailabilityReason) const { return false; }
     virtual void unavailablePluginButtonClicked(Element&, RenderEmbeddedObject::PluginUnavailabilityReason) const { }
-    virtual void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags) = 0;
-
-    virtual void setToolTip(const String&, TextDirection) = 0;
+    virtual void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) = 0;
 
     virtual void print(Frame&) = 0;
 

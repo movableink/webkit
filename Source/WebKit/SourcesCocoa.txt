@@ -57,6 +57,11 @@ NetworkProcess/webrtc/NetworkRTCResolver.cpp
 NetworkProcess/webrtc/NetworkRTCResolverCocoa.cpp
 NetworkProcess/webrtc/NetworkRTCSocket.cpp
 
+GPUProcess/ios/GPUProcessIOS.mm
+GPUProcess/mac/GPUProcessMac.mm
+GPUProcess/webrtc/LibWebRTCCodecsProxy.mm
+GPUProcess/EntryPoint/Cocoa/XPCService/GPUServiceEntryPoint.mm
+
 Platform/cf/ModuleCF.cpp
 
 Platform/cg/CGUtilities.cpp
@@ -252,6 +257,7 @@ UIProcess/API/Cocoa/_WKErrorRecoveryAttempting.mm
 UIProcess/API/Cocoa/_WKExperimentalFeature.mm
 UIProcess/API/Cocoa/_WKGeolocationPosition.mm
 UIProcess/API/Cocoa/_WKInspector.mm
+UIProcess/API/Cocoa/_WKInspectorDebuggableInfo.mm
 UIProcess/API/Cocoa/_WKInspectorWindow.mm
 UIProcess/API/Cocoa/_WKInternalDebugFeature.mm
 UIProcess/API/Cocoa/_WKLinkIconParameters.mm
@@ -318,11 +324,17 @@ UIProcess/API/Cocoa/WKUserScript.mm
 UIProcess/API/Cocoa/WKWebsiteDataRecord.mm
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
 UIProcess/API/Cocoa/WKWebView.mm
+UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/WKWebViewConfiguration.mm
 UIProcess/API/Cocoa/WKWebpagePreferences.mm
 UIProcess/API/Cocoa/WKWindowFeatures.mm
 
+UIProcess/API/ios/WKWebViewIOS.mm
+UIProcess/API/ios/WKWebViewTestingIOS.mm
+
 UIProcess/API/mac/WKView.mm
+UIProcess/API/mac/WKWebViewMac.mm
+UIProcess/API/mac/WKWebViewTestingMac.mm
 
 UIProcess/Authentication/cocoa/AuthenticationChallengeProxyCocoa.mm
 UIProcess/Authentication/cocoa/SecKeyProxyStore.mm
@@ -426,6 +438,7 @@ UIProcess/ios/WKActionSheetAssistant.mm
 UIProcess/ios/WKApplicationStateTrackingView.mm
 UIProcess/ios/WKContentView.mm @no-unify
 UIProcess/ios/WKContentViewInteraction.mm @no-unify
+UIProcess/ios/WKDeferringGestureRecognizer.mm
 UIProcess/ios/WKDrawingCoordinator.mm
 UIProcess/ios/WKDrawingView.mm
 UIProcess/ios/WKGeolocationProviderIOS.mm
@@ -616,5 +629,10 @@ WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator.mm
 
 // Derived Sources
 EditableImageControllerMessageReceiver.cpp
+GPUConnectionToWebProcessMessageReceiver.cpp
+GPUProcessProxyMessageReceiver.cpp
+GPUProcessMessageReceiver.cpp
+LibWebRTCCodecsProxyMessageReceiver.cpp
+LibWebRTCCodecsMessageReceiver.cpp
 ServiceWorkerFetchTaskMessageReceiver.cpp
 TextCheckingControllerProxyMessageReceiver.cpp

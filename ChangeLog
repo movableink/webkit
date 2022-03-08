@@ -1,3 +1,135 @@
+2019-12-22  Jeff Miller  <jeffm@apple.com>
+
+        Update user-visible copyright strings to include 2020
+        https://bugs.webkit.org/show_bug.cgi?id=205552
+
+        Reviewed by Darin Adler.
+
+        * Source/cmake/tools/scripts/COPYRIGHT-END-YEAR:
+
+2019-12-18  Diego Pino Garcia  <dpino@igalia.com>
+
+        [GTK][WPE] Renderization of Conic gradients
+        https://bugs.webkit.org/show_bug.cgi?id=202739
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        * Source/cmake/OptionsGTK.cmake: Enable CSS Conic Gradients.
+
+2019-12-17  ChangSeok Oh  <changseok@webkit.org>
+
+        [GTK] Suppress undefined USE_OPENGL warnings when USE_ANGLE_WEBGL and USE_OPENGL_ES are enabled.
+        https://bugs.webkit.org/show_bug.cgi?id=204634
+
+        Reviewed by Žan Doberšek.
+
+        When USE_ANGLE_WEBGL and USE_OPENGL_ES are enabled, many compiler warnings occur.
+        This is because USE_OPENGL is defined nowhere if they are enabled.
+        To fix this, USE_OPENGL is explicitly defined when USE_OPENGL_ES is enabled.
+
+        * Source/cmake/OptionsGTK.cmake:
+
+2019-12-16  Simon Fraser  <simon.fraser@apple.com>
+
+        Let the DrawingArea decide whether scrolling is delegated
+        https://bugs.webkit.org/show_bug.cgi?id=205258
+
+        Reviewed by Anders Carlsson.
+        
+        Let Xcode have its way with the workspace file, after the libANGLE rename.
+
+        * WebKit.xcworkspace/xcshareddata/xcschemes/All Source.xcscheme:
+
+2019-12-12  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Add LibPSL::LibPSL target
+        https://bugs.webkit.org/show_bug.cgi?id=205149
+
+        Reviewed by Michael Catanzaro.
+
+        Add a LibPSL target into the FindLibPSL module.
+
+        * Source/cmake/FindLibPSL.cmake:
+
+2019-12-11  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Add OpenJPEG find module
+        https://bugs.webkit.org/show_bug.cgi?id=204657
+
+        Reviewed by Michael Catanzaro.
+
+        Add a FindOpenJPEG CMake module. Update GTK and WPE ports to use this and
+        require v2.2.0 or later. Add support for OpenJPEG in WinCairo port.
+
+        * Source/cmake/FindOpenJPEG.cmake: Added.
+        * Source/cmake/OptionsGTK.cmake:
+        * Source/cmake/OptionsWPE.cmake:
+        * Source/cmake/OptionsWinCairo.cmake:
+
+2019-12-11  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Add HarfBuzz targets
+        https://bugs.webkit.org/show_bug.cgi?id=205042
+
+        Reviewed by Konstantin Tokarev.
+
+        Modernize the FindHarfBuzz.cmake module so it creates targets that can be
+        referenced rather than using HARFBUZZ_LIBRARIES and HARFBUZZ_INCLUDE_DIRS.
+        Also making ICU a component within the module, and allowing alternate names
+        for the library to be set by the platform.
+
+        * Source/cmake/FindHarfBuzz.cmake:
+        * Source/cmake/OptionsGTK.cmake:
+        * Source/cmake/OptionsWPE.cmake:
+
+2019-12-03  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Unreviewed, rolling out r253020.
+
+        It breaks WinCairo bots.
+
+        Reverted changeset:
+
+        "[MSVC] Add /experimental:newLambdaProcessor switch for better
+        C++ conformance"
+        https://bugs.webkit.org/show_bug.cgi?id=204443
+        https://trac.webkit.org/changeset/253020
+
+2019-12-02  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [MSVC] Add /experimental:newLambdaProcessor switch for better C++ conformance
+        https://bugs.webkit.org/show_bug.cgi?id=204443
+
+        Reviewed by Alex Christensen.
+
+        MSVC has a bug of lambda capture of 'this'. It has caused
+        compilation errors repeatedly.
+
+        * Source/cmake/OptionsMSVC.cmake: Added /experimental:newLambdaProcessor switch.
+
+2019-11-28  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Remove ENABLE_KEYBOARD_CODE_ATTRIBUTE and ENABLE_KEYBOARD_KEY_ATTRIBUTE macros
+        https://bugs.webkit.org/show_bug.cgi?id=204666
+
+        Reviewed by Ross Kirsling and Don Olmstead.
+
+        * Source/cmake/OptionsFTW.cmake:
+        * Source/cmake/OptionsMac.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+
+2019-11-27  Alejandro G. Castro  <alex@igalia.com>
+
+        Unreviewed. Update OptionsWPE.cmake and NEWS for the 2.27.3 release
+
+        * Source/cmake/OptionsWPE.cmake: Bump version numbers.
+
+2019-11-26  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Update OptionsGTK.cmake and NEWS for 2.27.3 release
+
+        * Source/cmake/OptionsGTK.cmake: Bump version numbers.
+
 2019-11-20  ChangSeok Oh  <changseok@webkit.org>
 
         [GTK] Add ANGLE backend to GTK port

@@ -41,6 +41,7 @@ VPATH = \
     $(WebCore)/Modules/fetch \
     $(WebCore)/Modules/gamepad \
     $(WebCore)/Modules/geolocation \
+    $(WebCore)/Modules/highlight \
     $(WebCore)/Modules/indexeddb \
     $(WebCore)/Modules/indieui \
     $(WebCore)/Modules/mediacapabilities \
@@ -188,6 +189,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/geolocation/PositionCallback.idl \
     $(WebCore)/Modules/geolocation/PositionErrorCallback.idl \
     $(WebCore)/Modules/geolocation/PositionOptions.idl \
+    $(WebCore)/Modules/highlight/HighlightMap.idl \
+    $(WebCore)/Modules/highlight/HighlightRangeGroup.idl \
     $(WebCore)/Modules/indexeddb/DOMWindowIndexedDatabase.idl \
     $(WebCore)/Modules/indexeddb/IDBCursor.idl \
     $(WebCore)/Modules/indexeddb/IDBCursorDirection.idl \
@@ -268,6 +271,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/mediastream/RTCPeerConnectionState.idl \
     $(WebCore)/Modules/mediastream/RTCPriorityType.idl \
     $(WebCore)/Modules/mediastream/RTCRtpCapabilities.idl \
+    $(WebCore)/Modules/mediastream/RTCRtpCodecCapability.idl \
     $(WebCore)/Modules/mediastream/RTCRtpCodecParameters.idl \
     $(WebCore)/Modules/mediastream/RTCRtpContributingSource.idl \
     $(WebCore)/Modules/mediastream/RTCRtpEncodingParameters.idl \
@@ -370,6 +374,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/webaudio/WaveShaperNode.idl \
     $(WebCore)/Modules/webauthn/AttestationConveyancePreference.idl \
     $(WebCore)/Modules/webauthn/AuthenticationExtensionsClientInputs.idl \
+    $(WebCore)/Modules/webauthn/AuthenticationExtensionsClientOutputs.idl \
     $(WebCore)/Modules/webauthn/AuthenticatorAssertionResponse.idl \
     $(WebCore)/Modules/webauthn/AuthenticatorAttestationResponse.idl \
     $(WebCore)/Modules/webauthn/AuthenticatorResponse.idl \
@@ -907,6 +912,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/page/PerformanceResourceTiming.idl \
     $(WebCore)/page/PerformanceServerTiming.idl \
     $(WebCore)/page/PerformanceTiming.idl \
+    $(WebCore)/page/PostMessageOptions.idl \
     $(WebCore)/page/RemoteDOMWindow.idl \
     $(WebCore)/page/ResizeObserver.idl \
     $(WebCore)/page/ResizeObserverCallback.idl \
@@ -1079,6 +1085,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/testing/GCObservation.idl \
     $(WebCore)/testing/InternalSettings.idl \
     $(WebCore)/testing/Internals.idl \
+    $(WebCore)/testing/InternalsMapLike.idl \
+    $(WebCore)/testing/InternalsSetLike.idl \
     $(WebCore)/testing/MallocStatistics.idl \
     $(WebCore)/testing/MemoryInfo.idl \
     $(WebCore)/testing/MockCDMFactory.idl \
@@ -1436,7 +1444,7 @@ ColorData.cpp : platform/ColorData.gperf $(WebCore)/make-hash-tools.pl
 
 # user agent style sheets
 
-USER_AGENT_STYLE_SHEETS = $(WebCore)/css/html.css $(WebCore)/css/quirks.css $(WebCore)/css/plugIns.css $(WebCore)/css/svg.css
+USER_AGENT_STYLE_SHEETS = $(WebCore)/css/html.css $(WebCore)/css/dialog.css $(WebCore)/css/quirks.css $(WebCore)/css/plugIns.css $(WebCore)/css/svg.css
 
 ifeq ($(findstring ENABLE_MATHML,$(FEATURE_DEFINES)), ENABLE_MATHML)
     USER_AGENT_STYLE_SHEETS += $(WebCore)/css/mathml.css

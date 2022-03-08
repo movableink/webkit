@@ -442,6 +442,8 @@ static Optional<Inspector::Protocol::CSS::PseudoId> protocolValueForPseudoId(Pse
         return Inspector::Protocol::CSS::PseudoId::After;
     case PseudoId::Selection:
         return Inspector::Protocol::CSS::PseudoId::Selection;
+    case PseudoId::Highlight:
+        return Inspector::Protocol::CSS::PseudoId::Highlight;
     case PseudoId::Scrollbar:
         return Inspector::Protocol::CSS::PseudoId::Scrollbar;
     case PseudoId::ScrollbarThumb:
@@ -944,7 +946,7 @@ Inspector::Protocol::CSS::StyleSheetOrigin InspectorCSSAgent::detectOrigin(CSSSt
     return Inspector::Protocol::CSS::StyleSheetOrigin::Regular;
 }
 
-RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(StyleRule* styleRule, Style::Resolver& styleResolver, Element& element)
+RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(const StyleRule* styleRule, Style::Resolver& styleResolver, Element& element)
 {
     if (!styleRule)
         return nullptr;
@@ -976,7 +978,7 @@ RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(
     return inspectorStyleSheet ? inspectorStyleSheet->buildObjectForRule(rule, nullptr) : nullptr;
 }
 
-RefPtr<JSON::ArrayOf<Inspector::Protocol::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMatchedRuleList(const Vector<RefPtr<StyleRule>>& matchedRules, Style::Resolver& styleResolver, Element& element, PseudoId pseudoId)
+RefPtr<JSON::ArrayOf<Inspector::Protocol::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMatchedRuleList(const Vector<RefPtr<const StyleRule>>& matchedRules, Style::Resolver& styleResolver, Element& element, PseudoId pseudoId)
 {
     auto result = JSON::ArrayOf<Inspector::Protocol::CSS::RuleMatch>::create();
 

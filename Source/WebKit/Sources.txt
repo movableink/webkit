@@ -21,6 +21,15 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
+GPUProcess/GPUProcess.cpp
+GPUProcess/GPUConnectionToWebProcess.cpp
+GPUProcess/GPUProcessCreationParameters.cpp
+//GPUProcess/media/RemoteMediaPlayerManagerProxy.cpp
+//GPUProcess/media/RemoteMediaPlayerProxy.cpp
+//GPUProcess/media/RemoteMediaResource.cpp
+//GPUProcess/media/RemoteMediaResourceLoader.cpp
+//GPUProcess/media/RemoteMediaResourceManager.cpp
+
 NetworkProcess/AdClickAttributionManager.cpp
 NetworkProcess/NetworkActivityTracker.cpp
 NetworkProcess/NetworkCORSPreflightChecker.cpp
@@ -59,8 +68,10 @@ NetworkProcess/Downloads/DownloadMonitor.cpp
 NetworkProcess/Downloads/PendingDownload.cpp
 
 NetworkProcess/IndexedDB/WebIDBConnectionToClient.cpp
+NetworkProcess/IndexedDB/WebIDBServer.cpp
 
 NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.cpp @no-unify
+NetworkProcess/ServiceWorker/ServiceWorkerSoftUpdateLoader.cpp
 NetworkProcess/ServiceWorker/WebSWOriginStore.cpp @no-unify
 NetworkProcess/ServiceWorker/WebSWServerConnection.cpp @no-unify
 NetworkProcess/ServiceWorker/WebSWServerToContextConnection.cpp @no-unify
@@ -122,6 +133,7 @@ Shared/AuxiliaryProcess.cpp @no-unify
 Shared/BlobDataFileReferenceWithSandboxExtension.cpp @no-unify
 Shared/CacheModel.cpp
 Shared/ContextMenuContextData.cpp
+Shared/DebuggableInfoData.cpp
 Shared/EditingRange.cpp
 Shared/EditorState.cpp
 Shared/FontInfo.cpp
@@ -307,6 +319,7 @@ UIProcess/API/APIContentRuleList.cpp
 UIProcess/API/APIContentRuleListAction.cpp
 UIProcess/API/APIContentRuleListStore.cpp
 UIProcess/API/APIContextMenuElementInfo.cpp
+UIProcess/API/APIDebuggableInfo.cpp
 UIProcess/API/APIExperimentalFeature.cpp
 UIProcess/API/APIFrameInfo.cpp
 UIProcess/API/APIHTTPCookieStore.cpp
@@ -397,6 +410,8 @@ UIProcess/Gamepad/UIGamepadProvider.cpp
 UIProcess/Launcher/ProcessLauncher.cpp @no-unify
 
 UIProcess/Network/NetworkProcessProxy.cpp
+
+UIProcess/GPU/GPUProcessProxy.cpp
 
 UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp
 UIProcess/Notifications/WebNotification.cpp
@@ -491,11 +506,17 @@ WebProcess/InjectedBundle/DOM/InjectedBundleRangeHandle.cpp @no-unify
 WebProcess/MediaStream/MediaDeviceSandboxExtensions.cpp
 WebProcess/MediaStream/UserMediaPermissionRequestManager.cpp
 
+WebProcess/GPU/GPUProcessConnection.cpp
+//WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
+//WebProcess/GPU/media/RemoteMediaPlayerManager.cpp
+//WebProcess/GPU/media/RemoteMediaResourceProxy.cpp
+WebProcess/GPU/webrtc/LibWebRTCCodecs.cpp
+
 WebProcess/Network/NetworkProcessConnection.cpp
 WebProcess/Network/WebLoaderStrategy.cpp
 WebProcess/Network/WebResourceInterceptController.cpp
 WebProcess/Network/WebResourceLoader.cpp
-WebProcess/Network/WebSocketChannel.cpp
+WebProcess/Network/WebSocketChannel.cpp @no-unify
 WebProcess/Network/WebSocketChannelManager.cpp
 WebProcess/Network/WebSocketProvider.cpp
 WebProcess/Network/WebSocketStream.cpp

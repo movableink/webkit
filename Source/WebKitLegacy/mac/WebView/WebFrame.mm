@@ -700,7 +700,7 @@ static NSURL *createUniqueWebDataURL();
     JSC::JSLockHolder jscLock(lexicalGlobalObject);
 #endif
 
-    JSC::JSValue result = _private->coreFrame->script().executeScript(string, forceUserGesture);
+    JSC::JSValue result = _private->coreFrame->script().executeScriptIgnoringException(string, forceUserGesture);
 
     if (!_private->coreFrame) // In case the script removed our frame from the page.
         return @"";
@@ -2059,8 +2059,6 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     if (auto* document = _private->coreFrame->document()) {
         if (WebCore::DatabaseManager::singleton().hasOpenDatabases(*document))
             [result setObject:@YES forKey:WebFrameUsesDatabases];
-        if (!document->canSuspendActiveDOMObjectsForDocumentSuspension())
-            [result setObject:@YES forKey:WebFrameCanSuspendActiveDOMObjects];
     }
     
     return result;
@@ -2098,7 +2096,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     ASSERT(frame->document());
     RetainPtr<WebFrame> webFrame(kit(frame)); // Running arbitrary JavaScript can destroy the frame.
 
-    JSC::JSValue result = frame->script().executeUserAgentScriptInWorld(*core(world), string, true);
+    JSC::JSValue result = frame->script().executeUserAgentScriptInWorldIgnoringException(*core(world), string, true);
 
     if (!webFrame->_private->coreFrame) // In case the script removed our frame from the page.
         return @"";

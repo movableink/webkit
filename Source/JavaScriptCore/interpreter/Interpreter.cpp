@@ -34,6 +34,7 @@
 #include "Bytecodes.h"
 #include "CallFrameClosure.h"
 #include "CatchScope.h"
+#include "CheckpointOSRExitSideState.h"
 #include "CodeBlock.h"
 #include "CodeCache.h"
 #include "DirectArguments.h"
@@ -53,7 +54,6 @@
 #include "JSArrayInlines.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
-#include "JSFixedArray.h"
 #include "JSImmutableButterfly.h"
 #include "JSLexicalEnvironment.h"
 #include "JSModuleEnvironment.h"
@@ -124,7 +124,7 @@ JSValue eval(JSGlobalObject* globalObject, CallFrame* callFrame)
     CallFrame* callerFrame = callFrame->callerFrame();
     CallSiteIndex callerCallSiteIndex = callerFrame->callSiteIndex();
     CodeBlock* callerCodeBlock = callerFrame->codeBlock();
-    JSScope* callerScopeChain = callerFrame->uncheckedR(callerCodeBlock->scopeRegister().offset()).Register::scope();
+    JSScope* callerScopeChain = callerFrame->uncheckedR(callerCodeBlock->scopeRegister()).Register::scope();
     UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerCodeBlock->unlinkedCodeBlock();
 
     bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
@@ -198,9 +198,6 @@ unsigned sizeOfVarargs(JSGlobalObject* globalObject, JSValue arguments, uint32_t
     case ScopedArgumentsType:
         length = jsCast<ScopedArguments*>(cell)->length(globalObject);
         break;
-    case JSFixedArrayType:
-        length = jsCast<JSFixedArray*>(cell)->size();
-        break;
     case JSImmutableButterflyType:
         length = jsCast<JSImmutableButterfly*>(cell)->length();
         break;
@@ -217,6 +214,9 @@ unsigned sizeOfVarargs(JSGlobalObject* globalObject, JSValue arguments, uint32_t
     }
     RETURN_IF_EXCEPTION(scope, 0);
     
+    if (length > maxArguments)
+        throwStackOverflowError(globalObject, scope);
+
     if (length >= firstVarArgOffset)
         length -= firstVarArgOffset;
     else
@@ -253,7 +253,7 @@ unsigned sizeFrameForVarargs(JSGlobalObject* globalObject, CallFrame* callFrame,
     return length;
 }
 
-void loadVarargs(JSGlobalObject* globalObject, CallFrame* callFrame, VirtualRegister firstElementDest, JSValue arguments, uint32_t offset, uint32_t length)
+void loadVarargs(JSGlobalObject* globalObject, JSValue* firstElementDest, JSValue arguments, uint32_t offset, uint32_t length)
 {
     if (UNLIKELY(!arguments.isCell()) || !length)
         return;
@@ -265,35 +265,31 @@ void loadVarargs(JSGlobalObject* globalObject, CallFrame* callFrame, VirtualRegi
     switch (cell->type()) {
     case DirectArgumentsType:
         scope.release();
-        jsCast<DirectArguments*>(cell)->copyToArguments(globalObject, callFrame, firstElementDest, offset, length);
+        jsCast<DirectArguments*>(cell)->copyToArguments(globalObject, firstElementDest, offset, length);
         return;
     case ScopedArgumentsType:
         scope.release();
-        jsCast<ScopedArguments*>(cell)->copyToArguments(globalObject, callFrame, firstElementDest, offset, length);
-        return;
-    case JSFixedArrayType:
-        scope.release();
-        jsCast<JSFixedArray*>(cell)->copyToArguments(globalObject, callFrame, firstElementDest, offset, length);
+        jsCast<ScopedArguments*>(cell)->copyToArguments(globalObject, firstElementDest, offset, length);
         return;
     case JSImmutableButterflyType:
         scope.release();
-        jsCast<JSImmutableButterfly*>(cell)->copyToArguments(globalObject, callFrame, firstElementDest, offset, length);
+        jsCast<JSImmutableButterfly*>(cell)->copyToArguments(globalObject, firstElementDest, offset, length);
         return; 
     default: {
         ASSERT(arguments.isObject());
         JSObject* object = jsCast<JSObject*>(cell);
         if (isJSArray(object)) {
             scope.release();
-            jsCast<JSArray*>(object)->copyToArguments(globalObject, callFrame, firstElementDest, offset, length);
+            jsCast<JSArray*>(object)->copyToArguments(globalObject, firstElementDest, offset, length);
             return;
         }
         unsigned i;
         for (i = 0; i < length && object->canGetIndexQuickly(i + offset); ++i)
-            callFrame->r(firstElementDest + i) = object->getIndexQuickly(i + offset);
+            firstElementDest[i] = object->getIndexQuickly(i + offset);
         for (; i < length; ++i) {
             JSValue value = object->get(globalObject, i + offset);
             RETURN_IF_EXCEPTION(scope, void());
-            callFrame->r(firstElementDest + i) = value;
+            firstElementDest[i] = value;
         }
         return;
     } }
@@ -305,8 +301,7 @@ void setupVarargsFrame(JSGlobalObject* globalObject, CallFrame* callFrame, CallF
     
     loadVarargs(
         globalObject,
-        callFrame,
-        calleeFrameOffset + CallFrame::argumentOffset(0),
+        bitwise_cast<JSValue*>(&callFrame->r(calleeFrameOffset + CallFrame::argumentOffset(0))),
         arguments, offset, length);
     
     newCallFrame->setArgumentCountIncludingThis(length + 1);
@@ -546,8 +541,13 @@ public:
         m_codeBlock = visitor->codeBlock();
 
         m_handler = nullptr;
-        if (!m_isTermination) {
-            if (m_codeBlock) {
+        if (m_codeBlock) {
+            // FIXME: We should support exception handling in checkpoints.
+#if ENABLE(DFG_JIT)
+            if (m_returnPC == LLInt::getCodePtr<JSEntryPtrTag>(checkpoint_osr_exit_from_inlined_call_trampoline).executableAddress())
+                m_codeBlock->vm().findCheckpointOSRSideState(m_callFrame);
+#endif
+            if (!m_isTermination) {
                 m_handler = findExceptionHandler(visitor, m_codeBlock, RequiredHandler::AnyHandler);
                 if (m_handler)
                     return StackVisitor::Done;
@@ -569,6 +569,7 @@ public:
         if (shouldStopUnwinding)
             return StackVisitor::Done;
 
+        m_returnPC = m_callFrame->returnPC().value();
         return StackVisitor::Continue;
     }
 
@@ -605,6 +606,7 @@ private:
     bool m_isTermination;
     CodeBlock*& m_codeBlock;
     HandlerInfo*& m_handler;
+    mutable const void* m_returnPC { nullptr };
 };
 
 NEVER_INLINE HandlerInfo* Interpreter::unwind(VM& vm, CallFrame*& callFrame, Exception* exception)
@@ -666,6 +668,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     VM& vm = scope->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     JSGlobalObject* globalObject = scope->globalObject(vm);
+    JSCallee* globalCallee = globalObject->globalCallee();
 
     ProgramExecutable* program = ProgramExecutable::create(globalObject, source);
     EXCEPTION_ASSERT(throwScope.exception() || program);
@@ -827,9 +830,9 @@ failedJSONP:
         codeBlock = jsCast<ProgramCodeBlock*>(tempCodeBlock);
     }
 
-    VMTraps::Mask mask(VMTraps::NeedTermination, VMTraps::NeedWatchdogCheck);
-    if (UNLIKELY(vm.needTrapHandling(mask))) {
-        vm.handleTraps(globalObject, vm.topCallFrame, mask);
+    constexpr auto trapsMask = VMTraps::interruptingTraps();
+    if (UNLIKELY(vm.needTrapHandling(trapsMask))) {
+        vm.handleTraps(globalObject, vm.topCallFrame, trapsMask);
         RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
     }
 
@@ -839,7 +842,7 @@ failedJSONP:
     ASSERT(codeBlock->numParameters() == 1); // 1 parameter for 'this'.
 
     ProtoCallFrame protoCallFrame;
-    protoCallFrame.init(codeBlock, globalObject, JSCallee::create(vm, globalObject, scope), thisObj, 1);
+    protoCallFrame.init(codeBlock, globalObject, globalCallee, thisObj, 1);
 
     // Execute the code:
     throwScope.release();
@@ -873,7 +876,7 @@ JSValue Interpreter::executeCall(JSGlobalObject* lexicalGlobalObject, JSObject* 
     }
 
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments))
         return checkedReturn(throwStackOverflowError(globalObject, throwScope));
 
     if (isJSCall) {
@@ -888,9 +891,9 @@ JSValue Interpreter::executeCall(JSGlobalObject* lexicalGlobalObject, JSObject* 
     } else
         newCodeBlock = 0;
 
-    VMTraps::Mask mask(VMTraps::NeedTermination, VMTraps::NeedWatchdogCheck);
-    if (UNLIKELY(vm.needTrapHandling(mask))) {
-        vm.handleTraps(globalObject, vm.topCallFrame, mask);
+    constexpr auto trapsMask = VMTraps::interruptingTraps();
+    if (UNLIKELY(vm.needTrapHandling(trapsMask))) {
+        vm.handleTraps(globalObject, vm.topCallFrame, trapsMask);
         RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
     }
 
@@ -942,7 +945,7 @@ JSObject* Interpreter::executeConstruct(JSGlobalObject* lexicalGlobalObject, JSO
     }
 
     VMEntryScope entryScope(vm, globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments)) {
         throwStackOverflowError(globalObject, throwScope);
         return nullptr;
     }
@@ -959,9 +962,9 @@ JSObject* Interpreter::executeConstruct(JSGlobalObject* lexicalGlobalObject, JSO
     } else
         newCodeBlock = 0;
 
-    VMTraps::Mask mask(VMTraps::NeedTermination, VMTraps::NeedWatchdogCheck);
-    if (UNLIKELY(vm.needTrapHandling(mask))) {
-        vm.handleTraps(globalObject, vm.topCallFrame, mask);
+    constexpr auto trapsMask = VMTraps::interruptingTraps();
+    if (UNLIKELY(vm.needTrapHandling(trapsMask))) {
+        vm.handleTraps(globalObject, vm.topCallFrame, trapsMask);
         RETURN_IF_EXCEPTION(throwScope, nullptr);
     }
 
@@ -1143,16 +1146,21 @@ JSValue Interpreter::execute(EvalExecutable* eval, JSGlobalObject* lexicalGlobal
         }
     }
 
-    VMTraps::Mask mask(VMTraps::NeedTermination, VMTraps::NeedWatchdogCheck);
-    if (UNLIKELY(vm.needTrapHandling(mask))) {
-        vm.handleTraps(globalObject, vm.topCallFrame, mask);
+    constexpr auto trapsMask = VMTraps::interruptingTraps();
+    if (UNLIKELY(vm.needTrapHandling(trapsMask))) {
+        vm.handleTraps(globalObject, vm.topCallFrame, trapsMask);
         RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
     }
 
     ASSERT(codeBlock->numParameters() == 1); // 1 parameter for 'this'.
 
+    JSCallee* callee = nullptr;
+    if (scope == globalObject->globalScope())
+        callee = globalObject->globalCallee();
+    else
+        callee = JSCallee::create(vm, globalObject, scope);
     ProtoCallFrame protoCallFrame;
-    protoCallFrame.init(codeBlock, globalObject, JSCallee::create(vm, globalObject, scope), thisValue, 1);
+    protoCallFrame.init(codeBlock, globalObject, callee, thisValue, 1);
 
     // Execute the code:
     throwScope.release();
@@ -1188,9 +1196,9 @@ JSValue Interpreter::executeModuleProgram(ModuleProgramExecutable* executable, J
         codeBlock = jsCast<ModuleProgramCodeBlock*>(tempCodeBlock);
     }
 
-    VMTraps::Mask mask(VMTraps::NeedTermination, VMTraps::NeedWatchdogCheck);
-    if (UNLIKELY(vm.needTrapHandling(mask))) {
-        vm.handleTraps(globalObject, vm.topCallFrame, mask);
+    constexpr auto trapsMask = VMTraps::interruptingTraps();
+    if (UNLIKELY(vm.needTrapHandling(trapsMask))) {
+        vm.handleTraps(globalObject, vm.topCallFrame, trapsMask);
         RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
     }
 

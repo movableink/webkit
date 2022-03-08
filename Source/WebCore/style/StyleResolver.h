@@ -89,7 +89,7 @@ public:
 
     void keyframeStylesForAnimation(const Element&, const RenderStyle*, KeyframeList&);
 
-    std::unique_ptr<RenderStyle> pseudoStyleForElement(const Element&, const PseudoElementRequest&, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle = nullptr, const SelectorFilter* = nullptr);
+    WEBCORE_EXPORT std::unique_ptr<RenderStyle> pseudoStyleForElement(const Element&, const PseudoElementRequest&, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle = nullptr, const SelectorFilter* = nullptr);
 
     std::unique_ptr<RenderStyle> styleForPage(int pageIndex);
     std::unique_ptr<RenderStyle> defaultStyleForElement(const Element*);
@@ -121,8 +121,8 @@ public:
         AllButEmptyCSSRules = UAAndUserCSSRules | AuthorCSSRules,
         AllCSSRules         = AllButEmptyCSSRules | EmptyCSSRules,
     };
-    Vector<RefPtr<StyleRule>> styleRulesForElement(const Element*, unsigned rulesToInclude = AllButEmptyCSSRules);
-    Vector<RefPtr<StyleRule>> pseudoStyleRulesForElement(const Element*, PseudoId, unsigned rulesToInclude = AllButEmptyCSSRules);
+    Vector<RefPtr<const StyleRule>> styleRulesForElement(const Element*, unsigned rulesToInclude = AllButEmptyCSSRules);
+    Vector<RefPtr<const StyleRule>> pseudoStyleRulesForElement(const Element*, PseudoId, unsigned rulesToInclude = AllButEmptyCSSRules);
 
     bool hasSelectorForId(const AtomString&) const;
     bool hasSelectorForAttribute(const Element&, const AtomString&) const;
@@ -131,15 +131,8 @@ public:
     ViewportStyleResolver* viewportStyleResolver() { return m_viewportStyleResolver.get(); }
 #endif
 
-    void addMediaQueryDynamicResults(const MediaQueryDynamicResults&);
-    bool hasViewportDependentMediaQueries() const { return !m_mediaQueryDynamicResults.viewport.isEmpty(); }
-    bool hasMediaQueriesAffectedByViewportChange() const;
-
-    bool hasAccessibilitySettingsDependentMediaQueries() const { return !m_mediaQueryDynamicResults.accessibilitySettings.isEmpty(); }
-    bool hasMediaQueriesAffectedByAccessibilitySettingsChange() const;
-
-    bool hasAppearanceDependentMediaQueries() const { return !m_mediaQueryDynamicResults.appearance.isEmpty(); }
-    bool hasMediaQueriesAffectedByAppearanceChange() const;
+    bool hasViewportDependentMediaQueries() const;
+    Optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueries();
 
     void addKeyframeStyle(Ref<StyleRuleKeyframes>&&);
 
@@ -199,8 +192,6 @@ private:
     Document& m_document;
 
     RenderStyle* m_overrideDocumentElementStyle { nullptr };
-
-    MediaQueryDynamicResults m_mediaQueryDynamicResults;
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     RefPtr<ViewportStyleResolver> m_viewportStyleResolver;

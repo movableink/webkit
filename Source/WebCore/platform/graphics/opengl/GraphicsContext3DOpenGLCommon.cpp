@@ -151,19 +151,23 @@ static uint64_t nameHashForShader(const char* name, size_t length)
 
 void GraphicsContext3D::validateDepthStencil(const char* packedDepthStencilExtension)
 {
+    auto attrs = contextAttributes();
+
     Extensions3D& extensions = getExtensions();
-    if (m_attrs.stencil) {
+    if (attrs.stencil) {
         if (extensions.supports(packedDepthStencilExtension)) {
             extensions.ensureEnabled(packedDepthStencilExtension);
             // Force depth if stencil is true.
-            m_attrs.depth = true;
+            attrs.depth = true;
         } else
-            m_attrs.stencil = false;
+            attrs.stencil = false;
+        setContextAttributes(attrs);
     }
-    if (m_attrs.antialias) {
-        if (!extensions.supports("GL_ANGLE_framebuffer_multisample") || isGLES2Compliant())
-            m_attrs.antialias = false;
-        else
+    if (attrs.antialias && !m_isForWebGL2) {
+        if (!extensions.supports("GL_ANGLE_framebuffer_multisample")) {
+            attrs.antialias = false;
+            setContextAttributes(attrs);
+        } else
             extensions.ensureEnabled("GL_ANGLE_framebuffer_multisample");
     }
 }
@@ -185,7 +189,7 @@ void GraphicsContext3D::paintRenderingResultsToCanvas(ImageBuffer* imageBuffer)
 
     readRenderingResults(pixels.get(), totalBytes);
 
-    if (!m_attrs.premultipliedAlpha) {
+    if (!contextAttributes().premultipliedAlpha) {
         for (int i = 0; i < totalBytes; i += 4) {
             // Premultiply alpha.
             pixels[i + 0] = std::min(255, pixels[i + 0] * pixels[i + 3] / 255);
@@ -211,7 +215,7 @@ RefPtr<ImageData> GraphicsContext3D::paintRenderingResultsToImageData()
 {
     // Reading premultiplied alpha would involve unpremultiplying, which is
     // lossy.
-    if (m_attrs.premultipliedAlpha)
+    if (contextAttributes().premultipliedAlpha)
         return nullptr;
 
     auto imageData = ImageData::create(IntSize(m_currentWidth, m_currentHeight));
@@ -242,7 +246,7 @@ void GraphicsContext3D::prepareTexture()
     TemporaryOpenGLSetting scopedDither(GL_DITHER, GL_FALSE);
 #endif
 
-    if (m_attrs.antialias)
+    if (contextAttributes().antialias)
         resolveMultisamplingIfNecessary();
 
 #if USE(COORDINATED_GRAPHICS)
@@ -275,7 +279,7 @@ void GraphicsContext3D::readRenderingResults(unsigned char *pixels, int pixelsSi
     makeContextCurrent();
 
     bool mustRestoreFBO = false;
-    if (m_attrs.antialias) {
+    if (contextAttributes().antialias) {
         resolveMultisamplingIfNecessary();
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
         mustRestoreFBO = true;
@@ -338,14 +342,17 @@ void GraphicsContext3D::reshape(int width, int height)
     ::glClearColor(0, 0, 0, 0);
     ::glGetBooleanv(GL_COLOR_WRITEMASK, colorMask);
     ::glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    if (m_attrs.depth) {
+
+    auto attrs = contextAttributes();
+
+    if (attrs.depth) {
         ::glGetFloatv(GL_DEPTH_CLEAR_VALUE, &clearDepth);
         GraphicsContext3D::clearDepth(1);
         ::glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
         ::glDepthMask(GL_TRUE);
         clearMask |= GL_DEPTH_BUFFER_BIT;
     }
-    if (m_attrs.stencil) {
+    if (attrs.stencil) {
         ::glGetIntegerv(GL_STENCIL_CLEAR_VALUE, &clearStencil);
         ::glClearStencil(0);
         ::glGetIntegerv(GL_STENCIL_WRITEMASK, reinterpret_cast<GLint*>(&stencilMask));
@@ -359,11 +366,11 @@ void GraphicsContext3D::reshape(int width, int height)
 
     ::glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
     ::glColorMask(colorMask[0], colorMask[1], colorMask[2], colorMask[3]);
-    if (m_attrs.depth) {
+    if (attrs.depth) {
         GraphicsContext3D::clearDepth(clearDepth);
         ::glDepthMask(depthMask);
     }
-    if (m_attrs.stencil) {
+    if (attrs.stencil) {
         ::glClearStencil(clearStencil);
         ::glStencilMaskSeparate(GL_FRONT, stencilMask);
         ::glStencilMaskSeparate(GL_BACK, stencilMaskBack);
@@ -491,7 +498,7 @@ void GraphicsContext3D::bindFramebuffer(GC3Denum target, Platform3DObject buffer
     if (buffer)
         fbo = buffer;
     else
-        fbo = (m_attrs.antialias ? m_multisampleFBO : m_fbo);
+        fbo = (contextAttributes().antialias ? m_multisampleFBO : m_fbo);
     if (fbo != m_state.boundFBO) {
         ::glBindFramebufferEXT(target, fbo);
         m_state.boundFBO = fbo;
@@ -754,24 +761,28 @@ void GraphicsContext3D::compileShaderDirect(Platform3DObject shader)
 void GraphicsContext3D::copyTexImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Dint border)
 {
     makeContextCurrent();
-    if (m_attrs.antialias && m_state.boundFBO == m_multisampleFBO) {
+    auto attrs = contextAttributes();
+
+    if (attrs.antialias && m_state.boundFBO == m_multisampleFBO) {
         resolveMultisamplingIfNecessary(IntRect(x, y, width, height));
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
     }
     ::glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
-    if (m_attrs.antialias && m_state.boundFBO == m_multisampleFBO)
+    if (attrs.antialias && m_state.boundFBO == m_multisampleFBO)
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_multisampleFBO);
 }
 
 void GraphicsContext3D::copyTexSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height)
 {
     makeContextCurrent();
-    if (m_attrs.antialias && m_state.boundFBO == m_multisampleFBO) {
+    auto attrs = contextAttributes();
+
+    if (attrs.antialias && m_state.boundFBO == m_multisampleFBO) {
         resolveMultisamplingIfNecessary(IntRect(x, y, width, height));
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
     }
     ::glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
-    if (m_attrs.antialias && m_state.boundFBO == m_multisampleFBO)
+    if (attrs.antialias && m_state.boundFBO == m_multisampleFBO)
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_multisampleFBO);
 }
 
@@ -1136,11 +1147,6 @@ int GraphicsContext3D::getAttribLocationDirect(Platform3DObject program, const S
     makeContextCurrent();
 
     return ::glGetAttribLocation(program, name.utf8().data());
-}
-
-GraphicsContext3DAttributes GraphicsContext3D::getContextAttributes()
-{
-    return m_attrs;
 }
 
 bool GraphicsContext3D::moveErrorsToSyntheticErrorList()
@@ -1818,7 +1824,6 @@ String GraphicsContext3D::getShaderSource(Platform3DObject shader)
 
     return result->value.source;
 }
-
 
 void GraphicsContext3D::getTexParameterfv(GC3Denum target, GC3Denum pname, GC3Dfloat* value)
 {

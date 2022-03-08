@@ -104,7 +104,7 @@ const MatchResult& ElementRuleCollector::matchResult() const
     return m_result;
 }
 
-const Vector<RefPtr<StyleRule>>& ElementRuleCollector::matchedRuleList() const
+const Vector<RefPtr<const StyleRule>>& ElementRuleCollector::matchedRuleList() const
 {
     ASSERT(m_mode == SelectorChecker::Mode::CollectingRules);
     return m_matchedRuleList;
@@ -193,12 +193,12 @@ void ElementRuleCollector::transferMatchedRules(DeclarationOrigin declarationOri
             break;
 
         if (m_mode == SelectorChecker::Mode::CollectingRules) {
-            m_matchedRuleList.append(matchedRule.ruleData->rule());
+            m_matchedRuleList.append(&matchedRule.ruleData->styleRule());
             continue;
         }
 
         addMatchedProperties({
-            &matchedRule.ruleData->rule()->properties(),
+            &matchedRule.ruleData->styleRule().properties(),
             static_cast<uint16_t>(matchedRule.ruleData->linkMatchType()),
             static_cast<uint16_t>(matchedRule.ruleData->propertyWhitelistType()),
             matchedRule.styleScopeOrdinal
@@ -228,7 +228,7 @@ bool ElementRuleCollector::matchesAnyAuthorRules()
 void ElementRuleCollector::collectMatchingAuthorRules()
 {
     {
-        MatchRequest matchRequest(&m_authorStyle);
+        MatchRequest matchRequest(m_authorStyle.ptr());
         collectMatchingRules(matchRequest);
     }
 
@@ -354,8 +354,8 @@ std::unique_ptr<RuleSet::RuleDataVector> ElementRuleCollector::collectSlottedPse
     m_mode = SelectorChecker::Mode::CollectingRules;
 
     // Match global author rules.
-    MatchRequest matchRequest(&m_authorStyle);
-    collectMatchingRulesForList(&m_authorStyle.slottedPseudoElementRules(), matchRequest);
+    MatchRequest matchRequest(m_authorStyle.ptr());
+    collectMatchingRulesForList(&m_authorStyle->slottedPseudoElementRules(), matchRequest);
 
     if (m_matchedRules.isEmpty())
         return { };
@@ -375,7 +375,7 @@ void ElementRuleCollector::matchUserRules()
     
     clearMatchedRules();
 
-    MatchRequest matchRequest(m_userStyle);
+    MatchRequest matchRequest(m_userStyle.get());
     collectMatchingRules(matchRequest);
 
     sortAndTransferMatchedRules(DeclarationOrigin::User);
@@ -448,7 +448,7 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
     }
 
 #if ENABLE(CSS_SELECTOR_JIT)
-    auto& compiledSelector = ruleData.rule()->compiledSelectorForListIndex(ruleData.selectorListIndex());
+    auto& compiledSelector = ruleData.compiledSelector();
     void* compiledSelectorChecker = compiledSelector.codeRef.code().executableAddress();
     if (!compiledSelectorChecker && compiledSelector.status == SelectorCompilationStatus::NotCompiled) {
         compiledSelector.status = SelectorCompiler::compileSelector(ruleData.selector(), SelectorCompiler::SelectorContext::RuleCollector, compiledSelector.codeRef);
@@ -477,6 +477,7 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
     SelectorChecker::CheckingContext context(m_mode);
     context.pseudoId = m_pseudoElementRequest.pseudoId;
     context.scrollbarState = m_pseudoElementRequest.scrollbarState;
+    context.nameForHightlightPseudoElement = m_pseudoElementRequest.highlightName;
     context.isMatchingHostPseudoClass = m_isMatchingHostPseudoClass;
     context.shadowHostInPartRuleScope = m_shadowHostInPartRuleScope.get();
 
@@ -523,18 +524,21 @@ void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVe
     for (unsigned i = 0, size = rules->size(); i < size; ++i) {
         const auto& ruleData = rules->data()[i];
 
+        if (UNLIKELY(!ruleData.isEnabled()))
+            continue;
+
         if (!ruleData.canMatchPseudoElement() && m_pseudoElementRequest.pseudoId != PseudoId::None)
             continue;
 
         if (m_selectorFilter && m_selectorFilter->fastRejectSelector(ruleData.descendantSelectorIdentifierHashes()))
             continue;
 
-        StyleRule* rule = ruleData.rule();
+        auto& rule = ruleData.styleRule();
 
         // If the rule has no properties to apply, then ignore it in the non-debug mode.
         // Note that if we get null back here, it means we have a rule with deferred properties,
         // and that means we always have to consider it.
-        const StyleProperties* properties = rule->propertiesWithoutDeferredParsing();
+        const StyleProperties* properties = rule.propertiesWithoutDeferredParsing();
         if (properties && properties->isEmpty() && !m_shouldIncludeEmptyRules)
             continue;
 

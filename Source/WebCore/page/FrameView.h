@@ -138,6 +138,7 @@ public:
 #endif
 
     void willRecalcStyle();
+    void styleDidChange() override;
     bool updateCompositingLayersAfterStyleChange();
     void updateCompositingLayersAfterLayout();
 
@@ -721,6 +722,8 @@ private:
 
     void delegatesScrollingDidChange() final;
 
+    void unobscuredContentSizeChanged() final;
+
     // ScrollableArea interface
     void invalidateScrollbarRect(Scrollbar&, const IntRect&) final;
     void scrollTo(const ScrollPosition&) final;
@@ -733,10 +736,6 @@ private:
     GraphicsLayer* layerForOverhangAreas() const final;
 #endif
     void contentsResized() final;
-
-#if PLATFORM(IOS_FAMILY)
-    void unobscuredContentSizeChanged() final;
-#endif
 
 #if ENABLE(DARK_MODE_CSS)
     RenderObject* rendererForColorScheme() const;

@@ -222,38 +222,11 @@ void ScriptExecutionContext::didLoadResourceSynchronously()
 {
 }
 
-bool ScriptExecutionContext::canSuspendActiveDOMObjectsForDocumentSuspension(Vector<ActiveDOMObject*>* unsuspendableObjects)
-{
-    checkConsistency();
-
-    bool canSuspend = true;
-
-    forEachActiveDOMObject([&](auto& activeDOMObject) {
-        if (activeDOMObject.shouldPreventEnteringBackForwardCache_DEPRECATED()) {
-            canSuspend = false;
-            if (unsuspendableObjects)
-                unsuspendableObjects->append(&activeDOMObject);
-            else
-                return ShouldContinue::No;
-        }
-        return ShouldContinue::Yes;
-    });
-
-    if (unsuspendableObjects) {
-        // Remove activeDOMObjects that have been destroyed while we were iterating above.
-        unsuspendableObjects->removeAllMatching([&](auto* activeDOMObject) {
-            return !m_activeDOMObjects.contains(activeDOMObject);
-        });
-    }
-
-    return canSuspend;
-}
-
 void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
 {
     // It is not allowed to run arbitrary script or construct new ActiveDOMObjects while we are iterating over ActiveDOMObjects.
     // An ASSERT_WITH_SECURITY_IMPLICATION or RELEASE_ASSERT will fire if this happens, but it's important to code
-    // canSuspendActiveDOMObjectsForDocumentSuspension() / suspend() / resume() / stop() functions so it will not happen!
+    // suspend() / resume() / stop() functions so it will not happen!
     ScriptDisallowedScope scriptDisallowedScope;
     SetForScope<bool> activeDOMObjectAdditionForbiddenScope(m_activeDOMObjectAdditionForbidden, true);
 
@@ -623,27 +596,6 @@ ServiceWorkerContainer* ScriptExecutionContext::ensureServiceWorkerContainer()
         navigator = &downcast<WorkerGlobalScope>(*this).navigator();
         
     return navigator ? &navigator->serviceWorker() : nullptr;
-}
-
-bool ScriptExecutionContext::postTaskTo(const DocumentOrWorkerIdentifier& contextIdentifier, WTF::Function<void(ScriptExecutionContext&)>&& task)
-{
-    ASSERT(isMainThread());
-
-    bool wasPosted = false;
-    switchOn(contextIdentifier, [&] (DocumentIdentifier identifier) {
-        auto* document = Document::allDocumentsMap().get(identifier);
-        if (!document)
-            return;
-        document->postTask([task = WTFMove(task)](auto& scope) {
-            task(scope);
-        });
-        wasPosted= true;
-    }, [&](ServiceWorkerIdentifier identifier) {
-        wasPosted = SWContextManager::singleton().postTaskToServiceWorker(identifier, [task = WTFMove(task)](auto& scope) {
-            task(scope);
-        });
-    });
-    return wasPosted;
 }
 
 #endif

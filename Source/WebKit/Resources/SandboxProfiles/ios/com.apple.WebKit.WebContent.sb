@@ -87,9 +87,22 @@
     (allow user-preference-read user-preference-write (apply preference-domain domains)))
 
 (define-once (framebuffer-access)
-    (allow iokit-open
+    (allow iokit-open (with report) (with telemetry)
            (iokit-user-client-class "IOMobileFramebufferUserClient"))
-    (mobile-preferences-read "com.apple.iokit.IOMobileGraphicsFamily"))
+
+    ; IOMobileFramebuffer
+    (with-filter (iokit-registry-entry-class "IOMobileFramebuffer")
+        (allow iokit-get-properties
+               (iokit-property "AppleTV"
+                               "DisplayPipePlaneBaseAlignment"
+                               "DisplayPipeStrideRequirements"
+                               "PerformanceStatistics"
+                               "appleTV-VID0"
+                               "appleTV-VID1"
+                               "hdcp-hoover-protocol")))
+
+    (mobile-preferences-read "com.apple.iokit.IOMobileGraphicsFamily")
+)
 
 (define-once (asset-access . options)
     (let ((asset-access-filter
@@ -108,11 +121,11 @@
         (mobile-preferences-read "com.apple.MobileAsset")))
 
 (define-once (mobile-keybag-access)
-     (allow iokit-open
+     (allow iokit-open (with report) (with telemetry)
             (iokit-user-client-class "AppleKeyStoreUserClient")))
 
 (define-once (location-services)
-    (allow mach-lookup
+    (allow mach-lookup (with report) (with telemetry)
            (global-name "com.apple.locationd.registration"))
     (allow-carrier-bundle) ;; <rdar://problem/21192365>
     (mobile-preferences-read
@@ -285,8 +298,10 @@
     (allow sysctl-read
            (sysctl-name #"kern.bootsessionuuid"))
 
+    (allow mach-lookup (with report) (with telemetry)
+        (xpc-service-name-prefix "com.apple.AGXCompilerService"))
+
     (allow mach-lookup
-       (xpc-service-name-prefix "com.apple.AGXCompilerService")
        ;; <rdar://problem/47268166>
        (xpc-service-name "com.apple.MTLCompilerService"))
     
@@ -410,7 +425,7 @@
             (iokit-property "gyro-interrupt-calibration")))
     (with-filter
         (iokit-registry-entry-class "IOHIDEventServiceFastPathUserClient")
-        (allow iokit-open)
+        (allow iokit-open (with report) (with telemetry))
         (allow iokit-get-properties iokit-set-properties
             (iokit-property "interval"
                             "mode"
@@ -441,15 +456,14 @@
 
     (allow mach-lookup (with report) (with telemetry)
         (global-name-regex #"^com\.apple\.uikit\.viewservice\..+")
-        (xpc-service-name-regex #"\.apple-extension-service$") ;; <rdar://problem/19525887>
-        (xpc-service-name-regex #"\.viewservice$") ;; <rdar://problem/31252371>
     )
 
     ; UIKit-required IOKit nodes.
     (allow iokit-open
         (iokit-user-client-class "AppleJPEGDriverUserClient")
         (iokit-user-client-class "IOSurfaceAcceleratorClient")
-        (iokit-user-client-class "IOSurfaceSendRight")
+        (iokit-user-client-class "IOSurfaceSendRight"))
+    (allow iokit-open (with report) (with telemetry)
         ;; Requires by UIView -> UITextMagnifierRenderer -> UIWindow
         (iokit-user-client-class "IOSurfaceRootUserClient"))
 
@@ -475,7 +489,7 @@
 
 (define-once (network-extensions-support)
     ;; Network Extensions / VPN helper.
-    (allow mach-lookup
+    (allow mach-lookup (with report) (with telemetry)
         (global-name "com.apple.nehelper")
         (global-name "com.apple.nesessionmanager.content-filter")) ;; <rdar://problem/48442387>
 )
@@ -624,11 +638,11 @@
 (allow mach-lookup
     (global-name "com.apple.logd")
     (global-name "com.apple.logd.events")
-    (global-name "com.apple.distributed_notifications@1v3")
-    (global-name "com.apple.aggregated")
     (global-name "com.apple.cfprefsd.daemon"))
 
-(allow mach-lookup
+(allow mach-lookup (with report) (with telemetry)
+    (global-name "com.apple.aggregated")
+    (global-name "com.apple.distributed_notifications@1v3")
     (global-name "com.apple.tccd"))
 
 (allow ipc-posix-shm-read*
@@ -663,9 +677,6 @@
 (with-filter (system-attribute apple-internal)
     (allow sysctl-read sysctl-write
            (sysctl-name "vm.footprint_suspend")))
-
-(allow mach-lookup (with report) (with telemetry)
-       (global-name "com.apple.system.logger"))
 
 (allow file-read-metadata network-outbound
        (literal "/private/var/run/syslog"))
@@ -726,10 +737,6 @@
 
 (url-translation)
 
-;; TextInput framework
-(allow mach-lookup (with report) (with telemetry)
-    (global-name "com.apple.TextInput"))
-
 (mobile-preferences-read "com.apple.da")
 
 (speech-synthesis-and-voiceover)
@@ -751,7 +758,7 @@
     (home-subpath "/Library/Caches/com.apple.keyboards"))
 
 ;; Power logging
-(allow mach-lookup
+(allow mach-lookup (with report) (with telemetry)
     (global-name "com.apple.powerlog.plxpclogger.xpc")) ;;  <rdar://problem/36442803>
 
 (mobile-preferences-read
@@ -942,8 +949,11 @@
 
 ;; Various services required by CFNetwork and other frameworks
 (allow mach-lookup
-    (global-name "com.apple.PowerManagement.control")
     (global-name "com.apple.analyticsd"))
+
+(allow mach-lookup (with report) (with telemetry)
+    (global-name "com.apple.cookied")
+    (global-name "com.apple.PowerManagement.control"))
 
 (deny file-write-create (vnode-type SYMLINK))
 (deny file-read-xattr file-write-xattr (xattr-regex #"^com\.apple\.security\.private\."))
@@ -964,7 +974,12 @@
 (allow mach-lookup
     (require-all
         (extension "com.apple.webkit.extension.mach")
-        (global-name "com.apple.iphone.axserver-systemwide")))
+        (global-name "com.apple.iphone.axserver-systemwide" "com.apple.tccd" "com.apple.nehelper" "com.apple.nesessionmanager.content-filter" "com.apple.uikit.viewservice.com.apple.WebContentFilter.remoteUI" "com.apple.diagnosticd")))
+
+(allow mach-lookup
+    (require-all
+        (extension "com.apple.webkit.extension.mach")
+        (xpc-service-name-prefix "com.apple.AGXCompilerService")))
 
 (media-capture-support)
 

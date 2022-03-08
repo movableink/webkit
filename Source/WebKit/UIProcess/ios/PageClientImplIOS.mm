@@ -48,13 +48,16 @@
 #import "WKProcessPoolInternal.h"
 #import "WKWebViewConfigurationInternal.h"
 #import "WKWebViewContentProviderRegistry.h"
+#import "WKWebViewIOS.h"
 #import "WKWebViewInternal.h"
+#import "WKWebViewPrivateForTesting.h"
 #import "WebContextMenuProxy.h"
 #import "WebDataListSuggestionsDropdownIOS.h"
 #import "WebEditCommandProxy.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
 #import "_WKDownloadInternal.h"
+#import <WebCore/Cursor.h>
 #import <WebCore/DOMPasteAccess.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/NotImplemented.h>
@@ -264,9 +267,14 @@ WebCore::FloatRect PageClientImpl::documentRect() const
     return [m_contentView bounds];
 }
 
-void PageClientImpl::setCursor(const Cursor&)
+void PageClientImpl::setCursor(const Cursor& cursor)
 {
-    notImplemented();
+    // The Web process may have asked to change the cursor when the view was in an active window, but
+    // if it is no longer in a window or the window is not active, then the cursor should not change.
+    if (!isViewWindowActive())
+        return;
+
+    cursor.setAsPlatformCursor();
 }
 
 void PageClientImpl::setCursorHiddenUntilMouseMoves(bool)
@@ -417,6 +425,15 @@ void PageClientImpl::doneWithTouchEvent(const NativeWebTouchEvent& nativeWebtouc
     [m_contentView _webTouchEvent:nativeWebtouchEvent preventsNativeGestures:eventHandled];
 }
 #endif
+
+#if ENABLE(IOS_TOUCH_EVENTS)
+
+void PageClientImpl::doneDeferringNativeGestures(bool preventNativeGestures)
+{
+    [m_contentView _doneDeferringNativeGestures:preventNativeGestures];
+}
+
+#endif // ENABLE(IOS_TOUCH_EVENTS)
 
 RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy&)
 {

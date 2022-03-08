@@ -79,7 +79,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/indexeddb/shared/IDBResourceIdentifier.h
     Modules/indexeddb/shared/IDBResultData.h
     Modules/indexeddb/shared/IDBTransactionInfo.h
-    Modules/indexeddb/shared/InProcessIDBServer.h
 
     Modules/mediasession/MediaSessionEvents.h
     Modules/mediasession/MediaSessionMetadata.h
@@ -113,11 +112,12 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     Modules/webauthn/AttestationConveyancePreference.h
     Modules/webauthn/AuthenticationExtensionsClientInputs.h
+    Modules/webauthn/AuthenticationExtensionsClientOutputs.h
     Modules/webauthn/AuthenticatorCoordinator.h
     Modules/webauthn/AuthenticatorCoordinatorClient.h
+    Modules/webauthn/AuthenticatorResponseData.h
     Modules/webauthn/AuthenticatorTransport.h
     Modules/webauthn/PublicKeyCredentialCreationOptions.h
-    Modules/webauthn/PublicKeyCredentialData.h
     Modules/webauthn/PublicKeyCredentialDescriptor.h
     Modules/webauthn/PublicKeyCredentialRequestOptions.h
     Modules/webauthn/PublicKeyCredentialType.h
@@ -240,6 +240,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/JSValueInWrappedObject.h
     bindings/js/JSWindowProxy.h
     bindings/js/ReadableStreamDefaultController.h
+    bindings/js/RunJavaScriptParameters.h
     bindings/js/ScriptCachedFrameData.h
     bindings/js/ScriptController.h
     bindings/js/ScriptState.h
@@ -373,7 +374,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/DeviceOrientationData.h
     dom/DeviceOrientationOrMotionPermissionState.h
     dom/Document.h
-    dom/DocumentEventQueue.h
     dom/DocumentFragment.h
     dom/DocumentFullscreen.h
     dom/DocumentIdentifier.h
@@ -659,6 +659,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     inspector/InspectorClient.h
     inspector/InspectorController.h
+    inspector/InspectorDebuggableType.h
     inspector/InspectorFrontendClient.h
     inspector/InspectorFrontendClientLocal.h
     inspector/InspectorFrontendHost.h
@@ -750,7 +751,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/ActivityStateChangeObserver.h
     page/AdjustViewSizeOrNot.h
     page/AlternativeTextClient.h
-    page/ApplicationStateChangeListener.h
     page/AutoplayEvent.h
     page/Base64Utilities.h
     page/CacheStorageProvider.h
@@ -810,6 +810,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/PlugInClient.h
     page/PointerCaptureController.h
     page/PointerLockController.h
+    page/PostMessageOptions.h
     page/PrewarmInformation.h
     page/PrintContext.h
     page/ProcessWarming.h
@@ -1057,6 +1058,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/Gradient.h
     platform/graphics/GraphicsContext.h
     platform/graphics/GraphicsContext3D.h
+    platform/graphics/GraphicsContext3DBase.h
     platform/graphics/GraphicsContext3DAttributes.h
     platform/graphics/GraphicsContext3DManager.h
     platform/graphics/GraphicsContextImpl.h
@@ -1122,6 +1124,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/WindRule.h
 
     platform/graphics/angle/Extensions3DANGLE.h
+
+    platform/graphics/displaylists/DisplayList.h
+    platform/graphics/displaylists/DisplayListItems.h
 
     platform/graphics/cv/ImageTransferSessionVT.h
 
@@ -1320,6 +1325,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/SimpleLineLayoutResolver.h
 
     rendering/line/LineLayoutTraversal.h
+    rendering/line/LineLayoutTraversalComplexPath.h
+    rendering/line/LineLayoutTraversalDisplayRunPath.h
+    rendering/line/LineLayoutTraversalSimplePath.h
     rendering/line/LineWidth.h
     rendering/line/TrailingObjects.h
 

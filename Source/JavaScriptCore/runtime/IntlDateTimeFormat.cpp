@@ -86,7 +86,7 @@ Structure* IntlDateTimeFormat::createStructure(VM& vm, JSGlobalObject* globalObj
 }
 
 IntlDateTimeFormat::IntlDateTimeFormat(VM& vm, Structure* structure)
-    : JSDestructibleObject(vm, structure)
+    : Base(vm, structure)
 {
 }
 
@@ -94,11 +94,6 @@ void IntlDateTimeFormat::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-}
-
-void IntlDateTimeFormat::destroy(JSCell* cell)
-{
-    static_cast<IntlDateTimeFormat*>(cell)->IntlDateTimeFormat::~IntlDateTimeFormat();
 }
 
 void IntlDateTimeFormat::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -1018,7 +1013,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
 
     auto resultString = String(result.data(), resultLength);
     auto typePropertyName = Identifier::fromString(vm, "type");
-    auto literalString = jsString(vm, "literal"_s);
+    auto literalString = jsNontrivialString(vm, "literal"_s);
 
     int32_t previousEndIndex = 0;
     int32_t beginIndex = 0;

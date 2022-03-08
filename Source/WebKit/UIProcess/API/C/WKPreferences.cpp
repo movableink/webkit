@@ -1539,6 +1539,16 @@ bool WKPreferencesGetGamepadsEnabled(WKPreferencesRef preferencesRef)
     return toImpl(preferencesRef)->gamepadsEnabled();
 }
 
+void WKPreferencesSetHighlightAPIEnabled(WKPreferencesRef preferencesRef, bool enabled)
+{
+    toImpl(preferencesRef)->setHighlightAPIEnabled(enabled);
+}
+
+bool WKPreferencesGetHighlightAPIEnabled(WKPreferencesRef preferencesRef)
+{
+    return toImpl(preferencesRef)->highlightAPIEnabled();
+}
+
 // FIXME: Remove these when possible.
 void WKPreferencesSetLongMousePressEnabled(WKPreferencesRef preferencesRef, bool enabled)
 {
@@ -1697,16 +1707,6 @@ void WKPreferencesSetFetchAPIEnabled(WKPreferencesRef preferencesRef, bool flag)
 bool WKPreferencesGetFetchAPIEnabled(WKPreferencesRef preferencesRef)
 {
     return toImpl(preferencesRef)->fetchAPIEnabled();
-}
-
-void WKPreferencesSetDisplayContentsEnabled(WKPreferencesRef preferencesRef, bool flag)
-{
-    toImpl(preferencesRef)->setDisplayContentsEnabled(flag);
-}
-
-bool WKPreferencesGetDisplayContentsEnabled(WKPreferencesRef preferencesRef)
-{
-    return toImpl(preferencesRef)->displayContentsEnabled();
 }
 
 void WKPreferencesSetDataTransferItemsEnabled(WKPreferencesRef preferencesRef, bool flag)
@@ -2139,6 +2139,16 @@ bool WKPreferencesGetCaptureAudioInUIProcessEnabled(WKPreferencesRef preferences
     return toImpl(preferencesRef)->captureAudioInUIProcessEnabled();
 }
 
+void WKPreferencesSetCaptureAudioInGPUProcessEnabled(WKPreferencesRef preferencesRef, bool flag)
+{
+    toImpl(preferencesRef)->setCaptureAudioInGPUProcessEnabled(flag);
+}
+
+bool WKPreferencesGetCaptureAudioInGPUProcessEnabled(WKPreferencesRef preferencesRef)
+{
+    return toImpl(preferencesRef)->captureAudioInGPUProcessEnabled();
+}
+
 void WKPreferencesSetCaptureVideoInUIProcessEnabled(WKPreferencesRef preferencesRef, bool flag)
 {
     toImpl(preferencesRef)->setCaptureVideoInUIProcessEnabled(flag);
@@ -2177,4 +2187,14 @@ bool WKPreferencesGetRemotePlaybackEnabled(WKPreferencesRef preferencesRef)
 void WKPreferencesSetRemotePlaybackEnabled(WKPreferencesRef preferencesRef, bool enabled)
 {
     WebKit::toImpl(preferencesRef)->setRemotePlaybackEnabled(enabled);
+}
+
+bool WKPreferencesGetShouldUseServiceWorkerShortTimeout(WKPreferencesRef preferencesRef)
+{
+    return WebKit::toImpl(preferencesRef)->shouldUseServiceWorkerShortTimeout();
+}
+
+void WKPreferencesSetShouldUseServiceWorkerShortTimeout(WKPreferencesRef preferencesRef, bool enabled)
+{
+    WebKit::toImpl(preferencesRef)->setShouldUseServiceWorkerShortTimeout(enabled);
 }

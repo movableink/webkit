@@ -63,7 +63,7 @@ public:
 
     void requestUserMediaPermissionForFrame(uint64_t userMediaID, WebCore::FrameIdentifier, Ref<WebCore::SecurityOrigin>&&  userMediaDocumentOrigin, Ref<WebCore::SecurityOrigin>&& topLevelDocumentOrigin, WebCore::MediaStreamRequest&&);
 
-    void resetAccess(WebCore::FrameIdentifier mainFrameID);
+    void resetAccess(Optional<WebCore::FrameIdentifier> mainFrameID = { });
     void viewIsBecomingVisible();
 
     void grantRequest(UserMediaPermissionRequestProxy&);
@@ -86,7 +86,7 @@ public:
         Prompt
     };
 
-    void setMockCaptureDevicesEnabledOverride(Optional<bool> enabled) { m_mockDevicesEnabledOverride = enabled; }
+    void setMockCaptureDevicesEnabledOverride(Optional<bool>);
     bool hasPendingCapture() const { return m_hasPendingCapture; }
 
 private:
@@ -154,6 +154,9 @@ private:
     const void* m_logIdentifier;
 #endif
     bool m_hasFilteredDeviceList { false };
+#if PLATFORM(IOS)
+    bool m_hasCreatedSandboxExtensionForTCCD { false };
+#endif
     uint64_t m_hasPendingCapture { 0 };
     Optional<bool> m_mockDevicesEnabledOverride;
 };

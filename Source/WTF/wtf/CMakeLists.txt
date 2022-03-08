@@ -55,6 +55,7 @@ set(WTF_PUBLIC_HEADERS
     DoublyLinkedList.h
     DumbPtrTraits.h
     DumbValueTraits.h
+    EnumClassOperatorOverloads.h
     EnumTraits.h
     Expected.h
     ExportMacros.h
@@ -151,9 +152,12 @@ set(WTF_PUBLIC_HEADERS
     ObjCRuntimeExtras.h
     ObjectIdentifier.h
     OptionSet.h
+    OptionSetHash.h
     Optional.h
     OrderMaker.h
     Packed.h
+    PackedRef.h
+    PackedRefPtr.h
     PackedIntVector.h
     PageAllocation.h
     PageBlock.h
@@ -264,6 +268,7 @@ set(WTF_PUBLIC_HEADERS
     ValueCheck.h
     Variant.h
     Vector.h
+    VectorHash.h
     VectorTraits.h
     WTFSemaphore.h
     WallTime.h
@@ -327,7 +332,6 @@ set(WTF_PUBLIC_HEADERS
     text/TextStream.h
     text/UTF8ConversionError.h
     text/UniquedStringImpl.h
-    text/ValueToString.h
     text/WTFString.h
 
     text/icu/TextBreakIteratorICU.h

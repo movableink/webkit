@@ -82,13 +82,14 @@ enum class StyleDifferenceContextSensitiveProperty {
 };
 
 // Static pseudo styles. Dynamic ones are produced on the fly.
-enum class PseudoId : uint8_t {
+enum class PseudoId : uint16_t {
     // The order must be None, public IDs, and then internal IDs.
     None,
 
     // Public:
     FirstLine,
     FirstLetter,
+    Highlight,
     Marker,
     Before,
     After,
@@ -871,7 +872,6 @@ enum class DisplayType : uint8_t {
     Inline,
     Block,
     ListItem,
-    Compact,
     InlineBlock,
     Table,
     InlineTable,

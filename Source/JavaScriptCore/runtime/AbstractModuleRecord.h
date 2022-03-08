@@ -37,10 +37,18 @@ class JSMap;
 
 // Based on the Source Text Module Record
 // http://www.ecma-international.org/ecma-262/6.0/#sec-source-text-module-records
-class AbstractModuleRecord : public JSDestructibleObject {
+class AbstractModuleRecord : public JSNonFinalObject {
     friend class LLIntOffsetsExtractor;
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
+
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess>
+    static void subspaceFor(VM&)
+    {
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 
     // https://tc39.github.io/ecma262/#sec-source-text-module-records
     struct ExportEntry {
@@ -127,7 +135,6 @@ protected:
     void finishCreation(JSGlobalObject*, VM&);
 
     static void visitChildren(JSCell*, SlotVisitor&);
-    static void destroy(JSCell*);
 
     WriteBarrier<JSModuleEnvironment> m_moduleEnvironment;
 

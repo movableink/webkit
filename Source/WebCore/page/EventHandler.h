@@ -180,9 +180,7 @@ public:
 #endif
 
     void scheduleHoverStateUpdate();
-#if ENABLE(CURSOR_SUPPORT)
     void scheduleCursorUpdate();
-#endif
 
     void setResizingFrameSet(HTMLFrameSetElement*);
 
@@ -365,9 +363,9 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void startSelectionAutoscroll(RenderObject* renderer, const FloatPoint& positionInWindow);
     WEBCORE_EXPORT void cancelSelectionAutoscroll();
-    IntPoint m_targetAutoscrollPositionInWindow;
-    bool m_isAutoscrolling { false };
 #endif
+
+    WEBCORE_EXPORT Optional<Cursor> selectCursor(const HitTestResult&, bool shiftKey);
 
 private:
 #if ENABLE(DRAG_SUPPORT)
@@ -399,14 +397,10 @@ private:
 
     bool internalKeyEvent(const PlatformKeyboardEvent&);
 
-    Optional<Cursor> selectCursor(const HitTestResult&, bool shiftKey);
     void updateCursor(FrameView&, const HitTestResult&, bool shiftKey);
 
     void hoverTimerFired();
-
-#if ENABLE(CURSOR_SUPPORT)
     void cursorUpdateTimerFired();
-#endif
 
     bool logicalScrollOverflow(ScrollLogicalDirection, ScrollGranularity, Node* startingNode = nullptr);
     
@@ -553,10 +547,7 @@ private:
 #endif
 
     Timer m_hoverTimer;
-
-#if ENABLE(CURSOR_SUPPORT)
     Timer m_cursorUpdateTimer;
-#endif
 
 #if PLATFORM(MAC)
     Timer m_pendingMomentumWheelEventsTimer;
@@ -658,6 +649,8 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     bool m_shouldAllowMouseDownToStartDrag { false };
+    IntPoint m_targetAutoscrollPositionInWindow;
+    bool m_isAutoscrolling { false };
 #endif
 
 #if ENABLE(CURSOR_VISIBILITY)

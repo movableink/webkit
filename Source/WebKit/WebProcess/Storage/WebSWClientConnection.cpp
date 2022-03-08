@@ -73,6 +73,7 @@ IPC::Connection* WebSWClientConnection::messageSenderConnection() const
 
 void WebSWClientConnection::scheduleJobInServer(const ServiceWorkerJobData& jobData)
 {
+    RELEASE_ASSERT(!jobData.scopeURL.isNull());
     runOrDelayTaskForImport([this, jobData] {
         send(Messages::WebSWServerConnection::ScheduleJobInServer { jobData });
     });
@@ -239,6 +240,11 @@ void WebSWClientConnection::clear()
 void WebSWClientConnection::syncTerminateWorker(ServiceWorkerIdentifier identifier)
 {
     sendSync(Messages::WebSWServerConnection::SyncTerminateWorkerFromClient { identifier }, Messages::WebSWServerConnection::SyncTerminateWorkerFromClient::Reply());
+}
+
+void WebSWClientConnection::isServiceWorkerRunning(ServiceWorkerIdentifier identifier, CompletionHandler<void(bool)>&& callback)
+{
+    sendWithAsyncReply(Messages::WebSWServerConnection::IsServiceWorkerRunning { identifier }, WTFMove(callback));
 }
 
 void WebSWClientConnection::updateThrottleState()

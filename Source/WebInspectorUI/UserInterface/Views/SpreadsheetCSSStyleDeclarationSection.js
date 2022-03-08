@@ -558,6 +558,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
                 WI.showSourceCodeLocation(this._style.ownerRule.sourceCodeLocation, {
                     ignoreNetworkTab: true,
                     ignoreSearchTab: true,
+                    initiatorHint: WI.TabBrowser.TabNavigationInitiator.ContextMenu,
                 });
             });
         }
@@ -636,7 +637,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
         let node = this._style.node;
 
         if (!this._style.ownerRule) {
-            WI.domManager.highlightDOMNode(node.id);
+            node.highlight();
             return;
         }
 

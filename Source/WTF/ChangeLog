@@ -1,3 +1,472 @@
+2019-12-20  Darin Adler  <darin@apple.com>
+
+        Tidy a bit of StringBuilder usage
+        https://bugs.webkit.org/show_bug.cgi?id=205509
+
+        Reviewed by Sam Weinig.
+
+        * wtf/FileSystem.cpp:
+        (WTF::FileSystemImpl::decodeFromFilename): Fix misleading variable name "hexDigit"
+        for result of decoding "%+XXXX"; what's decoded is a character, not a hex digit.
+
+        * wtf/HexNumber.h: Remove unused appendUnsignedAsHexFixedSize function for
+        destinations other than StringBuilder. Don't need it at this time, could add
+        it later if we ever decide we do.
+
+        * wtf/text/StringBuilder.h:
+        (WTF::StringBuilder::appendSubstring): Improved logic in appendSubstring so it
+        will handle even absurd values for offset and length correctly, and added a
+        default length of "infinity" just like in String::substring.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::convertToLowercaseWithoutLocale): Use isASCII.
+        (WTF::StringImpl::convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit): Ditto.
+
+        * wtf/text/WTFString.cpp:
+        (asciiDebug): Use StringBuilder to build the string; this was the one place that
+        used appendUnsignedAsHexFixedSize on something else, and there is no need.
+
+2019-12-30  youenn fablet  <youenn@apple.com>
+
+        Ignore URL host for schemes that are not using host information
+        https://bugs.webkit.org/show_bug.cgi?id=205157
+        <rdar://problem/57825963>
+
+        Reviewed by Darin Adler.
+
+        * wtf/URL.cpp:
+        (WTF::URL::removeHostAndPort):
+        * wtf/URL.h:
+
+2019-12-25  Dean Jackson  <dino@apple.com>
+
+        [WebGL] Enable ANGLE by default for Cocoa platforms (except simulator)
+        https://bugs.webkit.org/show_bug.cgi?id=205483
+        rdar://56925821
+
+        Reviewed by Simon Fraser.
+
+        Turn USE_ANGLE on for Cocoa, with the exception of the simulator.
+
+        * wtf/Platform.h:
+
+2019-12-24  Eric Carlson  <eric.carlson@apple.com>
+
+        [Media in GPU process] Enable media player proxy logging
+        https://bugs.webkit.org/show_bug.cgi?id=205557
+        <rdar://problem/58160932>
+
+        Reviewed by Youenn Fablet.
+
+        * wtf/Logger.h:
+        (WTF::Logger::willLog const): Minor optimization: don't check m_enabled unnecessarily.
+
+2019-12-23  Keith Miller  <keith_miller@apple.com>
+
+        DFG/FTL should be able to exit to the middle of a bytecode
+        https://bugs.webkit.org/show_bug.cgi?id=205232
+
+        Reviewed by Saam Barati.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/Bitmap.h:
+        (WTF::WordType>::invert):
+        (WTF::WordType>::operator):
+        (WTF::WordType>::operator const const):
+        * wtf/CMakeLists.txt:
+        * wtf/EnumClassOperatorOverloads.h: Added.
+        * wtf/FastBitVector.h:
+        (WTF::FastBitReference::operator bool const):
+        (WTF::FastBitReference::operator|=):
+        (WTF::FastBitReference::operator&=):
+        (WTF::FastBitVector::fill):
+        (WTF::FastBitVector::grow):
+        * wtf/UnalignedAccess.h:
+        (WTF::unalignedLoad):
+        (WTF::unalignedStore):
+
+2019-12-21  Antti Koivisto  <antti@apple.com>
+
+        Move Vector HashTraits to HashTraits.h to fix GCC build
+        https://bugs.webkit.org/show_bug.cgi?id=205540
+
+        Reviewed by Zalan Bujtas.
+
+        GCC is stricter than LLVM with partial specializations
+
+        Error: partial specialization of struct WTF::HashTraits<WTF::Vector<U, otherCapacity, WTF::CrashOnOverflow, 16> >
+        after instantiation of struct WTF::HashTraits<WTF::Vector<WTF::String> >
+
+        * wtf/HashTraits.h:
+        * wtf/VectorHash.h:
+
+2019-12-20  Truitt Savell  <tsavell@apple.com>
+
+        Unreviewed, rolling out r253820.
+
+        Broke Mac testing
+
+        Reverted changeset:
+
+        "Invalidate only affected elements after media query
+        evaluation changes"
+        https://bugs.webkit.org/show_bug.cgi?id=205392
+        https://trac.webkit.org/changeset/253820
+
+2019-12-20  Antti Koivisto  <antti@apple.com>
+
+        Invalidate only affected elements after media query evaluation changes
+        https://bugs.webkit.org/show_bug.cgi?id=205392
+
+        Reviewed by Zalan Bujtas.
+
+        Fix GCC build error
+
+        Error: partial specialization of ‘struct WTF::HashTraits<WTF::Vector<U, otherCapacity, WTF::CrashOnOverflow, 16> >’
+               after instantiation of ‘struct WTF::HashTraits<WTF::Vector<WTF::String> >’
+
+        * wtf/HashTraits.h:
+        * wtf/VectorHash.h:
+
+        Move to HashTraits to HashTraits.h so it gets specialized before any instantiation.
+
+2019-12-19  Antti Koivisto  <antti@apple.com>
+
+        Allow Vectors as hash keys
+        https://bugs.webkit.org/show_bug.cgi?id=205449
+
+        Reviewed by Geoff Garen.
+
+        Add traits to allow Vectors of hashable types to act as hash keys.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/Vector.h:
+        (WTF::Vector::Vector):
+        (WTF::Vector::~Vector):
+        (WTF::Vector::isHashTableDeletedValue const):
+
+        Use m_size = numeric_limits::max() as the deleted value.
+
+        * wtf/VectorHash.h: Added.
+        (WTF::VectorHash::hash):
+        (WTF::VectorHash::equal):
+
+        Add traits. Empty Vector is the empty value.
+
+2019-12-19  Jer Noble  <jer.noble@apple.com>
+
+        Safely iterate observers in languageDidChange()
+        https://bugs.webkit.org/show_bug.cgi?id=205452
+        <rdar://problem/57937765>
+
+        Reviewed by Eric Carlson.
+
+        Use the "copyToVector() then verify each item is still in the original
+        map" pattern to safely iterate over the observerMap().
+
+        * wtf/Language.cpp:
+        (WTF::languageDidChange):
+
+2019-12-18  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Unreviewed, build fix after r253730
+        https://bugs.webkit.org/show_bug.cgi?id=204398
+
+        Thread::destructTLS is always required in POSIX environments
+
+        * wtf/Threading.h:
+
+2019-12-18  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Win] Use thread_local to hold Ref<WTF::Thread> in the thread rather than using FLS
+        https://bugs.webkit.org/show_bug.cgi?id=204398
+
+        Reviewed by Yusuke Suzuki.
+
+        Use thread_local which is faster than FLS.
+
+        * wtf/Threading.cpp:
+        (WTF::initializeThreading):
+        * wtf/Threading.h:
+        (WTF::Thread::current):
+        * wtf/ThreadingPrimitives.h: Deleted threadSpecificKeyCreate and
+        related functions which aren't used now in Windows port. Deleted
+        THREAD_SPECIFIC_CALL macro which isn't used now.
+        * wtf/win/ThreadingWin.cpp: Added a thread_local variable s_threadHolder.
+        (WTF::Thread::ThreadHolder::~ThreadHolder): Added.
+        (WTF::Thread::currentMayBeNull):
+        (WTF::Thread::initializeTLS): Store a reference of Thread into s_threadHolder.
+        (WTF::Thread::initializeTLSKey): Deleted.
+        (WTF::Thread::destructTLS): Deleted.
+
+2019-12-18  Ben Nham  <nham@apple.com>
+
+        Add network loading signposts
+        https://bugs.webkit.org/show_bug.cgi?id=204822
+        <rdar://problem/57608824>
+
+        Reviewed by Alex Christensen.
+
+        This adds os_signposts related to network loads to aid in debugging networking performance
+        issues. Since URLs are logged in the signposts, this capability is only enabled on Apple
+        internal builds when an environment variable is set.
+
+        * wtf/Platform.h:
+        Add HAVE_OS_SIGNPOST.
+
+2019-12-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [iOS] Update to use CTFontCreateForCharactersWithLanguageAndOption()
+        https://bugs.webkit.org/show_bug.cgi?id=205310
+
+        Reviewed by Simon Fraser.
+
+        All our bots are on the appropriate OS version.
+
+        * wtf/Platform.h:
+
+2019-12-17  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] 8Bit JSRopeString can contain 16Bit string in its rope
+        https://bugs.webkit.org/show_bug.cgi?id=205323
+
+        Reviewed by Mark Lam.
+
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::copyCharacters):
+
+2019-12-17  Tim Horton  <timothy_horton@apple.com>
+
+        macCatalyst: Cursor should update on mouse movement and style change
+        https://bugs.webkit.org/show_bug.cgi?id=205317
+        <rdar://problem/46793696>
+
+        Reviewed by Anders Carlsson.
+
+        * wtf/FeatureDefines.h:
+        Make ENABLE_CURSOR_SUPPORT true on iOS, for macCatalyst. This results
+        in it being true everywhere, so remove it.
+
+        Add a new ENABLE_CUSTOM_CURSOR_SUPPORT, indicating whether we support
+        custom bitmap cursors. It covers the subset of ENABLE_CURSOR_SUPPORT
+        code that we still don't support in macCatalyst.
+
+        * wtf/Platform.h:
+        Add HAVE_HISERVICES (true on macOS but not macCatalyst) and
+        HAVE_NSCURSOR (true on macOS and macCatalyst but not e.g. iOS).
+
+2019-12-16  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Remove ArrayBufferNeuteringWatchpointSet
+        https://bugs.webkit.org/show_bug.cgi?id=205194
+
+        Reviewed by Saam Barati.
+
+        This patch adds PackedRef and PackedRefPtr. They are Ref and RefPtr, but its internal pointer is packed.
+        So we can represent them in 6 bytes with 1 byte alignment.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CMakeLists.txt:
+        * wtf/Packed.h:
+        (WTF::alignof):
+        * wtf/PackedRef.h: Copied from Source/JavaScriptCore/runtime/ArrayBufferNeuteringWatchpointSet.h.
+        * wtf/PackedRefPtr.h: Renamed from Source/JavaScriptCore/runtime/ArrayBufferNeuteringWatchpointSet.h.
+        * wtf/RefPtr.h:
+        (WTF::RefPtr::operator UnspecifiedBoolType const):
+        (WTF::RefPtr::unspecifiedBoolTypeInstance const):
+
+2019-12-13  Saam Barati  <sbarati@apple.com>
+
+        Add a Heap::finalize function that takes WTF::Function<void()>
+        https://bugs.webkit.org/show_bug.cgi?id=205211
+
+        Reviewed by Geoffrey Garen.
+
+        * wtf/Function.h:
+        (WTF::Function<Out):
+
+2019-12-13  Per Arne Vollan  <pvollan@apple.com>
+
+        [iOS] Deny mach lookup access to "*.apple-extension-service" in the WebContent process
+        https://bugs.webkit.org/show_bug.cgi?id=205134
+        <rdar://problem/56984257>
+
+        Reviewed by Brent Fulgham.
+
+        Add enum value for the XPC service name filter type.
+
+        * wtf/spi/darwin/SandboxSPI.h:
+
+2019-12-09  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [MSVC] writeNumberToBufferUnsigned is unsafe for bool type
+        https://bugs.webkit.org/show_bug.cgi?id=204873
+
+        Reviewed by Darin Adler.
+
+        MSVC reports warning for using / operator for bool type.
+        > warning C4804: '/': unsafe use of type 'bool' in operation
+
+        And, 'bool' isn't expected to be serialized as '0' or '1'. 'bool' isn't supported.
+
+        * wtf/text/IntegerToStringConversion.h: Added a static_assert to ensure UnsignedIntegerType isn't bool.
+
+2019-07-13  Darin Adler  <darin@apple.com>
+
+        Streamline PODIntervalTree code and remove ValueToString
+        https://bugs.webkit.org/show_bug.cgi?id=199782
+
+        Reviewed by Anders Carlsson.
+
+        * WTF.xcodeproj/project.pbxproj: Remove ValueToString.h.
+        * wtf/CMakeLists.txt: Ditto.
+
+        * wtf/MediaTime.cpp:
+        (WTF::operator<<): Implement debug-only TextStream serialization
+        based on toJSONString.
+        * wtf/MediaTime.h: Ditto.
+
+        * wtf/text/ValueToString.h: Removed.
+
+2019-12-06  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK][WPE] Use bmalloc's memory footprint API for JSC heap growth management
+        https://bugs.webkit.org/show_bug.cgi?id=204576
+
+        Reviewed by Saam Barati.
+
+        Add the new USE_BMALLOC_MEMORY_FOOTPRINT_API, enabled for the iOS-family
+        ports and the Linux ports, as long as system malloc enforcement is
+        disabled and bmalloc is subsequently built and used. The flag is used in
+        JavaScriptCore to enable usage of bmalloc's memory footprint API for
+        JSC heap growth control.
+
+        * wtf/Platform.h:
+
+2019-12-05  Chris Dumez  <cdumez@apple.com>
+
+        [IPC] Fail ObjectIdentifier decoding if the decoded integer is not a valid ID
+        https://bugs.webkit.org/show_bug.cgi?id=204921
+        <rdar://problem/57677747>
+
+        Reviewed by Ryosuke Niwa.
+
+        * wtf/ObjectIdentifier.h:
+        (WTF::ObjectIdentifier::decode):
+
+2019-12-03  Sunny He  <sunny_he@apple.com>
+
+        Enable security assertions on all ASAN builds
+        https://bugs.webkit.org/show_bug.cgi?id=204802
+
+        Reviewed by Ryosuke Niwa.
+
+        * wtf/FeatureDefines.h:
+
+2019-12-03  Christopher Reid  <chris.reid@sony.com>
+
+        Regular expression hangs in Safari only
+        https://bugs.webkit.org/show_bug.cgi?id=202882
+        <rdar://problem/56236654>
+
+        Reviewed by Yusuke Suzuki.
+
+        BumpPointerPool::ensureCapacityCrossPool can cause an infinite loop
+        if multiple large pools are deallocated and a new capacity does not
+        fit in the deallocated pools. BumpPointerPool should try using
+        more pools if the next one isn't large enough.
+
+        * wtf/BumpPointerAllocator.h:
+        (WTF::BumpPointerPool::ensureCapacityCrossPool):
+
+2019-11-28  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Remove ENABLE_KEYBOARD_CODE_ATTRIBUTE and ENABLE_KEYBOARD_KEY_ATTRIBUTE macros
+        https://bugs.webkit.org/show_bug.cgi?id=204666
+
+        Reviewed by Ross Kirsling and Don Olmstead.
+
+        * wtf/FeatureDefines.h:
+
+2019-11-25  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Win] Update KeyboardEvent as per the latest specification
+        https://bugs.webkit.org/show_bug.cgi?id=202183
+
+        Reviewed by Ross Kirsling.
+
+        * wtf/FeatureDefines.h:
+
+2019-11-25  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Add DefaultHash<OptionSet<T>> and HashTrait<OptionSet<T>> specializations
+        https://bugs.webkit.org/show_bug.cgi?id=204562
+
+        Reviewed by Daniel Bates.
+
+        * WTF.xcodeproj/project.pbxproj: Added OptionSetHash.h
+        * wtf/CMakeLists.txt: Ditto.
+        * wtf/OptionSet.h: Made StorageType public, and use C++14 types.
+        * wtf/OptionSetHash.h: Added.
+        (WTF::DefaultHash<OptionSet<T>>::Hash::hash):
+        (WTF::DefaultHash<OptionSet<T>>::Hash::equal):
+        (WTF::HashTraits<OptionSet<T>>::emptyValue):
+        (WTF::HashTraits<OptionSet<T>>::constructDeletedValue):
+        (WTF::HashTraits<OptionSet<T>>::isDeletedValue):
+
+2019-11-25  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        REGRESSION(r252770): [GTK][WPE] Remote inspector no longer works if debugger is in a different kind of system
+        https://bugs.webkit.org/show_bug.cgi?id=204572
+
+        Reviewed by Žan Doberšek.
+
+        This patch adds the following changes:
+
+         - Use uint32_t instead of size_t to store the body size in the message header, because size_t has a different
+           size in 32 and 64 bit platforms.
+         - Use htonl/ntohl to write/read the body size in the header.
+         - Add a flags byte to the header to include the message byte order. The sender always uses the host byter order
+           and the receiver does the byte swapping if needed.
+
+        * wtf/glib/SocketConnection.cpp:
+        (WTF::messageIsByteSwapped):
+        (WTF::SocketConnection::readMessage):
+        (WTF::SocketConnection::sendMessage):
+
+2019-11-25  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        REGRESSION(r252770): [GTK][WPE] Remote inspector broken in debug builds after r252770
+        https://bugs.webkit.org/show_bug.cgi?id=204569
+
+        Reviewed by Žan Doberšek.
+
+        We need to call relaxAdoptionRequirement() in SocketConnection constructor because we are taking a reference for
+        the read monitor lambda.
+
+        * wtf/glib/SocketConnection.cpp:
+        (WTF::SocketConnection::SocketConnection):
+
+2019-11-25  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Ran sort-Xcode-project-file.
+
+        Unreviewed.
+
+        * WTF.xcodeproj/project.pbxproj:
+
+2019-11-23  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Try to fix the GTK WebDriver tests in the bots after r252770
+
+        They are failing in the bots because g_variant_new_from_data() is failing due to the given data not being
+        properly aligned for the type being loaded. This is not a problem since GLib 2.60 that checks the alignment and
+        reallocates the buffer in aligned memory only if needed. For previous versions we need to ensure the memory we
+        pass to g_variant_new_from_data() is aligned.
+
+        * wtf/glib/SocketConnection.cpp:
+        (WTF::SocketConnection::readMessage):
+
 2019-11-22  Brent Fulgham  <bfulgham@apple.com>
 
         Unreviewed FTW build fix after r252687.

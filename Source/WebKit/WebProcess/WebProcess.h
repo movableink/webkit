@@ -107,7 +107,9 @@ namespace WebKit {
 
 class EventDispatcher;
 class GamepadData;
+class GPUProcessConnection;
 class InjectedBundle;
+class LibWebRTCCodecs;
 class LibWebRTCNetwork;
 class NetworkProcessConnection;
 class ObjCObjectGraph;
@@ -212,6 +214,17 @@ public:
     void networkProcessConnectionClosed(NetworkProcessConnection*);
     NetworkProcessConnection* existingNetworkProcessConnection() { return m_networkProcessConnection.get(); }
     WebLoaderStrategy& webLoaderStrategy();
+
+#if ENABLE(GPU_PROCESS)
+    GPUProcessConnection& ensureGPUProcessConnection();
+    void gpuProcessConnectionClosed(GPUProcessConnection*);
+    GPUProcessConnection* existingGPUProcessConnection() { return m_gpuProcessConnection.get(); }
+
+#if PLATFORM(COCOA) && USE(LIBWEBRTC)
+    LibWebRTCCodecs& libWebRTCCodecs();
+#endif
+
+#endif // ENABLE(GPU_PROCESS)
 
     LibWebRTCNetwork& libWebRTCNetwork();
 
@@ -513,6 +526,13 @@ private:
     String m_uiProcessBundleIdentifier;
     RefPtr<NetworkProcessConnection> m_networkProcessConnection;
     WebLoaderStrategy& m_webLoaderStrategy;
+
+#if ENABLE(GPU_PROCESS)
+    RefPtr<GPUProcessConnection> m_gpuProcessConnection;
+#if PLATFORM(COCOA) && USE(LIBWEBRTC)
+    std::unique_ptr<LibWebRTCCodecs> m_libWebRTCCodecs;
+#endif
+#endif
 
     Ref<WebCacheStorageProvider> m_cacheStorageProvider;
     WebSocketChannelManager m_webSocketChannelManager;

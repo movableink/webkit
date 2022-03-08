@@ -35,6 +35,7 @@
 #import "PluginProcessManager.h"
 #import "SandboxUtilities.h"
 #import "TextChecker.h"
+#import "UserInterfaceIdiom.h"
 #import "VersionChecks.h"
 #import "WKBrowsingContextControllerInternal.h"
 #import "WebBackForwardCache.h"
@@ -66,6 +67,24 @@
 #else
 #import "AccessibilitySupportSPI.h"
 #import "UIKitSPI.h"
+#import <pal/ios/ManagedConfigurationSoftLink.h>
+#import <pal/spi/ios/ManagedConfigurationSPI.h>
+#endif
+
+#if PLATFORM(IOS)
+#import <pal/spi/cocoa/WebFilterEvaluatorSPI.h>
+#import <pal/spi/ios/MobileGestaltSPI.h>
+#import <sys/utsname.h>
+
+SOFT_LINK_PRIVATE_FRAMEWORK(WebContentAnalysis);
+SOFT_LINK_CLASS(WebContentAnalysis, WebFilterEvaluator);
+#endif
+
+#if PLATFORM(COCOA)
+#import <pal/spi/cocoa/NEFilterSourceSPI.h>
+
+SOFT_LINK_FRAMEWORK_OPTIONAL(NetworkExtension);
+SOFT_LINK_CLASS_OPTIONAL(NetworkExtension, NEFilterSource);
 #endif
 
 NSString *WebServiceWorkerRegistrationDirectoryDefaultsKey = @"WebServiceWorkerRegistrationDirectory";
@@ -167,6 +186,31 @@ void WebProcessPool::platformResolvePathsForSandboxExtensions()
 #endif
 }
 
+#if PLATFORM(IOS)
+static bool deviceHasAGXCompilerService()
+{
+    static bool deviceHasAGXCompilerService = false;
+    static std::once_flag flag;
+    std::call_once(
+        flag,
+        [] () {
+            struct utsname systemInfo;
+            if (uname(&systemInfo))
+                return;
+            const char* machine = systemInfo.machine;
+            if (!strcmp(machine, "iPad5,1") || !strcmp(machine, "iPad5,2") || !strcmp(machine, "iPad5,3") || !strcmp(machine, "iPad5,4"))
+                deviceHasAGXCompilerService = true;
+        });
+    return deviceHasAGXCompilerService;
+}
+
+static bool isInternalInstall()
+{
+    static bool isInternal = MGGetBoolAnswer(kMGQAppleInternalInstallCapability);
+    return isInternal;
+}
+#endif
+
 void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process, WebProcessCreationParameters& parameters)
 {
     parameters.mediaMIMETypes = process.mediaMIMETypes();
@@ -264,6 +308,42 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     parameters.screenProperties = WTFMove(screenProperties);
     parameters.useOverlayScrollbars = ([NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay);
 #endif
+    
+#if PLATFORM(IOS)
+    if (deviceHasAGXCompilerService()) {
+        SandboxExtension::Handle compilerServiceExtensionHandle;
+        SandboxExtension::createHandleForMachLookup("com.apple.AGXCompilerService", WTF::nullopt, compilerServiceExtensionHandle);
+        parameters.compilerServiceExtensionHandle = WTFMove(compilerServiceExtensionHandle);
+    }
+    
+    if (isInternalInstall()) {
+        SandboxExtension::Handle diagnosticsExtensionHandle;
+        SandboxExtension::createHandleForMachLookup("com.apple.diagnosticd", WTF::nullopt, diagnosticsExtensionHandle);
+        parameters.diagnosticsExtensionHandle = WTFMove(diagnosticsExtensionHandle);
+    }
+#endif
+    
+#if PLATFORM(COCOA)
+    if ([getNEFilterSourceClass() filterRequired]) {
+        SandboxExtension::Handle handle;
+        SandboxExtension::createHandleForMachLookup("com.apple.nehelper", WTF::nullopt, handle);
+        parameters.neHelperExtensionHandle = WTFMove(handle);
+        SandboxExtension::createHandleForMachLookup("com.apple.nesessionmanager.content-filter", WTF::nullopt, handle);
+        parameters.neSessionManagerExtensionHandle = WTFMove(handle);
+    }
+#endif
+    
+#if PLATFORM(IOS)
+    if ([getWebFilterEvaluatorClass() isManagedSession]) {
+        SandboxExtension::Handle handle;
+        SandboxExtension::createHandleForMachLookup("com.apple.uikit.viewservice.com.apple.WebContentFilter.remoteUI", WTF::nullopt, handle);
+        parameters.contentFilterExtensionHandle = WTFMove(handle);
+    }
+#endif
+    
+#if PLATFORM(IOS_FAMILY)
+    parameters.currentUserInterfaceIdiomIsPad = currentUserInterfaceIdiomIsPad();
+#endif
 }
 
 void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationParameters& parameters)
@@ -286,9 +366,16 @@ void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationPara
         }
     }
 
-    parameters.enableLegacyTLS = true;
+    parameters.enableLegacyTLS = false;
     if (id value = [defaults objectForKey:@"WebKitEnableLegacyTLS"])
         parameters.enableLegacyTLS = [value boolValue];
+    if (!parameters.enableLegacyTLS) {
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+        parameters.enableLegacyTLS = [[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitTLS"] == MCRestrictedBoolExplicitYes;
+#elif PLATFORM(MAC)
+        parameters.enableLegacyTLS = CFPreferencesGetAppBooleanValue(CFSTR("allowDeprecatedWebKitTLS"), CFSTR("com.apple.applicationaccess"), nullptr);
+#endif
+    }
     parameters.defaultDataStoreParameters.networkSessionParameters.enableLegacyTLS = parameters.enableLegacyTLS;
 
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());

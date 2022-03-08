@@ -270,12 +270,13 @@ void RenderLayerBacking::willDestroyLayer(const GraphicsLayer* layer)
         compositor().layerTiledBackingUsageChanged(layer, false);
 }
 
-static void clearBackingSharingLayerProviders(Vector<WeakPtr<RenderLayer>>& sharingLayers)
+static void clearBackingSharingLayerProviders(Vector<WeakPtr<RenderLayer>>& sharingLayers, const RenderLayer& providerLayer)
 {
     for (auto& layerWeakPtr : sharingLayers) {
         if (!layerWeakPtr)
             continue;
-        layerWeakPtr->setBackingProviderLayer(nullptr);
+        if (layerWeakPtr->backingProviderLayer() == &providerLayer)
+            layerWeakPtr->setBackingProviderLayer(nullptr);
     }
 }
 
@@ -292,7 +293,7 @@ void RenderLayerBacking::setBackingSharingLayers(Vector<WeakPtr<RenderLayer>>&& 
         }
     }
 
-    clearBackingSharingLayerProviders(m_backingSharingLayers);
+    clearBackingSharingLayerProviders(m_backingSharingLayers, m_owningLayer);
 
     if (sharingLayers != m_backingSharingLayers) {
         if (sharingLayers.size())
@@ -323,7 +324,7 @@ void RenderLayerBacking::removeBackingSharingLayer(RenderLayer& layer)
 
 void RenderLayerBacking::clearBackingSharingLayers()
 {
-    clearBackingSharingLayerProviders(m_backingSharingLayers);
+    clearBackingSharingLayerProviders(m_backingSharingLayers, m_owningLayer);
     m_backingSharingLayers.clear();
 }
 
@@ -2287,7 +2288,7 @@ static bool supportsDirectlyCompositedBoxDecorations(const RenderLayerModelObjec
         return false;
 
     // FIXME: we should be able to allow backgroundComposite; However since this is not a common use case it has been deferred for now.
-    if (style.backgroundComposite() != CompositeSourceOver)
+    if (style.backgroundComposite() != CompositeOperator::SourceOver)
         return false;
 
     return true;
@@ -2935,7 +2936,7 @@ static RefPtr<Pattern> patternForTouchAction(TouchAction touchAction, FloatSize 
 
     const FloatSize tileSize { 32, 18 };
 
-    auto imageBuffer = ImageBuffer::createCompatibleBuffer(tileSize, ColorSpaceSRGB, destContext);
+    auto imageBuffer = ImageBuffer::createCompatibleBuffer(tileSize, ColorSpace::SRGB, destContext);
     if (!imageBuffer)
         return nullptr;
 

@@ -126,6 +126,7 @@
 #include "JSWeakSet.h"
 #include "JSWebAssembly.h"
 #include "JSWebAssemblyCompileError.h"
+#include "JSWebAssemblyGlobal.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyLinkError.h"
 #include "JSWebAssemblyMemory.h"
@@ -189,6 +190,8 @@
 #include "WebAssemblyCompileErrorConstructor.h"
 #include "WebAssemblyCompileErrorPrototype.h"
 #include "WebAssemblyFunction.h"
+#include "WebAssemblyGlobalConstructor.h"
+#include "WebAssemblyGlobalPrototype.h"
 #include "WebAssemblyInstanceConstructor.h"
 #include "WebAssemblyInstancePrototype.h"
 #include "WebAssemblyLinkErrorConstructor.h"
@@ -202,7 +205,6 @@
 #include "WebAssemblyRuntimeErrorPrototype.h"
 #include "WebAssemblyTableConstructor.h"
 #include "WebAssemblyTablePrototype.h"
-#include "WebAssemblyToJSCallee.h"
 #include <wtf/RandomNumber.h>
 
 #if ENABLE(INTL)
@@ -283,16 +285,17 @@ static EncodedJSValue JSC_HOST_CALL makeBoundFunction(JSGlobalObject* globalObje
     ASSERT(lengthValue.isInt32AsAnyInt());
     int32_t length = lengthValue.asInt32AsAnyInt();
 
-    String name = nameString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs.isCell() ? jsCast<JSArray*>(boundArgs) : nullptr, length, WTFMove(name))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs.isCell() ? jsCast<JSImmutableButterfly*>(boundArgs) : nullptr, length, nameString)));
 }
 
 static EncodedJSValue JSC_HOST_CALL hasOwnLengthProperty(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     VM& vm = globalObject->vm();
+
     JSObject* target = asObject(callFrame->uncheckedArgument(0));
+    JSFunction* function = jsDynamicCast<JSFunction*>(vm, target);
+    if (function)
+        return JSValue::encode(jsBoolean(function->areNameAndLengthOriginal(vm)));
     return JSValue::encode(jsBoolean(target->hasOwnProperty(globalObject, vm.propertyNames->length)));
 }
 
@@ -668,7 +671,7 @@ void JSGlobalObject::init(VM& vm)
         });
     m_callbackObjectStructure.initLater(
         [] (const Initializer<Structure>& init) {
-            init.set(JSCallbackObject<JSDestructibleObject>::createStructure(init.vm, init.owner, init.owner->m_objectPrototype.get()));
+            init.set(JSCallbackObject<JSNonFinalObject>::createStructure(init.vm, init.owner, init.owner->m_objectPrototype.get()));
         });
 
 #if JSC_OBJC_API_ENABLED
@@ -1191,10 +1194,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         m_webAssemblyWrapperFunctionStructure.initLater(
             [] (const Initializer<Structure>& init) {
                 init.set(WebAssemblyWrapperFunction::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
-            });
-        m_webAssemblyToJSCalleeStructure.initLater(
-            [] (const Initializer<Structure>& init) {
-                init.set(WebAssemblyToJSCallee::createStructure(init.vm, init.owner, jsNull()));
             });
         auto* webAssembly = JSWebAssembly::create(vm, this, JSWebAssembly::createStructure(vm, this, m_objectPrototype.get()));
         putDirectWithoutTransition(vm, Identifier::fromString(vm, "WebAssembly"), webAssembly, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -1847,7 +1846,6 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     thisObject->m_webAssemblyFunctionStructure.visit(visitor);
     thisObject->m_jsToWasmICCalleeStructure.visit(visitor);
     thisObject->m_webAssemblyWrapperFunctionStructure.visit(visitor);
-    thisObject->m_webAssemblyToJSCalleeStructure.visit(visitor);
     FOR_EACH_WEBASSEMBLY_CONSTRUCTOR_TYPE(VISIT_LAZY_TYPE)
 #endif // ENABLE(WEBASSEMBLY)
 

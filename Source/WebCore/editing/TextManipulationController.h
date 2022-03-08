@@ -30,11 +30,14 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/Optional.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Document;
+class Element;
+class VisiblePosition;
 
 class TextManipulationController : public CanMakeWeakPtr<TextManipulationController> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -74,8 +77,15 @@ public:
             template<class Decoder> static Optional<AttributeRule> decode(Decoder&);
         };
 
+        struct ClassRule {
+            AtomString className;
+
+            template<class Encoder> void encode(Encoder&) const;
+            template<class Decoder> static Optional<ClassRule> decode(Decoder&);
+        };
+
         Type type;
-        WTF::Variant<ElementRule, AttributeRule> rule;
+        WTF::Variant<ElementRule, AttributeRule, ClassRule> rule;
 
         bool match(const Element&) const;
 
@@ -85,6 +95,8 @@ public:
 
     using ManipulationItemCallback = WTF::Function<void(Document&, ItemIdentifier, const Vector<ManipulationToken>&)>;
     WEBCORE_EXPORT void startObservingParagraphs(ManipulationItemCallback&&, Vector<ExclusionRule>&& = { });
+
+    void didCreateRendererForElement(Element&);
 
     enum class ManipulationResult : uint8_t {
         Success,
@@ -96,6 +108,9 @@ public:
     WEBCORE_EXPORT ManipulationResult completeManipulation(ItemIdentifier, const Vector<ManipulationToken>&);
 
 private:
+    void observeParagraphs(VisiblePosition& start, VisiblePosition& end);
+    void scheduleObservartionUpdate();
+
     struct ManipulationItem {
         Position start;
         Position end;
@@ -106,6 +121,7 @@ private:
     ManipulationResult replace(const ManipulationItem&, const Vector<ManipulationToken>&);
 
     WeakPtr<Document> m_document;
+    WeakHashSet<Element> m_mutatedElements;
     ManipulationItemCallback m_callback;
     Vector<ExclusionRule> m_exclusionRules;
     HashMap<ItemIdentifier, ManipulationItem> m_items;
@@ -177,6 +193,21 @@ Optional<TextManipulationController::ExclusionRule::AttributeRule> TextManipulat
     if (!decoder.decode(result.name))
         return WTF::nullopt;
     if (!decoder.decode(result.value))
+        return WTF::nullopt;
+    return result;
+}
+
+template<class Encoder>
+void TextManipulationController::ExclusionRule::ClassRule::encode(Encoder& encoder) const
+{
+    encoder << className;
+}
+
+template<class Decoder>
+Optional<TextManipulationController::ExclusionRule::ClassRule> TextManipulationController::ExclusionRule::ClassRule::decode(Decoder& decoder)
+{
+    ClassRule result;
+    if (!decoder.decode(result.className))
         return WTF::nullopt;
     return result;
 }

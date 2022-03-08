@@ -254,8 +254,6 @@ void IDBDatabase::didCloseFromServer(const IDBError& error)
     LOG(IndexedDB, "IDBDatabase::didCloseFromServer - %" PRIu64, m_databaseConnectionIdentifier);
 
     connectionToServerLost(error);
-
-    m_connectionProxy->confirmDidCloseFromServer(*this);
 }
 
 void IDBDatabase::connectionToServerLost(const IDBError& error)
@@ -278,13 +276,13 @@ void IDBDatabase::connectionToServerLost(const IDBError& error)
     auto errorEvent = Event::create(m_eventNames.errorEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
     errorEvent->setTarget(this);
 
-    if (auto* context = scriptExecutionContext())
+    if (scriptExecutionContext())
         queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(errorEvent));
 
     auto closeEvent = Event::create(m_eventNames.closeEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
     closeEvent->setTarget(this);
 
-    if (auto* context = scriptExecutionContext())
+    if (scriptExecutionContext())
         queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(closeEvent));
 }
 

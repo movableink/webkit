@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -613,52 +613,27 @@ void WebPage::generateSyntheticEditingCommand(SyntheticEditingCommandType comman
     switch (command) {
     case SyntheticEditingCommandType::Undo:
         keyEvent = PlatformKeyboardEvent(PlatformEvent::KeyDown, "z", "z",
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        "z",
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        "KeyZ"_s,
-#endif
+        "z", "KeyZ"_s,
         @"U+005A", 90, false, false, false, modifiers, WallTime::now());
         break;
     case SyntheticEditingCommandType::Redo:
         keyEvent = PlatformKeyboardEvent(PlatformEvent::KeyDown, "y", "y",
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        "y",
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        "KeyY"_s,
-#endif
+        "y", "KeyY"_s,
         @"U+0059", 89, false, false, false, modifiers, WallTime::now());
         break;
     case SyntheticEditingCommandType::ToggleBoldface:
         keyEvent = PlatformKeyboardEvent(PlatformEvent::KeyDown, "b", "b",
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        "b",
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        "KeyB"_s,
-#endif
+        "b", "KeyB"_s,
         @"U+0042", 66, false, false, false, modifiers, WallTime::now());
         break;
     case SyntheticEditingCommandType::ToggleItalic:
         keyEvent = PlatformKeyboardEvent(PlatformEvent::KeyDown, "i", "i",
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        "i",
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        "KeyI"_s,
-#endif
+        "i", "KeyI"_s,
         @"U+0049", 73, false, false, false, modifiers, WallTime::now());
         break;
     case SyntheticEditingCommandType::ToggleUnderline:
         keyEvent = PlatformKeyboardEvent(PlatformEvent::KeyDown, "u", "u",
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        "u",
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        "KeyU"_s,
-#endif
+        "u", "KeyU"_s,
         @"U+0055", 85, false, false, false, modifiers, WallTime::now());
         break;
     default:
@@ -2784,6 +2759,22 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
     info.adjustedPointForNodeRespondingToClickEvents = adjustedPoint;
     info.nodeAtPositionHasDoubleClickHandler = m_page->mainFrame().nodeRespondingToDoubleClickEvent(request.point, adjustedPoint);
 
+    auto& eventHandler = m_page->mainFrame().eventHandler();
+    HitTestResult hitTestResult = eventHandler.hitTestResultAtPoint(request.point, HitTestRequest::ReadOnly | HitTestRequest::AllowFrameScrollbars);
+    info.cursor = eventHandler.selectCursor(hitTestResult, false);
+    if (request.includeCaretContext) {
+        if (auto* frame = hitTestResult.innerNodeFrame()) {
+            if (auto* frameView = frame->view()) {
+                VisiblePosition position = frame->visiblePositionForPoint(request.point);
+                info.caretHeight = frameView->contentsToRootView(position.absoluteCaretBounds()).height();
+
+                VisiblePosition startPosition = startOfLine(position);
+                VisiblePosition endPosition = endOfLine(position);
+                info.lineCaretExtent = unionRect(frameView->contentsToRootView(startPosition.absoluteCaretBounds()), frameView->contentsToRootView(endPosition.absoluteCaretBounds()));
+            }
+        }
+    }
+
 #if ENABLE(DATA_INTERACTION)
     info.hasSelectionAtPosition = m_page->hasSelectionAtPosition(adjustedPoint);
 #endif
@@ -3731,8 +3722,8 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
         else
             frameView.setVisualViewportOverrideRect(WTF::nullopt);
 
-        LOG_WITH_STREAM(VisibleRects, stream << "WebPage::updateVisibleContentRects - setLayoutViewportOverrideRect " << visibleContentRectUpdateInfo.customFixedPositionRect());
-        frameView.setLayoutViewportOverrideRect(LayoutRect(visibleContentRectUpdateInfo.customFixedPositionRect()));
+        LOG_WITH_STREAM(VisibleRects, stream << "WebPage::updateVisibleContentRects - setLayoutViewportOverrideRect " << visibleContentRectUpdateInfo.layoutViewportRect());
+        frameView.setLayoutViewportOverrideRect(LayoutRect(visibleContentRectUpdateInfo.layoutViewportRect()));
         if (selectionIsInsideFixedPositionContainer(frame)) {
             // Ensure that the next layer tree commit contains up-to-date caret/selection rects.
             frameView.frame().selection().setCaretRectNeedsUpdate();
@@ -3756,7 +3747,7 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
             viewportStability = ViewportRectStability::Unstable;
             layerAction = ScrollingLayerPositionAction::SetApproximate;
         }
-        scrollingCoordinator->reconcileScrollingState(frameView, scrollPosition, visibleContentRectUpdateInfo.customFixedPositionRect(), ScrollType::User, viewportStability, layerAction);
+        scrollingCoordinator->reconcileScrollingState(frameView, scrollPosition, visibleContentRectUpdateInfo.layoutViewportRect(), ScrollType::User, viewportStability, layerAction);
     }
 }
 
@@ -3767,11 +3758,14 @@ void WebPage::willStartUserTriggeredZooming()
 }
 
 #if ENABLE(IOS_TOUCH_EVENTS)
-void WebPage::dispatchAsynchronousTouchEvents(const Vector<WebTouchEvent, 1>& queue)
+void WebPage::dispatchAsynchronousTouchEvents(const Vector<std::pair<WebTouchEvent, Optional<CallbackID>>, 1>& queue)
 {
-    bool ignored;
-    for (const WebTouchEvent& event : queue)
-        dispatchTouchEvent(event, ignored);
+    for (auto& eventAndCallbackID : queue) {
+        bool handled;
+        dispatchTouchEvent(eventAndCallbackID.first, handled);
+        if (eventAndCallbackID.second)
+            send(Messages::WebPageProxy::BoolCallback(handled, *eventAndCallbackID.second));
+    }
 }
 #endif
 
@@ -3889,25 +3883,33 @@ void WebPage::updateSelectionWithDelta(int64_t locationDelta, int64_t lengthDelt
     completionHandler();
 }
 
-static VisiblePosition moveByGranularityRespectingWordBoundary(Frame& frame, VisiblePosition& position, TextGranularity granularity, uint64_t granularityCount, SelectionDirection direction)
+static VisiblePosition moveByGranularityRespectingWordBoundary(const VisiblePosition& position, TextGranularity granularity, uint64_t granularityCount, SelectionDirection direction)
 {
+    ASSERT(granularityCount);
+    ASSERT(position.isNotNull());
     bool backwards = direction == DirectionBackward;
     auto farthestPositionInDirection = backwards ? startOfEditableContent(position) : endOfEditableContent(position);
     if (position == farthestPositionInDirection)
-        return { };
-
+        return backwards ? startOfWord(position) : endOfWord(position);
     VisiblePosition currentPosition = position;
     VisiblePosition nextPosition;
-    for (unsigned i = 0; i < granularityCount + 1; ++i) {
+    do {
         nextPosition = positionOfNextBoundaryOfGranularity(currentPosition, granularity, direction);
-        // FIXME (196127): We shouldn't need to do this, but have seen previousParagraphPosition go forwards.
-        if ((backwards && nextPosition > currentPosition) || (!backwards && nextPosition < currentPosition))
-            break;
         if (nextPosition.isNull())
             break;
         currentPosition = nextPosition;
+        if (atBoundaryOfGranularity(currentPosition, granularity, direction))
+            --granularityCount;
+    } while (granularityCount);
+    if (granularity == SentenceGranularity) {
+        ASSERT(atBoundaryOfGranularity(currentPosition, SentenceGranularity, direction));
+        return currentPosition;
     }
-
+    // Note that this rounds to the nearest word, which may cross a line boundary when using line granularity.
+    // For example, suppose the text is laid out as follows and the insertion point is at |:
+    //     |This is the first sen
+    //      tence in a paragraph.
+    // Then moving 1 line of granularity forward will return the postion after the 'e' in sentence.
     return backwards ? startOfWord(currentPosition) : endOfWord(currentPosition);
 }
 
@@ -4013,12 +4015,21 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest reques
 
     VisiblePosition contextBeforeStart;
     VisiblePosition contextAfterEnd;
+    auto compositionRange = frame->editor().compositionRange();
     if (request.granularityCount) {
-        contextBeforeStart = moveByGranularityRespectingWordBoundary(frame.get(), rangeOfInterestStart, request.surroundingGranularity, request.granularityCount, DirectionBackward);
-        contextAfterEnd = moveByGranularityRespectingWordBoundary(frame.get(), rangeOfInterestEnd, request.surroundingGranularity, request.granularityCount, DirectionForward);
+        contextBeforeStart = moveByGranularityRespectingWordBoundary(rangeOfInterestStart, request.surroundingGranularity, request.granularityCount, DirectionBackward);
+        contextAfterEnd = moveByGranularityRespectingWordBoundary(rangeOfInterestEnd, request.surroundingGranularity, request.granularityCount, DirectionForward);
     } else {
         contextBeforeStart = rangeOfInterestStart;
         contextAfterEnd = rangeOfInterestEnd;
+        if (wantsMarkedTextRects && compositionRange) {
+            // In the case where the client has requested marked text rects, additionally make sure that the
+            // context range encompasses the entire marked text range.
+            auto compositionStart = compositionRange->startPosition();
+            auto compositionEnd = compositionRange->endPosition();
+            contextBeforeStart = contextBeforeStart > compositionStart ? compositionStart : contextBeforeStart;
+            contextAfterEnd = contextAfterEnd < compositionEnd ? compositionEnd : contextAfterEnd;
+        }
     }
 
     auto makeString = [&](VisiblePosition& start, VisiblePosition& end) -> NSAttributedString * {
@@ -4031,17 +4042,11 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest reques
     context.contextBefore = makeString(contextBeforeStart, startOfRangeOfInterestInSelection);
     context.selectedText = makeString(startOfRangeOfInterestInSelection, endOfRangeOfInterestInSelection);
     context.contextAfter = makeString(endOfRangeOfInterestInSelection, contextAfterEnd);
-
-    auto compositionRange = frame->editor().compositionRange();
     if (compositionRange && rangesOverlap(rangeOfInterest.get(), compositionRange.get())) {
         VisiblePosition compositionStart(compositionRange->startPosition());
         VisiblePosition compositionEnd(compositionRange->endPosition());
-
-        VisiblePosition relevantCompositionStart = rangeOfInterestStart > compositionStart ? rangeOfInterestStart : compositionStart;
-        VisiblePosition relevantCompositionEnd = rangeOfInterestEnd < compositionEnd ? rangeOfInterestEnd : compositionEnd;
-
-        context.markedText = makeString(relevantCompositionStart, relevantCompositionEnd);
-        context.selectedRangeInMarkedText.location = distanceBetweenPositions(relevantCompositionStart, startOfRangeOfInterestInSelection);
+        context.markedText = makeString(compositionStart, compositionEnd);
+        context.selectedRangeInMarkedText.location = distanceBetweenPositions(startOfRangeOfInterestInSelection, compositionStart);
         context.selectedRangeInMarkedText.length = [context.selectedText.string length];
     }
 

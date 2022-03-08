@@ -35,8 +35,14 @@ class JSScope;
 
 class DebuggerScope final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.debuggerScopeSpace<mode>();
+    }
 
     JS_EXPORT_PRIVATE static DebuggerScope* create(VM& vm, JSScope* scope);
 
@@ -54,8 +60,7 @@ public:
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject) 
     {
         return Structure::create(vm, globalObject, jsNull(), TypeInfo(ObjectType, StructureFlags), info()); 
-    }
-
+    } 
     class iterator {
     public:
         iterator(DebuggerScope* node)

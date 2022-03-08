@@ -870,10 +870,10 @@ void AccessCase::generateWithGuard(
         jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
         fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(ScopedArgumentsType)));
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-        allocator.lock(valueRegs.payloadGPR());
-        allocator.lock(propertyGPR);
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
         allocator.lock(scratchGPR);
         
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
@@ -902,9 +902,16 @@ void AccessCase::generateWithGuard(
         jit.sub32(propertyGPR, scratch2GPR);
         jit.neg32(scratch2GPR);
         jit.loadPtr(CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfStorage()), scratch3GPR);
-        jit.loadValue(CCallHelpers::BaseIndex(scratch3GPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs::payloadOnly(scratchGPR));
+#if USE(JSVALUE64)
+        jit.loadValue(CCallHelpers::BaseIndex(scratch3GPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratchGPR));
         failAndIgnore.append(jit.branchIfEmpty(scratchGPR));
         jit.move(scratchGPR, valueRegs.payloadGPR());
+#else
+        jit.loadValue(CCallHelpers::BaseIndex(scratch3GPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratch2GPR, scratchGPR));
+        failAndIgnore.append(jit.branchIfEmpty(scratch2GPR));
+        jit.move(scratchGPR, valueRegs.payloadGPR());
+        jit.move(scratch2GPR, valueRegs.tagGPR());
+#endif
 
         done.link(&jit);
 
@@ -958,10 +965,10 @@ void AccessCase::generateWithGuard(
         jit.load32(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
         state.failAndRepatch.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratchGPR));
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-        allocator.lock(valueRegs.payloadGPR());
-        allocator.lock(propertyGPR);
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
         allocator.lock(scratchGPR);
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
 
@@ -1040,10 +1047,10 @@ void AccessCase::generateWithGuard(
 
         fallThrough.append(jit.branchIfNotString(baseGPR));
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-        allocator.lock(valueRegs.payloadGPR());
-        allocator.lock(propertyGPR);
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
         allocator.lock(scratchGPR);
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
 
@@ -1072,6 +1079,7 @@ void AccessCase::generateWithGuard(
         failAndIgnore.append(jit.branch32(CCallHelpers::Above, scratch2GPR, CCallHelpers::TrustedImm32(maxSingleCharacterString)));
         jit.move(CCallHelpers::TrustedImmPtr(vm.smallStrings.singleCharacterStrings()), scratchGPR);
         jit.loadPtr(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::ScalePtr, 0), valueRegs.payloadGPR());
+        jit.boxCell(valueRegs.payloadGPR(), valueRegs);
         allocator.restoreReusedRegistersByPopping(jit, preservedState);
         state.succeed();
 
@@ -1099,12 +1107,15 @@ void AccessCase::generateWithGuard(
         CCallHelpers::Jump isOutOfBounds;
         CCallHelpers::Jump isEmpty;
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-        allocator.lock(valueRegs.payloadGPR());
-        allocator.lock(propertyGPR);
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
         allocator.lock(scratchGPR);
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
+#if USE(JSVALUE32_64)
+        GPRReg scratch3GPR = allocator.allocateScratchGPR();
+#endif
         ScratchRegisterAllocator::PreservedState preservedState;
 
         CCallHelpers::JumpList failAndIgnore;
@@ -1122,9 +1133,16 @@ void AccessCase::generateWithGuard(
             isOutOfBounds = jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, CCallHelpers::Address(scratchGPR, ArrayStorage::vectorLengthOffset()));
 
             jit.zeroExtend32ToPtr(propertyGPR, scratch2GPR);
-            jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight, ArrayStorage::vectorOffset()), JSValueRegs::payloadOnly(scratchGPR));
+#if USE(JSVALUE64)
+            jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight, ArrayStorage::vectorOffset()), JSValueRegs(scratchGPR));
             isEmpty = jit.branchIfEmpty(scratchGPR);
             jit.move(scratchGPR, valueRegs.payloadGPR());
+#else
+            jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight, ArrayStorage::vectorOffset()), JSValueRegs(scratch3GPR, scratchGPR));
+            isEmpty = jit.branchIfEmpty(scratch3GPR);
+            jit.move(scratchGPR, valueRegs.payloadGPR());
+            jit.move(scratch3GPR, valueRegs.tagGPR());
+#endif
         } else {
             IndexingType expectedShape;
             switch (m_type) {
@@ -1155,9 +1173,16 @@ void AccessCase::generateWithGuard(
                 isEmpty = jit.branchIfNaN(state.scratchFPR);
                 jit.boxDouble(state.scratchFPR, valueRegs);
             } else {
-                jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs::payloadOnly(scratchGPR));
+#if USE(JSVALUE64)
+                jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratchGPR));
                 isEmpty = jit.branchIfEmpty(scratchGPR);
                 jit.move(scratchGPR, valueRegs.payloadGPR());
+#else
+                jit.loadValue(CCallHelpers::BaseIndex(scratchGPR, scratch2GPR, CCallHelpers::TimesEight), JSValueRegs(scratch3GPR, scratchGPR));
+                isEmpty = jit.branchIfEmpty(scratch3GPR);
+                jit.move(scratchGPR, valueRegs.payloadGPR());
+                jit.move(scratch3GPR, valueRegs.tagGPR());
+#endif
             }
         }
 
@@ -1193,10 +1218,10 @@ void AccessCase::generateWithGuard(
         
         GPRReg valueGPR = valueRegs.payloadGPR();
         
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-        allocator.lock(valueGPR);
-        allocator.lock(prototypeGPR);
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(stubInfo.propertyRegs());
         allocator.lock(scratchGPR);
         
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
@@ -1483,7 +1508,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
         jit.store32(
             CCallHelpers::TrustedImm32(state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-            CCallHelpers::tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+            CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
 
         if (m_type == Getter || m_type == Setter) {
             auto& access = this->as<GetterSetterAccessCase>();
@@ -1507,7 +1532,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             state.setSpillStateForJSGetterSetter(spillState);
 
             RELEASE_ASSERT(!access.callLinkInfo());
-            access.m_callLinkInfo = makeUnique<CallLinkInfo>();
+            CallLinkInfo* callLinkInfo = state.m_callLinkInfos.add();
+            access.m_callLinkInfo = callLinkInfo;
 
             // FIXME: If we generated a polymorphic call stub that jumped back to the getter
             // stub, which then jumped back to the main code, then we'd have a reachability
@@ -1517,10 +1543,9 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             // be GC objects, and then we'd be able to say that the polymorphic call stub has a
             // reference to the getter stub.
             // https://bugs.webkit.org/show_bug.cgi?id=148914
-            access.callLinkInfo()->disallowStubs();
+            callLinkInfo->disallowStubs();
 
-            access.callLinkInfo()->setUpCall(
-                CallLinkInfo::Call, stubInfo.codeOrigin, loadedValueGPR);
+            callLinkInfo->setUpCall(CallLinkInfo::Call, stubInfo.codeOrigin, loadedValueGPR);
 
             CCallHelpers::JumpList done;
 
@@ -1560,7 +1585,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
             jit.store32(
                 CCallHelpers::TrustedImm32(numberOfParameters),
-                calleeFrame.withOffset(CallFrameSlot::argumentCount * sizeof(Register) + PayloadOffset));
+                calleeFrame.withOffset(CallFrameSlot::argumentCountIncludingThis * sizeof(Register) + PayloadOffset));
 
             jit.storeCell(
                 loadedValueGPR, calleeFrame.withOffset(CallFrameSlot::callee * sizeof(Register)));
@@ -1706,11 +1731,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
         bool reallocating = allocating && structure()->outOfLineCapacity();
         bool allocatingInline = allocating && !structure()->couldHaveIndexingHeader();
 
-        ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-        allocator.lock(baseGPR);
-#if USE(JSVALUE32_64)
-        allocator.lock(stubInfo.patch.baseTagGPR);
-#endif
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
         allocator.lock(valueRegs);
         allocator.lock(scratchGPR);
 
@@ -1775,7 +1797,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                 jit.store32(
                     CCallHelpers::TrustedImm32(
                         state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-                    CCallHelpers::tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+                    CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
                 
                 jit.makeSpaceOnStackForCCall();
                 

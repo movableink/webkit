@@ -208,7 +208,7 @@ void StackVisitor::readInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOrigin
         m_frame.m_callFrame = callFrame;
         m_frame.m_inlineCallFrame = inlineCallFrame;
         if (inlineCallFrame->argumentCountRegister.isValid())
-            m_frame.m_argumentCountIncludingThis = callFrame->r(inlineCallFrame->argumentCountRegister.offset()).unboxedInt32();
+            m_frame.m_argumentCountIncludingThis = callFrame->r(inlineCallFrame->argumentCountRegister).unboxedInt32();
         else
             m_frame.m_argumentCountIncludingThis = inlineCallFrame->argumentCountIncludingThis;
         m_frame.m_codeBlock = inlineCallFrame->baselineCodeBlock.get();
@@ -264,7 +264,7 @@ Optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForUnwind
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
         if (callee().isCell()) {
-            RELEASE_ASSERT(isWebAssemblyToJSCallee(callee().asCell()));
+            RELEASE_ASSERT(isWebAssemblyModule(callee().asCell()));
             return WTF::nullopt;
         }
         Wasm::Callee* wasmCallee = callee().asWasmCallee();

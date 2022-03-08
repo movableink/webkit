@@ -43,7 +43,7 @@ typedef HICON HCURSOR;
 #include <wtf/Optional.h>
 #endif
 
-#if USE(APPKIT)
+#if HAVE(NSCURSOR)
 OBJC_CLASS NSCursor;
 #endif
 
@@ -73,7 +73,7 @@ private:
 
 #if PLATFORM(WIN)
 using PlatformCursor = RefPtr<SharedCursor>;
-#elif USE(APPKIT)
+#elif HAVE(NSCURSOR)
 using PlatformCursor = NSCursor *;
 #elif PLATFORM(GTK)
 using PlatformCursor = GRefPtr<GdkCursor>;
@@ -136,8 +136,6 @@ public:
 
     Cursor() = default;
 
-#if !PLATFORM(IOS_FAMILY)
-
     WEBCORE_EXPORT static const Cursor& fromType(Cursor::Type);
 
     WEBCORE_EXPORT Cursor(Image*, const IntPoint& hotSpot);
@@ -160,6 +158,8 @@ public:
 
     WEBCORE_EXPORT PlatformCursor platformCursor() const;
 
+    WEBCORE_EXPORT void setAsPlatformCursor() const;
+
 private:
     void ensurePlatformCursor() const;
 
@@ -174,13 +174,12 @@ private:
 
 #if PLATFORM(QT)
     mutable Optional<QCursor> m_platformCursor;
-#elif !USE(APPKIT)
+#elif !HAVE(NSCURSOR)
     mutable PlatformCursor m_platformCursor { nullptr };
 #else
     mutable RetainPtr<NSCursor> m_platformCursor;
 #endif
 
-#endif // !PLATFORM(IOS_FAMILY)
 };
 
 IntPoint determineHotSpot(Image*, const IntPoint& specifiedHotSpot);
@@ -229,15 +228,11 @@ const Cursor& noneCursor();
 const Cursor& grabCursor();
 const Cursor& grabbingCursor();
 
-#if !PLATFORM(IOS_FAMILY)
-
 inline Cursor::Type Cursor::type() const
 {
     ASSERT(m_type >= 0);
     ASSERT(m_type <= Custom);
     return m_type;
 }
-
-#endif
 
 } // namespace WebCore

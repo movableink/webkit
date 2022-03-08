@@ -41,7 +41,6 @@ class NetworkSessionCocoa;
 struct SessionWrapper;
 
 class NetworkDataTaskCocoa final : public NetworkDataTask {
-    friend class NetworkSessionCocoa;
 public:
     static Ref<NetworkDataTask> create(NetworkSession& session, NetworkDataTaskClient& client, const WebCore::ResourceRequest& request, WebCore::FrameIdentifier frameID, WebCore::PageIdentifier pageID, WebCore::StoredCredentialsPolicy storedCredentialsPolicy, WebCore::ContentSniffingPolicy shouldContentSniff, WebCore::ContentEncodingSniffingPolicy shouldContentEncodingSniff, bool shouldClearReferrerOnHTTPSToHTTPRedirect, PreconnectOnly shouldPreconnectOnly, bool dataTaskIsForMainFrameNavigation, bool dataTaskIsForMainResourceNavigationForAnyFrame, Optional<NetworkActivityTracker> networkActivityTracker)
     {
@@ -55,6 +54,7 @@ public:
     void didSendData(uint64_t totalBytesSent, uint64_t totalBytesExpectedToSend);
     void didReceiveChallenge(WebCore::AuthenticationChallenge&&, ChallengeCompletionHandler&&);
     void didCompleteWithError(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&);
+    void didReceiveResponse(WebCore::ResourceResponse&&, ResponseCompletionHandler&&);
     void didReceiveData(Ref<WebCore::SharedBuffer>&&);
 
     void willPerformHTTPRedirection(WebCore::ResourceResponse&&, WebCore::ResourceRequest&&, RedirectCompletionHandler&&);

@@ -41,6 +41,7 @@
 #import <wtf/text/WTFString.h>
 
 static bool done;
+static bool wasPrompted;
 
 @interface GetUserMediaCaptureUIDelegate : NSObject<WKUIDelegate>
 - (void)_webView:(WKWebView *)webView requestMediaCaptureAuthorization: (_WKCaptureDevices)devices decisionHandler:(void (^)(BOOL))decisionHandler;
@@ -51,6 +52,7 @@ static bool done;
 - (void)_webView:(WKWebView *)webView requestMediaCaptureAuthorization: (_WKCaptureDevices)devices decisionHandler:(void (^)(BOOL))decisionHandler
 {
     decisionHandler(YES);
+    wasPrompted = true;
 }
 
 - (void)_webView:(WKWebView *)webView checkUserMediaPermissionForURL:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL frameIdentifier:(NSUInteger)frameIdentifier decisionHandler:(void (^)(NSString *salt, BOOL authorized))decisionHandler
@@ -155,6 +157,48 @@ TEST(WebKit2, CaptureMute)
 
     [webView stringByEvaluatingJavaScript:@"stop()"];
     EXPECT_TRUE(waitUntilCaptureState(webView, _WKMediaCaptureStateNone));
+}
+
+TEST(WebKit2, CaptureStop)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    auto preferences = [configuration preferences];
+    preferences._mediaCaptureRequiresSecureConnection = NO;
+    preferences._mediaDevicesEnabled = YES;
+    preferences._mockCaptureDevicesEnabled = YES;
+
+    auto messageHandler = adoptNS([[GUMMessageHandler alloc] init]);
+    [[configuration.get() userContentController] addScriptMessageHandler:messageHandler.get() name:@"gum"];
+
+    auto webView = [[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get() processPoolConfiguration:processPoolConfig.get()];
+    auto delegate = adoptNS([[GetUserMediaCaptureUIDelegate alloc] init]);
+    webView.UIDelegate = delegate.get();
+
+    wasPrompted = false;
+
+    [webView loadTestPageNamed:@"getUserMedia"];
+    EXPECT_TRUE(waitUntilCaptureState(webView, _WKMediaCaptureStateActiveCamera));
+
+    TestWebKitAPI::Util::run(&wasPrompted);
+    wasPrompted = false;
+
+    [webView _setPageMuted: _WKMediaCaptureDevicesMuted];
+    EXPECT_TRUE(waitUntilCaptureState(webView, _WKMediaCaptureStateMutedCamera));
+    [webView _setPageMuted: _WKMediaNoneMuted];
+    EXPECT_TRUE(waitUntilCaptureState(webView, _WKMediaCaptureStateActiveCamera));
+
+    [webView stringByEvaluatingJavaScript:@"notifyEndedEvent()"];
+    [webView _stopMediaCapture];
+
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    EXPECT_TRUE(waitUntilCaptureState(webView, _WKMediaCaptureStateNone));
+
+    [webView stringByEvaluatingJavaScript:@"promptForCapture()"];
+    TestWebKitAPI::Util::run(&wasPrompted);
+    wasPrompted = false;
 }
 
 #if WK_HAVE_C_SPI

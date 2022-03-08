@@ -74,10 +74,12 @@ WI.ColorPicker = class ColorPicker extends WI.Object
         this._element = document.createElement("div");
         this._element.classList.add("color-picker");
 
-        this._element.append(this._colorSquare.element);
-        this._element.append(this._hueSlider.element);
+        let wrapper = this._element.appendChild(document.createElement("div"));
+        wrapper.className = "wrapper";
+        wrapper.appendChild(this._colorSquare.element);
+        wrapper.appendChild(this._hueSlider.element);
+        wrapper.appendChild(this._opacitySlider.element);
 
-        this._element.appendChild(this._opacitySlider.element);
         this._element.appendChild(colorInputsContainerElement);
 
         this._opacity = 0;
@@ -174,7 +176,9 @@ WI.ColorPicker = class ColorPicker extends WI.Object
             components = this._colorSquare.tintedColor.hsl.concat(opacity);
             if (opacity !== 1)
                 format = WI.Color.Format.HSLA;
-        } else {
+        } else if (format === WI.Color.Format.ColorFunction)
+            components = this._colorSquare.tintedColor.normalizedRGB.concat(opacity);
+        else {
             components = this._colorSquare.tintedColor.rgb.concat(opacity);
             if (opacity !== 1 && format === WI.Color.Format.RGB)
                 format = WI.Color.Format.RGBA;
@@ -194,12 +198,14 @@ WI.ColorPicker = class ColorPicker extends WI.Object
 
     _updateOpacitySlider()
     {
-        let rgb = this._colorSquare.tintedColor.rgb;
-        let gamut = this._colorSquare.tintedColor.gamut;
+        let color = this._colorSquare.tintedColor;
+
+        let rgb = color.format === WI.Color.Format.ColorFunction ? color.normalizedRGB : color.rgb;
+        let gamut = color.gamut;
         let format = gamut === WI.Color.Gamut.DisplayP3 ? WI.Color.Format.ColorFunction : WI.Color.Format.RGBA;
         let opaque = new WI.Color(format, rgb.concat(1), gamut).toString();
         let transparent = new WI.Color(format, rgb.concat(0), gamut).toString();
-        this._opacitySlider.element.style.setProperty("background-image", "linear-gradient(90deg, " + transparent + ", " + opaque + "), " + this._opacityPattern);
+        this._opacitySlider.element.style.setProperty("background-image", "linear-gradient(0deg, " + transparent + ", " + opaque + "), " + this._opacityPattern);
     }
 
     _handleFormatChange()

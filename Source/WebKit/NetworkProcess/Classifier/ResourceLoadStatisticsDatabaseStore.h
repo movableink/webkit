@@ -85,6 +85,7 @@ public:
     void clear(CompletionHandler<void()>&&) override;
     bool isEmpty() const override;
 
+    Vector<WebResourceLoadStatisticsStore::ThirdPartyData> aggregatedThirdPartyData() const override;
     void updateCookieBlocking(CompletionHandler<void()>&&) override;
 
     void classifyPrevalentResources() override;
@@ -127,16 +128,19 @@ public:
     void logUserInteraction(const TopFrameDomain&, CompletionHandler<void()>&&) override;
     void logCrossSiteLoadWithLinkDecoration(const NavigatedFromDomain&, const NavigatedToDomain&) override;
 
-    void clearUserInteraction(const RegistrableDomain&) override;
+    void clearUserInteraction(const RegistrableDomain&, CompletionHandler<void()>&&) override;
     bool hasHadUserInteraction(const RegistrableDomain&, OperatingDatesWindow) override;
 
     void setLastSeen(const RegistrableDomain&, Seconds) override;
     bool isCorrectSubStatisticsCount(const RegistrableDomain&, const TopFrameDomain&);
     void resourceToString(StringBuilder&, const String&) const;
+    Seconds getMostRecentlyUpdatedTimestamp(const RegistrableDomain&, const TopFrameDomain&) const;
 
 private:
     void openITPDatabase();
     bool isCorrectTableSchema();
+    bool hasStorageAccess(const TopFrameDomain&, const SubFrameDomain&) const;
+    Vector<WebResourceLoadStatisticsStore::ThirdPartyDataForSpecificFirstParty> getThirdPartyDataForSpecificFirstPartyDomains(unsigned, const RegistrableDomain&) const;
     void openAndDropOldDatabaseIfNecessary();
     String getDomainStringFromDomainID(unsigned) const;
     String getSubStatisticStatement(const String&) const;
@@ -194,8 +198,9 @@ private:
 
     bool predicateValueForDomain(WebCore::SQLiteStatement&, const RegistrableDomain&) const;
 
-    CookieAccess cookieAccess(const RegistrableDomain&) const;
-    
+    bool areAllThirdPartyCookiesBlockedUnder(const TopFrameDomain&) override;
+    CookieAccess cookieAccess(const SubResourceDomain&, const TopFrameDomain&);
+
     void setPrevalentResource(const RegistrableDomain&, ResourceLoadPrevalence);
     unsigned recursivelyFindNonPrevalentDomainsThatRedirectedToThisDomain(unsigned primaryDomainID, StdSet<unsigned>& nonPrevalentRedirectionSources, unsigned numberOfRecursiveCalls);
     void setDomainsAsPrevalent(StdSet<unsigned>&&);
@@ -247,6 +252,9 @@ private:
     mutable WebCore::SQLiteStatement m_getResourceDataByDomainNameStatement;
     mutable WebCore::SQLiteStatement m_getAllDomainsStatement;
     mutable WebCore::SQLiteStatement m_domainStringFromDomainIDStatement;
+    mutable WebCore::SQLiteStatement m_getAllSubStatisticsStatement;
+    mutable WebCore::SQLiteStatement m_storageAccessExistsStatement;
+    mutable WebCore::SQLiteStatement m_getMostRecentlyUpdatedTimestampStatement;
     PAL::SessionID m_sessionID;
 };
 

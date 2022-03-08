@@ -36,7 +36,7 @@
 #import <WebKit/WKURLSchemeHandler.h>
 #import <WebKit/WKURLSchemeTaskPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
-#import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WKWebsiteDataStoreRef.h>
 #import <WebKit/WebKit.h>
@@ -1840,7 +1840,7 @@ TEST(ServiceWorkers, RestoreFromDiskNonDefaultStore)
         TestWebKitAPI::Util::run(&done);
         done = false;
 
-        [webView.get().configuration.processPool _terminateServiceWorkerProcesses];
+        [webView.get().configuration.processPool _terminateServiceWorkers];
     }
 
     @autoreleasepool {

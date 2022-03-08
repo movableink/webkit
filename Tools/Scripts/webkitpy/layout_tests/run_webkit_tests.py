@@ -118,6 +118,10 @@ def parse_args(args):
             help="Use accelerated drawing (OS X only)"),
         optparse.make_option("--remote-layer-tree", action="store_true", default=False,
             help="Use the remote layer tree drawing model (OS X WebKit2 only)"),
+        optparse.make_option("--internal-feature", type="string", action="append", default=[],
+            help="Enable (disable) an internal feature (--internal-feature FeatureName[=true|false])"),
+        optparse.make_option("--experimental-feature", type="string", action="append", default=[],
+            help="Enable (disable) an experimental feature (--experimental-feature FeatureName[=true|false])"),
     ]))
 
     option_group_definitions.append(("WebKit Options", [
@@ -320,6 +324,12 @@ def parse_args(args):
         optparse.make_option(
             "--webgl-test-suite", action="store_true", default=False,
             help=("Run exhaustive webgl list, including test ordinarily skipped for performance reasons. Equivalent to '--additional-expectations=LayoutTests/webgl/TestExpectations webgl'")),
+        optparse.make_option(
+            "--use-gpu-process", action="store_true", default=False,
+            help=("Enable all GPU process related features, also set additional expectations and the result report flavor.")),
+        optparse.make_option(
+            "--prefer-integrated-gpu", action="store_true", default=False,
+            help=("Prefer using the lower-power integrated GPU on a dual-GPU system. Note that other running applications and the tests themselves can override this request.")),
     ]))
 
     option_group_definitions.append(("Web Platform Test Server Options", [
@@ -361,6 +371,19 @@ def parse_args(args):
         host = Host()
         host.initialize_scm()
         options.additional_expectations.insert(0, host.filesystem.join(host.scm().checkout_root, 'LayoutTests/webgl/TestExpectations'))
+
+    if options.use_gpu_process:
+        host = Host()
+        host.initialize_scm()
+        options.additional_expectations.insert(0, host.filesystem.join(host.scm().checkout_root, 'LayoutTests/gpu-process/TestExpectations'))
+        if not options.internal_feature:
+            options.internal_feature = []
+        options.internal_feature.append('UseGPUProcessForMedia')
+        options.internal_feature.append('CaptureAudioInGPUProcessEnabled')
+        if options.result_report_flavor:
+            raise RuntimeError('--use-gpu-process implicitly sets the result flavor, this should not be overridden')
+        options.result_report_flavor = 'gpuprocess'
+
     return options, args
 
 

@@ -370,8 +370,11 @@ void AccessibilityUIElement::getChildren(Vector<RefPtr<AccessibilityUIElement> >
 void AccessibilityUIElement::getChildrenWithRange(Vector<RefPtr<AccessibilityUIElement> >& elementVector, unsigned location, unsigned length)
 {
     BEGIN_AX_OBJC_EXCEPTIONS
-    NSArray* children = [m_element accessibilityArrayAttributeValues:NSAccessibilityChildrenAttribute index:location maxCount:length];
-    elementVector = convertNSArrayToVector<RefPtr<AccessibilityUIElement>>(children);
+    auto accessibilityController = InjectedBundle::singleton().accessibilityController();
+    accessibilityController->executeOnAXThreadIfPossible([&elementVector, location, length, this] {
+        NSArray* children = [m_element accessibilityArrayAttributeValues:NSAccessibilityChildrenAttribute index:location maxCount:length];
+        elementVector = convertNSArrayToVector<RefPtr<AccessibilityUIElement>>(children);
+    });
     END_AX_OBJC_EXCEPTIONS
 }
 
@@ -634,11 +637,17 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringAttributeValue(JSStringRe
 double AccessibilityUIElement::numberAttributeValue(JSStringRef attribute)
 {
     BEGIN_AX_OBJC_EXCEPTIONS
-    id value = [m_element accessibilityAttributeValue:[NSString stringWithJSStringRef:attribute]];
+    id value;
+
+    auto accessibilityController = InjectedBundle::singleton().accessibilityController();
+    accessibilityController->executeOnAXThreadIfPossible([&attribute, &value, this] {
+        value = [m_element accessibilityAttributeValue:[NSString stringWithJSStringRef:attribute]];
+    });
+
     if ([value isKindOfClass:[NSNumber class]])
         return [value doubleValue];
     END_AX_OBJC_EXCEPTIONS
-    
+
     return 0;
 }
 
@@ -1244,7 +1253,11 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::selectTextWithCriteria(JSContex
 {
     BEGIN_AX_OBJC_EXCEPTIONS
     NSDictionary *parameterizedAttribute = selectTextParameterizedAttributeForCriteria(context, ambiguityResolution, searchStrings, replacementString, activity);
-    id result = [m_element accessibilityAttributeValue:@"AXSelectTextWithCriteria" forParameter:parameterizedAttribute];
+    id result;
+    auto accessibilityController = InjectedBundle::singleton().accessibilityController();
+    accessibilityController->executeOnAXThreadIfPossible([&parameterizedAttribute, &result, this] {
+        result = [m_element accessibilityAttributeValue:@"AXSelectTextWithCriteria" forParameter:parameterizedAttribute];
+    });
     if ([result isKindOfClass:[NSString class]])
         return [result createJSStringRef];
     END_AX_OBJC_EXCEPTIONS

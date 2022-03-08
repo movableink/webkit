@@ -23,17 +23,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #if ENABLE(MEDIA_STREAM)
 
+#include "RealtimeMediaSourceCapabilities.h"
 #include <pal/cf/CoreMediaSoftLink.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
+#include <wtf/MediaTime.h>
 #include <wtf/RecursiveLockAdapter.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class AudioStreamDescription;
 class CoreAudioCaptureSource;
+class PlatformAudioData;
 
 class BaseAudioSharedUnit {
 public:
@@ -41,6 +47,7 @@ public:
 
     void startProducingData();
     void stopProducingData();
+    void reconfigure();
     virtual bool isProducingData() const = 0;
 
     virtual void delaySamples(Seconds) { }
@@ -66,9 +73,10 @@ public:
 
     virtual bool hasAudioUnit() const = 0;
     virtual void setCaptureDevice(String&&, uint32_t) = 0;
-    virtual OSStatus reconfigureAudioUnit() = 0;
 
     virtual CapabilityValueOrRange sampleRateCapacities() const = 0;
+
+    void setDisableAudioSessionCheck(bool value) { m_disableAudioSessionCheck = value; };
 
 protected:
     void forEachClient(const Function<void(CoreAudioCaptureSource&)>&) const;
@@ -78,21 +86,26 @@ protected:
     virtual void cleanupAudioUnit() = 0;
     virtual OSStatus startInternal() = 0;
     virtual void stopInternal() = 0;
+    virtual OSStatus reconfigureAudioUnit() = 0;
 
     void setSuspended(bool value) { m_suspended = value; }
 
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/);
 
 private:
+    OSStatus startUnit();
+
     bool m_enableEchoCancellation { true };
     double m_volume { 1 };
     int m_sampleRate;
     bool m_suspended { false };
+    bool m_needsReconfiguration { false };
 
     int32_t m_producingCount { 0 };
 
     HashSet<CoreAudioCaptureSource*> m_clients;
     mutable RecursiveLock m_clientsLock;
+    bool m_disableAudioSessionCheck { false };
 };
 
 } // namespace WebCore

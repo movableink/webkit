@@ -31,7 +31,6 @@
 #include "Color.h"
 #include "ContainerNode.h"
 #include "DisabledAdaptations.h"
-#include "DocumentEventQueue.h"
 #include "DocumentIdentifier.h"
 #include "DocumentTiming.h"
 #include "ElementIdentifier.h"
@@ -88,8 +87,6 @@ class InputCursor;
 
 namespace WebCore {
 
-class EventLoop;
-class ApplicationStateChangeListener;
 class AXObjectCache;
 class Attr;
 class CDATASection;
@@ -121,6 +118,7 @@ class DocumentSharedObjectPool;
 class DocumentTimeline;
 class DocumentType;
 class EditingBehavior;
+class EventLoop;
 class EventLoopTaskGroup;
 class ExtensionStyleSheets;
 class FloatQuad;
@@ -145,6 +143,7 @@ class HTMLMapElement;
 class HTMLMediaElement;
 class HTMLVideoElement;
 class HTMLScriptElement;
+class HighlightMap;
 class HitTestLocation;
 class HitTestRequest;
 class HitTestResult;
@@ -217,9 +216,9 @@ class XPathResult;
 template<typename> class ExceptionOr;
 
 enum CollectionType;
-enum class ShouldOpenExternalURLsPolicy : uint8_t;
 
 enum class RouteSharingPolicy : uint8_t;
+enum class ShouldOpenExternalURLsPolicy : uint8_t;
 
 using PlatformDisplayID = uint32_t;
 
@@ -227,18 +226,14 @@ using PlatformDisplayID = uint32_t;
 class TransformSource;
 #endif
 
-#if ENABLE(TOUCH_EVENTS) || ENABLE(IOS_TOUCH_EVENTS)
-class Touch;
-class TouchList;
-#endif
-
-#if ENABLE(DEVICE_ORIENTATION)
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
 class DeviceMotionClient;
 class DeviceMotionController;
 class DeviceOrientationClient;
 class DeviceOrientationController;
 #endif
+
+#if ENABLE(DEVICE_ORIENTATION)
 class DeviceOrientationAndMotionAccessController;
 #endif
 
@@ -488,6 +483,9 @@ public:
     bool xmlStandalone() const { return m_xmlStandalone == StandaloneStatus::Standalone; }
     StandaloneStatus xmlStandaloneStatus() const { return m_xmlStandalone; }
     bool hasXMLDeclaration() const { return m_hasXMLDeclaration; }
+
+    bool shouldPreventEnteringBackForwardCacheForTesting() const { return m_shouldPreventEnteringBackForwardCacheForTesting; }
+    void preventEnteringBackForwardCacheForTesting() { m_shouldPreventEnteringBackForwardCacheForTesting = true; }
 
     void setXMLEncoding(const String& encoding) { m_xmlEncoding = encoding; } // read-only property, only to be set from XMLDocumentParser
     WEBCORE_EXPORT ExceptionOr<void> setXMLVersion(const String&);
@@ -1064,13 +1062,14 @@ public:
     WEBCORE_EXPORT void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
 
     EventLoopTaskGroup& eventLoop() final;
+    WindowEventLoop& windowEventLoop();
 
     ScriptedAnimationController* scriptedAnimationController() { return m_scriptedAnimationController.get(); }
     void suspendScriptedAnimationControllerCallbacks();
     void resumeScriptedAnimationControllerCallbacks();
 
-    void updateAnimationsAndSendEvents(DOMHighResTimeStamp timestamp);
-    void serviceRequestAnimationFrameCallbacks(DOMHighResTimeStamp timestamp);
+    void updateAnimationsAndSendEvents(DOMHighResTimeStamp);
+    void serviceRequestAnimationFrameCallbacks(DOMHighResTimeStamp);
 
     void windowScreenDidChange(PlatformDisplayID);
 
@@ -1088,9 +1087,8 @@ public:
     void suspend(ReasonForSuspension);
     void resume(ReasonForSuspension);
 
-    void registerForMediaVolumeCallbacks(Element&);
-    void unregisterForMediaVolumeCallbacks(Element&);
-    void mediaVolumeDidChange();
+    void registerMediaElement(HTMLMediaElement&);
+    void unregisterMediaElement(HTMLMediaElement&);
 
     bool audioPlaybackRequiresUserGesture() const;
     bool videoPlaybackRequiresUserGesture() const;
@@ -1100,34 +1098,20 @@ public:
     MediaSession& defaultMediaSession();
 #endif
 
-    void registerForPrivateBrowsingStateChangedCallbacks(Element&);
-    void unregisterForPrivateBrowsingStateChangedCallbacks(Element&);
-    void storageBlockingStateDidChange();
     void privateBrowsingStateDidChange(PAL::SessionID);
 
-#if ENABLE(VIDEO_TRACK)
-    void registerForCaptionPreferencesChangedCallbacks(Element&);
-    void unregisterForCaptionPreferencesChangedCallbacks(Element&);
-    void captionPreferencesChanged();
-#endif
+    void storageBlockingStateDidChange();
 
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
-    void registerForPageScaleFactorChangedCallbacks(HTMLMediaElement&);
-    void unregisterForPageScaleFactorChangedCallbacks(HTMLMediaElement&);
-    void pageScaleFactorChangedAndStable();
-    void registerForUserInterfaceLayoutDirectionChangedCallbacks(HTMLMediaElement&);
-    void unregisterForUserInterfaceLayoutDirectionChangedCallbacks(HTMLMediaElement&);
-    void userInterfaceLayoutDirectionChanged();
+#if ENABLE(VIDEO_TRACK)
+    void registerForCaptionPreferencesChangedCallbacks(HTMLMediaElement&);
+    void unregisterForCaptionPreferencesChangedCallbacks(HTMLMediaElement&);
+    void captionPreferencesChanged();
 #endif
 
     void registerForVisibilityStateChangedCallbacks(VisibilityChangeClient&);
     void unregisterForVisibilityStateChangedCallbacks(VisibilityChangeClient&);
 
 #if ENABLE(VIDEO)
-    void registerForAllowsMediaDocumentInlinePlaybackChangedCallbacks(HTMLMediaElement&);
-    void unregisterForAllowsMediaDocumentInlinePlaybackChangedCallbacks(HTMLMediaElement&);
-    void allowsMediaDocumentInlinePlaybackChanged();
-
     void stopAllMediaPlayback();
     void suspendAllMediaPlayback();
     void resumeAllMediaPlayback();
@@ -1198,15 +1182,15 @@ public:
 #include <WebKitAdditions/DocumentIOS.h>
 #endif
 
-#if ENABLE(DEVICE_ORIENTATION)
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     DeviceMotionController& deviceMotionController() const;
     DeviceOrientationController& deviceOrientationController() const;
     WEBCORE_EXPORT void simulateDeviceOrientationChange(double alpha, double beta, double gamma);
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION)
     DeviceOrientationAndMotionAccessController& deviceOrientationAndMotionAccessController();
-#endif // ENABLE(DEVICE_ORIENTATION)
+#endif
 
     const DocumentTiming& timing() const { return m_documentTiming; }
 
@@ -1423,8 +1407,6 @@ public:
     void setDeviceIDHashSalt(const String&);
     String deviceIDHashSalt() const { return m_idHashSalt; }
     void stopMediaCapture();
-    void registerForMediaStreamStateChangeCallbacks(HTMLMediaElement&);
-    void unregisterForMediaStreamStateChangeCallbacks(HTMLMediaElement&);
     void mediaStreamCaptureStateChanged();
 #endif
 
@@ -1501,9 +1483,9 @@ public:
     void setServiceWorkerConnection(SWClientConnection*);
 #endif
 
-    void addApplicationStateChangeListener(ApplicationStateChangeListener&);
-    void removeApplicationStateChangeListener(ApplicationStateChangeListener&);
-    void forEachApplicationStateChangeListener(const Function<void(ApplicationStateChangeListener&)>&);
+#if ENABLE(VIDEO)
+    void forEachMediaElement(const Function<void(HTMLMediaElement&)>&);
+#endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     bool handlingTouchEvent() const { return m_handlingTouchEvent; }
@@ -1562,6 +1544,8 @@ public:
 
     WEBCORE_EXPORT TextManipulationController& textManipulationController();
     TextManipulationController* textManipulationControllerIfExists() { return m_textManipulationController.get(); }
+        
+    HighlightMap& highlightMap();
 
 protected:
     enum ConstructionFlags { Synthesized = 1, NonRenderedPlaceholder = 1 << 1 };
@@ -1667,6 +1651,8 @@ private:
     void platformSuspendOrStopActiveDOMObjects();
 
     bool isBodyPotentiallyScrollable(HTMLBodyElement&);
+
+    void didLogMessage(const WTFLogChannel&, WTFLogLevel, Vector<JSONLogValue>&&) final;
 
     const Ref<Settings> m_settings;
 
@@ -1789,24 +1775,19 @@ private:
     HashMap<String, RefPtr<HTMLCanvasElement>> m_cssCanvasElements;
 
     HashSet<Element*> m_documentSuspensionCallbackElements;
-    HashSet<Element*> m_mediaVolumeCallbackElements;
-    HashSet<Element*> m_privateBrowsingStateChangedElements;
+
+#if ENABLE(VIDEO)
+    HashSet<HTMLMediaElement*> m_mediaElements;
+#endif
+
 #if ENABLE(VIDEO_TRACK)
-    HashSet<Element*> m_captionPreferencesChangedElements;
+    HashSet<HTMLMediaElement*> m_captionPreferencesChangedElements;
 #endif
 
     Element* m_mainArticleElement { nullptr };
     HashSet<Element*> m_articleElements;
 
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
-    HashSet<HTMLMediaElement*> m_pageScaleFactorChangedElements;
-    HashSet<HTMLMediaElement*> m_userInterfaceLayoutDirectionChangedElements;
-#endif
-
     HashSet<VisibilityChangeClient*> m_visibilityStateCallbackClients;
-#if ENABLE(VIDEO)
-    HashSet<HTMLMediaElement*> m_allowsMediaDocumentInlinePlaybackElements;
-#endif
 
     std::unique_ptr<HashMap<String, Element*, ASCIICaseInsensitiveHash>> m_accessKeyCache;
 
@@ -1862,17 +1843,14 @@ private:
 
     std::unique_ptr<IdleCallbackController> m_idleCallbackController;
 
-    void notifyMediaCaptureOfVisibilityChanged();
-
-    void didLogMessage(const WTFLogChannel&, WTFLogLevel, Vector<JSONLogValue>&&) final;
-
-#if ENABLE(DEVICE_ORIENTATION)
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     std::unique_ptr<DeviceMotionClient> m_deviceMotionClient;
     std::unique_ptr<DeviceMotionController> m_deviceMotionController;
     std::unique_ptr<DeviceOrientationClient> m_deviceOrientationClient;
     std::unique_ptr<DeviceOrientationController> m_deviceOrientationController;
 #endif
+
+#if ENABLE(DEVICE_ORIENTATION)
     std::unique_ptr<DeviceOrientationAndMotionAccessController> m_deviceOrientationAndMotionAccessController;
 #endif
 
@@ -1884,6 +1862,8 @@ private:
 #if ENABLE(TEXT_AUTOSIZING)
     std::unique_ptr<TextAutoSizing> m_textAutoSizing;
 #endif
+        
+    RefPtr<HighlightMap> m_highlightMap;
 
     Timer m_visualUpdatesSuppressionTimer;
 
@@ -2061,8 +2041,6 @@ private:
     RefPtr<SWClientConnection> m_serviceWorkerConnection;
 #endif
 
-    HashSet<ApplicationStateChangeListener*> m_applicationStateChangeListeners;
-    
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     RegistrableDomain m_registrableDomainRequestedPageSpecificStorageAccessWithUserInteraction { };
     String m_referrerOverride;
@@ -2078,6 +2056,7 @@ private:
     bool m_hasEvaluatedUserAgentScripts { false };
     bool m_isRunningUserScripts { false };
     bool m_mayBeDetachedFromFrame { true };
+    bool m_shouldPreventEnteringBackForwardCacheForTesting { false };
 #if ENABLE(APPLE_PAY)
     bool m_hasStartedApplePaySession { false };
 #endif

@@ -177,14 +177,15 @@ std::unique_ptr<ServiceWorkerFetchTask> WebSWServerConnection::createFetchTask(N
         return nullptr;
     }
 
+    auto* registration = server().getRegistration(*serviceWorkerRegistrationIdentifier);
+    bool shouldSoftUpdate = registration && registration->shouldSoftUpdate(loader.parameters().options);
     if (worker->shouldSkipFetchEvent()) {
-        auto* registration = server().getRegistration(worker->registrationKey());
-        if (registration && registration->shouldSoftUpdate(loader.parameters().options))
-            registration->softUpdate();
+        if (shouldSoftUpdate)
+            registration->scheduleSoftUpdate();
         return nullptr;
     }
 
-    auto task = makeUnique<ServiceWorkerFetchTask>(loader, ResourceRequest { request }, identifier(), worker->identifier(), *serviceWorkerRegistrationIdentifier);
+    auto task = makeUnique<ServiceWorkerFetchTask>(loader, ResourceRequest { request }, identifier(), worker->identifier(), *serviceWorkerRegistrationIdentifier, shouldSoftUpdate);
     startFetch(*task, *worker);
     return task;
 }
@@ -196,19 +197,19 @@ void WebSWServerConnection::startFetch(ServiceWorkerFetchTask& task, SWServerWor
             return;
 
         if (!weakThis) {
-            task->didNotHandle();
+            task->cannotHandle();
             return;
         }
 
         if (!success) {
             SWSERVERCONNECTION_RELEASE_LOG_ERROR_IF_ALLOWED("startFetch: fetchIdentifier: %s DidNotHandle because worker did not become activated", task->fetchIdentifier().loggingString().utf8().data());
-            task->didNotHandle();
+            task->cannotHandle();
             return;
         }
 
         auto* worker = server().workerByID(task->serviceWorkerIdentifier());
         if (!worker || worker->hasTimedOutAnyFetchTasks()) {
-            task->didNotHandle();
+            task->cannotHandle();
             return;
         }
 
@@ -221,13 +222,13 @@ void WebSWServerConnection::startFetch(ServiceWorkerFetchTask& task, SWServerWor
                 return;
             
             if (!weakThis) {
-                task->didNotHandle();
+                task->cannotHandle();
                 return;
             }
 
             if (!contextConnection) {
                 SWSERVERCONNECTION_RELEASE_LOG_ERROR_IF_ALLOWED("startFetch: fetchIdentifier: %s DidNotHandle because failed to run service worker", task->fetchIdentifier().loggingString().utf8().data());
-                task->didNotHandle();
+                task->cannotHandle();
                 return;
             }
             SWSERVERCONNECTION_RELEASE_LOG_IF_ALLOWED("startFetch: Starting fetch %s via service worker %s", task->fetchIdentifier().loggingString().utf8().data(), task->serviceWorkerIdentifier().loggingString().utf8().data());
@@ -395,7 +396,7 @@ void WebSWServerConnection::updateThrottleState()
     }
 }
 
-void WebSWServerConnection::contextConnectionCreated(WebCore::SWServerToContextConnection& contextConnection)
+void WebSWServerConnection::contextConnectionCreated(SWServerToContextConnection& contextConnection)
 {
     auto& connection =  static_cast<WebSWServerToContextConnection&>(contextConnection);
     connection.setThrottleState(computeThrottleState(connection.registrableDomain()));
@@ -404,10 +405,16 @@ void WebSWServerConnection::contextConnectionCreated(WebCore::SWServerToContextC
         m_networkProcess->parentProcessConnection()->send(Messages::NetworkProcessProxy::RegisterServiceWorkerClientProcess { identifier(), connection.webProcessIdentifier() }, 0);
 }
 
-void WebSWServerConnection::syncTerminateWorkerFromClient(WebCore::ServiceWorkerIdentifier&& identifier, CompletionHandler<void()>&& completionHandler)
+void WebSWServerConnection::syncTerminateWorkerFromClient(ServiceWorkerIdentifier identifier, CompletionHandler<void()>&& completionHandler)
 {
     syncTerminateWorker(WTFMove(identifier));
     completionHandler();
+}
+
+void WebSWServerConnection::isServiceWorkerRunning(ServiceWorkerIdentifier identifier, CompletionHandler<void(bool)>&& completionHandler)
+{
+    auto* worker = SWServerWorker::existingWorkerForIdentifier(identifier);
+    completionHandler(worker ? worker->isRunning() : false);
 }
 
 PAL::SessionID WebSWServerConnection::sessionID() const
