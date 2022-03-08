@@ -718,7 +718,7 @@ void QWebFrameAdapter::scrollToAnchor(const QString &anchor)
 {
     FrameView* view = frame->view();
     if (view)
-        view->scrollToAnchor(anchor);
+        view->scrollToFragment(URL(anchor));
 }
 
 void QWebFrameAdapter::scrollBy(int dx, int dy)
