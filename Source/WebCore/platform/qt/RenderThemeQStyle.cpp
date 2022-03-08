@@ -284,7 +284,7 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
 
 
 
-void RenderThemeQStyle::adjustButtonStyle(StyleResolver& styleResolver, RenderStyle& style, const Element*) const
+void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) const
 {
     // Ditch the border.
     style.resetBorder();
@@ -312,7 +312,8 @@ void RenderThemeQStyle::adjustButtonStyle(StyleResolver& styleResolver, RenderSt
     families.append(m_buttonFontFamily);
     fontDescription.setFamilies(families);
     style.setFontDescription(WTFMove(fontDescription));
-    style.fontCascade().update(&styleResolver.document().fontSelector());
+    // TODO: address no longer having styleResolver reference here
+    // style.fontCascade().update(&styleResolver.document().fontSelector());
     style.setLineHeight(RenderStyle::initialLineHeight());
     setButtonSize(style);
     setButtonPadding(style);
@@ -391,9 +392,9 @@ bool RenderThemeQStyle::paintTextField(const RenderObject& o, const PaintInfo& i
     return false;
 }
 
-void RenderThemeQStyle::adjustTextAreaStyle(StyleResolver& styleResolver, RenderStyle& style, const Element* element) const
+void RenderThemeQStyle::adjustTextAreaStyle(RenderStyle& style, const Element* element) const
 {
-    adjustTextFieldStyle(styleResolver, style, element);
+    adjustTextFieldStyle(style, element);
 }
 
 bool RenderThemeQStyle::paintTextArea(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -433,13 +434,13 @@ bool RenderThemeQStyle::paintMenuList(const RenderObject& o, const PaintInfo& i,
     return false;
 }
 
-void RenderThemeQStyle::adjustMenuListButtonStyle(StyleResolver& styleResolver, RenderStyle& style, const Element* e) const
+void RenderThemeQStyle::adjustMenuListButtonStyle(RenderStyle& style, const Element* e) const
 {
     // WORKAROUND because html.css specifies -webkit-border-radius for <select> so we override it here
     // see also http://bugs.webkit.org/show_bug.cgi?id=18399
     style.resetBorderRadius();
 
-    RenderThemeQt::adjustMenuListButtonStyle(styleResolver, style, e);
+    RenderThemeQt::adjustMenuListButtonStyle(style, e);
 }
 
 bool RenderThemeQStyle::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)
@@ -519,7 +520,7 @@ bool RenderThemeQStyle::paintSliderTrack(const RenderObject& o, const PaintInfo&
     return false;
 }
 
-void RenderThemeQStyle::adjustSliderTrackStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeQStyle::adjustSliderTrackStyle(RenderStyle& style, const Element*) const
 {
     style.setBoxShadow(nullptr);
 }
@@ -547,9 +548,9 @@ bool RenderThemeQStyle::paintSliderThumb(const RenderObject& o, const PaintInfo&
     return false;
 }
 
-void RenderThemeQStyle::adjustSliderThumbStyle(StyleResolver& styleResolver, RenderStyle& style, const Element* element) const
+void RenderThemeQStyle::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const
 {
-    RenderTheme::adjustSliderThumbStyle(styleResolver, style, element);
+    RenderTheme::adjustSliderThumbStyle(style, element);
     style.setBoxShadow(nullptr);
 }
 
@@ -558,10 +559,10 @@ bool RenderThemeQStyle::paintSearchField(const RenderObject& o, const PaintInfo&
     return paintTextField(o, pi, r);
 }
 
-void RenderThemeQStyle::adjustSearchFieldDecorationPartStyle(StyleResolver& styleResolver, RenderStyle& style, const Element* e) const
+void RenderThemeQStyle::adjustSearchFieldDecorationPartStyle(RenderStyle& style, const Element* e) const
 {
     notImplemented();
-    RenderTheme::adjustSearchFieldDecorationPartStyle(styleResolver, style, e);
+    RenderTheme::adjustSearchFieldDecorationPartStyle(style, e);
 }
 
 bool RenderThemeQStyle::paintSearchFieldDecorationPart(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
@@ -570,10 +571,10 @@ bool RenderThemeQStyle::paintSearchFieldDecorationPart(const RenderObject& o, co
     return RenderTheme::paintSearchFieldDecorationPart(o, pi, r);
 }
 
-void RenderThemeQStyle::adjustSearchFieldResultsDecorationPartStyle(StyleResolver& styleResolver, RenderStyle& style, const Element* e) const
+void RenderThemeQStyle::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& style, const Element* e) const
 {
     notImplemented();
-    RenderTheme::adjustSearchFieldResultsDecorationPartStyle(styleResolver, style, e);
+    RenderTheme::adjustSearchFieldResultsDecorationPartStyle(style, e);
 }
 
 bool RenderThemeQStyle::paintSearchFieldResultsDecorationPart(const RenderBox& o, const PaintInfo& pi, const IntRect& r)
