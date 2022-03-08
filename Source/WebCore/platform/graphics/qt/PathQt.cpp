@@ -455,32 +455,12 @@ float Path::length() const
     return m_path.length();
 }
 
-FloatPoint Path::pointAtLength(float length, bool& ok) const
+FloatPoint Path::pointAtLength(float length) const
 {
-    ok = (length >= 0 && length <= m_path.length());
-
     qreal percent = m_path.percentAtLength(length);
     QPointF point = m_path.pointAtPercent(percent);
 
     return point;
-}
-
-float Path::normalAngleAtLength(float length, bool& ok) const
-{
-    ok = (length >= 0 && length <= m_path.length());
-
-    qreal percent = m_path.percentAtLength(length);
-    qreal angle = m_path.angleAtPercent(percent);
-
-    // Normalize angle value.
-    // QPainterPath returns angle values with the origo being at the top left corner.
-    // In case of moveTo(0, 0) and addLineTo(0, 10) the angle is 270,
-    // while the caller expects it to be 90.
-    // Normalize the value by mirroring it to the x-axis.
-    // For more info look at pathLengthApplierFunction().
-    if (angle > 0)
-        angle = 360 - angle;
-    return angle;
 }
 
 }
