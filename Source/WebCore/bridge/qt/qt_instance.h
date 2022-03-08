@@ -69,18 +69,18 @@ public:
     ~QtInstance();
 
     Class* getClass() const override;
-    RuntimeObject* newRuntimeObject(ExecState*) final;
+    RuntimeObject* newRuntimeObject(JSGloablObject*) final;
 
-    JSValue valueOf(ExecState*) const final;
-    JSValue defaultValue(ExecState*, PreferredPrimitiveType) const final;
+    JSValue valueOf(JSGlobalObject*) const final;
+    JSValue defaultValue(JSGlobalObject*, PreferredPrimitiveType) const final;
 
-    JSValue getMethod(ExecState*, PropertyName) final;
-    JSValue invokeMethod(ExecState*, RuntimeMethod*) final;
+    JSValue getMethod(JSGlobalObject*, PropertyName) final;
+    JSValue invokeMethod(JSGlobalObject*, RuntimeMethod*) final;
 
-    void getPropertyNames(ExecState*, PropertyNameArray&) final;
+    void getPropertyNames(JSGlobalObject*, PropertyNameArray&) final;
 
-    JSValue stringValue(ExecState*) const;
-    JSValue numberValue(ExecState*) const;
+    JSValue stringValue(JSGlobalObject*) const;
+    JSValue numberValue(JSGlobalObject*) const;
     JSValue booleanValue() const;
 
     QObject* getObject() const { return m_object.data(); }
@@ -88,10 +88,10 @@ public:
 
     static RefPtr<QtInstance> getQtInstance(QObject*, RootObject*, ValueOwnership);
 
-    bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&) final;
-    bool put(JSObject*, ExecState*, PropertyName, JSValue, PutPropertySlot&) final;
+    bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&) final;
+    bool put(JSObject*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&) final;
 
-    static QtInstance* getInstance(ExecState*, JSObject*);
+    static QtInstance* getInstance(JSGlobalObject*, JSObject*);
 
 private:
     static RefPtr<QtInstance> create(QObject *instance, RefPtr<RootObject>&& rootObject, ValueOwnership ownership)

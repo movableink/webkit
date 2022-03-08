@@ -77,7 +77,6 @@
 #include <QWindow>
 #include <qpa/qplatformnativeinterface.h>
 
-using JSC::ExecState;
 using JSC::Interpreter;
 using JSC::JSLock;
 using JSC::JSObject;

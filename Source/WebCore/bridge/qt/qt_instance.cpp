@@ -138,21 +138,21 @@ RefPtr<QtInstance> QtInstance::getQtInstance(QObject* o, RootObject* rootObject,
     return ret;
 }
 
-bool QtInstance::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool QtInstance::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
 {
-    return JSObject::getOwnPropertySlot(object, exec, propertyName, slot);
+    return JSObject::getOwnPropertySlot(object, lexicalGlobalObject, propertyName, slot);
 }
 
-bool QtInstance::put(JSObject* object, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+bool QtInstance::put(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    return JSObject::put(object, exec, propertyName, value, slot);
+    return JSObject::put(object, lexicalGlobalObject, propertyName, value, slot);
 }
 
-QtInstance* QtInstance::getInstance(ExecState* exec, JSObject* object)
+QtInstance* QtInstance::getInstance(JSGlobalObject* lexicalGlobalObject, JSObject* object)
 {
     if (!object)
         return 0;
-    if (!object->inherits(exec->vm(), QtRuntimeObject::info()))
+    if (!object->inherits(lexicalGlobalObject->vm(), QtRuntimeObject::info()))
         return 0;
     return static_cast<QtInstance*>(static_cast<RuntimeObject*>(object)->getInternalInstance());
 }
@@ -167,17 +167,17 @@ Class* QtInstance::getClass() const
     return m_class;
 }
 
-RuntimeObject* QtInstance::newRuntimeObject(ExecState* exec)
+RuntimeObject* QtInstance::newRuntimeObject(JSGlobalObject* lexicalGlobalObject)
 {
-    JSLockHolder lock(exec);
+    JSLockHolder lock(lexicalGlobalObject);
     qDeleteAll(m_methods);
     m_methods.clear();
 
     // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object.
-    return QtRuntimeObject::create(exec->vm(), WebCore::deprecatedGetDOMStructure<QtRuntimeObject>(exec), this);
+    return QtRuntimeObject::create(lexicalGlobalObject->vm(), WebCore::deprecatedGetDOMStructure<QtRuntimeObject>(lexicalGlobalObject), this);
 }
 
-void QtInstance::getPropertyNames(ExecState* exec, PropertyNameArray& array)
+void QtInstance::getPropertyNames(JSGlobalObject* lexicalGlobalObject, PropertyNameArray& array)
 {
     // This is the enumerable properties, so put:
     // properties
@@ -185,7 +185,7 @@ void QtInstance::getPropertyNames(ExecState* exec, PropertyNameArray& array)
     // slots
     QObject* obj = getObject();
     if (obj) {
-        VM& vm = exec->vm();
+        VM& vm = lexicalGlobalObject->vm();
         const QMetaObject* meta = obj->metaObject();
 
         int i;
@@ -212,30 +212,30 @@ void QtInstance::getPropertyNames(ExecState* exec, PropertyNameArray& array)
     }
 }
 
-JSValue QtInstance::getMethod(ExecState* exec, PropertyName propertyName)
+JSValue QtInstance::getMethod(JSGlobalObject* lexicalGlobalObject, PropertyName propertyName)
 {
     if (!getClass())
         return jsNull();
     Method* method = m_class->methodNamed(propertyName, this);
-    return RuntimeMethod::create(exec, exec->lexicalGlobalObject(), WebCore::deprecatedGetDOMStructure<RuntimeMethod>(exec), propertyName.publicName(), method);
+    return RuntimeMethod::create(lexicalGlobalObject, lexicalGlobalObject, WebCore::deprecatedGetDOMStructure<RuntimeMethod>(lexicalGlobalObject), propertyName.publicName(), method);
 }
 
-JSValue QtInstance::invokeMethod(ExecState*, RuntimeMethod*)
+JSValue QtInstance::invokeMethod(JSGlobalObject*, RuntimeMethod*)
 {
     // Implemented via fallbackMethod & QtRuntimeMetaMethod::callAsFunction
     return jsUndefined();
 }
 
-JSValue QtInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint) const
+JSValue QtInstance::defaultValue(JSGlobalObject* lexicalGlobalObject, PreferredPrimitiveType hint) const
 {
     if (hint == PreferString)
-        return stringValue(exec);
+        return stringValue(lexicalGlobalObject);
     if (hint == PreferNumber)
-        return numberValue(exec);
-    return valueOf(exec);
+        return numberValue(lexicalGlobalObject);
+    return valueOf(lexicalGlobalObject);
 }
 
-JSValue QtInstance::stringValue(ExecState* exec) const
+JSValue QtInstance::stringValue(JSGlobalObject* lexicalGlobalObject) const
 {
     QObject* obj = getObject();
     if (!obj)
@@ -277,10 +277,10 @@ JSValue QtInstance::stringValue(ExecState* exec) const
 
         buf = str.toLatin1();
     }
-    return jsString(exec->vm(), buf.constData());
+    return jsString(lexicalGlobalObject->vm(), buf.constData());
 }
 
-JSValue QtInstance::numberValue(ExecState*) const
+JSValue QtInstance::numberValue(JSGlobalObject*) const
 {
     return jsNumber(0);
 }
@@ -291,9 +291,9 @@ JSValue QtInstance::booleanValue() const
     return jsBoolean(getObject());
 }
 
-JSValue QtInstance::valueOf(ExecState* exec) const
+JSValue QtInstance::valueOf(JSGlobalObject* lexicalGlobalObject) const
 {
-    return stringValue(exec);
+    return stringValue(lexicalGlobalObject);
 }
 
 QByteArray QtField::name() const
@@ -309,9 +309,9 @@ QByteArray QtField::name() const
     return QByteArray(); // deleted child object
 }
 
-JSValue QtField::valueFromInstance(ExecState* exec, const Instance* inst) const
+JSValue QtField::valueFromInstance(JSGlobalObject* lexicalGlobalObject, const Instance* inst) const
 {
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     const QtInstance* instance = static_cast<const QtInstance*>(inst);
@@ -331,21 +331,21 @@ JSValue QtField::valueFromInstance(ExecState* exec, const Instance* inst) const
             val = obj->property(m_dynamicProperty);
 #endif
         JSValueRef exception = 0;
-        JSValueRef jsValue = convertQVariantToValue(toRef(exec), inst->rootObject(), val, &exception);
+        JSValueRef jsValue = convertQVariantToValue(toRef(lexicalGlobalObject), inst->rootObject(), val, &exception);
         if (exception)
-            return throwException(exec, scope, toJS(exec, exception));
-        return toJS(exec, jsValue);
+            return throwException(lexicalGlobalObject, scope, toJS(lexicalGlobalObject, exception));
+        return toJS(lexicalGlobalObject, jsValue);
     }
     QString msg = QString(QLatin1String("cannot access member `%1' of deleted QObject")).arg(QLatin1String(name()));
-    return throwException(exec, scope, createError(exec, msg.toLatin1().constData()));
+    return throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, msg.toLatin1().constData()));
 }
 
-bool QtField::setValueToInstance(ExecState* exec, const Instance* inst, JSValue aValue) const
+bool QtField::setValueToInstance(JSGlobalObject* lexicalGlobalObject, const Instance* inst, JSValue aValue) const
 {
     if (m_type == ChildObject) // QtScript doesn't allow setting to a named child
         return false;
 
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     const QtInstance* instance = static_cast<const QtInstance*>(inst);
@@ -357,9 +357,9 @@ bool QtField::setValueToInstance(ExecState* exec, const Instance* inst, JSValue 
 
         // dynamic properties just get any QVariant
         JSValueRef exception = 0;
-        QVariant val = convertValueToQVariant(toRef(exec), toRef(exec, aValue), argtype, 0, &exception);
+        QVariant val = convertValueToQVariant(toRef(lexicalGlobalObject), toRef(lexicalGlobalObject, aValue), argtype, 0, &exception);
         if (exception) {
-            throwException(exec, scope, toJS(exec, exception));
+            throwException(lexicalGlobalObject, scope, toJS(lexicalGlobalObject, exception));
             return false;
         }
         if (m_type == MetaProperty) {
@@ -372,7 +372,7 @@ bool QtField::setValueToInstance(ExecState* exec, const Instance* inst, JSValue 
 #endif
     } else {
         QString msg = QString(QLatin1String("cannot access member `%1' of deleted QObject")).arg(QLatin1String(name()));
-        throwException(exec, scope, createError(exec, msg.toLatin1().constData()));
+        throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, msg.toLatin1().constData()));
     }
     return false;
 }

@@ -66,8 +66,8 @@ public:
         : m_type(ChildObject), m_childObject(child)
         {}
 
-    JSValue valueFromInstance(ExecState*, const Instance*) const final;
-    bool setValueToInstance(ExecState*, const Instance*, JSValue) const final;
+    JSValue valueFromInstance(JSGlobalObject*, const Instance*) const final;
+    bool setValueToInstance(JSGlobalObject*, const Instance*, JSValue) const final;
     QByteArray name() const;
     QtFieldType fieldType() const {return m_type;}
 private:
@@ -133,8 +133,8 @@ private:
 };
 
 
-typedef QVariant (*ConvertToVariantFunction)(ExecState* exec, JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects);
-typedef JSValue (*ConvertToJSValueFunction)(ExecState* exec, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant);
+typedef QVariant (*ConvertToVariantFunction)(JSGlobalObject* exec, JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects);
+typedef JSValue (*ConvertToJSValueFunction)(JSGlobalObject* exec, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant);
 
 void registerCustomType(int qtMetaTypeId, ConvertToVariantFunction, ConvertToJSValueFunction);
 

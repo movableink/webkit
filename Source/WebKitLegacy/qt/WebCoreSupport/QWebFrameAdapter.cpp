@@ -183,11 +183,11 @@ QVariant QWebFrameAdapter::evaluateJavaScript(const QString &scriptSource)
     QVariant rc;
     int distance = 0;
     JSC::JSValue value = scriptController.executeScript(ScriptSourceCode(scriptSource));
-    JSC::ExecState* exec = scriptController.globalObject(mainThreadNormalWorld())->globalExec();
+    JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorld())->globalExec();
     JSValueRef* ignoredException = 0;
-    JSC::JSLockHolder lock(exec);
-    JSValueRef valueRef = toRef(exec, value);
-    rc = JSC::Bindings::convertValueToQVariant(toRef(exec), valueRef, QMetaType::Void, &distance, ignoredException);
+    JSC::JSLockHolder lock(lexicalGlobalObject);
+    JSValueRef valueRef = toRef(lexicalGlobalObject, value);
+    rc = JSC::Bindings::convertValueToQVariant(toRef(lexicalGlobalObject), valueRef, QMetaType::Void, &distance, ignoredException);
     return rc;
 }
 
@@ -212,13 +212,13 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
         return;
     }
 
-    JSC::ExecState* exec = window->globalExec();
-    JSC::JSLockHolder lock(exec);
+    JSCGlobalObject* lexicalGlobalObject = window->globalExec();
+    JSC::JSLockHolder lock(lexicalGlobalObject);
 
-    JSC::JSObject* runtimeObject = JSC::Bindings::QtInstance::getQtInstance(object, root, valueOwnership)->createRuntimeObject(exec);
+    JSC::JSObject* runtimeObject = JSC::Bindings::QtInstance::getQtInstance(object, root, valueOwnership)->createRuntimeObject(lexicalGlobalObject);
 
     JSC::PutPropertySlot slot(window);
-    window->methodTable(exec->vm())->put(window, exec, JSC::Identifier::fromString(exec->vm(), reinterpret_cast_ptr<const UChar*>(name.constData()), name.length()), runtimeObject, slot);
+    window->methodTable(lexicalGlobalObject->vm())->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), reinterpret_cast_ptr<const UChar*>(name.constData()), name.length()), runtimeObject, slot);
 }
 
 QString QWebFrameAdapter::toHtml() const
