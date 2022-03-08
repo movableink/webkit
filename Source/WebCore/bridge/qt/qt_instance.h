@@ -69,13 +69,13 @@ public:
     ~QtInstance();
 
     Class* getClass() const override;
-    RuntimeObject* newRuntimeObject(JSGloablObject*) final;
+    RuntimeObject* newRuntimeObject(JSGlobalObject*) final;
 
     JSValue valueOf(JSGlobalObject*) const final;
     JSValue defaultValue(JSGlobalObject*, PreferredPrimitiveType) const final;
 
     JSValue getMethod(JSGlobalObject*, PropertyName) final;
-    JSValue invokeMethod(JSGlobalObject*, RuntimeMethod*) final;
+    JSValue invokeMethod(JSGlobalObject*, CallFrame*, RuntimeMethod*) final;
 
     void getPropertyNames(JSGlobalObject*, PropertyNameArray&) final;
 

@@ -187,7 +187,7 @@ static JSRealType valueRealType(JSContextRef context, JSValueRef value, JSValueR
     JSGlobalObject* lexicalGlobalObject = toJS(context);
     JSLockHolder locker(lexicalGlobalObject);
 
-    if (isJSUint8Array(lexicalGlobalObect->vm(), object))
+    if (isJSUint8Array(lexicalGlobalObject->vm(), object))
         return RTUint8Array;
     if (isJSUint8ClampedArray(lexicalGlobalObject->vm(), object))
         return RTUint8ClampedArray;
@@ -752,7 +752,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
         memcpy(wtfByteArray->data(), qtByteArray.constData(), qtByteArray.length());
         JSGlobalObject* lexicalGlobalObject = toJS(context);
         JSLockHolder locker(lexicalGlobalObject);
-        return toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject->lexicalGlobalObject()), wtfByteArray.get()));
+        return toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject), wtfByteArray.get()));
     }
 
     if (QMetaType::typeFlags(type).testFlag(QMetaType::PointerToQObject)) {
