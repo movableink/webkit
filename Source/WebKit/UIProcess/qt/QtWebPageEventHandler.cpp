@@ -374,28 +374,13 @@ void QtWebPageEventHandler::handleInputMethodEvent(QInputMethodEvent* ev)
     }
 
     if (composition.isEmpty()) {
-        int selectionStart = -1;
-        int selectionLength = 0;
-        for (int i = 0; i < ev->attributes().size(); ++i) {
-            const QInputMethodEvent::Attribute& attr = ev->attributes().at(i);
-            if (attr.type == QInputMethodEvent::Selection) {
-                selectionStart = attr.start;
-                selectionLength = attr.length;
-
-                ASSERT(selectionStart >= 0);
-                ASSERT(selectionLength >= 0);
-                break;
-            }
-        }
-
-        m_webPageProxy->confirmComposition(commit, selectionStart, selectionLength);
+        m_webPageProxy->confirmComposition(commit);
     } else {
         ASSERT(cursorPositionWithinComposition >= 0);
         ASSERT(replacementStart >= 0);
 
         m_webPageProxy->setComposition(composition, underlines,
-            cursorPositionWithinComposition, cursorPositionWithinComposition,
-            replacementStart, replacementLength);
+	    EditingRange(cursorPositionWithinComposition, 0));
     }
 
     ev->accept();
