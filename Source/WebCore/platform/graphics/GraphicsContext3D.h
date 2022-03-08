@@ -1483,7 +1483,7 @@ private:
 #if USE(ANGLE)
     friend class Extensions3DANGLE;
     std::unique_ptr<Extensions3DANGLE> m_extensions;
-#if PLATFORM(QT)
+#elif PLATFORM(QT)
     std::unique_ptr<Extensions3DOpenGLCommon> m_extensions;
     friend class Extensions3DOpenGL;
     friend class Extensions3DOpenGLES;
