@@ -645,14 +645,14 @@ RenderThemeQtMobile::~RenderThemeQtMobile()
 {
 }
 
-bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const BorderData& border, const FillLayer& fill, const Color& backgroundColor) const
+bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
     switch (style.appearance()) {
     case CheckboxPart:
     case RadioPart:
         return false;
     default:
-        return RenderThemeQt::isControlStyled(style, border, fill, backgroundColor);
+        return RenderThemeQt::isControlStyled(style, userAgentStyle);
     }
 }
 
