@@ -292,16 +292,28 @@ static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSVal
 {
     JSGlobalObject* lexicalGlobalObject = toJS(context);
     JSLockHolder locker(lexicalGlobalObject);
+    const GregorianDateTime* other;
     if (type == Date) {
         JSObject* jsObject = toJS(object);
         DateInstance* date = jsDynamicCast<DateInstance*>(lexicalGlobalObject->vm(), jsObject);
-        gdt->copyFrom(*date->gregorianDateTimeUTC(lexicalGlobalObject));
+        other = date->gregorianDateTimeUTC(lexicalGlobalObject->vm());
     } else {
         double ms = JSValueToNumber(context, value, exception);
         GregorianDateTime convertedGdt;
         msToGregorianDateTime(lexicalGlobalObject->vm(), ms, WTF::UTCTime, convertedGdt);
-        gdt->copyFrom(convertedGdt);
+        other = &convertedGdt;
     }
+
+    gdt->setYear(other->year());
+    gdt->setMonth(other->month());
+    gdt->setYearDay(other->yearDay());
+    gdt->setMonthDay(other->monthDay());
+    gdt->setWeekDay(other->weekDay());
+    gdt->setHour(other->hour());
+    gdt->setMinute(other->minute());
+    gdt->setSecond(other->second());
+    gdt->setUTCOffsetInMinute(other->utcOffsetInMinute());
+    gdt->setIsDST(other->isDST());
 }
 
 static QDateTime toQDateTimeUTC(JSContextRef context, JSRealType type, JSValueRef value, JSObjectRef object, JSValueRef* exception)
