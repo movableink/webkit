@@ -90,7 +90,7 @@
 #import <WebCore/TextIterator.h>
 #import <WebCore/VisibleUnits.h>
 #import <WebCore/WindowsKeyboardCodes.h>
-#import <pal/spi/mac/NSAccessibilitySPI.h>
+#import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <wtf/SetForScope.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -1045,6 +1045,11 @@ void WebPage::playbackTargetAvailabilityDidChange(uint64_t contextId, bool chang
 void WebPage::setShouldPlayToPlaybackTarget(uint64_t contextId, bool shouldPlay)
 {
     m_page->setShouldPlayToPlaybackTarget(contextId, shouldPlay);
+}
+
+void WebPage::playbackTargetPickerWasDismissed(uint64_t contextId)
+{
+    m_page->playbackTargetPickerWasDismissed(contextId);
 }
 #endif
 

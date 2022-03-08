@@ -20,7 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-messages -> WebProcess LegacyReceiver {
+messages -> WebProcess LegacyReceiver NotRefCounted {
     InitializeWebProcess(struct WebKit::WebProcessCreationParameters processCreationParameters)
     SetWebsiteDataStoreParameters(struct WebKit::WebProcessDataStoreParameters parameters)
 
@@ -93,9 +93,7 @@ messages -> WebProcess LegacyReceiver {
     EnsureAutomationSessionProxy(String sessionIdentifier)
     DestroyAutomationSessionProxy()
 
-    ProcessWillSuspendImminently()
-    PrepareToSuspend()
-    CancelPrepareToSuspend()
+    PrepareToSuspend(bool isSuspensionImminent) -> () Async
     ProcessDidResume()
 
     MainThreadPing()
@@ -108,7 +106,7 @@ messages -> WebProcess LegacyReceiver {
 #endif
 
 #if ENABLE(SERVICE_WORKER)
-    EstablishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier pageID, struct WebKit::WebPreferencesStore store, WebCore::RegistrableDomain domain)
+    EstablishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier pageID, struct WebKit::WebPreferencesStore store, WebCore::RegistrableDomain domain, struct WebKit::ServiceWorkerInitializationData initializationData)
     RegisterServiceWorkerClients()
 #endif
 
@@ -160,5 +158,9 @@ messages -> WebProcess LegacyReceiver {
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     SendMessageToWebExtension(struct WebKit::UserMessage userMessage)
+#endif
+
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    SeedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain firstPartyDomain, WebCore::RegistrableDomain thirdPartyDomain, bool shouldScheduleNotification) -> () Async
 #endif
 }

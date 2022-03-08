@@ -116,6 +116,14 @@ WI.Setting = class Setting extends WI.Object
         this.save();
     }
 
+    get valueRespectingDebugUIAvailability()
+    {
+        if (this._name.startsWith("debug-") || this._name.startsWith("engineering-"))
+            return WI.isDebugUIEnabled() ? this.value : this._defaultValue;
+
+        return this.value;
+    }
+
     save()
     {
         if (!window.InspectorTest && window.localStorage) {
@@ -154,7 +162,7 @@ WI.settings = {
     cpuTimelineThreadDetailsExpanded: new WI.Setting("cpu-timeline-thread-details-expanded", false),
     emulateInUserGesture: new WI.Setting("emulate-in-user-gesture", false),
     enableControlFlowProfiler: new WI.Setting("enable-control-flow-profiler", false),
-    enableLineWrapping: new WI.Setting("enable-line-wrapping", false),
+    enableLineWrapping: new WI.Setting("enable-line-wrapping", true),
     groupMediaRequestsByDOMNode: new WI.Setting("group-media-requests-by-dom-node", WI.Setting.migrateValue("group-by-dom-node") || false),
     indentUnit: new WI.Setting("indent-unit", 4),
     indentWithTabs: new WI.Setting("indent-with-tabs", false),
@@ -186,9 +194,8 @@ WI.settings = {
     zoomFactor: new WI.Setting("zoom-factor", 1),
 
     // Experimental
-    experimentalEnableLayersTab: new WI.Setting("experimental-enable-layers-tab", false),
+    experimentalEnablePreviewFeatures: new WI.Setting("experimental-enable-preview-features", false),
     experimentalEnableNewTabBar: new WI.Setting("experimental-enable-new-tab-bar", false),
-    experimentalEnableStylesIcons: new WI.Setting("experimental-styles-icons", false),
     experimentalEnableStylesJumpToEffective: new WI.Setting("experimental-styles-jump-to-effective", false),
 
     // Protocol
@@ -202,11 +209,34 @@ WI.settings = {
     engineeringPauseForInternalScripts: new WI.Setting("engineering-pause-for-internal-scripts", false),
     engineeringShowInternalObjectsInHeapSnapshot: new WI.Setting("engineering-show-internal-objects-in-heap-snapshot", false),
     engineeringShowPrivateSymbolsInHeapSnapshot: new WI.Setting("engineering-show-private-symbols-in-heap-snapshot", false),
+    engineeringAllowEditingUserAgentShadowTrees: new WI.Setting("engineering-allow-editing-user-agent-shadow-trees", false),
 
     // Debug
     debugShowConsoleEvaluations: new WI.Setting("debug-show-console-evaluations", false),
     debugEnableLayoutFlashing: new WI.Setting("debug-enable-layout-flashing", false),
     debugEnableStyleEditingDebugMode: new WI.Setting("debug-enable-style-editing-debug-mode", false),
     debugEnableUncaughtExceptionReporter: new WI.Setting("debug-enable-uncaught-exception-reporter", true),
+    debugEnableDiagnosticLogging: new WI.Setting("debug-enable-diagnostic-logging", true),
+    debugAutoLogDiagnosticEvents: new WI.Setting("debug-auto-log-diagnostic-events", false),
     debugLayoutDirection: new WI.Setting("debug-layout-direction-override", "system"),
+};
+
+WI.previewFeatures = [
+    "p3-gamut-color-picker" // FIXME: <https://webkit.org/b/203931> Web Inspector: Enable p3 color picker by default
+];
+
+WI.isTechnologyPreviewBuild = function()
+{
+    return WI.isExperimentalBuild && !WI.isEngineeringBuild;
+};
+
+WI.arePreviewFeaturesEnabled = function()
+{
+    if (WI.isExperimentalBuild)
+        return true;
+
+    if (WI.settings.experimentalEnablePreviewFeatures.value)
+        return true;
+
+    return false;
 };

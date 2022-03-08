@@ -247,7 +247,7 @@ public:
         return typeInfo().isImmutablePrototypeExoticObject();
     }
 
-    // We use SlowPath in GetByIdStatus for structures that may get new impure properties later to prevent
+    // We use SlowPath in GetByStatus for structures that may get new impure properties later to prevent
     // DFG from inlining property accesses since structures don't transition when a new impure property appears.
     bool takesSlowPathInDFGForImpureProperty()
     {
@@ -294,7 +294,7 @@ public:
     JSValue prototypeForLookup(JSGlobalObject*) const;
     JSValue prototypeForLookup(JSGlobalObject*, JSCell* base) const;
     StructureChain* prototypeChain(VM&, JSGlobalObject*, JSObject* base) const;
-    StructureChain* prototypeChain(ExecState*, JSObject* base) const;
+    StructureChain* prototypeChain(JSGlobalObject*, JSObject* base) const;
     static void visitChildren(JSCell*, SlotVisitor&);
     
     // A Structure is cheap to mark during GC if doing so would only add a small and bounded amount
@@ -492,7 +492,7 @@ public:
         return rareData()->objectToStringValue();
     }
 
-    void setObjectToStringValue(ExecState*, VM&, JSString* value, PropertySlot toStringTagSymbolSlot);
+    void setObjectToStringValue(JSGlobalObject*, VM&, JSString* value, PropertySlot toStringTagSymbolSlot);
 
     const ClassInfo* classInfo() const { return m_classInfo; }
 

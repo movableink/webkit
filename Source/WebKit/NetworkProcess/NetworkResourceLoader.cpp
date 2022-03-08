@@ -30,17 +30,21 @@
 #include "FormDataReference.h"
 #include "Logging.h"
 #include "NetworkCache.h"
+#include "NetworkCacheSpeculativeLoadManager.h"
 #include "NetworkConnectionToWebProcess.h"
+#include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkLoad.h"
 #include "NetworkLoadChecker.h"
 #include "NetworkProcess.h"
 #include "NetworkProcessConnectionMessages.h"
 #include "NetworkSession.h"
+#include "ServiceWorkerFetchTask.h"
 #include "SharedBufferDataReference.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebErrors.h"
 #include "WebPageMessages.h"
 #include "WebResourceLoaderMessages.h"
+#include "WebSWServerConnection.h"
 #include "WebsiteDataStoreParameters.h"
 #include <WebCore/BlobDataFileReference.h>
 #include <WebCore/CertificateInfo.h>
@@ -111,7 +115,7 @@ NetworkResourceLoader::NetworkResourceLoader(NetworkResourceLoadParameters&& par
 
     if (synchronousReply || parameters.shouldRestrictHTTPResponseAccess || parameters.options.keepAlive) {
         NetworkLoadChecker::LoadType requestLoadType = isMainFrameLoad() ? NetworkLoadChecker::LoadType::MainFrame : NetworkLoadChecker::LoadType::Other;
-        m_networkLoadChecker = makeUnique<NetworkLoadChecker>(connection.networkProcess(), FetchOptions { m_parameters.options }, sessionID(), m_parameters.webPageProxyID, HTTPHeaderMap { m_parameters.originalRequestHeaders }, URL { m_parameters.request.url() }, m_parameters.sourceOrigin.copyRef(), m_parameters.topOrigin.copyRef(), m_parameters.preflightPolicy, originalRequest().httpReferrer(), m_parameters.isHTTPSUpgradeEnabled, shouldCaptureExtraNetworkLoadMetrics(), requestLoadType);
+        m_networkLoadChecker = makeUnique<NetworkLoadChecker>(connection.networkProcess(), &connection.schemeRegistry(), FetchOptions { m_parameters.options }, sessionID(), m_parameters.webPageProxyID, HTTPHeaderMap { m_parameters.originalRequestHeaders }, URL { m_parameters.request.url() }, m_parameters.sourceOrigin.copyRef(), m_parameters.topOrigin.copyRef(), m_parameters.preflightPolicy, originalRequest().httpReferrer(), m_parameters.isHTTPSUpgradeEnabled, shouldCaptureExtraNetworkLoadMetrics(), requestLoadType);
         if (m_parameters.cspResponseHeaders)
             m_networkLoadChecker->setCSPResponseHeaders(ContentSecurityPolicyResponseHeaders { m_parameters.cspResponseHeaders.value() });
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -463,6 +467,9 @@ void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedRespon
 {
     RELEASE_LOG_IF_ALLOWED("didReceiveResponse: (pageID = %" PRIu64 ", frameID = %" PRIu64 ", resourceID = %" PRIu64 ", httpStatusCode = %d, length = %" PRId64 ")", m_parameters.webPageID.toUInt64(), m_parameters.webFrameID.toUInt64(), m_parameters.identifier, receivedResponse.httpStatusCode(), receivedResponse.expectedContentLength());
 
+    if (isMainResource())
+        didReceiveMainResourceResponse(receivedResponse);
+
     m_response = WTFMove(receivedResponse);
 
     if (shouldCaptureExtraNetworkLoadMetrics() && m_networkLoadChecker) {
@@ -498,7 +505,7 @@ void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedRespon
     }
 
     if (m_networkLoadChecker) {
-        auto error = m_networkLoadChecker->validateResponse(m_response);
+        auto error = m_networkLoadChecker->validateResponse(m_networkLoad ? m_networkLoad->currentRequest() : originalRequest(), m_response);
         if (!error.isNull()) {
             RunLoop::main().dispatch([protectedThis = makeRef(*this), error = WTFMove(error)] {
                 if (protectedThis->m_networkLoad)
@@ -527,13 +534,8 @@ void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedRespon
         return;
     }
 
-    if (m_isKeptAlive) {
-        m_responseCompletionHandler = WTFMove(completionHandler);
-        RunLoop::main().dispatch([protectedThis = makeRef(*this)] {
-            protectedThis->didFinishLoading(NetworkLoadMetrics { });
-        });
-        return;
-    }
+    if (m_isKeptAlive)
+        return completionHandler(PolicyAction::Ignore);
 
     completionHandler(PolicyAction::Use);
 }
@@ -691,6 +693,7 @@ void NetworkResourceLoader::willSendRedirectedRequest(ResourceRequest&& request,
             if (this->isSynchronous()) {
                 if (storedCredentialsPolicy != m_networkLoadChecker->storedCredentialsPolicy()) {
                     // We need to restart the load to update the session according the new credential policy.
+                    RELEASE_LOG_IF_ALLOWED("willSendRedirectedRequest: (pageID = %" PRIu64 ", frameID = %" PRIu64 ", resourceID = %" PRIu64 ") Restarting network load due to credential policy change for synchronous load", m_parameters.webPageID.toUInt64(), m_parameters.webFrameID.toUInt64(), m_parameters.identifier);
                     this->restartNetworkLoad(WTFMove(result->redirectRequest));
                     return;
                 }
@@ -722,7 +725,9 @@ void NetworkResourceLoader::continueWillSendRedirectedRequest(ResourceRequest&& 
     if (adClickConversion && (networkSession = m_connection->networkProcess().networkSession(sessionID())))
         networkSession->handleAdClickAttributionConversion(WTFMove(*adClickConversion), request.url(), redirectRequest);
 
-    send(Messages::WebResourceLoader::WillSendRequest(redirectRequest, sanitizeResponseIfPossible(WTFMove(redirectResponse), ResourceResponse::SanitizationType::Redirection)));
+    // We send the request body separately because the ResourceRequest body normally does not get encoded when sent over IPC, as an optimization.
+    // However, we really need the body here because a redirect cross-site may cause a process-swap and the request to start again in a new WebContent process.
+    send(Messages::WebResourceLoader::WillSendRequest(redirectRequest, IPC::FormDataReference { redirectRequest.httpBody() }, sanitizeResponseIfPossible(WTFMove(redirectResponse), ResourceResponse::SanitizationType::Redirection)));
 }
 
 void NetworkResourceLoader::didFinishWithRedirectResponse(WebCore::ResourceRequest&& request, WebCore::ResourceRequest&& redirectRequest, ResourceResponse&& redirectResponse)
@@ -752,6 +757,8 @@ ResourceResponse NetworkResourceLoader::sanitizeResponseIfPossible(ResourceRespo
 
 void NetworkResourceLoader::restartNetworkLoad(WebCore::ResourceRequest&& newRequest)
 {
+    RELEASE_LOG_IF_ALLOWED("restartNetworkLoad: (pageID = %" PRIu64 ", frameID = %" PRIu64 ", resourceID = %" PRIu64 ")", m_parameters.webPageID.toUInt64(), m_parameters.webFrameID.toUInt64(), m_parameters.identifier);
+
     if (m_networkLoad)
         m_networkLoad->cancel();
 
@@ -761,17 +768,28 @@ void NetworkResourceLoader::restartNetworkLoad(WebCore::ResourceRequest&& newReq
 void NetworkResourceLoader::continueWillSendRequest(ResourceRequest&& newRequest, bool isAllowedToAskUserForCredentials)
 {
 #if ENABLE(SERVICE_WORKER)
+    if (parameters().options.mode == FetchOptions::Mode::Navigate) {
+        if (auto serviceWorkerFetchTask = m_connection->swConnection().createFetchTask(*this, newRequest)) {
+            m_networkLoad = nullptr;
+            m_serviceWorkerFetchTask = WTFMove(serviceWorkerFetchTask);
+            return;
+        }
+        m_shouldRestartLoad = !!m_serviceWorkerFetchTask;
+        m_serviceWorkerFetchTask = nullptr;
+    }
     if (m_serviceWorkerFetchTask) {
         m_serviceWorkerFetchTask->continueFetchTaskWith(WTFMove(newRequest));
         return;
     }
 #endif
+
     if (m_shouldRestartLoad) {
         m_shouldRestartLoad = false;
 
         if (m_networkLoad)
             m_networkLoad->updateRequestAfterRedirection(newRequest);
 
+        RELEASE_LOG_IF_ALLOWED("continueWillSendRequest: (pageID = %" PRIu64 ", frameID = %" PRIu64 ", resourceID = %" PRIu64 ") Restarting network load", m_parameters.webPageID.toUInt64(), m_parameters.webFrameID.toUInt64(), m_parameters.identifier);
         restartNetworkLoad(WTFMove(newRequest));
         return;
     }
@@ -886,9 +904,20 @@ void NetworkResourceLoader::tryStoreAsCacheEntry()
     });
 }
 
+void NetworkResourceLoader::didReceiveMainResourceResponse(const WebCore::ResourceResponse& response)
+{
+#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
+    if (auto* speculativeLoadManager = m_cache ? m_cache->speculativeLoadManager() : nullptr)
+        speculativeLoadManager->registerMainResourceLoadResponse(globalFrameID(), originalRequest(), response);
+#endif
+}
+
 void NetworkResourceLoader::didRetrieveCacheEntry(std::unique_ptr<NetworkCache::Entry> entry)
 {
     auto response = entry->response();
+
+    if (isMainResource())
+        didReceiveMainResourceResponse(response);
 
     if (isMainResource() && shouldInterruptLoadForCSPFrameAncestorsOrXFrameOptions(response)) {
         response = sanitizeResponseIfPossible(WTFMove(response), ResourceResponse::SanitizationType::CrossOriginSafe);
@@ -896,7 +925,7 @@ void NetworkResourceLoader::didRetrieveCacheEntry(std::unique_ptr<NetworkCache::
         return;
     }
     if (m_networkLoadChecker) {
-        auto error = m_networkLoadChecker->validateResponse(response);
+        auto error = m_networkLoadChecker->validateResponse(originalRequest(), response);
         if (!error.isNull()) {
             didFailLoading(error);
             return;
@@ -1223,10 +1252,10 @@ bool NetworkResourceLoader::isCrossOriginPrefetch() const
 }
 
 #if ENABLE(SERVICE_WORKER)
-void NetworkResourceLoader::startWithServiceWorker(WebSWServerConnection* swConnection)
+void NetworkResourceLoader::startWithServiceWorker()
 {
     ASSERT(!m_serviceWorkerFetchTask);
-    m_serviceWorkerFetchTask = swConnection ? swConnection->createFetchTask(*this) : nullptr;
+    m_serviceWorkerFetchTask = m_connection->swConnection().createFetchTask(*this, originalRequest());
     if (m_serviceWorkerFetchTask)
         return;
 
@@ -1241,7 +1270,17 @@ void NetworkResourceLoader::serviceWorkerDidNotHandle()
         return;
     }
 
-    m_serviceWorkerFetchTask = nullptr;
+    if (m_serviceWorkerFetchTask) {
+        auto newRequest = m_serviceWorkerFetchTask->takeRequest();
+        m_serviceWorkerFetchTask = nullptr;
+
+        if (m_networkLoad)
+            m_networkLoad->updateRequestAfterRedirection(newRequest);
+
+        RELEASE_LOG_IF_ALLOWED("serviceWorkerDidNotHandle: (pageID = %" PRIu64 ", frameID = %" PRIu64 ", resourceID = %" PRIu64 ") Restarting network load", m_parameters.webPageID.toUInt64(), m_parameters.webFrameID.toUInt64(), m_parameters.identifier);
+        restartNetworkLoad(WTFMove(newRequest));
+        return;
+    }
     start();
 }
 #endif

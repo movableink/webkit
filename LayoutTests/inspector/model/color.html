@@ -27,6 +27,8 @@ function test()
             return "HSL";
         case WI.Color.Format.HSLA:
             return "HSLA";
+        case WI.Color.Format.ColorFunction:
+            return "Function";
         default:
             return "Unexpected format";
         }
@@ -224,6 +226,34 @@ function test()
                 testGood(`hsla(999${unit} 999% 999% / 999%)`, WI.Color.Format.HSLA);
             }
 
+            testGood("color(display-p3 0 1 0.5)", WI.Color.Format.ColorFunction);
+            testGood("COLOR(DISPLAY-P3 0 1 0.5)", WI.Color.Format.ColorFunction);
+
+            testGood("color(srgb 0.123 0.999 1)", WI.Color.Format.ColorFunction);
+            testGood("COLOR(SRGB 0.123 0.999 1)", WI.Color.Format.ColorFunction);
+            testGood("color( display-p3 0 1 0.5 )", WI.Color.Format.ColorFunction);
+            testGood("color(display-p3 999 999 999)", WI.Color.Format.ColorFunction);
+
+            testGood("color(srgb 0.123 0.999 1/0.5)", WI.Color.Format.ColorFunction);
+            testGood("COLOR(SRGB 0.123 0.999 1/0.5)", WI.Color.Format.ColorFunction);
+            testGood("color( display-p3 0 1 0.5/0.5)", WI.Color.Format.ColorFunction);
+            testGood("color(display-p3 999 999 999/999)", WI.Color.Format.ColorFunction);
+
+            testGood("color(srgb 0.123 0.999 1 / 0.5)", WI.Color.Format.ColorFunction);
+            testGood("COLOR(SRGB 0.123 0.999 1 / 0.5)", WI.Color.Format.ColorFunction);
+            testGood("color( display-p3 0 1 0.5 / 0.5)", WI.Color.Format.ColorFunction);
+            testGood("color(display-p3 999 999 999 / 999)", WI.Color.Format.ColorFunction);
+
+            testGood("color(srgb 0.123 0.999 1/33%)", WI.Color.Format.ColorFunction);
+            testGood("COLOR(SRGB 0.123 0.999 1/33%)", WI.Color.Format.ColorFunction);
+            testGood("color( display-p3 0 1 0.5/33%)", WI.Color.Format.ColorFunction);
+            testGood("color(display-p3 999 999 999/999%)", WI.Color.Format.ColorFunction);
+
+            testGood("color(srgb 0.123 0.999 1 / 33%)", WI.Color.Format.ColorFunction);
+            testGood("COLOR(SRGB 0.123 0.999 1 / 33%)", WI.Color.Format.ColorFunction);
+            testGood("color( display-p3 0 1 0.5 / 33%)", WI.Color.Format.ColorFunction);
+            testGood("color(display-p3 999 999 999 / 999%)", WI.Color.Format.ColorFunction);
+
             InspectorTest.log("");
 
             testBad(" #000 "); // whitespace
@@ -238,6 +268,8 @@ function test()
             testBad("hsl(0, 0%, 50%, 1, 2)"); // extra value
             testBad("hsla(0, 0%, 50%, 1, 2)"); // extra values
             testBad("superblue"); // not a keyword
+            testBad("color(display-p3 0 1)"); // 2
+            testBad("color(display-p3 0 1 2 4 5)"); // 5
 
             // FIXME: currentColor?
             // FIXME: Should we consider missing %s as bad? Currently we just strip them.
@@ -287,6 +319,18 @@ function test()
 
             color = WI.Color.fromString("#11223345");
             InspectorTest.expectThat(color.canBeSerializedAsShortHEX() === false, "'#11223345' should not be serializable as a short Hex");
+
+            color = WI.Color.fromString("color(display-p3 0 1 0.5)");
+            InspectorTest.expectThat(color.alpha === 1, "'color(display-p3 0 1 0.5)' color should have a default alpha of 1");
+            InspectorTest.expectThat(color.isKeyword() === false, "color function is not a keyword");
+            InspectorTest.expectShallowEqual(color.rgb, [0, 1, 0.5], "'color(display-p3 0 1 0.5)' has rgb of [0, 1, 0.5]");
+            InspectorTest.expectShallowEqual(color.rgba, [0, 1, 0.5, 1], "'color(display-p3 0 1 0.5)' has rgba of [0, 1, 0.5, 1]");
+
+            color = WI.Color.fromString("color(display-p3 0 1 0.5 / 0.3)");
+            InspectorTest.expectThat(color.alpha === 0.3, "'color(display-p3 0 1 0.5 / 0.3)' should have an alpha of 0.3");
+            InspectorTest.expectThat(color.isKeyword() === false, "color function is not a keyword");
+            InspectorTest.expectShallowEqual(color.rgb, [0, 1, 0.5], "'color(display-p3 0 1 0.5 / 0.3)' has rgb of [0, 1, 0.5]");
+            InspectorTest.expectShallowEqual(color.rgba, [0, 1, 0.5, 0.3], "'color(display-p3 0 1 0.5 / 0.3)' has rgba of [0, 1, 0.5, 0.3]");
 
             return true;
         }
@@ -479,6 +523,62 @@ function test()
     });
 
     suite.addTestCase({
+        name: "WI.Color.hsv2hsl",
+        description: "Test conversion from HSV to HSL.",
+        test() {
+            testColorConversion(WI.Color.hsv2hsl, [42, 100, 0], [42, 0, 0]);
+            testColorConversion(WI.Color.hsv2hsl, [42, 50, 100], [42, 100, 75]);
+            testColorConversion(WI.Color.hsv2hsl, [42, 100, 50], [42, 100, 25]);
+            testColorConversion(WI.Color.hsv2hsl, [42, 50, 50], [42, 33.33333333333333, 37.5]);
+            testColorConversion(WI.Color.hsv2hsl, [42, 100, 100], [42, 100, 50]);
+
+            // Out-of-bounds.
+            testColorConversion(WI.Color.hsv2hsl, [-1, -1, -1], [0, 0, 0]);
+            testColorConversion(WI.Color.hsv2hsl, [361, 101, 50], [360, 100, 25]);
+            testColorConversion(WI.Color.hsv2hsl, [361, 101, 101], [360, 100, 50]);
+
+            return true;
+        }
+    });
+
+    suite.addTestCase({
+        name: "WI.Color.rgb2hsv",
+        description: "Test conversion from RGB to HSV.",
+        test() {
+            testColorConversion(WI.Color.rgb2hsv, [0, 0, 0], [0, 0, 0]);
+            testColorConversion(WI.Color.rgb2hsv, [1, 1, 1], [0, 0, 100]);
+            testColorConversion(WI.Color.rgb2hsv, [1, 0, 0], [0, 100, 100]);
+            testColorConversion(WI.Color.rgb2hsv, [0, 1, 0], [120, 100, 100]);
+            testColorConversion(WI.Color.rgb2hsv, [0, 0, 1], [240, 100, 100]);
+
+            // Out-of-bounds.
+            testColorConversion(WI.Color.rgb2hsv, [-1, -1, -1], [0, 0, 0]);
+            testColorConversion(WI.Color.rgb2hsv, [1.1, 1.1, 1.1], [0, 0, 100]);
+
+            return true;
+        }
+    });
+
+    suite.addTestCase({
+        name: "WI.Color.hsv2rgb",
+        description: "Test conversion from HSV to RGB.",
+        test() {
+            testColorConversion(WI.Color.hsv2rgb, [42, 100, 0], [0, 0, 0]);
+            testColorConversion(WI.Color.hsv2rgb, [42, 50, 100], [1, 0.8500000000000001, 0.5]);
+            testColorConversion(WI.Color.hsv2rgb, [42, 100, 50], [0.5, 0.3500000000000001, 0]);
+            testColorConversion(WI.Color.hsv2rgb, [42, 50, 50], [0.5, 0.42500000000000004, 0.25]);
+            testColorConversion(WI.Color.hsv2rgb, [42, 100, 100], [1, 0.7000000000000002, 0]);
+
+            // Out-of-bounds.
+            testColorConversion(WI.Color.hsv2rgb, [-1, -1, -1], [0, 0, 0]);
+            testColorConversion(WI.Color.hsv2rgb, [361, 101, 50], [0.5, 0, 0]);
+            testColorConversion(WI.Color.hsv2rgb, [361, 101, 101], [1, 0, 0]);
+
+            return true;
+        }
+    });
+
+    suite.addTestCase({
         name: "WI.Color.cmyk2rgb",
         description: "Test conversion from CMYK to RGB.",
         test() {
@@ -507,6 +607,24 @@ function test()
             // Out-of-bounds inputs.
             testColorConversion(WI.Color.normalized2rgb, [2, 0, 0], [255, 0, 0]);
             testColorConversion(WI.Color.normalized2rgb, [-1, 0, 0], [0, 0, 0]);
+
+            return true;
+        }
+    });
+
+    suite.addTestCase({
+        name: "WI.Color.displayP3toSRGB",
+        description: "Test conversion from display-P3 gamut to sRGB.",
+        test() {
+            testColorConversion(WI.Color.displayP3toSRGB, [0, 0, 0], [0, 0, 0]);
+            testColorConversion(WI.Color.displayP3toSRGB, [1, 1, 1], [0.9999300658875597, 1.0000101408119602, 1.0001054916006267]);
+            testColorConversion(WI.Color.displayP3toSRGB, [1, 0, 0], [1.0929902391315327, -0.5433883521407902, -0.2537782522695441]);
+            testColorConversion(WI.Color.displayP3toSRGB, [0, 1, 0], [-2.9057643199691516, 1.0182759798644396, -1.0162215225472337]);
+            testColorConversion(WI.Color.displayP3toSRGB, [0, 0, 1], [2.3902361583783006e-7, -2.0487738563140788e-7, 1.0421313171983129]);
+
+            // Out-of-bounds inputs.
+            testColorConversion(WI.Color.displayP3toSRGB, [2, 0, 0], [1.0929902391315327, -0.5433883521407902, -0.2537782522695441]);
+            testColorConversion(WI.Color.displayP3toSRGB, [-1, 0, 0], [0, 0, 0]);
 
             return true;
         }

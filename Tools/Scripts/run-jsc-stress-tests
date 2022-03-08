@@ -306,7 +306,7 @@ unless jscArg
 
     output = output[0]
     jscArg = Pathname.new(output).join("jsc")
-    jscArg = Pathname.new(output).join("JavaScriptCore.framework", "Resources", "jsc") if !File.file?(jscArg)
+    jscArg = Pathname.new(output).join("JavaScriptCore.framework", "Helpers", "jsc") if !File.file?(jscArg)
     jscArg = Pathname.new(output).join("bin", "jsc") if !File.file?(jscArg) # Support CMake build.
     if !File.file?(jscArg)
         $stderr.puts "Error: must specify --jsc <path>"
@@ -325,7 +325,7 @@ end
 $progressMeter = ($verbosity == 0 and $stdout.tty? and $remoteHosts.length <= 1)
 
 if $bundle
-    $jscPath = $bundle + ".vm" + "JavaScriptCore.framework" + "Resources" + "jsc"
+    $jscPath = $bundle + ".vm" + "JavaScriptCore.framework" + "Helpers" + "jsc"
     $outputDir = $bundle
 end
 
@@ -702,10 +702,6 @@ def runBigIntEnabled(*optionalTestSpecificOptions)
     end
 
     run("big-int-enabled", "--useBigInt=true" , *(FTL_OPTIONS + optionalTestSpecificOptions))
-end
-
-def runNullishAwareOperatorsEnabled(*optionalTestSpecificOptions)
-    run("nullish-aware-operators-enabled", "--useNullishAwareOperators=true" , *(FTL_OPTIONS + optionalTestSpecificOptions))
 end
 
 def runFTLNoCJIT(*optionalTestSpecificOptions)
@@ -1094,7 +1090,8 @@ def runWebAssembly
         run("wasm-eager-jettison", "-m", "--forceCodeBlockToJettisonDueToOldAge=true", *FTL_OPTIONS)
         run("wasm-no-tls-context", "-m", "--useFastTLSForWasmContext=false", *FTL_OPTIONS)
         run("wasm-slow-memory", "-m", "--useWebAssemblyFastMemory=false", *FTL_OPTIONS)
-        run("wasm-no-air", "-m", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+        run("wasm-b3", "-m", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+        run("wasm-air", "-m", "--useWasmLLInt=false", *FTL_OPTIONS)
         run("wasm-collect-continuously", "-m", "--collectContinuously=true", *FTL_OPTIONS) if shouldCollectContinuously?
     end
 end
@@ -1112,7 +1109,8 @@ def runWebAssemblySuite(*optionalTestSpecificOptions)
         run("wasm-eager-jettison", "-m", "--forceCodeBlockToJettisonDueToOldAge=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-no-tls-context", "-m", "--useFastTLSForWasmContext=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-slow-memory", "-m", "--useWebAssemblyFastMemory=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-        run("wasm-no-air", "-m", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        run("wasm-b3", "-m", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        run("wasm-air", "-m", "--useWasmLLInt=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-collect-continuously", "-m", "--collectContinuously=true", *(FTL_OPTIONS + optionalTestSpecificOptions)) if shouldCollectContinuously?
     end
 end
@@ -1141,7 +1139,8 @@ def runWebAssemblyWithHarness(*optionalTestSpecificOptions)
         runHarnessTest("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
         runHarnessTest("wasm-no-tls-context", "--useFastTLSForWasmContext=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         runHarnessTest("wasm-slow-memory", "--useWebAssemblyFastMemory=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-        runHarnessTest("wasm-no-air", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        runHarnessTest("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        runHarnessTest("wasm-no-air", "--useWasmLLInt=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         runHarnessTest("wasm-collect-continuously", "--collectContinuously=true", *(FTL_OPTIONS + optionalTestSpecificOptions)) if shouldCollectContinuously?
     end
 end
@@ -1160,7 +1159,8 @@ def runWebAssemblyEmscripten(mode)
         run("wasm-no-cjit-yes-tls-context", "--useFastTLSForWasmContext=true", *(FTL_OPTIONS + NO_CJIT_OPTIONS))
         run("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", *FTL_OPTIONS)
         run("wasm-no-tls-context", "--useFastTLSForWasmContext=false", *FTL_OPTIONS)
-        run("wasm-no-air", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+        run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+        run("wasm-air", "--useWasmLLInt=false", *FTL_OPTIONS)
         run("wasm-collect-continuously", "--collectContinuously=true", *FTL_OPTIONS) if shouldCollectContinuously?
     end
 end
@@ -1185,7 +1185,8 @@ def runWebAssemblySpecTest(mode)
       runWithOutputHandler("wasm-no-cjit-yes-tls-context", noisyOutputHandler, "../spec-harness.js",  "--useFastTLSForWasmContext=true", *(FTL_OPTIONS + NO_CJIT_OPTIONS))
       runWithOutputHandler("wasm-eager-jettison", noisyOutputHandler, "../spec-harness.js", "--forceCodeBlockToJettisonDueToOldAge=true", *FTL_OPTIONS)
       runWithOutputHandler("wasm-no-tls-context", noisyOutputHandler, "../spec-harness.js", "--useFastTLSForWasmContext=false", *FTL_OPTIONS)
-      runWithOutputHandler("wasm-no-air", noisyOutputHandler, "../spec-harness.js", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+      runWithOutputHandler("wasm-b3", noisyOutputHandler, "../spec-harness.js", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+      runWithOutputHandler("wasm-air", noisyOutputHandler, "../spec-harness.js", "--useWasmLLInt=false", *FTL_OPTIONS)
       runWithOutputHandler("wasm-collect-continuously", noisyOutputHandler, "../spec-harness.js", "--collectContinuously=true", *FTL_OPTIONS) if shouldCollectContinuously?
     end
 end
@@ -1382,11 +1383,11 @@ def prepareExtraAbsoluteFiles(absoluteBase, extraFiles)
     }
 end
 
-def runComplexTest(before, after, *options)
+def runComplexTest(before, after, additionalEnv, *options)
     prepareExtraRelativeFiles(before.map{|v| (Pathname("..") + v).to_s}, $collection)
     prepareExtraRelativeFiles(after.map{|v| (Pathname("..") + v).to_s}, $collection)
     args = [pathToVM.to_s] + BASE_OPTIONS + $testSpecificRequiredOptions + options + before.map{|v| v.to_s} + [$benchmark.to_s] + after.map{|v| v.to_s}
-    addRunCommand("complex", args, silentOutputHandler, simpleErrorHandler)
+    addRunCommand("complex", args, silentOutputHandler, simpleErrorHandler, *additionalEnv)
 end
 
 def runMozillaTest(kind, mode, extraFiles, *options)
@@ -1735,7 +1736,7 @@ def prepareBundle
         
         frameworkPath = frameworkFromJSCPath($jscPath)
         destinationFrameworkPath = Pathname.new(".vm") + "JavaScriptCore.framework"
-        $jscPath = destinationFrameworkPath + "Resources" + "jsc"
+        $jscPath = destinationFrameworkPath + "Helpers" + "jsc"
         $testingFrameworkPath = Pathname.new("..") + destinationFrameworkPath
 
         if frameworkPath

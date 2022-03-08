@@ -28,6 +28,8 @@
 #include "GraphicsLayer.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
+#include "MediaQueryEvaluator.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -134,6 +136,8 @@ public:
     bool isDroppedImagePlaceholder() const { return m_isDroppedImagePlaceholder; }
     void setIsDroppedImagePlaceholder() { m_isDroppedImagePlaceholder = true; }
 
+    void evaluateDynamicMediaQueryDependencies();
+
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr, bool createdByParser = false);
 
@@ -201,6 +205,7 @@ private:
 
     RefPtr<EditableImageReference> m_editableImage;
     WeakPtr<HTMLPictureElement> m_pictureElement;
+    MediaQueryDynamicResults m_mediaQueryDynamicResults;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     String m_pendingClonedAttachmentID;

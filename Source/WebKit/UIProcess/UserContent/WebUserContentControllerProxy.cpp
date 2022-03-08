@@ -84,6 +84,18 @@ WebUserContentControllerProxy::~WebUserContentControllerProxy()
 #endif
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebUserContentControllerProxy::addNetworkProcess(NetworkProcessProxy& proxy)
+{
+    m_networkProcesses.add(proxy);
+}
+
+void WebUserContentControllerProxy::removeNetworkProcess(NetworkProcessProxy& proxy)
+{
+    m_networkProcesses.remove(proxy);
+}
+#endif
+
 void WebUserContentControllerProxy::addProcess(WebProcessProxy& webProcessProxy, WebPageCreationParameters& parameters)
 {
     ASSERT(!m_processes.hasNullReferences());
@@ -109,10 +121,20 @@ void WebUserContentControllerProxy::addProcess(WebProcessProxy& webProcessProxy,
 
 #if ENABLE(CONTENT_EXTENSIONS)
     ASSERT(parameters.contentRuleLists.isEmpty());
-    for (const auto& contentRuleList : m_contentRuleLists.values())
-        parameters.contentRuleLists.append(std::make_pair(contentRuleList->name(), contentRuleList->compiledRuleList().data()));
+    parameters.contentRuleLists = contentRuleListData();
 #endif
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+Vector<std::pair<String, WebCompiledContentRuleListData>> WebUserContentControllerProxy::contentRuleListData()
+{
+    Vector<std::pair<String, WebCompiledContentRuleListData>> data;
+    data.reserveInitialCapacity(m_contentRuleLists.size());
+    for (const auto& contentRuleList : m_contentRuleLists.values())
+        data.uncheckedAppend(std::make_pair(contentRuleList->name(), contentRuleList->compiledRuleList().data()));
+    return data;
+}
+#endif
 
 void WebUserContentControllerProxy::removeProcess(WebProcessProxy& webProcessProxy)
 {
@@ -332,7 +354,7 @@ void WebUserContentControllerProxy::removeAllUserMessageHandlers(API::UserConten
     removeUserContentWorldUses(world, numberRemoved);
 }
 
-void WebUserContentControllerProxy::didPostMessage(IPC::Connection& connection, WebPageProxyIdentifier pageProxyID, const FrameInfoData& frameInfoData, uint64_t messageHandlerID, const IPC::DataReference& dataReference)
+void WebUserContentControllerProxy::didPostMessage(IPC::Connection& connection, WebPageProxyIdentifier pageProxyID, FrameInfoData&& frameInfoData, uint64_t messageHandlerID, const IPC::DataReference& dataReference)
 {
     WebPageProxy* page = WebProcessProxy::webPage(pageProxyID);
     if (!page)
@@ -345,7 +367,7 @@ void WebUserContentControllerProxy::didPostMessage(IPC::Connection& connection, 
     if (!handler)
         return;
 
-    handler->client().didPostMessage(*page, frameInfoData, WebCore::SerializedScriptValue::adopt(dataReference.vector()));
+    handler->client().didPostMessage(*page, WTFMove(frameInfoData), WebCore::SerializedScriptValue::adopt(dataReference.vector()));
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)

@@ -83,8 +83,8 @@ public:
     void didFirstPaint();
 
 #if PLATFORM(IOS_FAMILY)
-    enum class NetworkActivityTokenReleaseReason { LoadCompleted, ScreenLocked };
-    void releaseNetworkActivityToken(NetworkActivityTokenReleaseReason);
+    enum class NetworkActivityReleaseReason { LoadCompleted, ScreenLocked };
+    void releaseNetworkActivity(NetworkActivityReleaseReason);
 #endif
 
 private:
@@ -100,7 +100,7 @@ private:
         void didPerformClientRedirect(WebPageProxy&, const WTF::String&, const WTF::String&) override;
         void didCancelClientRedirect(WebPageProxy&) override;
         void didFailProvisionalNavigationWithError(WebPageProxy&, WebFrameProxy&, API::Navigation*, const WebCore::ResourceError&, API::Object*) override;
-        void didFailProvisionalLoadInSubframeWithError(WebPageProxy&, WebFrameProxy&, const WebCore::SecurityOriginData&, API::Navigation*, const WebCore::ResourceError&, API::Object*) override;
+        void didFailProvisionalLoadInSubframeWithError(WebPageProxy&, WebFrameProxy&, WebCore::SecurityOriginData&&, API::Navigation*, const WebCore::ResourceError&, API::Object*) override;
         void didCommitNavigation(WebPageProxy&, API::Navigation*, API::Object*) override;
         void didFinishDocumentLoad(WebPageProxy&, API::Navigation*, API::Object*) override;
         void didFinishNavigation(WebPageProxy&, API::Navigation*, API::Object*) override;
@@ -122,7 +122,7 @@ private:
 
 #if USE(QUICK_LOOK)
         void didStartLoadForQuickLookDocumentInMainFrame(const WTF::String& fileName, const WTF::String& uti) override;
-        void didFinishLoadForQuickLookDocumentInMainFrame(const QuickLookDocumentData&) override;
+        void didFinishLoadForQuickLookDocumentInMainFrame(const WebCore::SharedBuffer&) override;
 #endif
 
 #if PLATFORM(MAC)
@@ -184,7 +184,7 @@ private:
     void didSwapWebProcesses() override;
 
 #if PLATFORM(IOS_FAMILY)
-    void releaseNetworkActivityTokenAfterLoadCompletion() { releaseNetworkActivityToken(NetworkActivityTokenReleaseReason::LoadCompleted); }
+    void releaseNetworkActivityAfterLoadCompletion() { releaseNetworkActivity(NetworkActivityReleaseReason::LoadCompleted); }
 #endif
 
     WKWebView *m_webView;
@@ -258,8 +258,8 @@ private:
     } m_historyDelegateMethods;
 
 #if PLATFORM(IOS_FAMILY)
-    ProcessThrottler::BackgroundActivityToken m_activityToken;
-    RunLoop::Timer<NavigationState> m_releaseActivityTimer;
+    std::unique_ptr<ProcessThrottler::BackgroundActivity> m_networkActivity;
+    RunLoop::Timer<NavigationState> m_releaseNetwrokActivityTimer;
 #endif
 };
 

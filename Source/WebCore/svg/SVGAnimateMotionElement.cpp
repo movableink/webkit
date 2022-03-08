@@ -139,7 +139,7 @@ void SVGAnimateMotionElement::updateAnimationPath()
     updateAnimationMode();
 }
 
-void SVGAnimateMotionElement::resetAnimatedType()
+void SVGAnimateMotionElement::startAnimation()
 {
     if (!hasValidAttributeType())
         return;
@@ -150,7 +150,7 @@ void SVGAnimateMotionElement::resetAnimatedType()
         transform->makeIdentity();
 }
 
-void SVGAnimateMotionElement::clearAnimatedType(SVGElement* targetElement)
+void SVGAnimateMotionElement::stopAnimation(SVGElement* targetElement)
 {
     if (!targetElement)
         return;
@@ -190,10 +190,9 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
 {
     ASSERT(!m_animationPath.isEmpty());
 
-    bool success = false;
     float positionOnPath = m_animationPath.length() * percentage;
-    auto traversalState(m_animationPath.traversalStateAtLength(positionOnPath, success));
-    if (!success)
+    auto traversalState(m_animationPath.traversalStateAtLength(positionOnPath));
+    if (!traversalState.success())
         return;
 
     FloatPoint position = traversalState.current();
@@ -208,7 +207,7 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
     transform->rotate(angle);
 }
 
-void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount, SVGSMILElement*)
+void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount)
 {
     auto targetElement = makeRefPtr(this->targetElement());
     if (!targetElement)

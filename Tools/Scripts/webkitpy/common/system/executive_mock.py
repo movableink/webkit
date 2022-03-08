@@ -29,7 +29,7 @@
 import logging
 import os
 
-from webkitpy.common.unicode_compatibility import BytesIO, unicode
+from webkitpy.common.unicode_compatibility import BytesIO, encode_if_necessary, unicode
 from webkitpy.common.system.executive import ScriptError
 
 _log = logging.getLogger(__name__)
@@ -38,8 +38,8 @@ _log = logging.getLogger(__name__)
 class MockProcess(object):
     def __init__(self, stdout='MOCK STDOUT\n', stderr=''):
         self.pid = 42
-        self.stdout = BytesIO(stdout)
-        self.stderr = BytesIO(stderr)
+        self.stdout = BytesIO(encode_if_necessary(stdout))
+        self.stderr = BytesIO(encode_if_necessary(stderr))
         self.stdin = BytesIO()
         self.returncode = 0
         self._is_running = False
@@ -88,7 +88,7 @@ class MockExecutive(object):
 
     def running_pids(self, process_name_filter):
         running_pids = []
-        for process_name, process_pid in self._running_pids.iteritems():
+        for process_name, process_pid in self._running_pids.items():
             if process_name_filter(process_name):
                 running_pids.append(process_pid)
 

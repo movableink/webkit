@@ -78,6 +78,7 @@ interface UIScriptController {
 
     void keyDown(DOMString character, object modifierArray);
     void toggleCapsLock(object callback);
+    void setContinuousSpellCheckingEnabled(boolean enabled);
 
     void rawKeyDown(DOMString key);
     void rawKeyUp(DOMString key);
@@ -203,9 +204,9 @@ interface UIScriptController {
     attribute object didStartFormControlInteractionCallback;
     attribute object didEndFormControlInteractionCallback;
 
-    // Force press preview handling
-    attribute object didShowForcePressPreviewCallback;
-    attribute object didDismissForcePressPreviewCallback;
+    // Pop Over preview handling
+    attribute object didShowContextMenuCallback;
+    attribute object didDismissContextMenuCallback;
 
     // <select> picker
     void selectFormAccessoryPickerRow(long rowIndex);
@@ -219,6 +220,7 @@ interface UIScriptController {
 
     // <datalist>
     readonly attribute boolean isShowingDataListSuggestions;
+    void activateDataListSuggestion(unsigned long index, object callback);
 
     void keyboardAccessoryBarNext();
     void keyboardAccessoryBarPrevious();

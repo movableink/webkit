@@ -79,6 +79,14 @@ WI.appendContextMenuItemsForSourceCode = function(contextMenu, sourceCodeOrLocat
                 WI.networkManager.addLocalResourceOverride(localResourceOverride);
                 WI.showLocalResourceOverride(localResourceOverride);
             });
+        } else {
+            let localResourceOverride = WI.networkManager.localResourceOverrideForURL(sourceCode.url);
+            if (localResourceOverride) {
+                contextMenu.appendSeparator();
+                contextMenu.appendItem(WI.UIString("Reveal Local Override"), () => {
+                    WI.showLocalResourceOverride(localResourceOverride);
+                });
+            }
         }
     }
 
@@ -93,7 +101,7 @@ WI.appendContextMenuItemsForSourceCode = function(contextMenu, sourceCodeOrLocat
                 });
             });
         } else {
-            contextMenu.appendItem(blackboxData ? WI.UIString("Include script when debugging") : WI.UIString("Ignore script when debugging"), () => {
+            contextMenu.appendItem(blackboxData ? WI.UIString("Unblackbox script to include it when debugging") : WI.UIString("Blackbox script to ignore it when debugging"), () => {
                 WI.debuggerManager.setShouldBlackboxScript(sourceCode, !blackboxData);
             });
         }
@@ -226,7 +234,7 @@ WI.appendContextMenuItemsForDOMNode = function(contextMenu, domNode, options = {
 
     contextMenu.appendSeparator();
 
-    if (!options.disallowEditing) {
+    if (!options.usingLocalDOMNode) {
         if (domNode.isCustomElement()) {
             contextMenu.appendItem(WI.UIString("Jump to Definition"), () => {
                 function didGetFunctionDetails(error, response) {
@@ -260,7 +268,7 @@ WI.appendContextMenuItemsForDOMNode = function(contextMenu, domNode, options = {
             contextMenu.appendSeparator();
         }
 
-        if (WI.cssManager.canForcePseudoClasses() && domNode.attached) {
+        if (!options.disallowEditing && WI.cssManager.canForcePseudoClasses() && domNode.attached) {
             contextMenu.appendSeparator();
 
             let pseudoSubMenu = contextMenu.appendSubMenuItem(WI.UIString("Forced Pseudo-Classes", "A context menu item to force (override) a DOM node's pseudo-classes"));
@@ -282,7 +290,8 @@ WI.appendContextMenuItemsForDOMNode = function(contextMenu, domNode, options = {
 
         contextMenu.appendSeparator();
 
-        if (!options.excludeLogElement && !domNode.isInUserAgentShadowTree() && !domNode.isPseudoElement()) {
+        let canLogShadowTree = !domNode.isInUserAgentShadowTree() || WI.DOMManager.supportsEditingUserAgentShadowTrees({frontendOnly: true});
+        if (!options.excludeLogElement && canLogShadowTree && !domNode.isPseudoElement()) {
             let label = isElement ? WI.UIString("Log Element", "Log (print) DOM element to Console") : WI.UIString("Log Node", "Log (print) DOM node to Console");
             contextMenu.appendItem(label, () => {
                 WI.RemoteObject.resolveNode(domNode, WI.RuntimeManager.ConsoleObjectGroup).then((remoteObject) => {
@@ -299,7 +308,7 @@ WI.appendContextMenuItemsForDOMNode = function(contextMenu, domNode, options = {
             });
         }
 
-        if (WI.settings.experimentalEnableLayersTab.value && InspectorBackend.hasDomain("LayerTree") && attached) {
+        if (InspectorBackend.hasDomain("LayerTree") && attached) {
             contextMenu.appendItem(WI.UIString("Reveal in Layers Tab", "Open Layers tab and select the layer corresponding to this node"), () => {
                 WI.showLayersTab({nodeToSelect: domNode});
             });

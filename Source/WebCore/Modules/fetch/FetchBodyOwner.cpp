@@ -29,11 +29,13 @@
 #include "config.h"
 #include "FetchBodyOwner.h"
 
+#include "Document.h"
 #include "FetchLoader.h"
 #include "HTTPParsers.h"
 #include "JSBlob.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
+#include "WindowEventLoop.h"
 
 namespace WebCore {
 
@@ -289,7 +291,6 @@ void FetchBodyOwner::blobLoadingFailed()
     } else
 #endif
         m_body->loadingFailed(Exception { TypeError, "Blob loading failed"_s});
-
     finishBlobLoading();
 }
 
@@ -324,7 +325,7 @@ void FetchBodyOwner::BlobLoader::didFail(const ResourceError&)
         owner.blobLoadingFailed();
 }
 
-RefPtr<ReadableStream> FetchBodyOwner::readableStream(JSC::ExecState& state)
+RefPtr<ReadableStream> FetchBodyOwner::readableStream(JSC::JSGlobalObject& state)
 {
     if (isBodyNullOrOpaque())
         return nullptr;
@@ -335,7 +336,7 @@ RefPtr<ReadableStream> FetchBodyOwner::readableStream(JSC::ExecState& state)
     return m_body->readableStream();
 }
 
-void FetchBodyOwner::createReadableStream(JSC::ExecState& state)
+void FetchBodyOwner::createReadableStream(JSC::JSGlobalObject& state)
 {
     ASSERT(!m_readableStreamSource);
     if (isDisturbed()) {

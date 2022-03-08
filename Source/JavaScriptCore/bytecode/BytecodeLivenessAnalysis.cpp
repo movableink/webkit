@@ -46,20 +46,20 @@ BytecodeLivenessAnalysis::BytecodeLivenessAnalysis(CodeBlock* codeBlock)
         dumpResults(codeBlock);
 }
 
-void BytecodeLivenessAnalysis::getLivenessInfoAtBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset, FastBitVector& result)
+void BytecodeLivenessAnalysis::getLivenessInfoAtBytecodeIndex(CodeBlock* codeBlock, BytecodeIndex bytecodeIndex, FastBitVector& result)
 {
-    BytecodeBasicBlock* block = m_graph.findBasicBlockForBytecodeOffset(bytecodeOffset);
+    BytecodeBasicBlock* block = m_graph.findBasicBlockForBytecodeOffset(bytecodeIndex.offset());
     ASSERT(block);
     ASSERT(!block->isEntryBlock());
     ASSERT(!block->isExitBlock());
     result.resize(block->out().numBits());
-    computeLocalLivenessForBytecodeOffset(codeBlock, codeBlock->instructions(), m_graph, block, bytecodeOffset, result);
+    computeLocalLivenessForBytecodeIndex(codeBlock, codeBlock->instructions(), m_graph, block, bytecodeIndex, result);
 }
 
-FastBitVector BytecodeLivenessAnalysis::getLivenessInfoAtBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset)
+FastBitVector BytecodeLivenessAnalysis::getLivenessInfoAtBytecodeIndex(CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
 {
     FastBitVector out;
-    getLivenessInfoAtBytecodeOffset(codeBlock, bytecodeOffset, out);
+    getLivenessInfoAtBytecodeIndex(codeBlock, bytecodeIndex, out);
     return out;
 }
 
@@ -67,7 +67,8 @@ void BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock, FullByt
 {
     FastBitVector out;
 
-    result.m_map.resize(codeBlock->instructions().size());
+    result.m_beforeUseVector.resize(codeBlock->instructions().size());
+    result.m_afterUseVector.resize(codeBlock->instructions().size());
     
     for (std::unique_ptr<BytecodeBasicBlock>& block : m_graph.basicBlocksInReverseOrder()) {
         if (block->isEntryBlock() || block->isExitBlock())
@@ -75,10 +76,25 @@ void BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock, FullByt
         
         out = block->out();
         
+        auto use = [&] (unsigned bitIndex) {
+            // This is the use functor, so we set the bit.
+            out[bitIndex] = true;
+        };
+
+        auto def = [&] (unsigned bitIndex) {
+            // This is the def functor, so we clear the bit.
+            out[bitIndex] = false;
+        };
+
+        auto& instructions = codeBlock->instructions();
         for (unsigned i = block->offsets().size(); i--;) {
-            unsigned bytecodeOffset = block->offsets()[i];
-            stepOverInstruction(codeBlock, codeBlock->instructions(), m_graph, bytecodeOffset, out);
-            result.m_map[bytecodeOffset] = out;
+            BytecodeIndex bytecodeIndex = BytecodeIndex(block->offsets()[i]);
+
+            stepOverInstructionDef(codeBlock, instructions, m_graph, bytecodeIndex, def);
+            stepOverInstructionUseInExceptionHandler(codeBlock, instructions, m_graph, bytecodeIndex, use);
+            result.m_afterUseVector[bytecodeIndex.offset()] = out; // AfterUse point.
+            stepOverInstructionUse(codeBlock, instructions, m_graph, bytecodeIndex, use);
+            result.m_beforeUseVector[bytecodeIndex.offset()] = out; // BeforeUse point.
         }
     }
 }
@@ -100,7 +116,7 @@ void BytecodeLivenessAnalysis::computeKills(CodeBlock* codeBlock, BytecodeKills&
         for (unsigned i = block->offsets().size(); i--;) {
             unsigned bytecodeOffset = block->offsets()[i];
             stepOverInstruction(
-                codeBlock, codeBlock->instructions(), m_graph, bytecodeOffset,
+                codeBlock, codeBlock->instructions(), m_graph, BytecodeIndex(bytecodeOffset),
                 [&] (unsigned index) {
                     // This is for uses.
                     if (out[index])
@@ -170,7 +186,7 @@ void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
             const auto currentInstruction = instructions.at(bytecodeOffset);
 
             dataLogF("Live variables:");
-            FastBitVector liveBefore = getLivenessInfoAtBytecodeOffset(codeBlock, bytecodeOffset);
+            FastBitVector liveBefore = getLivenessInfoAtBytecodeIndex(codeBlock, BytecodeIndex(bytecodeOffset));
             dumpBitVector(liveBefore);
             dataLogF("\n");
             codeBlock->dumpBytecode(WTF::dataFile(), currentInstruction);

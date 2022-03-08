@@ -37,6 +37,7 @@
 #import "WKWebView.h"
 #import "WKWebViewContentProviderRegistry.h"
 #import "WebKit2Initialize.h"
+#import "WebPreferencesDefaultValues.h"
 #import "WebURLSchemeHandlerCocoa.h"
 #import "_WKApplicationManifestInternal.h"
 #import "_WKVisitedLinkStore.h"
@@ -875,6 +876,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_setShouldDeferAsynchronousScriptsUntilAfterDocumentLoad:(BOOL)shouldDeferAsynchronousScriptsUntilAfterDocumentLoad
 {
     _shouldDeferAsynchronousScriptsUntilAfterDocumentLoad = shouldDeferAsynchronousScriptsUntilAfterDocumentLoad;
+}
+
+- (WKWebsiteDataStore *)_websiteDataStoreIfExists
+{
+    return _websiteDataStore.peek();
 }
 
 - (BOOL)_drawsBackground

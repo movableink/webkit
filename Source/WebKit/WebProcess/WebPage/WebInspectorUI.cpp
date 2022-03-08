@@ -38,6 +38,7 @@
 #include <WebCore/InspectorController.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/RuntimeEnabledFeatures.h>
+#include <WebCore/Settings.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -52,7 +53,7 @@ WebInspectorUI::WebInspectorUI(WebPage& page)
     , m_frontendAPIDispatcher(page)
 {
     RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setImageBitmapOffscreenCanvasEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setImageBitmapEnabled(true);
 #if ENABLE(WEBGL2)
     RuntimeEnabledFeatures::sharedFeatures().setWebGL2Enabled(true);
 #endif
@@ -288,6 +289,27 @@ void WebInspectorUI::showCertificate(const CertificateInfo& certificateInfo)
 {
     WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorProxy::ShowCertificate(certificateInfo), m_inspectedPageIdentifier);
 }
+
+#if ENABLE(INSPECTOR_TELEMETRY)
+bool WebInspectorUI::supportsDiagnosticLogging()
+{
+    return m_page.corePage()->settings().diagnosticLoggingEnabled();
+}
+
+void WebInspectorUI::logDiagnosticEvent(const String& eventName, const DiagnosticLoggingClient::ValueDictionary& dictionary)
+{
+    m_page.corePage()->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(eventName, "Web Inspector Frontend Diagnostics"_s, dictionary, ShouldSample::No);
+}
+
+void WebInspectorUI::setDiagnosticLoggingAvailable(bool available)
+{
+    // Inspector's diagnostic logging client should never be used unless the page setting is also enabled.
+    ASSERT(!available || supportsDiagnosticLogging());
+    m_diagnosticLoggingAvailable = available;
+
+    m_frontendAPIDispatcher.dispatchCommand("setDiagnosticLoggingAvailable"_s, m_diagnosticLoggingAvailable);
+}
+#endif
 
 void WebInspectorUI::showConsole()
 {

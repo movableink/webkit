@@ -85,11 +85,11 @@
 #include "JSFunction.h"
 #include "JSGlobalObjectFunctions.h"
 #include "JSImmutableButterfly.h"
-#include "JSInternalPromiseDeferred.h"
+#include "JSInternalPromise.h"
 #include "JSLock.h"
 #include "JSMap.h"
 #include "JSMapIterator.h"
-#include "JSPromiseDeferred.h"
+#include "JSPromise.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSScriptFetchParameters.h"
 #include "JSScriptFetcher.h"
@@ -104,6 +104,7 @@
 #include "JSWebAssembly.h"
 #include "JSWebAssemblyCodeBlock.h"
 #include "JSWebAssemblyCodeBlockHeapCellType.h"
+#include "JSWebAssemblyMemory.h"
 #include "JSWithScope.h"
 #include "LLIntData.h"
 #include "Lexer.h"
@@ -120,7 +121,7 @@
 #include "ProfilerDatabase.h"
 #include "ProgramCodeBlock.h"
 #include "ProgramExecutable.h"
-#include "PromiseDeferredTimer.h"
+#include "PromiseTimer.h"
 #include "PropertyMapHashTable.h"
 #include "ProxyRevoke.h"
 #include "RandomizingFuzzerAgent.h"
@@ -129,6 +130,7 @@
 #include "RegisterAtOffsetList.h"
 #include "RuntimeType.h"
 #include "SamplingProfiler.h"
+#include "ScopedArguments.h"
 #include "ShadowChicken.h"
 #include "SimpleTypedArrayController.h"
 #include "SourceProviderCache.h"
@@ -273,14 +275,18 @@ VM::VM(VMType vmType, HeapType heapType)
     , cellSpace("JSCell", heap, cellHeapCellType.get(), fastMallocAllocator.get()) // Hash:0xadfb5a79
     , variableSizedCellSpace("Variable Sized JSCell", heap, cellHeapCellType.get(), fastMallocAllocator.get()) // Hash:0xbcd769cc
     , destructibleCellSpace("Destructible JSCell", heap, destructibleCellHeapCellType.get(), fastMallocAllocator.get()) // Hash:0xbfff3d73
-    , stringSpace("JSString", heap, stringHeapCellType.get(), fastMallocAllocator.get()) // Hash:0x90cf758f
     , destructibleObjectSpace("JSDestructibleObject", heap, destructibleObjectHeapCellType.get(), fastMallocAllocator.get()) // Hash:0x4f5ed7a9
-    , eagerlySweptDestructibleObjectSpace("Eagerly Swept JSDestructibleObject", heap, destructibleObjectHeapCellType.get(), fastMallocAllocator.get()) // Hash:0x6ebf28e2
+    , bigIntSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), JSBigInt)
     , executableToCodeBlockEdgeSpace ISO_SUBSPACE_INIT(heap, cellHeapCellType.get(), ExecutableToCodeBlockEdge) // Hash:0x7b730b20
     , functionSpace ISO_SUBSPACE_INIT(heap, cellHeapCellType.get(), JSFunction) // Hash:0x800fca72
+    , getterSetterSpace ISO_SUBSPACE_INIT(heap, cellHeapCellType.get(), GetterSetter)
     , internalFunctionSpace ISO_SUBSPACE_INIT(heap, destructibleObjectHeapCellType.get(), InternalFunction) // Hash:0xf845c464
     , nativeExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), NativeExecutable) // Hash:0x67567f95
     , propertyTableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), PropertyTable) // Hash:0xc6bc9f12
+    , ropeStringSpace ISO_SUBSPACE_INIT(heap, stringHeapCellType.get(), JSRopeString)
+    , scopedArgumentsSpace ISO_SUBSPACE_INIT(heap, cellHeapCellType.get(), ScopedArguments)
+    , sparseArrayValueMapSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), SparseArrayValueMap)
+    , stringSpace ISO_SUBSPACE_INIT(heap, stringHeapCellType.get(), JSString) // Hash:0x90cf758f
     , structureRareDataSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), StructureRareData) // Hash:0xaca4e62d
     , structureSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), Structure) // Hash:0x1f1bcdca
     , symbolTableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), SymbolTable) // Hash:0xc5215afd
@@ -294,7 +300,7 @@ VM::VM(VMType vmType, HeapType heapType)
     , clientData(0)
     , topEntryFrame(nullptr)
     , topCallFrame(CallFrame::noCaller())
-    , promiseDeferredTimer(PromiseDeferredTimer::create(*this))
+    , promiseTimer(PromiseTimer::create(*this))
     , m_atomStringTable(vmType == Default ? Thread::current().atomStringTable() : new AtomStringTable)
     , propertyNames(nullptr)
     , emptyList(new ArgList)
@@ -379,8 +385,6 @@ VM::VM(VMType vmType, HeapType heapType)
     propertyTableStructure.set(*this, PropertyTable::createStructure(*this, 0, jsNull()));
     functionRareDataStructure.set(*this, FunctionRareData::createStructure(*this, 0, jsNull()));
     exceptionStructure.set(*this, Exception::createStructure(*this, 0, jsNull()));
-    promiseDeferredStructure.set(*this, JSPromiseDeferred::createStructure(*this, 0, jsNull()));
-    internalPromiseDeferredStructure.set(*this, JSInternalPromiseDeferred::createStructure(*this, 0, jsNull()));
     nativeStdFunctionCellStructure.set(*this, NativeStdFunctionCell::createStructure(*this, 0, jsNull()));
     programCodeBlockStructure.set(*this, ProgramCodeBlock::createStructure(*this, 0, jsNull()));
     moduleProgramCodeBlockStructure.set(*this, ModuleProgramCodeBlock::createStructure(*this, 0, jsNull()));
@@ -396,6 +400,7 @@ VM::VM(VMType vmType, HeapType heapType)
         sentinelMapBucket();
         sentinelSetBucket();
     }
+    bigIntConstantOne.set(*this, JSBigInt::createFrom(*this, 1));
 
     Thread::current().setCurrentAtomStringTable(existingEntryAtomStringTable);
     
@@ -490,7 +495,7 @@ VM::~VM()
     auto destructionLocker = holdLock(s_destructionLock.read());
     
     Gigacage::removePrimitiveDisableCallback(primitiveGigacageDisabledCallback, this);
-    promiseDeferredTimer->stopRunningTasks();
+    promiseTimer->stopRunningTasks();
 #if ENABLE(WEBASSEMBLY)
     if (Wasm::Worklist* worklist = Wasm::existingWorklistOrNull())
         worklist->stopAllPlansForContext(wasmContext);
@@ -801,10 +806,11 @@ void VM::clearSourceProviderCaches()
     sourceProviderCacheMap.clear();
 }
 
-Exception* VM::throwException(ExecState* exec, Exception* exception)
+Exception* VM::throwException(JSGlobalObject* globalObject, Exception* exception)
 {
-    ASSERT(exec == topCallFrame || exec->isGlobalExec() || exec == exec->lexicalGlobalObject()->callFrameAtDebuggerEntry());
-    CallFrame* throwOriginFrame = exec->isGlobalExec() ? exec : topJSCallFrame();
+    CallFrame* throwOriginFrame = topJSCallFrame();
+    if (!throwOriginFrame)
+        throwOriginFrame = globalObject->deprecatedCallFrameForDebugger();
 
     if (Options::breakOnThrow()) {
         CodeBlock* codeBlock = throwOriginFrame ? throwOriginFrame->codeBlock() : nullptr;
@@ -812,7 +818,7 @@ Exception* VM::throwException(ExecState* exec, Exception* exception)
         CRASH();
     }
 
-    interpreter->notifyDebuggerOfExceptionToBeThrown(*this, throwOriginFrame, exception);
+    interpreter->notifyDebuggerOfExceptionToBeThrown(*this, globalObject, throwOriginFrame, exception);
 
     setException(exception);
 
@@ -823,19 +829,19 @@ Exception* VM::throwException(ExecState* exec, Exception* exception)
     return exception;
 }
 
-Exception* VM::throwException(ExecState* exec, JSValue thrownValue)
+Exception* VM::throwException(JSGlobalObject* globalObject, JSValue thrownValue)
 {
     VM& vm = *this;
     Exception* exception = jsDynamicCast<Exception*>(vm, thrownValue);
     if (!exception)
         exception = Exception::create(*this, thrownValue);
 
-    return throwException(exec, exception);
+    return throwException(globalObject, exception);
 }
 
-Exception* VM::throwException(ExecState* exec, JSObject* error)
+Exception* VM::throwException(JSGlobalObject* globalObject, JSObject* error)
 {
-    return throwException(exec, JSValue(error));
+    return throwException(globalObject, JSValue(error));
 }
 
 void VM::setStackPointerAtVMEntry(void* sp)
@@ -882,7 +888,7 @@ static void preCommitStackMemory(void* stackLimit)
 }
 #endif
 
-inline void VM::updateStackLimits()
+void VM::updateStackLimits()
 {
 #if OS(WINDOWS)
     void* lastSoftStackLimit = m_softStackLimit;
@@ -897,7 +903,6 @@ inline void VM::updateStackLimits()
     RELEASE_ASSERT(reservedZoneSize >= minimumReservedZoneSize);
 
     if (m_stackPointerAtVMEntry) {
-        ASSERT(stack.isGrowingDownward());
         char* startOfStack = reinterpret_cast<char*>(m_stackPointerAtVMEntry);
         m_softStackLimit = stack.recursionLimit(startOfStack, Options::maxPerThreadStackUsage(), m_currentSoftReservedZoneSize);
         m_stackLimit = stack.recursionLimit(startOfStack, Options::maxPerThreadStackUsage(), reservedZoneSize);
@@ -1113,7 +1118,7 @@ void VM::callPromiseRejectionCallback(Strong<JSPromise>& promise)
     MarkedArgumentBuffer args;
     args.append(promise.get());
     args.append(promise->result(*this));
-    call(promise->globalObject()->globalExec(), callback, callType, callData, jsNull(), args);
+    call(promise->globalObject(), callback, callType, callData, jsNull(), args);
     scope.clearException();
 }
 
@@ -1148,7 +1153,7 @@ void VM::drainMicrotasks()
 
 void QueuedTask::run()
 {
-    m_microtask->run(m_globalObject->globalExec());
+    m_microtask->run(m_globalObject.get());
 }
 
 void sanitizeStackForVM(VM& vm)
@@ -1171,7 +1176,6 @@ size_t VM::committedStackByteCount()
 #if !ENABLE(C_LOOP)
     // When using the C stack, we don't know how many stack pages are actually
     // committed. So, we use the current stack usage as an estimate.
-    ASSERT(Thread::current().stack().isGrowingDownward());
     uint8_t* current = bitwise_cast<uint8_t*>(currentStackPointer());
     uint8_t* high = bitwise_cast<uint8_t*>(Thread::current().stack().origin());
     return high - current;
@@ -1294,8 +1298,15 @@ DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(boundFunctionSpace, cellHeapCellType.get
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(callbackFunctionSpace, destructibleObjectHeapCellType.get(), JSCallbackFunction) // Hash:0xe7648ebc
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(customGetterSetterFunctionSpace, cellHeapCellType.get(), JSCustomGetterSetterFunction) // Hash:0x18091000
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(errorInstanceSpace, destructibleObjectHeapCellType.get(), ErrorInstance) // Hash:0x3f40d4a
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(functionRareDataSpace, destructibleCellHeapCellType.get(), FunctionRareData)
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(nativeStdFunctionSpace, cellHeapCellType.get(), JSNativeStdFunction) // Hash:0x70ed61e4
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(proxyObjectSpace, cellHeapCellType.get(), ProxyObject)
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(proxyRevokeSpace, destructibleObjectHeapCellType.get(), ProxyRevoke) // Hash:0xb506a939
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(symbolSpace, destructibleCellHeapCellType.get(), Symbol)
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(unlinkedEvalCodeBlockSpace, destructibleCellHeapCellType.get(), UnlinkedEvalCodeBlock)
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(unlinkedFunctionCodeBlockSpace, destructibleCellHeapCellType.get(), UnlinkedFunctionCodeBlock)
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(unlinkedModuleProgramCodeBlockSpace, destructibleCellHeapCellType.get(), UnlinkedModuleProgramCodeBlock)
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(unlinkedProgramCodeBlockSpace, destructibleCellHeapCellType.get(), UnlinkedProgramCodeBlock)
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(weakMapSpace, destructibleObjectHeapCellType.get(), JSWeakMap) // Hash:0x662b12a3
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(weakSetSpace, destructibleObjectHeapCellType.get(), JSWeakSet) // Hash:0x4c781b30
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(weakObjectRefSpace, cellHeapCellType.get(), JSWeakObjectRef) // Hash:0x8ec68f1f
@@ -1305,6 +1316,7 @@ DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(objCCallbackFunctionSpace, destructibleO
 #if ENABLE(WEBASSEMBLY)
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(webAssemblyCodeBlockSpace, webAssemblyCodeBlockHeapCellType.get(), JSWebAssemblyCodeBlock) // Hash:0x9ad995cd
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(webAssemblyFunctionSpace, webAssemblyFunctionHeapCellType.get(), WebAssemblyFunction) // Hash:0x8b7c32db
+DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(webAssemblyMemorySpace, destructibleObjectHeapCellType.get(), JSWebAssemblyMemory)
 DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER_SLOW(webAssemblyWrapperFunctionSpace, cellHeapCellType.get(), WebAssemblyWrapperFunction) // Hash:0xd4a5ff01
 #endif
 
@@ -1364,15 +1376,11 @@ JSPropertyNameEnumerator* VM::emptyPropertyNameEnumeratorSlow()
     return enumerator;
 }
 
-JSGlobalObject* VM::vmEntryGlobalObject(const CallFrame* callFrame) const
+JSGlobalObject* VM::deprecatedVMEntryGlobalObject(JSGlobalObject* globalObject) const
 {
-    if (callFrame && callFrame->isGlobalExec()) {
-        ASSERT(callFrame->callee().isCell() && callFrame->callee().asCell()->isObject());
-        ASSERT(callFrame == callFrame->lexicalGlobalObject()->globalExec());
-        return callFrame->lexicalGlobalObject();
-    }
-    ASSERT(entryScope);
-    return entryScope->globalObject();
+    if (entryScope)
+        return entryScope->globalObject();
+    return globalObject;
 }
 
 void VM::setCrashOnVMCreation(bool shouldCrash)

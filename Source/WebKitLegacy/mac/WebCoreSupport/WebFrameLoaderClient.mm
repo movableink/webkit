@@ -152,7 +152,7 @@
 #endif
 
 #if USE(QUICK_LOOK)
-#import <WebCore/PreviewLoaderClient.h>
+#import <WebCore/LegacyPreviewLoaderClient.h>
 #import <WebCore/QuickLook.h>
 #import <pal/spi/cocoa/NSFileManagerSPI.h>
 #endif
@@ -276,7 +276,9 @@ void WebFrameLoaderClient::forceLayoutForNonHTML()
 
 void WebFrameLoaderClient::setCopiesOnScroll()
 {
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [[[m_webFrame->_private->webFrameView _scrollView] contentView] setCopiesOnScroll:YES];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 void WebFrameLoaderClient::detachedFromParent2()
@@ -2186,9 +2188,9 @@ bool WebFrameLoaderClient::shouldLoadMediaElementURL(const URL& url) const
 #endif
 
 #if USE(QUICK_LOOK)
-RefPtr<WebCore::PreviewLoaderClient> WebFrameLoaderClient::createPreviewLoaderClient(const String& fileName, const String& uti)
+RefPtr<WebCore::LegacyPreviewLoaderClient> WebFrameLoaderClient::createPreviewLoaderClient(const String& fileName, const String& uti)
 {
-    class QuickLookDocumentWriter : public WebCore::PreviewLoaderClient {
+    class QuickLookDocumentWriter : public WebCore::LegacyPreviewLoaderClient {
     public:
         explicit QuickLookDocumentWriter(NSString *filePath)
             : m_filePath { filePath }
@@ -2206,9 +2208,10 @@ RefPtr<WebCore::PreviewLoaderClient> WebFrameLoaderClient::createPreviewLoaderCl
         RetainPtr<NSString> m_filePath;
         RetainPtr<NSFileHandle> m_fileHandle;
 
-        void didReceiveDataArray(CFArrayRef dataArray) override
+        void didReceiveBuffer(const WebCore::SharedBuffer& buffer) override
         {
-            for (NSData *data in (NSArray *)dataArray)
+            auto dataArray = buffer.createNSDataArray();
+            for (NSData *data in dataArray.get())
                 [m_fileHandle writeData:data];
         }
 

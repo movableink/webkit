@@ -54,6 +54,7 @@ VPATH = \
     $(WebCore)/Modules/pictureinpicture \
     $(WebCore)/Modules/plugins \
     $(WebCore)/Modules/quota \
+	$(WebCore)/Modules/remoteplayback \
     $(WebCore)/Modules/speech \
     $(WebCore)/Modules/streams \
     $(WebCore)/Modules/webaudio \
@@ -203,6 +204,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/indexeddb/IDBVersionChangeEvent.idl \
     $(WebCore)/Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.idl \
     $(WebCore)/Modules/mediacapabilities/AudioConfiguration.idl \
+    $(WebCore)/Modules/mediacapabilities/ColorGamut.idl \
+    $(WebCore)/Modules/mediacapabilities/HdrMetadataType.idl \
     $(WebCore)/Modules/mediacapabilities/MediaCapabilities.idl \
     $(WebCore)/Modules/mediacapabilities/MediaCapabilitiesDecodingInfo.idl \
     $(WebCore)/Modules/mediacapabilities/MediaCapabilitiesEncodingInfo.idl \
@@ -213,8 +216,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/mediacapabilities/MediaEncodingConfiguration.idl \
     $(WebCore)/Modules/mediacapabilities/MediaEncodingType.idl \
     $(WebCore)/Modules/mediacapabilities/NavigatorMediaCapabilities.idl \
-    $(WebCore)/Modules/mediacapabilities/ScreenColorGamut.idl \
-    $(WebCore)/Modules/mediacapabilities/ScreenLuminance.idl \
+    $(WebCore)/Modules/mediacapabilities/TransferFunction.idl \
     $(WebCore)/Modules/mediacapabilities/VideoConfiguration.idl \
     $(WebCore)/Modules/mediacontrols/MediaControlsHost.idl \
     $(WebCore)/Modules/mediarecorder/BlobEvent.idl \
@@ -320,6 +322,9 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/quota/StorageQuotaCallback.idl \
     $(WebCore)/Modules/quota/StorageUsageCallback.idl \
     $(WebCore)/Modules/quota/WorkerNavigatorStorageQuota.idl \
+	$(WebCore)/Modules/remoteplayback/HTMLMediaElementRemotePlayback.idl \
+	$(WebCore)/Modules/remoteplayback/RemotePlayback.idl \
+	$(WebCore)/Modules/remoteplayback/RemotePlaybackAvailabilityCallback.idl \
     $(WebCore)/Modules/speech/DOMWindowSpeechSynthesis.idl \
     $(WebCore)/Modules/speech/SpeechSynthesis.idl \
     $(WebCore)/Modules/speech/SpeechSynthesisEvent.idl \
@@ -824,6 +829,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/html/canvas/WebGLBuffer.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureASTC.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureATC.idl \
+    $(WebCore)/html/canvas/WebGLCompressedTextureETC.idl \
+    $(WebCore)/html/canvas/WebGLCompressedTextureETC1.idl \
     $(WebCore)/html/canvas/WebGLCompressedTexturePVRTC.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureS3TC.idl \
     $(WebCore)/html/canvas/WebGLContextAttributes.idl \
@@ -956,7 +963,6 @@ JS_BINDING_IDLS = \
     $(WebCore)/svg/SVGDocument.idl \
     $(WebCore)/svg/SVGElement.idl \
     $(WebCore)/svg/SVGEllipseElement.idl \
-    $(WebCore)/svg/SVGExternalResourcesRequired.idl \
     $(WebCore)/svg/SVGFEBlendElement.idl \
     $(WebCore)/svg/SVGFEColorMatrixElement.idl \
     $(WebCore)/svg/SVGFEComponentTransferElement.idl \
@@ -1285,7 +1291,7 @@ all : \
     SVGNames.h \
     SelectorPseudoClassAndCompatibilityElementMap.cpp \
     SelectorPseudoElementTypeMap.cpp \
-    StyleBuilder.cpp \
+    StyleBuilderGenerated.cpp \
     StylePropertyShorthandFunctions.cpp \
     StylePropertyShorthandFunctions.h \
     UserAgentStyleSheets.h \
@@ -1334,7 +1340,7 @@ WEBCORE_CSS_VALUE_KEYWORDS := $(WEBCORE_CSS_VALUE_KEYWORDS) $(WebCore)/css/SVGCS
 CSS_PROPERTY_NAME_FILES = \
     CSSPropertyNames.cpp \
     CSSPropertyNames.h \
-    StyleBuilder.cpp \
+    StyleBuilderGenerated.cpp \
     StylePropertyShorthandFunctions.cpp \
     StylePropertyShorthandFunctions.h \
 #

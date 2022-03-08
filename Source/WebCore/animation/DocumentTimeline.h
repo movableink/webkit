@@ -67,7 +67,6 @@ public:
     void animationAcceleratedRunningStateDidChange(WebAnimation&);
     void applyPendingAcceleratedAnimations();
     bool runningAnimationsForElementAreAllAccelerated(Element&) const;
-    bool resolveAnimationsForElement(Element&, RenderStyle&);
     void detachFromDocument();
 
     void enqueueAnimationPlaybackEvent(AnimationPlaybackEvent&);
@@ -100,6 +99,7 @@ private:
     void scheduleNextTick();
     void removeReplacedAnimations();
     bool animationCanBeRemoved(WebAnimation&);
+    bool shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const;
 
     Timer m_tickScheduleTimer;
     GenericTaskQueue<Timer> m_currentTimeClearingTaskQueue;

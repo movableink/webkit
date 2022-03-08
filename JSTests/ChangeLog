@@ -1,3 +1,1506 @@
+2019-11-22  Tadeu Zagallo  <tzagallo@apple.com>
+
+        [WebAssembly] Improve Wasm::LLIntGenerator
+        https://bugs.webkit.org/show_bug.cgi?id=204092
+
+        Reviewed by Saam Barati.
+
+        * wasm/stress/set-local-enclosed-stack.js: Added.
+        (assert.eq.instance.exports.foo):
+        (assert.eq):
+
+2019-11-22  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] DFG terminal's liveness should respect caller's opcodeID
+        https://bugs.webkit.org/show_bug.cgi?id=204317
+
+        Reviewed by Saam Barati.
+
+        * stress/call-var-args-phantom-arguments-handler-strict.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/call-var-args-phantom-arguments-handler.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/call-var-args-phantom-arguments-strict.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/call-var-args-phantom-arguments.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/derived-class-construct-varargs.js: Added.
+        (shouldThrow):
+        (B):
+        * stress/tail-call-var-args-phantom-arguments-handler-strict.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/tail-call-var-args-phantom-arguments-handler.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/tail-call-var-args-phantom-arguments-strict.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+        * stress/tail-call-var-args-phantom-arguments.js: Added.
+        (shouldBe):
+        (inlined):
+        (test):
+
+2019-11-22  Guillaume Emont  <guijemont@igalia.com>
+
+        Skip tests that fail on arm and mips devices
+        https://bugs.webkit.org/show_bug.cgi?id=204522
+
+        Unreviewed gardening.
+
+
+        * stress/generator-cell-with-type.js:
+        * stress/stack-overflow-in-yarr-byteCompile.js:
+        * stress/toctou-having-a-bad-time-new-array.js:
+
+2019-11-21  Mark Lam  <mark.lam@apple.com>
+
+        replaceUsingStringSearch() should not use CachedCall with host functions.
+        https://bugs.webkit.org/show_bug.cgi?id=204494
+        <rdar://problem/57421078>
+
+        Reviewed by Ross Kirsling.
+
+        * stress/string-replaceAll-2.js:
+
+2019-11-21  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Unreviewed test262 gardening following r252680.
+
+        * test262/expectations.yaml:
+        Mark eight test cases as passing.
+
+2019-11-21  Saam Barati  <sbarati@apple.com>
+
+        GetByStatus should not say it took the slow path for multiple identifiers and should have a way to indicate if the StructureStubInfo it saw took the slow path
+        https://bugs.webkit.org/show_bug.cgi?id=204435
+
+        Reviewed by Tadeu Zagallo.
+
+        * microbenchmarks/get-by-val-polymorphic-ic-1.js: Added.
+        (assert):
+        (test1.foo):
+        (test1):
+        * microbenchmarks/get-by-val-polymorphic-ic-2.js: Added.
+        (assert):
+        (test2.foo):
+        (test2):
+        * microbenchmarks/get-by-val-polymorphic-ic-3.js: Added.
+        (assert):
+        (test3.foo):
+        (test3.args):
+        (test3):
+        * microbenchmarks/get-by-val-polymorphic-ic-4.js: Added.
+        (assert):
+        (test4.foo):
+        (test4.capture):
+        (test4.args):
+        (test4):
+        * microbenchmarks/get-by-val-polymorphic-ic-5.js: Added.
+        (assert):
+        (test5.foo):
+        (test5.capture):
+        (test5.args):
+        (test5):
+        * microbenchmarks/get-by-val-polymorphic-ic-6.js: Added.
+        (assert):
+        (test6.foo):
+        (test6.capture):
+        (test6.args):
+        (test6):
+        * microbenchmarks/get-by-val-polymorphic-ic-7.js: Added.
+        (assert):
+        (test7.foo):
+        (test7):
+        * microbenchmarks/get-by-val-polymorphic-ic-8.js: Added.
+        (assert):
+        (test7.foo):
+        (test7):
+        * microbenchmarks/get-by-val-polymorphic-ic-9.js: Added.
+        (assert):
+        (test7.foo):
+        (test7):
+
+2019-11-21  Mark Lam  <mark.lam@apple.com>
+
+        Fix broken String.prototype.replace() and replaceAll().
+        https://bugs.webkit.org/show_bug.cgi?id=204479
+        <rdar://problem/57354854>
+
+        Reviewed by Ross Kirsling and Yusuke Suzuki.
+
+        * ChakraCore.yaml:
+        * ChakraCore/test/Strings/replace.baseline-jsc: Removed.
+        - We no longer need this because we've fixed the spec compliance issue in replace().
+        * stress/string-replaceAll-2.js: Added.
+
+2019-11-21  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Unreviewed, rolling in again, regression is not caused by it
+        https://bugs.webkit.org/show_bug.cgi?id=202471
+
+        * stress/string-replaceall.js: Added.
+        (shouldBe):
+        (shouldThrowTypeError):
+        (shouldBe.string_appeared_here.replaceAll.Symbol.match):
+
+2019-11-21  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r252683 and r252721.
+        https://bugs.webkit.org/show_bug.cgi?id=204475
+
+        13% regression in JetStream2/prepack-wtb (Requested by
+        yusukesuzuki on #webkit).
+
+        Reverted changesets:
+
+        "Implement String.prototype.replaceAll"
+        https://bugs.webkit.org/show_bug.cgi?id=202471
+        https://trac.webkit.org/changeset/252683
+
+        "Unreviewed, address Darin's feedback on r252683."
+        https://trac.webkit.org/changeset/252721
+
+2019-11-20  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Unreviewed, address Darin's feedback on r252683.
+
+        * stress/string-replaceall.js:
+
+2019-11-20  Caio Lima  <ticaiolima@gmail.com>
+
+        [JSC] OSR exit to LLInt is broken on MIPS
+        https://bugs.webkit.org/show_bug.cgi?id=203737
+
+        Reviewed by Yusuke Suzuki.
+
+        Unskipping broken tests due to OSR to LLInt bug.
+
+        * microbenchmarks/call-spread-call.js:
+        * microbenchmarks/throw.js:
+        * stress/allocation-sinking-hints-are-valid-ssa-2.js:
+        * stress/allocation-sinking-hints-are-valid-ssa.js:
+        * stress/arith-profile-for-negate-can-see-non-number-due-to-dfg-osr-exit-profiling.js:
+        * stress/arrowfunction-lexical-bind-supercall-4.js:
+        * stress/arrowfunction-tdz-3.js:
+        * stress/function-constructor-semantics.js:
+        * stress/global-import-function-should-return-a-promise-when-clearing-exceptions.js:
+        * stress/stress-cleared-calllinkinfo.js:
+        * stress/typedarray-configure-index.js:
+        * stress/v8-deltablue-strict.js:
+
+2019-11-20  Mark Lam  <mark.lam@apple.com>
+
+        Flaky JSC test: stress/stack-overflow-in-yarr-byteCompile.js.dfg-eager.
+        https://bugs.webkit.org/show_bug.cgi?id=204405
+
+        Reviewed by Alexey Proskuryakov.
+
+        The test was timing out because it's slow.  We don't really need to run this test
+        on all configurations.  So, we'll change it to on run with the default
+        configuration.  Also declare the test as "//@ slow!".
+
+        * stress/stack-overflow-in-yarr-byteCompile.js:
+
+2019-11-19  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Implement String.prototype.replaceAll
+        https://bugs.webkit.org/show_bug.cgi?id=202471
+
+        Reviewed by Yusuke Suzuki.
+
+        * stress/string-replaceall.js: Added.
+
+2019-11-19  Robin Morisset  <rmorisset@apple.com>
+
+        [ESNext][BigInt] Add support for op_inc
+        https://bugs.webkit.org/show_bug.cgi?id=193240
+
+        Reviewed by Yusuke Suzuki.
+
+        Some parts of these tests are inspired by tests in a WIP patch by Caio Lima.
+        Thanks to him for allowing their reuse.
+
+        * stress/inc-osr-exit-from-big-int.js: Added.
+        (let.assert.sameValue):
+        (postInc):
+        (preInc):
+        (postDec):
+        (preDec):
+        * stress/inc-osr-exit-to-big-int.js: Added.
+        (let.assert.sameValue):
+        (postInc):
+        (preInc):
+        (postDec):
+        (preDec):
+        (o.valueOf):
+
+2019-11-19  Saam Barati  <sbarati@apple.com>
+
+        Remove runNullishAwareOperatorsEnabled
+
+        Rubber-stamped by Keith Miller.
+
+        * stress/nullish-coalescing.js:
+        * stress/optional-chaining.js:
+        * stress/tail-call-recognize.js:
+
+2019-11-18  Keith Miller  <keith_miller@apple.com>
+
+        Enable Nullish operators by default
+        https://bugs.webkit.org/show_bug.cgi?id=204308
+
+        Reviewed by Yusuke Suzuki.
+
+        Remove feature -> option map.
+
+        * test262/config.yaml:
+
+2019-11-18  Caio Lima  <ticaiolima@gmail.com>
+
+        Skipping wasm-error-message-cross-threads.js on architectures without WASM support
+        https://bugs.webkit.org/show_bug.cgi?id=204293
+
+        Unreviewed gardening.
+
+        * stress/ensure-code-block-is-not-precise-allocation.js:
+
+        Skipping this test until we fix OSR to LLInt on MIPS.
+
+        * stress/wasm-error-message-cross-threads.js:
+
+2019-11-15  Ross Kirsling  <ross.kirsling@sony.com>
+
+        [JSC] Anonymous built-in functions should have empty string for a name
+        https://bugs.webkit.org/show_bug.cgi?id=204214
+
+        Reviewed by Yusuke Suzuki.
+
+        * test262/expectations.yaml:
+        Mark 20 test cases as passing.
+
+        * stress/builtin-function-name.js:
+        (shouldThrow):
+        * stress/private-name-as-anonymous-builtin.js:
+        Fix tests which are no longer accurate.
+
+2019-11-15  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] DFG strength reduction should define "groups" for RegExp constant-folded result
+        https://bugs.webkit.org/show_bug.cgi?id=204264
+
+        Reviewed by Michael Saboff.
+
+        * stress/dfg-strength-reduction-for-regexp-should-include-groups-property.js: Added.
+        (shouldBe):
+        (test):
+
+2019-11-15  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Wasm error message should be cross-thread-copied
+        https://bugs.webkit.org/show_bug.cgi?id=204143
+
+        Reviewed by Mark Lam.
+
+        * stress/wasm-error-message-cross-threads.js: Added.
+        (f):
+
+2019-11-14  Alexey Shvayka  <shvaikalesh@gmail.com>
+
+        Use toLength() and getIndexQuickly() in JSON.stringify
+        https://bugs.webkit.org/show_bug.cgi?id=204122
+
+        Reviewed by Yusuke Suzuki.
+
+        * microbenchmarks/json-stringify-array-replacer.js: Added.
+        * microbenchmarks/json-stringify-empty-array.js: Added.
+
+2019-11-14  Caio Lima  <ticaiolima@gmail.com>
+
+        Support or16(TrustedImm32, AbsoluteAddress) in the MIPS MacroAssembler
+        https://bugs.webkit.org/show_bug.cgi?id=204126
+
+        Reviewed by Mark Lam.
+
+        Decreasing the number of iterations of test to avoid timeout into slow
+        ports.
+
+        * stress/regress-57020338.js:
+
+2019-11-13  Robin Morisset  <rmorisset@apple.com>
+
+        Split ArithProfile into a Unary and a Binary version
+        https://bugs.webkit.org/show_bug.cgi?id=202832
+        <rdar://problem/56266847>
+
+        Reviewed by Keith Miller.
+
+        The new test (kindly provided by Mark Lam) catches the metadata corruption that used to happen in the previous version of this patch.
+
+        * stress/regress-57020338.js: Added.
+
+2019-11-13  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] AI should convert IsCellWithType to constant when Structure set is finite
+        https://bugs.webkit.org/show_bug.cgi?id=204141
+
+        Reviewed by Saam Barati.
+
+        * stress/generator-cell-with-type.js: Added.
+        (shouldBe):
+        (shouldThrow):
+        (test):
+        (i.shouldThrow):
+
+2019-11-12  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] JSC GC relies on CodeBlock is not PreciseAllocation
+        https://bugs.webkit.org/show_bug.cgi?id=204124
+
+        Reviewed by Saam Barati.
+
+        * stress/ensure-code-block-is-not-precise-allocation.js: Added.
+        (foo):
+        (get for):
+
+2019-11-12  Alexey Shvayka  <shvaikalesh@gmail.com>
+
+        RegExpBuiltinExec should create "groups" property unconditionally
+        https://bugs.webkit.org/show_bug.cgi?id=204067
+
+        Reviewed by Ross Kirsling.
+
+        * test262/expectations.yaml: Mark 4 test cases as passing.
+
+2019-11-11  Ross Kirsling  <ross.kirsling@sony.com>
+
+        UTC offset for Samoa is miscalculated when !HAVE(TIMEGM)
+        https://bugs.webkit.org/show_bug.cgi?id=204032
+
+        Reviewed by Yusuke Suzuki.
+
+        * complex.yaml:
+        * complex/timezone-offset-apia.js: Added.
+        Add test to verify Date.prototype.getTimezoneOffset for TZ=Pacific/Apia.
+
+2019-11-08  Guillaume Emont  <guijemont@igalia.com>
+
+        Temporarily skip another broken test on MIPS due to OSR exit to LLInt
+        https://bugs.webkit.org/show_bug.cgi?id=204003
+
+        Unreviewed gardening.
+
+        * stress/global-import-function-should-return-a-promise-when-clearing-exceptions.js:
+
+2019-11-07  Mark Lam  <mark.lam@apple.com>
+
+        Add a stack overflow check in Yarr::ByteCompiler::emitDisjunction().
+        https://bugs.webkit.org/show_bug.cgi?id=203936
+        <rdar://problem/56624724>
+
+        Reviewed by Saam Barati.
+
+        This issue originally manifested as incorrect-exception-assertion-in-operationRegExpExecNonGlobalOrSticky.js
+        failing on iOS devices due to its smaller stack.  We adapted the original test
+        here using $vm.callWithStackSize() to reproduce the issue on x86_64 though it
+        has a much larger physical stack to work with.  This new test will crash while
+        stepping on the guard page beyond the end of the stack if the fix is not applied.
+
+        * stress/stack-overflow-in-yarr-byteCompile.js: Added.
+
+2019-11-07  Tuomas Karkkainen  <tuomas.webkit@apple.com>
+
+        didPassSomeTestsSilenty is misspelled in standalone-pre.js
+        https://bugs.webkit.org/show_bug.cgi?id=203948
+
+        Reviewed by Yusuke Suzuki.
+
+        * stress/resources/standalone-pre.js:
+
+2019-11-07  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Unskip test262 tests for async-iteration
+        https://bugs.webkit.org/show_bug.cgi?id=203921
+
+        Reviewed by Keith Miller.
+
+        This should have been done two years ago, it seems.
+
+        * test262/config.yaml:
+        * test262/expectations.yaml:
+
+2019-11-07  Alexey Shvayka  <shvaikalesh@gmail.com>
+
+        [[HasProperty]] result of Proxy in prototype chain is ignored
+        https://bugs.webkit.org/show_bug.cgi?id=203560
+
+        Reviewed by Ross Kirsling.
+
+        * stress/proxy-get-prototype-of.js: Correct Proxy "has" trap test.
+        * test262/expectations.yaml: Mark 6 test cases as passing.
+
+2019-11-06  Mark Lam  <mark.lam@apple.com>
+
+        JSGlobalObject::fireWatchpointAndMakeAllArrayStructuresSlowPut() should fire its watchpoint as the last step.
+        https://bugs.webkit.org/show_bug.cgi?id=203867
+        <rdar://problem/56813514>
+
+        Reviewed by Saam Barati.
+
+        * stress/racy-slow-put-cloned-arguments-when-having-a-bad-time.js: Added.
+
+2019-11-06  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r251940.
+        https://bugs.webkit.org/show_bug.cgi?id=203920
+
+        "it introduced test262 failures" (Requested by rkirsling on
+        #webkit).
+
+        Reverted changeset:
+
+        "[[HasProperty]] result of Proxy in prototype chain is
+        ignored"
+        https://bugs.webkit.org/show_bug.cgi?id=203560
+        https://trac.webkit.org/changeset/251940
+
+2019-11-04  Saam Barati  <sbarati@apple.com>
+
+        Don't use memmove/memcpy/memset for memory that can be scanned concurrently
+        https://bugs.webkit.org/show_bug.cgi?id=203228
+        <rdar://problem/56401852>
+
+        Reviewed by Robin Morisset.
+
+        * stress/torn-js-value-concurrent-collector.js: Added.
+        (foo):
+
+2019-11-03  Tadeu Zagallo  <tzagallo@apple.com>
+
+        LLIntGenerator should not allocate temporaries in between variables
+        https://bugs.webkit.org/show_bug.cgi?id=203787
+
+        Reviewed by Yusuke Suzuki.
+
+        * wasm/stress/local-ref.js: Added.
+
+2019-11-02  Alexey Proskuryakov  <ap@apple.com>
+
+        Revert http://trac.webkit.org/r251875
+        Don't use memmove/memcpy/memset for memory that can be scanned concurrently
+
+        This is suspected to have broken performance tests on iOS.
+
+        * stress/torn-js-value-concurrent-collector.js: Removed.
+
+2019-11-01  Alexey Shvayka  <shvaikalesh@gmail.com>
+
+        [[HasProperty]] result of Proxy in prototype chain is ignored
+        https://bugs.webkit.org/show_bug.cgi?id=203560
+
+        Reviewed by Ross Kirsling.
+
+        * stress/proxy-get-prototype-of.js: Correct Proxy "has" trap test.
+        * test262/expectations.yaml: Mark 6 test cases as passing.
+
+2019-11-01  Caio Lima  <ticaiolima@gmail.com>
+
+        [JSC][MIPS] Skip tests failing in RELEASE_ASSERT_NOT_REACHED() at CallFrame.cpp:81
+        https://bugs.webkit.org/show_bug.cgi?id=203738
+
+        Unreviewed gardening.
+
+        * stress/allocation-sinking-hints-are-valid-ssa.js:
+        * stress/has-instance-exception-check.js:
+        * stress/regress-176485.js:
+
+2019-10-31  Caio Lima  <ticaiolima@gmail.com>
+
+        Temporary skip broken tests on MIPS that is broken due to OSR exit to LLInt
+        https://bugs.webkit.org/show_bug.cgi?id=203710
+
+        Unreviewed gardening.
+
+        * microbenchmarks/call-spread-call.js:
+        * microbenchmarks/throw.js:
+        * stress/allocation-sinking-hints-are-valid-ssa-2.js:
+        * stress/arith-profile-for-negate-can-see-non-number-due-to-dfg-osr-exit-profiling.js:
+        * stress/arrowfunction-lexical-bind-supercall-4.js:
+        * stress/arrowfunction-tdz-3.js:
+        * stress/function-constructor-semantics.js:
+        * stress/stress-cleared-calllinkinfo.js:
+        * stress/typedarray-configure-index.js:
+        * stress/v8-deltablue-strict.js:
+
+2019-10-31  Saam Barati  <sbarati@apple.com>
+
+        Don't use memmove/memcpy/memset for memory that can be scanned concurrently
+        https://bugs.webkit.org/show_bug.cgi?id=203228
+        <rdar://problem/56401852>
+
+        Reviewed by Robin Morisset.
+
+        * stress/torn-js-value-concurrent-collector.js: Added.
+        (foo):
+
+2019-10-30  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Date functions should have intrinsic
+        https://bugs.webkit.org/show_bug.cgi?id=202187
+
+        Reviewed by Keith Miller.
+
+        * stress/date-cse.js: Added.
+        (shouldBe):
+        (test):
+        (test2):
+        (test3):
+        * stress/date-get-date-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-day-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-full-year-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-hours-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-milliseconds-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-minutes-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-month-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-seconds-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-time-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-timezone-offset-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-date-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-day-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-full-year-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-hours-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-milliseconds-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-minutes-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-month-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-utc-seconds-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-get-year-jit.js: Added.
+        (shouldBe):
+        (test):
+        * stress/date-value-of-jit.js: Added.
+        (shouldBe):
+        (test):
+
+2019-10-30  Guillaume Emont  <guijemont@igalia.com>
+
+        Temporarily skip ChakraCore/test/Math/max.js on arm and mips
+
+        Unreviewed gardening.
+
+        * ChakraCore.yaml:
+
+2019-10-30  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Intl.DateTimeFormat returns resolvedOptions in the wrong order
+        https://bugs.webkit.org/show_bug.cgi?id=203297
+
+        Reviewed by Yusuke Suzuki.
+
+        * test262/expectations.yaml:
+        Mark two test cases as passing.
+
+2019-10-30  Tadeu Zagallo  <tzagallo@apple.com>
+
+        tryCachePutToScopeGlobal should hold the lock to update metadata.m_getPutInfo
+        https://bugs.webkit.org/show_bug.cgi?id=203628
+        <rdar://problem/56705353>
+
+        Reviewed by Yusuke Suzuki.
+
+        * stress/property-move-from-global-object-to-global-lexical-environment.js: Added.
+        (foo):
+
+2019-10-29  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Add fast path for String#localeCompare
+        https://bugs.webkit.org/show_bug.cgi?id=202676
+
+        Reviewed by Mark Lam.
+
+        * stress/locale-compare-bits.js: Added.
+        (shouldBe):
+
+2019-10-28  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Optimize Promise runtime functions
+        https://bugs.webkit.org/show_bug.cgi?id=203454
+
+        Reviewed by Keith Miller.
+
+        * microbenchmarks/promise-reject.js: Added.
+        * microbenchmarks/promise-resolve.js: Added.
+
+2019-10-25  Ross Kirsling  <ross.kirsling@sony.com>
+
+        test262-runner should be able to pass JSC a feature flag
+        https://bugs.webkit.org/show_bug.cgi?id=203301
+
+        Reviewed by Keith Miller.
+
+        * test262/config.yaml:
+        Add feature flag mapping.
+        Also skip a few forgotten features as well as BigInt TypedArray tests.
+
+        * test262/expectations.yaml:
+        Regenerate expectations.
+
+2019-10-23  Keith Miller  <keith_miller@apple.com>
+
+        Undo incidental change from BytecodeIndex class patch
+        https://bugs.webkit.org/show_bug.cgi?id=203339
+
+        Reviewed by Mark Lam.
+
+        * stress/error-source-location-assertion.js: Added.
+
+2019-10-23  Ross Kirsling  <ross.kirsling@sony.com>
+
+        String.prototype.matchAll should throw on non-global regex
+        https://bugs.webkit.org/show_bug.cgi?id=202838
+
+        Reviewed by Keith Miller.
+
+        * stress/string-matchall.js: Added.
+
+        * test262/expectations.yaml:
+        Mark four test cases as passing.
+
+2019-10-23  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Update test262 (2019.10.11)
+        https://bugs.webkit.org/show_bug.cgi?id=202861
+
+        Reviewed by Keith Miller.
+
+        * test262/config.yaml:
+        * test262/expectations.yaml:
+        * test262/harness/:
+        * test262/latest-changes-summary.txt:
+        * test262/test/:
+        * test262/test262-Revision.txt:
+
+2019-10-22  Zhifei Fang  <zhifei_fang@apple.com>
+
+        [JSC tests] Skip slow tests on Watch S3 and Watch S4
+        https://bugs.webkit.org/show_bug.cgi?id=203268
+
+        Reviewed by Saam Barati.
+
+        * microbenchmarks/ArrayBuffer-DataView-alloc-large-long-lived.js:
+        * microbenchmarks/ArrayBuffer-DataView-alloc-long-lived.js:
+        * microbenchmarks/ArrayBuffer-Int32Array-byteOffset.js:
+        * microbenchmarks/ArrayBuffer-Int8Array-alloc-large-long-lived.js:
+        * microbenchmarks/ArrayBuffer-Int8Array-alloc-long-lived-buffer.js:
+        * microbenchmarks/ArrayBuffer-Int8Array-alloc-long-lived.js:
+        * microbenchmarks/ArrayBuffer-Int8Array-alloc.js:
+        * microbenchmarks/DataView-custom-properties.js:
+        * microbenchmarks/Float32Array-matrix-mult.js:
+        * microbenchmarks/Float32Array-to-Float64Array-set.js:
+        * microbenchmarks/Float64Array-alloc-long-lived.js:
+        * microbenchmarks/Float64Array-to-Int16Array-set.js:
+        * microbenchmarks/HashMap-put-get-iterate-keys.js:
+        * microbenchmarks/HashMap-put-get-iterate.js:
+        * microbenchmarks/HashMap-string-put-get-iterate.js:
+        * microbenchmarks/Int16Array-alloc-long-lived.js:
+        * microbenchmarks/Int16Array-bubble-sort-with-byteLength.js:
+        * microbenchmarks/Int16Array-bubble-sort.js:
+        * microbenchmarks/Int16Array-load-int-mul.js:
+        * microbenchmarks/Int16Array-to-Int32Array-set.js:
+        * microbenchmarks/Int32Array-Int8Array-view-alloc.js:
+        * microbenchmarks/Int32Array-alloc-large.js:
+        * microbenchmarks/Int32Array-alloc-long-lived.js:
+        * microbenchmarks/Int32Array-alloc.js:
+        * microbenchmarks/Int8Array-alloc-long-lived.js:
+        * microbenchmarks/Int8Array-load-with-byteLength.js:
+        * microbenchmarks/Int8Array-load.js:
+        * microbenchmarks/JSONP-negative-0.js:
+        * microbenchmarks/Number-isNaN.js:
+        * microbenchmarks/abc-forward-loop-equal.js:
+        * microbenchmarks/abc-postfix-backward-loop.js:
+        * microbenchmarks/abc-simple-backward-loop.js:
+        * microbenchmarks/abc-simple-forward-loop.js:
+        * microbenchmarks/abc-skippy-loop.js:
+        * microbenchmarks/abs-boolean.js:
+        * microbenchmarks/adapt-to-double-divide.js:
+        * microbenchmarks/add-tree.js:
+        * microbenchmarks/aliased-arguments-getbyval.js:
+        * microbenchmarks/allocate-big-object.js:
+        * microbenchmarks/apply-not-apply.js:
+        * microbenchmarks/arguments-named-and-reflective.js:
+        * microbenchmarks/arguments-out-of-bounds.js:
+        * microbenchmarks/arguments-strict-mode.js:
+        * microbenchmarks/arguments.js:
+        * microbenchmarks/arity-mismatch-inlining.js:
+        * microbenchmarks/array-access-polymorphic-structure.js:
+        * microbenchmarks/array-nonarray-polymorhpic-access.js:
+        * microbenchmarks/array-prototype-every.js:
+        * microbenchmarks/array-prototype-forEach.js:
+        * microbenchmarks/array-prototype-join-uninitialized.js:
+        * microbenchmarks/array-prototype-map.js:
+        * microbenchmarks/array-prototype-reduce.js:
+        * microbenchmarks/array-prototype-reduceRight.js:
+        * microbenchmarks/array-prototype-some.js:
+        * microbenchmarks/array-push-0.js:
+        * microbenchmarks/array-push-1.js:
+        * microbenchmarks/array-push-2.js:
+        * microbenchmarks/array-splice-contiguous.js:
+        * microbenchmarks/array-with-double-add.js:
+        * microbenchmarks/array-with-double-increment.js:
+        * microbenchmarks/array-with-double-mul-add.js:
+        * microbenchmarks/array-with-double-sum.js:
+        * microbenchmarks/array-with-int32-add-sub.js:
+        * microbenchmarks/array-with-int32-or-double-sum.js:
+        * microbenchmarks/arrowfunciton-direct-arguments.js:
+        * microbenchmarks/arrowfunciton-reference-arguments.js:
+        * microbenchmarks/arrowfunction-call-in-class-constructor.js:
+        * microbenchmarks/arrowfunction-call-in-class-method.js:
+        * microbenchmarks/arrowfunction-call-in-function.js:
+        * microbenchmarks/arrowfunction-call.js:
+        * microbenchmarks/asmjs_bool_bug.js:
+        * microbenchmarks/assign-custom-setter-polymorphic.js:
+        * microbenchmarks/assign-custom-setter.js:
+        * microbenchmarks/basic-set.js:
+        * microbenchmarks/big-int-mul.js:
+        * microbenchmarks/bigswitch-indirect-symbol.js:
+        * microbenchmarks/bigswitch-indirect.js:
+        * microbenchmarks/bigswitch.js:
+        * microbenchmarks/bit-or-tree.js:
+        * microbenchmarks/bit-test-constant.js:
+        * microbenchmarks/bit-test-load.js:
+        * microbenchmarks/bit-test-nonconstant.js:
+        * microbenchmarks/bit-xor-tree.js:
+        * microbenchmarks/boolean-test.js:
+        * microbenchmarks/bound-function-call.js:
+        * microbenchmarks/bound-function-construction-performance.js:
+        * microbenchmarks/branch-fold.js:
+        * microbenchmarks/branch-on-string-as-boolean.js:
+        * microbenchmarks/bug-153431.js:
+        * microbenchmarks/build-large-object.js:
+        * microbenchmarks/by-val-generic.js:
+        * microbenchmarks/cache-get-variables-under-tdz-in-bytecode-generator.js:
+        * microbenchmarks/call-or-not-call.js:
+        * microbenchmarks/call-spread-apply.js:
+        * microbenchmarks/call-spread-call.js:
+        * microbenchmarks/call-using-spread.js:
+        * microbenchmarks/captured-assignments.js:
+        * microbenchmarks/cast-int-to-double.js:
+        * microbenchmarks/cell-argument.js:
+        * microbenchmarks/cfg-simplify.js:
+        * microbenchmarks/chain-getter-access.js:
+        * microbenchmarks/check-mul-constant.js:
+        * microbenchmarks/check-mul-no-constant.js:
+        * microbenchmarks/check-mul-power-of-two.js:
+        * microbenchmarks/cmpeq-obj-to-obj-other.js:
+        * microbenchmarks/concat-append-one.js:
+        * microbenchmarks/constant-fold-check-type-info-flags.js:
+        * microbenchmarks/constant-test.js:
+        * microbenchmarks/construct-poly-proto-object.js:
+        * microbenchmarks/contiguous-array-to-string.js:
+        * microbenchmarks/create-lots-of-functions.js:
+        * microbenchmarks/create-many-weak-map.js:
+        * microbenchmarks/cse-new-array-buffer.js:
+        * microbenchmarks/cse-new-array.js:
+        * microbenchmarks/custom-accessor-materialized.js:
+        * microbenchmarks/custom-accessor-thin-air.js:
+        * microbenchmarks/custom-accessor.js:
+        * microbenchmarks/custom-setter-getter-as-put-get-by-id.js:
+        * microbenchmarks/custom-value-2.js:
+        * microbenchmarks/custom-value.js:
+        * microbenchmarks/data-view-accesses-2.js:
+        * microbenchmarks/data-view-accesses.js:
+        * microbenchmarks/dataview-cse.js:
+        * microbenchmarks/delay-tear-off-arguments-strictmode.js:
+        * microbenchmarks/delta-blue-try-catch.js:
+        * microbenchmarks/deltablue-for-of.js:
+        * microbenchmarks/deltablue-varargs.js:
+        * microbenchmarks/destructuring-arguments.js:
+        * microbenchmarks/destructuring-parameters-overridden-by-function.js:
+        * microbenchmarks/destructuring-swap.js:
+        * microbenchmarks/dfg-internal-function-call.js:
+        * microbenchmarks/dfg-internal-function-construct.js:
+        * microbenchmarks/dfg-internal-function-not-handled-call.js:
+        * microbenchmarks/dfg-internal-function-not-handled-construct.js:
+        * microbenchmarks/direct-arguments-getbyval.js:
+        * microbenchmarks/direct-arguments-length.js:
+        * microbenchmarks/direct-arguments-overridden-length.js:
+        * microbenchmarks/direct-arguments-possibly-overridden-length.js:
+        * microbenchmarks/direct-call-arity-mismatch.js:
+        * microbenchmarks/direct-call.js:
+        * microbenchmarks/direct-construct-arity-mismatch.js:
+        * microbenchmarks/direct-construct.js:
+        * microbenchmarks/direct-tail-call-arity-mismatch.js:
+        * microbenchmarks/direct-tail-call-inlined-caller-arity-mismatch.js:
+        * microbenchmarks/direct-tail-call-inlined-caller.js:
+        * microbenchmarks/direct-tail-call.js:
+        * microbenchmarks/div-boolean-double.js:
+        * microbenchmarks/div-boolean.js:
+        * microbenchmarks/dont-confuse-structures-from-different-executable-as-poly-proto.js:
+        * microbenchmarks/double-array-to-string.js:
+        * microbenchmarks/double-get-by-val-out-of-bounds.js:
+        * microbenchmarks/double-pollution-getbyval.js:
+        * microbenchmarks/double-pollution-putbyoffset.js:
+        * microbenchmarks/double-real-use.js:
+        * microbenchmarks/double-to-int32-typed-array-no-inline.js:
+        * microbenchmarks/double-to-int32-typed-array.js:
+        * microbenchmarks/double-to-uint32-typed-array-no-inline.js:
+        * microbenchmarks/double-to-uint32-typed-array.js:
+        * microbenchmarks/elidable-new-object-dag.js:
+        * microbenchmarks/elidable-new-object-roflcopter.js:
+        * microbenchmarks/elidable-new-object-then-call.js:
+        * microbenchmarks/elidable-new-object-tree.js:
+        * microbenchmarks/empty-string-plus-int.js:
+        * microbenchmarks/emscripten-cube2hash.js:
+        * microbenchmarks/eval-cached.js:
+        * microbenchmarks/eval-code-ftl-reentry.js:
+        * microbenchmarks/eval-code-ftl.js:
+        * microbenchmarks/eval-compute.js:
+        * microbenchmarks/eval-not-eval-compute-args.js:
+        * microbenchmarks/eval-not-eval-compute.js:
+        * microbenchmarks/exit-length-on-plain-object.js:
+        * microbenchmarks/external-arguments-getbyval.js:
+        * microbenchmarks/external-arguments-putbyval.js:
+        * microbenchmarks/fixed-typed-array-storage-var-index.js:
+        * microbenchmarks/fixed-typed-array-storage.js:
+        * microbenchmarks/fold-double-to-int.js:
+        * microbenchmarks/fold-get-by-id-to-multi-get-by-offset-rare-int.js:
+        * microbenchmarks/fold-get-by-id-to-multi-get-by-offset.js:
+        * microbenchmarks/fold-multi-get-by-offset-to-get-by-offset.js:
+        * microbenchmarks/fold-multi-get-by-offset-to-poly-get-by-offset.js:
+        * microbenchmarks/fold-multi-put-by-offset-to-poly-put-by-offset.js:
+        * microbenchmarks/fold-multi-put-by-offset-to-put-by-offset.js:
+        * microbenchmarks/fold-multi-put-by-offset-to-replace-or-transition-put-by-offset.js:
+        * microbenchmarks/fold-put-by-id-to-multi-put-by-offset.js:
+        * microbenchmarks/fold-put-by-val-with-string-to-multi-put-by-offset.js:
+        * microbenchmarks/fold-put-by-val-with-symbol-to-multi-put-by-offset.js:
+        * microbenchmarks/fold-put-structure.js:
+        * microbenchmarks/for-in-on-object-with-lazily-materialized-properties.js:
+        * microbenchmarks/for-of-array.js:
+        * microbenchmarks/for-of-iterate-array-entries.js:
+        * microbenchmarks/for-of-iterate-array-keys.js:
+        * microbenchmarks/for-of-iterate-array-values.js:
+        * microbenchmarks/forward-arguments-dont-escape-on-arguments-length.js:
+        * microbenchmarks/freeze-and-do-work.js:
+        * microbenchmarks/fround.js:
+        * microbenchmarks/ftl-library-inlining-dataview.js:
+        * microbenchmarks/ftl-library-inlining.js:
+        * microbenchmarks/ftl-polymorphic-StringFromCharCode.js:
+        * microbenchmarks/function-call.js:
+        * microbenchmarks/function-dot-apply.js:
+        * microbenchmarks/function-test.js:
+        * microbenchmarks/function-with-eval.js:
+        * microbenchmarks/gcse-poly-get-less-obvious.js:
+        * microbenchmarks/gcse-poly-get.js:
+        * microbenchmarks/gcse.js:
+        * microbenchmarks/generate-multiple-llint-entrypoints.js:
+        * microbenchmarks/generator-create.js:
+        * microbenchmarks/generator-fib.js:
+        * microbenchmarks/generator-function-create.js:
+        * microbenchmarks/generator-sunspider-access-nsieve.js:
+        * microbenchmarks/generator-with-several-types.js:
+        * microbenchmarks/get-by-id-bimorphic-check-structure-elimination-simple.js:
+        * microbenchmarks/get-by-id-bimorphic-check-structure-elimination.js:
+        * microbenchmarks/get-by-id-chain-from-try-block.js:
+        * microbenchmarks/get-by-id-check-structure-elimination.js:
+        * microbenchmarks/get-by-id-proto-or-self.js:
+        * microbenchmarks/get-by-id-quadmorphic-check-structure-elimination-simple.js:
+        * microbenchmarks/get-by-id-self-or-proto.js:
+        * microbenchmarks/get-by-val-negative-array-index.js:
+        * microbenchmarks/get-by-val-out-of-bounds.js:
+        * microbenchmarks/get-by-val-with-string-bimorphic-check-structure-elimination-simple.js:
+        * microbenchmarks/get-by-val-with-string-bimorphic-check-structure-elimination.js:
+        * microbenchmarks/get-by-val-with-string-chain-from-try-block.js:
+        * microbenchmarks/get-by-val-with-string-check-structure-elimination.js:
+        * microbenchmarks/get-by-val-with-string-proto-or-self.js:
+        * microbenchmarks/get-by-val-with-string-quadmorphic-check-structure-elimination-simple.js:
+        * microbenchmarks/get-by-val-with-string-self-or-proto.js:
+        * microbenchmarks/get-by-val-with-symbol-bimorphic-check-structure-elimination-simple.js:
+        * microbenchmarks/get-by-val-with-symbol-bimorphic-check-structure-elimination.js:
+        * microbenchmarks/get-by-val-with-symbol-chain-from-try-block.js:
+        * microbenchmarks/get-by-val-with-symbol-check-structure-elimination.js:
+        * microbenchmarks/get-by-val-with-symbol-proto-or-self.js:
+        * microbenchmarks/get-by-val-with-symbol-quadmorphic-check-structure-elimination-simple.js:
+        * microbenchmarks/get-by-val-with-symbol-self-or-proto.js:
+        * microbenchmarks/get-custom-getter.js:
+        * microbenchmarks/get_by_val-Int32Array.js:
+        * microbenchmarks/get_callee_monomorphic.js:
+        * microbenchmarks/get_callee_polymorphic.js:
+        * microbenchmarks/getter-no-activation.js:
+        * microbenchmarks/getter-prototype.js:
+        * microbenchmarks/getter-richards-try-catch.js:
+        * microbenchmarks/getter-richards.js:
+        * microbenchmarks/getter.js:
+        * microbenchmarks/global-code-ftl.js:
+        * microbenchmarks/global-isNaN.js:
+        * microbenchmarks/global-object-access-with-mutating-structure.js:
+        * microbenchmarks/global-var-const-infer-fire-from-opt.js:
+        * microbenchmarks/global-var-const-infer.js:
+        * microbenchmarks/hard-overflow-check-equal.js:
+        * microbenchmarks/hard-overflow-check.js:
+        * microbenchmarks/has-own-property-name-cache.js:
+        * microbenchmarks/hoist-get-by-offset-tower-with-inferred-types.js:
+        * microbenchmarks/hoist-make-rope.js:
+        * microbenchmarks/hoist-poly-check-structure-effectful-loop.js:
+        * microbenchmarks/hoist-poly-check-structure.js:
+        * microbenchmarks/implicit-bigswitch-indirect-symbol.js:
+        * microbenchmarks/imul-double-only.js:
+        * microbenchmarks/imul-int-only.js:
+        * microbenchmarks/imul-mixed.js:
+        * microbenchmarks/in-by-id-match.js:
+        * microbenchmarks/in-by-id-removed.js:
+        * microbenchmarks/in-four-cases.js:
+        * microbenchmarks/in-one-case-false.js:
+        * microbenchmarks/in-one-case-true.js:
+        * microbenchmarks/in-two-cases.js:
+        * microbenchmarks/indexed-properties-in-objects.js:
+        * microbenchmarks/infer-closure-const-then-mov-no-inline.js:
+        * microbenchmarks/infer-closure-const-then-mov.js:
+        * microbenchmarks/infer-closure-const-then-put-to-scope-no-inline.js:
+        * microbenchmarks/infer-closure-const-then-put-to-scope.js:
+        * microbenchmarks/infer-closure-const-then-reenter-no-inline.js:
+        * microbenchmarks/infer-closure-const-then-reenter.js:
+        * microbenchmarks/infer-constant-global-property.js:
+        * microbenchmarks/infer-constant-property.js:
+        * microbenchmarks/infer-one-time-closure-ten-vars.js:
+        * microbenchmarks/infer-one-time-closure-two-vars.js:
+        * microbenchmarks/infer-one-time-closure.js:
+        * microbenchmarks/infer-one-time-deep-closure.js:
+        * microbenchmarks/inline-arguments-access.js:
+        * microbenchmarks/inline-arguments-aliased-access.js:
+        * microbenchmarks/inline-arguments-local-escape.js:
+        * microbenchmarks/inline-get-scoped-var.js:
+        * microbenchmarks/inlined-put-by-id-transition.js:
+        * microbenchmarks/inlined-put-by-val-with-string-transition.js:
+        * microbenchmarks/inlined-put-by-val-with-symbol-transition.js:
+        * microbenchmarks/instanceof-always-hit-one.js:
+        * microbenchmarks/instanceof-always-hit-two.js:
+        * microbenchmarks/instanceof-bound.js:
+        * microbenchmarks/instanceof-dynamic.js:
+        * microbenchmarks/instanceof-sometimes-hit.js:
+        * microbenchmarks/instanceof-tricky-dynamic.js:
+        * microbenchmarks/int-or-other-abs-then-get-by-val.js:
+        * microbenchmarks/int-or-other-abs-zero-then-get-by-val.js:
+        * microbenchmarks/int-or-other-add-then-get-by-val.js:
+        * microbenchmarks/int-or-other-add.js:
+        * microbenchmarks/int-or-other-div-then-get-by-val.js:
+        * microbenchmarks/int-or-other-max-then-get-by-val.js:
+        * microbenchmarks/int-or-other-min-then-get-by-val.js:
+        * microbenchmarks/int-or-other-mod-then-get-by-val.js:
+        * microbenchmarks/int-or-other-mul-then-get-by-val.js:
+        * microbenchmarks/int-or-other-neg-then-get-by-val.js:
+        * microbenchmarks/int-or-other-neg-zero-then-get-by-val.js:
+        * microbenchmarks/int-or-other-sub-then-get-by-val.js:
+        * microbenchmarks/int-or-other-sub.js:
+        * microbenchmarks/int-overflow-local.js:
+        * microbenchmarks/int32-array-to-string.js:
+        * microbenchmarks/int52-back-and-forth.js:
+        * microbenchmarks/int52-rand-function.js:
+        * microbenchmarks/int52-spill.js:
+        * microbenchmarks/int8-out-of-bounds.js:
+        * microbenchmarks/integer-divide.js:
+        * microbenchmarks/integer-modulo.js:
+        * microbenchmarks/is-array-for-array.js:
+        * microbenchmarks/is-array-for-mixed-case.js:
+        * microbenchmarks/is-array-for-non-array-object.js:
+        * microbenchmarks/is-array-for-proxy.js:
+        * microbenchmarks/is-boolean-fold-tricky.js:
+        * microbenchmarks/is-boolean-fold.js:
+        * microbenchmarks/is-function-fold-tricky-internal-function.js:
+        * microbenchmarks/is-function-fold-tricky.js:
+        * microbenchmarks/is-function-fold.js:
+        * microbenchmarks/is-not-cell-speculation-for-empty-value.js:
+        * microbenchmarks/is-number-fold-tricky.js:
+        * microbenchmarks/is-number-fold.js:
+        * microbenchmarks/is-object-or-null-fold-functions.js:
+        * microbenchmarks/is-object-or-null-fold-less-tricky.js:
+        * microbenchmarks/is-object-or-null-fold-tricky.js:
+        * microbenchmarks/is-object-or-null-fold.js:
+        * microbenchmarks/is-object-or-null-trickier-function.js:
+        * microbenchmarks/is-object-or-null-trickier-internal-function.js:
+        * microbenchmarks/is-object-or-null-tricky-function.js:
+        * microbenchmarks/is-object-or-null-tricky-internal-function.js:
+        * microbenchmarks/is-string-fold-tricky.js:
+        * microbenchmarks/is-string-fold.js:
+        * microbenchmarks/is-symbol-mixed.js:
+        * microbenchmarks/is-symbol.js:
+        * microbenchmarks/is-undefined-fold-tricky.js:
+        * microbenchmarks/is-undefined-fold.js:
+        * microbenchmarks/json-parse-array-reviver-same-value.js:
+        * microbenchmarks/json-parse-array-reviver.js:
+        * microbenchmarks/json-parse-object-reviver-same-value.js:
+        * microbenchmarks/json-parse-object-reviver.js:
+        * microbenchmarks/large-empty-array-join-resolve-rope.js:
+        * microbenchmarks/large-empty-array-join.js:
+        * microbenchmarks/large-int-captured.js:
+        * microbenchmarks/large-int-neg.js:
+        * microbenchmarks/large-int.js:
+        * microbenchmarks/large-map-iteration.js:
+        * microbenchmarks/lazy-array-species-watchpoints.js:
+        * microbenchmarks/let-for-in.js:
+        * microbenchmarks/licm-dragons-out-of-bounds.js:
+        * microbenchmarks/licm-dragons-overflow.js:
+        * microbenchmarks/licm-dragons-two-structures.js:
+        * microbenchmarks/licm-dragons.js:
+        * microbenchmarks/load-varargs-elimination.js:
+        * microbenchmarks/locale-compare.js:
+        * microbenchmarks/logical-not-weird-types.js:
+        * microbenchmarks/logical-not.js:
+        * microbenchmarks/loop-osr-with-arity-mismatch.js:
+        * microbenchmarks/lots-of-fields.js:
+        * microbenchmarks/make-indexed-storage.js:
+        * microbenchmarks/make-rope-cse.js:
+        * microbenchmarks/make-rope.js:
+        * microbenchmarks/many-foreach-calls.js:
+        * microbenchmarks/many-repeat-stores.js:
+        * microbenchmarks/map-for-each.js:
+        * microbenchmarks/map-for-of.js:
+        * microbenchmarks/map-has-and-set.js:
+        * microbenchmarks/map-has-get-cse-opportunity.js:
+        * microbenchmarks/map-key-well-typed.js:
+        * microbenchmarks/map-rehash.js:
+        * microbenchmarks/marsaglia-larger-ints.js:
+        * microbenchmarks/marsaglia-osr-entry.js:
+        * microbenchmarks/math-random.js:
+        * microbenchmarks/math-trunc.js:
+        * microbenchmarks/math-with-out-of-bounds-array-values.js:
+        * microbenchmarks/max-boolean.js:
+        * microbenchmarks/megamorphic-load.js:
+        * microbenchmarks/memcpy-loop.js:
+        * microbenchmarks/memcpy-typed-loop-large.js:
+        * microbenchmarks/memcpy-typed-loop-small.js:
+        * microbenchmarks/memcpy-typed-loop-speculative.js:
+        * microbenchmarks/memcpy-typed-loop.js:
+        * microbenchmarks/memcpy-wasm-large.js:
+        * microbenchmarks/memcpy-wasm-medium.js:
+        * microbenchmarks/memcpy-wasm-small.js:
+        * microbenchmarks/memcpy-wasm.js:
+        * microbenchmarks/method-on-number.js:
+        * microbenchmarks/min-boolean.js:
+        * microbenchmarks/minus-boolean-double.js:
+        * microbenchmarks/minus-boolean.js:
+        * microbenchmarks/misc-strict-eq.js:
+        * microbenchmarks/mod-boolean-double.js:
+        * microbenchmarks/mod-boolean.js:
+        * microbenchmarks/mod-untyped.js:
+        * microbenchmarks/mul-boolean-double.js:
+        * microbenchmarks/mul-boolean.js:
+        * microbenchmarks/mul-immediate-sub.js:
+        * microbenchmarks/neg-boolean.js:
+        * microbenchmarks/negative-zero-divide.js:
+        * microbenchmarks/negative-zero-modulo.js:
+        * microbenchmarks/negative-zero-negate.js:
+        * microbenchmarks/new-array-buffer-dead.js:
+        * microbenchmarks/new-array-buffer-push.js:
+        * microbenchmarks/new-array-buffer-vector-profile.js:
+        * microbenchmarks/new-array-dead.js:
+        * microbenchmarks/new-array-push.js:
+        * microbenchmarks/new-error.js:
+        * microbenchmarks/no-inline-constructor.js:
+        * microbenchmarks/number-test.js:
+        * microbenchmarks/number-to-string-strength-reduction.js:
+        * microbenchmarks/number-to-string-with-add-empty.js:
+        * microbenchmarks/number-to-string-with-add-in-loop.js:
+        * microbenchmarks/number-to-string-with-add.js:
+        * microbenchmarks/number-to-string-with-radix-10.js:
+        * microbenchmarks/number-to-string-with-radix-cse.js:
+        * microbenchmarks/number-to-string-with-radix.js:
+        * microbenchmarks/object-and.js:
+        * microbenchmarks/object-closure-call.js:
+        * microbenchmarks/object-create-constant-prototype.js:
+        * microbenchmarks/object-create-null.js:
+        * microbenchmarks/object-create-unknown-object-prototype.js:
+        * microbenchmarks/object-create-untyped-prototype.js:
+        * microbenchmarks/object-entries.js:
+        * microbenchmarks/object-get-own-property-symbols-on-large-array.js:
+        * microbenchmarks/object-get-own-property-symbols.js:
+        * microbenchmarks/object-int-add-array.js:
+        * microbenchmarks/object-int-add.js:
+        * microbenchmarks/object-int-and-array.js:
+        * microbenchmarks/object-int-mul-array.js:
+        * microbenchmarks/object-int-sub-array.js:
+        * microbenchmarks/object-int-sub.js:
+        * microbenchmarks/object-is.js:
+        * microbenchmarks/object-iterate-symbols.js:
+        * microbenchmarks/object-iterate.js:
+        * microbenchmarks/object-keys-map-values.js:
+        * microbenchmarks/object-keys.js:
+        * microbenchmarks/object-lshift.js:
+        * microbenchmarks/object-or.js:
+        * microbenchmarks/object-rshift.js:
+        * microbenchmarks/object-test.js:
+        * microbenchmarks/object-urshift.js:
+        * microbenchmarks/object-values.js:
+        * microbenchmarks/object-xor.js:
+        * microbenchmarks/obvious-sink-pathology-taken.js:
+        * microbenchmarks/obvious-sink-pathology.js:
+        * microbenchmarks/obviously-elidable-new-object.js:
+        * microbenchmarks/plus-boolean-arith.js:
+        * microbenchmarks/plus-boolean-double.js:
+        * microbenchmarks/plus-boolean.js:
+        * microbenchmarks/poly-chain-access-different-prototypes-simple.js:
+        * microbenchmarks/poly-chain-access-different-prototypes.js:
+        * microbenchmarks/poly-chain-access-simpler.js:
+        * microbenchmarks/poly-chain-access.js:
+        * microbenchmarks/poly-proto-access.js:
+        * microbenchmarks/poly-proto-and-non-poly-proto-same-ic.js:
+        * microbenchmarks/poly-proto-clear-js-function-allocation-profile.js:
+        * microbenchmarks/poly-proto-put-transition-speed.js:
+        * microbenchmarks/poly-proto-setter-speed.js:
+        * microbenchmarks/poly-stricteq.js:
+        * microbenchmarks/polymorphic-array-call.js:
+        * microbenchmarks/polymorphic-get-by-id.js:
+        * microbenchmarks/polymorphic-put-by-id.js:
+        * microbenchmarks/polymorphic-put-by-val-with-string.js:
+        * microbenchmarks/polymorphic-put-by-val-with-symbol.js:
+        * microbenchmarks/polymorphic-structure.js:
+        * microbenchmarks/polyvariant-get-by-id-shorter-tower.js:
+        * microbenchmarks/polyvariant-get-by-id-tower.js:
+        * microbenchmarks/polyvariant-monomorphic-get-by-id.js:
+        * microbenchmarks/prevent-extensions-and-do-work.js:
+        * microbenchmarks/promise-creation-many.js:
+        * microbenchmarks/proto-getter-access.js:
+        * microbenchmarks/prototype-access-with-mutating-prototype.js:
+        * microbenchmarks/put-by-id-replace-and-transition.js:
+        * microbenchmarks/put-by-id-slightly-polymorphic.js:
+        * microbenchmarks/put-by-id-transition-with-indexing-header.js:
+        * microbenchmarks/put-by-id.js:
+        * microbenchmarks/put-by-val-direct-large-index.js:
+        * microbenchmarks/put-by-val-direct.js:
+        * microbenchmarks/put-by-val-large-index-blank-indexing-type.js:
+        * microbenchmarks/put-by-val-machine-int.js:
+        * microbenchmarks/put-by-val-negative-array-index.js:
+        * microbenchmarks/put-by-val-with-string-replace-and-transition.js:
+        * microbenchmarks/put-by-val-with-string-slightly-polymorphic.js:
+        * microbenchmarks/put-by-val-with-string.js:
+        * microbenchmarks/put-by-val-with-symbol-replace-and-transition.js:
+        * microbenchmarks/put-by-val-with-symbol-slightly-polymorphic.js:
+        * microbenchmarks/put-by-val-with-symbol.js:
+        * microbenchmarks/rare-osr-exit-on-local.js:
+        * microbenchmarks/raytrace-with-empty-try-catch.js:
+        * microbenchmarks/raytrace-with-try-catch.js:
+        * microbenchmarks/regexp-exec.js:
+        * microbenchmarks/regexp-last-index.js:
+        * microbenchmarks/regexp-nested-nonzero-min-counted-parens.js:
+        * microbenchmarks/regexp-prototype-is-not-instance.js:
+        * microbenchmarks/regexp-prototype-search-observable-side-effects.js:
+        * microbenchmarks/regexp-prototype-search-observable-side-effects2.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects2.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects3-flags.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects3-global.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects3-ignoreCase.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects3-multiline.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects3-sticky.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects3-unicode.js:
+        * microbenchmarks/regexp-prototype-split-observable-side-effects4.js:
+        * microbenchmarks/regexp-prototype-test-observable-side-effects.js:
+        * microbenchmarks/regexp-prototype-test-observable-side-effects2.js:
+        * microbenchmarks/regexp-set-last-index.js:
+        * microbenchmarks/regexp-u-global-es5.js:
+        * microbenchmarks/regexp-u-global-es6.js:
+        * microbenchmarks/register-pressure-from-osr.js:
+        * microbenchmarks/repeat-multi-get-by-offset.js:
+        * microbenchmarks/rest-parameter-construction-performance.js:
+        * microbenchmarks/richards-empty-try-catch.js:
+        * microbenchmarks/richards-try-catch.js:
+        * microbenchmarks/scoped-arguments-length.js:
+        * microbenchmarks/scoped-arguments-overridden-length.js:
+        * microbenchmarks/scoped-arguments-possibly-overridden-length.js:
+        * microbenchmarks/seal-and-do-work.js:
+        * microbenchmarks/set-for-each.js:
+        * microbenchmarks/set-for-of.js:
+        * microbenchmarks/setter-prototype.js:
+        * microbenchmarks/setter.js:
+        * microbenchmarks/simple-activation-demo.js:
+        * microbenchmarks/simple-getter-access.js:
+        * microbenchmarks/simple-poly-call-nested.js:
+        * microbenchmarks/simple-poly-call.js:
+        * microbenchmarks/simple-regexp-exec-folding-fail.js:
+        * microbenchmarks/simple-regexp-exec-folding.js:
+        * microbenchmarks/simple-regexp-test-folding-fail-with-hoisted-regexp.js:
+        * microbenchmarks/simple-regexp-test-folding-fail.js:
+        * microbenchmarks/simple-regexp-test-folding-with-hoisted-regexp.js:
+        * microbenchmarks/simple-regexp-test-folding.js:
+        * microbenchmarks/sin-boolean.js:
+        * microbenchmarks/singleton-scope.js:
+        * microbenchmarks/sink-function.js:
+        * microbenchmarks/sink-huge-activation.js:
+        * microbenchmarks/sinkable-new-object-dag.js:
+        * microbenchmarks/sinkable-new-object-taken.js:
+        * microbenchmarks/sinkable-new-object-with-builtin-constructor.js:
+        * microbenchmarks/sinkable-new-object.js:
+        * microbenchmarks/slow-array-profile-convergence.js:
+        * microbenchmarks/slow-convergence.js:
+        * microbenchmarks/slow-ternaries.js:
+        * microbenchmarks/sorting-benchmark.js:
+        * microbenchmarks/sparse-conditional.js:
+        * microbenchmarks/sparse-set.js:
+        * microbenchmarks/splice-to-remove.js:
+        * microbenchmarks/strcat-const.js:
+        * microbenchmarks/strcat-length-const.js:
+        * microbenchmarks/strict-osr-entry.js:
+        * microbenchmarks/string-char-code-at.js:
+        * microbenchmarks/string-concat-convert.js:
+        * microbenchmarks/string-concat-long-convert.js:
+        * microbenchmarks/string-concat-long.js:
+        * microbenchmarks/string-concat-object.js:
+        * microbenchmarks/string-concat-pair-object.js:
+        * microbenchmarks/string-concat-pair-simple.js:
+        * microbenchmarks/string-concat-simple.js:
+        * microbenchmarks/string-concat.js:
+        * microbenchmarks/string-cons-repeat.js:
+        * microbenchmarks/string-cons-tower.js:
+        * microbenchmarks/string-equality.js:
+        * microbenchmarks/string-from-char-code.js:
+        * microbenchmarks/string-get-by-val-big-char.js:
+        * microbenchmarks/string-get-by-val-out-of-bounds-insane.js:
+        * microbenchmarks/string-get-by-val-out-of-bounds.js:
+        * microbenchmarks/string-get-by-val.js:
+        * microbenchmarks/string-hash.js:
+        * microbenchmarks/string-long-ident-equality.js:
+        * microbenchmarks/string-object-to-string.js:
+        * microbenchmarks/string-object-value-of.js:
+        * microbenchmarks/string-out-of-bounds.js:
+        * microbenchmarks/string-prototype-search-observable-side-effects.js:
+        * microbenchmarks/string-prototype-search-observable-side-effects2.js:
+        * microbenchmarks/string-prototype-search-observable-side-effects3.js:
+        * microbenchmarks/string-prototype-search-observable-side-effects4.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects2.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects3-flags.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects3-global.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects3-ignoreCase.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects3-multiline.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects3-sticky.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects3-unicode.js:
+        * microbenchmarks/string-prototype-split-observable-side-effects4.js:
+        * microbenchmarks/string-repeat-arith.js:
+        * microbenchmarks/string-repeat-not-resolving-fixed.js:
+        * microbenchmarks/string-repeat-not-resolving-no-inline.js:
+        * microbenchmarks/string-repeat-not-resolving.js:
+        * microbenchmarks/string-repeat-resolving-fixed.js:
+        * microbenchmarks/string-repeat-resolving-no-inline.js:
+        * microbenchmarks/string-repeat-resolving.js:
+        * microbenchmarks/string-repeat-single-not-resolving.js:
+        * microbenchmarks/string-repeat-single-resolving.js:
+        * microbenchmarks/string-repeat-small-not-resolving.js:
+        * microbenchmarks/string-repeat-small-resolving.js:
+        * microbenchmarks/string-replace-empty.js:
+        * microbenchmarks/string-replace-generic.js:
+        * microbenchmarks/string-replace.js:
+        * microbenchmarks/string-rope-with-object.js:
+        * microbenchmarks/string-slice-empty.js:
+        * microbenchmarks/string-slice-one-char.js:
+        * microbenchmarks/string-slice.js:
+        * microbenchmarks/string-sub.js:
+        * microbenchmarks/string-test.js:
+        * microbenchmarks/string-transcoding.js:
+        * microbenchmarks/string-var-equality.js:
+        * microbenchmarks/stringalloc.js:
+        * microbenchmarks/structure-hoist-over-transitions.js:
+        * microbenchmarks/substring-concat-weird.js:
+        * microbenchmarks/substring-concat.js:
+        * microbenchmarks/substring.js:
+        * microbenchmarks/super-get-by-id-with-this-monomorphic.js:
+        * microbenchmarks/super-get-by-id-with-this-polymorphic.js:
+        * microbenchmarks/super-get-by-val-with-this-monomorphic.js:
+        * microbenchmarks/super-get-by-val-with-this-polymorphic.js:
+        * microbenchmarks/super-getter.js:
+        * microbenchmarks/switch-char-constant.js:
+        * microbenchmarks/switch-char.js:
+        * microbenchmarks/switch-constant.js:
+        * microbenchmarks/switch-string-basic-big-var.js:
+        * microbenchmarks/switch-string-basic-big.js:
+        * microbenchmarks/switch-string-basic-var.js:
+        * microbenchmarks/switch-string-basic.js:
+        * microbenchmarks/switch-string-big-length-tower-var.js:
+        * microbenchmarks/switch-string-length-tower-var.js:
+        * microbenchmarks/switch-string-length-tower.js:
+        * microbenchmarks/switch-string-short.js:
+        * microbenchmarks/switch.js:
+        * microbenchmarks/switching-size-classes.js:
+        * microbenchmarks/symbol-creation.js:
+        * microbenchmarks/symbol-tostringtag.js:
+        * microbenchmarks/tan.js:
+        * microbenchmarks/tear-off-arguments-simple.js:
+        * microbenchmarks/tear-off-arguments.js:
+        * microbenchmarks/template-string-array.js:
+        * microbenchmarks/temporal-structure.js:
+        * microbenchmarks/throw.js:
+        * microbenchmarks/to-int32-boolean.js:
+        * microbenchmarks/to-number-boolean.js:
+        * microbenchmarks/to-number-constructor-number-string-number-string.js:
+        * microbenchmarks/to-number-constructor-only-number.js:
+        * microbenchmarks/to-number-constructor-only-string.js:
+        * microbenchmarks/to-number-constructor-string-number-string-number.js:
+        * microbenchmarks/to-number-number-string-number-string.js:
+        * microbenchmarks/to-number-only-number.js:
+        * microbenchmarks/to-number-only-string.js:
+        * microbenchmarks/to-number-string-number-string-number.js:
+        * microbenchmarks/to-string-on-cow-array.js:
+        * microbenchmarks/try-catch-get-by-val-cloned-arguments.js:
+        * microbenchmarks/try-catch-get-by-val-direct-arguments.js:
+        * microbenchmarks/try-catch-get-by-val-scoped-arguments.js:
+        * microbenchmarks/try-catch-word-count.js:
+        * microbenchmarks/try-get-by-id-basic.js:
+        * microbenchmarks/try-get-by-id-polymorphic.js:
+        * microbenchmarks/typed-array-get-set-by-val-profiling.js:
+        * microbenchmarks/typed-array-subarray.js:
+        * microbenchmarks/typed-array-sum.js:
+        * microbenchmarks/undefined-test.js:
+        * microbenchmarks/unprofiled-licm.js:
+        * microbenchmarks/untyped-string-from-char-code.js:
+        * microbenchmarks/v8-raytrace-with-empty-try-catch.js:
+        * microbenchmarks/v8-raytrace-with-try-catch.js:
+        * microbenchmarks/v8-regexp-search.js:
+        * microbenchmarks/varargs-call.js:
+        * microbenchmarks/varargs-construct-inline.js:
+        * microbenchmarks/varargs-construct.js:
+        * microbenchmarks/varargs-inline.js:
+        * microbenchmarks/varargs-strict-mode.js:
+        * microbenchmarks/varargs.js:
+        * microbenchmarks/vector-length-hint-array-constructor.js:
+        * microbenchmarks/vector-length-hint-new-array.js:
+        * microbenchmarks/weak-map-key.js:
+        * microbenchmarks/weak-set-key.js:
+        * microbenchmarks/weird-inlining-const-prop.js:
+
+2019-10-22  Mark Lam  <mark.lam@apple.com>
+
+        Fix incorrect assertion in operationRegExpExecNonGlobalOrSticky().
+        https://bugs.webkit.org/show_bug.cgi?id=203230
+        <rdar://problem/56460749>
+
+        Reviewed by Robin Morisset.
+
+        * stress/incorrect-exception-assertion-in-operationRegExpExecNonGlobalOrSticky.js: Added.
+
+2019-10-21  Mark Lam  <mark.lam@apple.com>
+
+        Rolling out r251411: Fix is incorrect.
+        https://bugs.webkit.org/show_bug.cgi?id=203230
+
+        Not reviewed.
+
+        * stress/incorrect-exception-assertion-in-operationRegExpExecNonGlobalOrSticky.js: Removed.
+
+2019-10-21  Mark Lam  <mark.lam@apple.com>
+
+        Fix incorrect assertion in operationRegExpExecNonGlobalOrSticky().
+        https://bugs.webkit.org/show_bug.cgi?id=203230
+        <rdar://problem/56460749>
+
+        Reviewed by Robin Morisset.
+
+        * stress/incorrect-exception-assertion-in-operationRegExpExecNonGlobalOrSticky.js: Added.
+
+2019-10-21  Saam Barati  <sbarati@apple.com>
+
+        ValuePow's constant folding rule differs from what the runtime does
+        https://bugs.webkit.org/show_bug.cgi?id=203220
+        <rdar://problem/56181441>
+
+        Reviewed by Yusuke Suzuki.
+
+        * value-pow-ai-rule-should-box-the-same-way-as-the-runtime.js: Added.
+        (foo):
+
+2019-10-21  Mark Lam  <mark.lam@apple.com>
+
+        Fix missing exception check in JSON Stringifier.
+        https://bugs.webkit.org/show_bug.cgi?id=203227
+        <rdar://problem/56459854>
+
+        Reviewed by Keith Miller.
+
+        * stress/missing-exception-check-in-josn-stringifier.js: Added.
+
+2019-10-21  Saam Barati  <sbarati@apple.com>
+
+        JSON.parse has bad is array assert
+        https://bugs.webkit.org/show_bug.cgi?id=203207
+        <rdar://problem/56366913>
+
+        Reviewed by Yusuke Suzuki.
+
+        * stress/json-parse-array-prototype-is-array-assert.js: Added.
+        (assert):
+
+2019-10-21  Robin Morisset  <rmorisset@apple.com>
+
+        Throw the right exception upon memory exhaustion in Array::slice
+        https://bugs.webkit.org/show_bug.cgi?id=202650
+
+        Reviewed by Saam Barati.
+
+        * stress/array-slice-memory-exhaustion.js: Added.
+        (foo):
+
+2019-10-21  Robin Morisset  <rmorisset@apple.com>
+
+        Post increment/decrement should only call ToNumber once
+        https://bugs.webkit.org/show_bug.cgi?id=202711
+
+        Reviewed by Saam Barati.
+
+        * stress/postinc-custom-valueOf.js: Added.
+        (postInc):
+        (postDec):
+
+2019-10-18  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] DFG::CommonData modification by DFG reallyAdd should be guarded by CodeBlock's lock
+        https://bugs.webkit.org/show_bug.cgi?id=203177
+
+        Reviewed by Mark Lam.
+
+        * stress/dfg-really-add-locking.js: Added.
+
 2019-10-17  Mark Lam  <mark.lam@apple.com>
 
         Add missing checks after calls to the sameValue() JSValue comparator.

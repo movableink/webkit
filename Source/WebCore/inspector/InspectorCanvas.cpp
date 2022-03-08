@@ -209,7 +209,7 @@ ScriptExecutionContext* InspectorCanvas::scriptExecutionContext() const
     );
 }
 
-JSC::JSValue InspectorCanvas::resolveContext(JSC::ExecState* exec) const
+JSC::JSValue InspectorCanvas::resolveContext(JSC::JSGlobalObject* exec) const
 {
     JSC::JSLockHolder lock(exec);
 
@@ -1064,7 +1064,7 @@ Ref<JSON::ArrayOf<JSON::Value>> InspectorCanvas::buildAction(const String& name,
             [&] (const CanvasImageSource& value) {
                 WTF::visit(parseParameter, value);
             },
-            [&] (const CanvasRenderingContext2DBase::Style& value) {
+            [&] (const CanvasRenderingContext2DBase::StyleVariant& value) {
                 WTF::visit(parseParameter, value);
             },
 #if ENABLE(WEBGL)

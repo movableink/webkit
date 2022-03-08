@@ -28,6 +28,7 @@
 #include "BytecodeGeneratorification.h"
 
 #include "BytecodeDumper.h"
+#include "BytecodeGeneratorBaseInlines.h"
 #include "BytecodeLivenessAnalysisInlines.h"
 #include "BytecodeRewriter.h"
 #include "BytecodeStructs.h"
@@ -200,7 +201,7 @@ public:
         runLivenessFixpoint(codeBlock, instructions, m_generatorification.graph());
 
         for (YieldData& data : m_generatorification.yields())
-            data.liveness = getLivenessInfoAtBytecodeOffset(codeBlock, instructions, m_generatorification.graph(), m_generatorification.instructions().at(data.point).next().offset());
+            data.liveness = getLivenessInfoAtBytecodeIndex(codeBlock, instructions, m_generatorification.graph(), BytecodeIndex(m_generatorification.instructions().at(data.point).next().offset()));
     }
 
 private:
@@ -300,7 +301,7 @@ void BytecodeGeneratorification::run()
 void performGeneratorification(BytecodeGenerator& bytecodeGenerator, UnlinkedCodeBlock* codeBlock, InstructionStreamWriter& instructions, SymbolTable* generatorFrameSymbolTable, int generatorFrameSymbolTableIndex)
 {
     if (Options::dumpBytecodesBeforeGeneratorification())
-        BytecodeDumper<UnlinkedCodeBlock>::dumpBlock(codeBlock, instructions, WTF::dataFile());
+        CodeBlockBytecodeDumper<UnlinkedCodeBlock>::dumpBlock(codeBlock, instructions, WTF::dataFile());
 
     BytecodeGeneratorification pass(bytecodeGenerator, codeBlock, instructions, generatorFrameSymbolTable, generatorFrameSymbolTableIndex);
     pass.run();

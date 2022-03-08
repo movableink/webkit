@@ -38,22 +38,23 @@
 #include "WebCoreArgumentCoders.h"
 #include "WebResourceLoaderMessages.h"
 #include "WebSWContextManagerConnectionMessages.h"
+#include "WebSWServerConnection.h"
 #include "WebSWServerToContextConnection.h"
 #include <WebCore/CrossOriginAccessControl.h>
 
-#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(m_sessionID.isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorkerFetchTask::" fmt, this, ##__VA_ARGS__)
-#define RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(m_sessionID.isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorkerFetchTask::" fmt, this, ##__VA_ARGS__)
+#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(m_loader.sessionID().isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorkerFetchTask::" fmt, this, ##__VA_ARGS__)
+#define RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(m_loader.sessionID().isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorkerFetchTask::" fmt, this, ##__VA_ARGS__)
 
 using namespace WebCore;
 
 namespace WebKit {
 
-ServiceWorkerFetchTask::ServiceWorkerFetchTask(PAL::SessionID sessionID, NetworkResourceLoader& loader, SWServerConnectionIdentifier serverConnectionIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier)
-    : m_sessionID(sessionID)
-    , m_loader(loader)
+ServiceWorkerFetchTask::ServiceWorkerFetchTask(NetworkResourceLoader& loader, ResourceRequest&& request, SWServerConnectionIdentifier serverConnectionIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, ServiceWorkerRegistrationIdentifier serviceWorkerRegistrationIdentifier)
+    : m_loader(loader)
     , m_fetchIdentifier(WebCore::FetchIdentifier::generate())
     , m_serverConnectionIdentifier(serverConnectionIdentifier)
     , m_serviceWorkerIdentifier(serviceWorkerIdentifier)
+    , m_currentRequest(WTFMove(request))
     , m_timeoutTimer(*this, &ServiceWorkerFetchTask::timeoutTimerFired)
 {
     m_timeoutTimer.startOneShot(loader.connectionToWebProcess().networkProcess().serviceWorkerFetchTimeout());
@@ -80,20 +81,25 @@ void ServiceWorkerFetchTask::start(WebSWServerToContextConnection& serviceWorker
     m_serviceWorkerConnection = makeWeakPtr(serviceWorkerConnection);
     serviceWorkerConnection.registerFetch(*this);
 
-    startFetch(ResourceRequest { m_loader.originalRequest() }, serviceWorkerConnection);
+    startFetch();
 }
 
-void ServiceWorkerFetchTask::startFetch(ResourceRequest&& request, WebSWServerToContextConnection& serviceWorkerConnection)
+void ServiceWorkerFetchTask::contextClosed()
 {
-    m_currentRequest = WTFMove(request);
+    m_serviceWorkerConnection = nullptr;
+    didFail(ResourceError { errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
+}
 
+void ServiceWorkerFetchTask::startFetch()
+{
     auto& options = m_loader.parameters().options;
     auto referrer = m_currentRequest.httpReferrer();
 
     // We are intercepting fetch calls after going through the HTTP layer, which may add some specific headers.
-    cleanHTTPRequestHeadersForAccessControl(m_currentRequest, m_loader.parameters().httpHeadersToKeep);
+    auto request = m_currentRequest;
+    cleanHTTPRequestHeadersForAccessControl(request, m_loader.parameters().httpHeadersToKeep);
 
-    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { m_serverConnectionIdentifier, m_serviceWorkerIdentifier, m_fetchIdentifier, m_currentRequest, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer });
+    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { m_serverConnectionIdentifier, m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer });
     ASSERT_UNUSED(isSent, isSent);
 }
 
@@ -105,7 +111,7 @@ void ServiceWorkerFetchTask::didReceiveRedirectResponse(ResourceResponse&& respo
     response.setSource(ResourceResponse::Source::ServiceWorker);
     auto newRequest = m_currentRequest.redirectedRequest(response, m_loader.parameters().shouldClearReferrerOnHTTPSToHTTPRedirect);
 
-    sendToClient(Messages::WebResourceLoader::WillSendRequest { newRequest, response });
+    sendToClient(Messages::WebResourceLoader::WillSendRequest { newRequest, IPC::FormDataReference { newRequest.httpBody() }, response });
 }
 
 void ServiceWorkerFetchTask::didReceiveResponse(ResourceResponse&& response, bool needsContinueDidReceiveResponseMessage)
@@ -169,7 +175,8 @@ void ServiceWorkerFetchTask::continueFetchTaskWith(ResourceRequest&& request)
         m_loader.serviceWorkerDidNotHandle();
         return;
     }
-    startFetch(WTFMove(request), *m_serviceWorkerConnection);
+    m_currentRequest = WTFMove(request);
+    startFetch();
 }
 
 void ServiceWorkerFetchTask::timeoutTimerFired()

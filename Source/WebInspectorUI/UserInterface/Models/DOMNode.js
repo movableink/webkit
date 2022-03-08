@@ -151,7 +151,7 @@ WI.DOMNode = class DOMNode extends WI.Object
         this._domEvents = [];
         this._powerEfficientPlaybackRanges = [];
 
-        if (this._shouldListenForEventListeners())
+        if (this.isMediaElement())
             WI.DOMNode.addEventListener(WI.DOMNode.Event.DidFireEvent, this._handleDOMNodeDidFireEvent, this);
     }
 
@@ -549,7 +549,10 @@ WI.DOMNode = class DOMNode extends WI.Object
     getOuterHTML(callback)
     {
         let target = WI.assumingMainTarget();
-        target.DOMAgent.getOuterHTML(this.id, callback);
+        if (typeof callback === "function")
+            target.DOMAgent.getOuterHTML(this.id, callback);
+        else
+            return target.DOMAgent.getOuterHTML(this.id).then(({outerHTML}) => outerHTML);
     }
 
     setOuterHTML(html, callback)
@@ -585,18 +588,6 @@ WI.DOMNode = class DOMNode extends WI.Object
     {
         let target = WI.assumingMainTarget();
         target.DOMAgent.removeNode(this.id, this._makeUndoableCallback(callback));
-    }
-
-    copyNode()
-    {
-        function copy(error, text)
-        {
-            if (!error)
-                InspectorFrontendHost.copyText(text);
-        }
-
-        let target = WI.assumingMainTarget();
-        target.DOMAgent.getOuterHTML(this.id, copy);
     }
 
     getEventListeners(callback)
@@ -767,6 +758,12 @@ WI.DOMNode = class DOMNode extends WI.Object
         return !!this.ownerSVGElement;
     }
 
+    isMediaElement()
+    {
+        let lowerCaseName = this.localName() || this.nodeName().toLowerCase();
+        return lowerCaseName === "video" || lowerCaseName === "audio";
+    }
+
     didFireEvent(eventName, timestamp, data)
     {
         // Called from WI.DOMManager.
@@ -822,12 +819,6 @@ WI.DOMNode = class DOMNode extends WI.Object
         this._domEvents.push(domEvent);
 
         this.dispatchEventToListeners(WI.DOMNode.Event.DidFireEvent, {domEvent});
-    }
-
-    _shouldListenForEventListeners()
-    {
-        let lowerCaseName = this.localName() || this.nodeName().toLowerCase();
-        return lowerCaseName === "video" || lowerCaseName === "audio";
     }
 
     _setAttributesPayload(attrs)

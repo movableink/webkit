@@ -42,14 +42,13 @@ class JSWebAssemblyMemory final : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
 
-    template<typename CellType, SubspaceAccess>
-    static CompleteSubspace* subspaceFor(VM& vm)
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
     {
-        // We hold onto a lot of memory, so it makes a lot of sense to be swept eagerly.
-        return &vm.eagerlySweptDestructibleObjectSpace;
+        return vm.webAssemblyMemorySpace<mode>();
     }
 
-    static JSWebAssemblyMemory* create(ExecState*, VM&, Structure*);
+    static JSWebAssemblyMemory* create(JSGlobalObject*, VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
@@ -57,7 +56,7 @@ public:
     void adopt(Ref<Wasm::Memory>&&);
     Wasm::Memory& memory() { return m_memory.get(); }
     JSArrayBuffer* buffer(VM& vm, JSGlobalObject*);
-    Wasm::PageCount grow(VM&, ExecState*, uint32_t delta);
+    Wasm::PageCount grow(VM&, JSGlobalObject*, uint32_t delta);
     void growSuccessCallback(VM&, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount);
 
 private:

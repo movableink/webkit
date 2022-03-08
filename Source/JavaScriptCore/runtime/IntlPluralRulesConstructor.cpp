@@ -77,7 +77,7 @@ IntlPluralRulesConstructor::IntlPluralRulesConstructor(VM& vm, Structure* struct
 
 void IntlPluralRulesConstructor::finishCreation(VM& vm, IntlPluralRulesPrototype* pluralRulesPrototype)
 {
-    Base::finishCreation(vm, "PluralRules"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, "PluralRules"_s, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, pluralRulesPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
     pluralRulesPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -90,24 +90,24 @@ static EncodedJSValue JSC_HOST_CALL constructIntlPluralRules(JSGlobalObject* glo
 
     // 13.2.1 Intl.PluralRules ([ locales [ , options ] ])
     // https://tc39.github.io/ecma402/#sec-intl.pluralrules
-    Structure* structure = InternalFunction::createSubclassStructure(callFrame, callFrame->newTarget(), jsCast<IntlPluralRulesConstructor*>(callFrame->jsCallee())->pluralRulesStructure(vm));
+    Structure* structure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), jsCast<IntlPluralRulesConstructor*>(callFrame->jsCallee())->pluralRulesStructure(vm));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     IntlPluralRules* pluralRules = IntlPluralRules::create(vm, structure);
     ASSERT(pluralRules);
 
     scope.release();
-    pluralRules->initializePluralRules(*callFrame, callFrame->argument(0), callFrame->argument(1));
+    pluralRules->initializePluralRules(globalObject, callFrame->argument(0), callFrame->argument(1));
     return JSValue::encode(pluralRules);
 }
 
-static EncodedJSValue JSC_HOST_CALL callIntlPluralRules(JSGlobalObject* globalObject, CallFrame* callFrame)
+static EncodedJSValue JSC_HOST_CALL callIntlPluralRules(JSGlobalObject* globalObject, CallFrame*)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 13.2.1 Intl.PluralRules ([ locales [ , options ] ])
     // https://tc39.github.io/ecma402/#sec-intl.pluralrules
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(callFrame, scope, "PluralRules"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "PluralRules"));
 }
 
 EncodedJSValue JSC_HOST_CALL IntlPluralRulesConstructorFuncSupportedLocalesOf(JSGlobalObject* globalObject, CallFrame* callFrame)
@@ -119,10 +119,10 @@ EncodedJSValue JSC_HOST_CALL IntlPluralRulesConstructorFuncSupportedLocalesOf(JS
     // https://tc39.github.io/ecma402/#sec-intl.pluralrules.supportedlocalesof
     const HashSet<String> availableLocales = globalObject->intlNumberFormatAvailableLocales();
 
-    Vector<String> requestedLocales = canonicalizeLocaleList(*callFrame, callFrame->argument(0));
+    Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(supportedLocales(*callFrame, availableLocales, requestedLocales, callFrame->argument(1))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(supportedLocales(globalObject, availableLocales, requestedLocales, callFrame->argument(1))));
 }
 
 } // namespace JSC

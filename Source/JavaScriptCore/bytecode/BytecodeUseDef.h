@@ -46,8 +46,9 @@ namespace JSC {
 #define DEFS USES_OR_DEFS
 
 template<typename Block, typename Functor>
-void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, const Instruction* instruction, const Functor& functor)
+void computeUsesForBytecodeIndex(Block* codeBlock, const Instruction* instruction, const Functor& functor)
 {
+    OpcodeID opcodeID = instruction->opcodeID();
     if (opcodeID != op_enter && (codeBlock->wasCompiledWithDebuggingOpcodes() || codeBlock->usesEval()) && codeBlock->scopeRegister().isValid())
         functor(codeBlock->scopeRegister());
 
@@ -183,6 +184,7 @@ void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, const Ins
     USES(OpIsCellWithType, operand)
     USES(OpIsFunction, operand)
     USES(OpToNumber, operand)
+    USES(OpToNumeric, operand)
     USES(OpToString, operand)
     USES(OpToObject, operand)
     USES(OpNegate, operand)
@@ -297,9 +299,9 @@ void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, const Ins
 }
 
 template<typename Block, typename Functor>
-void computeDefsForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, const Instruction* instruction, const Functor& functor)
+void computeDefsForBytecodeIndex(Block* codeBlock, const Instruction* instruction, const Functor& functor)
 {
-    switch (opcodeID) {
+    switch (instruction->opcodeID()) {
     case op_wide16:
     case op_wide32:
         RELEASE_ASSERT_NOT_REACHED();
@@ -436,6 +438,7 @@ void computeDefsForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, const Ins
     DEFS(OpInById, dst)
     DEFS(OpInByVal, dst)
     DEFS(OpToNumber, dst)
+    DEFS(OpToNumeric, dst)
     DEFS(OpToString, dst)
     DEFS(OpToObject, dst)
     DEFS(OpNegate, dst)

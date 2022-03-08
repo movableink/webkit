@@ -34,6 +34,7 @@
 #include "ShadowRootMode.h"
 #include "SimulatedClickOptions.h"
 #include "StyleChange.h"
+#include <JavaScriptCore/Strong.h>
 
 namespace WebCore {
 
@@ -47,6 +48,7 @@ class Frame;
 class HTMLDocument;
 class IntSize;
 class JSCustomElementInterface;
+class KeyframeEffectStack;
 class KeyboardEvent;
 class Locale;
 class PlatformKeyboardEvent;
@@ -56,7 +58,6 @@ class PseudoElement;
 class RenderTreePosition;
 class StylePropertyMap;
 class WebAnimation;
-struct ElementStyle;
 struct ScrollIntoViewOptions;
 
 #if ENABLE(INTERSECTION_OBSERVER)
@@ -66,6 +67,10 @@ struct IntersectionObserverData;
 #if ENABLE(RESIZE_OBSERVER)
 struct ResizeObserverData;
 #endif
+
+namespace Style {
+struct ElementStyle;
+}
 
 enum SpellcheckAttributeState {
     SpellcheckAttributeTrue,
@@ -286,7 +291,7 @@ public:
     virtual bool rendererIsNeeded(const RenderStyle&);
 
     WEBCORE_EXPORT ShadowRoot* shadowRoot() const;
-    ShadowRoot* shadowRootForBindings(JSC::ExecState&) const;
+    ShadowRoot* shadowRootForBindings(JSC::JSGlobalObject&) const;
 
     struct ShadowRootInit {
         ShadowRootMode mode;
@@ -489,6 +494,10 @@ public:
     void setHasCSSAnimation();
     void clearHasCSSAnimation();
 
+    KeyframeEffectStack& ensureKeyframeEffectStack();
+    bool hasKeyframeEffects() const;
+    bool applyKeyframeEffects(RenderStyle&);
+
 #if ENABLE(FULLSCREEN_API)
     WEBCORE_EXPORT bool containsFullScreenElement() const;
     void setContainsFullScreenElement(bool);
@@ -535,7 +544,7 @@ public:
     virtual void didAttachRenderers();
     virtual void willDetachRenderers();
     virtual void didDetachRenderers();
-    virtual Optional<ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle);
+    virtual Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle);
 
     LayoutRect absoluteEventHandlerBounds(bool& includesFixedPositionElements) override;
 
@@ -556,8 +565,8 @@ public:
     bool allowsDoubleTapGesture() const override;
 #endif
 
-    StyleResolver& styleResolver();
-    ElementStyle resolveStyle(const RenderStyle* parentStyle);
+    Style::Resolver& styleResolver();
+    Style::ElementStyle resolveStyle(const RenderStyle* parentStyle);
 
     // Invalidates the style of a single element. Style is resolved lazily.
     // Descendant elements are resolved as needed, for example if an inherited property changes.
@@ -600,7 +609,7 @@ public:
 
     Element* findAnchorElementForLink(String& outAnchorName);
 
-    ExceptionOr<Ref<WebAnimation>> animate(JSC::ExecState&, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeAnimationOptions>>&&);
+    ExceptionOr<Ref<WebAnimation>> animate(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeAnimationOptions>>&&);
     Vector<RefPtr<WebAnimation>> getAnimations();
 
     ElementIdentifier createElementIdentifier();

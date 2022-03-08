@@ -34,7 +34,7 @@ import textwrap
 
 from webkitpy.common.config.committers import CommitterList
 from webkitpy.common.system.filesystem import FileSystem
-from webkitpy.common.unicode_compatibility import StringIO
+from webkitpy.common.unicode_compatibility import StringIO, unicode
 import webkitpy.common.config.urls as config_urls
 
 _log = logging.getLogger(__name__)
@@ -107,9 +107,9 @@ class ChangeLogEntry(object):
 
     split_names_regexp = r'\s*(?:,(?:\s+and\s+|&)?|(?:^|\s+)and\s+|&&|[/+&])\s*'
 
-    def __init__(self, contents, committer_list=CommitterList(), revision=None):
+    def __init__(self, contents, committer_list=None, revision=None):
         self._contents = contents
-        self._committer_list = committer_list
+        self._committer_list = committer_list or CommitterList()
         self._revision = revision
         self._parse_entry()
 

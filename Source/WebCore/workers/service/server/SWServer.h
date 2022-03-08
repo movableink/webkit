@@ -125,7 +125,7 @@ public:
     };
 
     using CreateContextConnectionCallback = Function<void(const WebCore::RegistrableDomain&)>;
-    WEBCORE_EXPORT SWServer(UniqueRef<SWOriginStore>&&, HashSet<String>&& registeredSchemes, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, CreateContextConnectionCallback&&);
+    WEBCORE_EXPORT SWServer(UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, CreateContextConnectionCallback&&);
 
     WEBCORE_EXPORT ~SWServer();
 
@@ -203,6 +203,9 @@ public:
     SWServerToContextConnection* contextConnectionForRegistrableDomain(const RegistrableDomain& domain) { return m_contextConnections.get(domain); }
     WEBCORE_EXPORT void createContextConnection(const RegistrableDomain&);
 
+    bool isImportCompleted() const { return m_importCompleted; }
+    WEBCORE_EXPORT void whenImportIsCompleted(CompletionHandler<void()>&&);
+
 private:
     void scriptFetchFinished(Connection&, const ServiceWorkerFetchResult&);
 
@@ -256,13 +259,13 @@ private:
     PAL::SessionID m_sessionID;
     bool m_importCompleted { false };
     bool m_isProcessTerminationDelayEnabled { true };
-    HashSet<String> m_registeredSchemes;
     Vector<CompletionHandler<void()>> m_clearCompletionCallbacks;
     Vector<Function<void(const HashSet<SecurityOriginData>&)>> m_getOriginsWithRegistrationsCallbacks;
     HashMap<RegistrableDomain, SWServerToContextConnection*> m_contextConnections;
 
     CreateContextConnectionCallback m_createContextConnectionCallback;
     HashSet<WebCore::RegistrableDomain> m_pendingConnectionDomains;
+    Vector<CompletionHandler<void()>> m_importCompletedCallbacks;
 };
 
 } // namespace WebCore

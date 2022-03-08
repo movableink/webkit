@@ -35,14 +35,18 @@
 #include "AccessibilityNodeObject.h"
 #include "Attr.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertySourceData.h"
 #include "CSSRule.h"
 #include "CSSRuleList.h"
+#include "CSSSelector.h"
+#include "CSSSelectorList.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CharacterData.h"
 #include "CommandLineAPIHost.h"
+#include "ComposedTreeIterator.h"
 #include "ContainerNode.h"
 #include "Cookie.h"
 #include "CookieJar.h"
@@ -92,6 +96,7 @@
 #include "RenderStyle.h"
 #include "RenderStyleConstants.h"
 #include "ScriptState.h"
+#include "SelectorChecker.h"
 #include "ShadowRoot.h"
 #include "StaticNodeList.h"
 #include "StyleProperties.h"
@@ -109,6 +114,7 @@
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/Function.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -217,7 +223,7 @@ public:
     {
     }
 
-    JSC::JSValue get(JSC::ExecState& state) final
+    JSC::JSValue get(JSC::JSGlobalObject& state) final
     {
         return InspectorDOMAgent::nodeAsScriptValue(state, m_node.get());
     }
@@ -461,7 +467,7 @@ Node* InspectorDOMAgent::assertEditableNode(ErrorString& errorString, int nodeId
     Node* node = assertNode(errorString, nodeId);
     if (!node)
         return nullptr;
-    if (node->isInUserAgentShadowTree()) {
+    if (node->isInUserAgentShadowTree() && !m_allowEditingUserAgentShadowTrees) {
         errorString = "Node for given nodeId is in a shadow tree"_s;
         return nullptr;
     }
@@ -539,6 +545,15 @@ void InspectorDOMAgent::discardBindings()
     m_eventListenerEntries.clear();
     releaseDanglingNodes();
     m_childrenRequested.clear();
+}
+
+int InspectorDOMAgent::pushNodeToFrontend(Node* nodeToPush)
+{
+    if (!nodeToPush)
+        return 0;
+
+    ErrorString ignored;
+    return pushNodeToFrontend(ignored, boundNodeId(&nodeToPush->document()), nodeToPush);
 }
 
 int InspectorDOMAgent::pushNodeToFrontend(ErrorString& errorString, int documentNodeId, Node* nodeToPush)
@@ -1112,7 +1127,7 @@ void InspectorDOMAgent::focusNode()
     if (!frame)
         return;
 
-    JSC::ExecState* scriptState = mainWorldExecState(frame);
+    JSC::JSGlobalObject* scriptState = mainWorldExecState(frame);
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(scriptState);
     if (injectedScript.hasNoValue())
         return;
@@ -1213,6 +1228,10 @@ void InspectorDOMAgent::innerHighlightQuad(std::unique_ptr<FloatQuad> quad, cons
 
 void InspectorDOMAgent::highlightSelector(ErrorString& errorString, const JSON::Object& highlightInspectorObject, const String& selectorString, const String* frameId)
 {
+    auto highlightConfig = highlightConfigFromInspectorObject(errorString, &highlightInspectorObject);
+    if (!highlightConfig)
+        return;
+
     RefPtr<Document> document;
 
     if (frameId) {
@@ -1235,18 +1254,66 @@ void InspectorDOMAgent::highlightSelector(ErrorString& errorString, const JSON::
         return;
     }
 
-    auto queryResult = document->querySelectorAll(selectorString);
-    // FIXME: <https://webkit.org/b/146161> Web Inspector: DOM.highlightSelector should work for "a:visited"
-    if (queryResult.hasException()) {
-        errorString = "DOM Error while querying with given selectorString"_s;
-        return;
+    CSSParser parser(*document);
+    CSSSelectorList selectorList;
+    parser.parseSelector(selectorString, selectorList);
+
+    SelectorChecker selectorChecker(*document);
+
+    Vector<Ref<Node>> nodeList;
+    HashSet<Node*> seenNodes;
+
+    for (auto& descendant : composedTreeDescendants(*document)) {
+        if (!is<Element>(descendant))
+            continue;
+
+        auto& descendantElement = downcast<Element>(descendant);
+
+        auto isInUserAgentShadowTree = descendantElement.isInUserAgentShadowTree();
+        auto pseudoId = descendantElement.pseudoId();
+        auto& pseudo = descendantElement.pseudo();
+
+        for (const auto* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector)) {
+            if (isInUserAgentShadowTree && (selector->match() != CSSSelector::PseudoElement || selector->value() != pseudo))
+                continue;
+
+            SelectorChecker::CheckingContext context(SelectorChecker::Mode::ResolvingStyle);
+            context.pseudoId = pseudoId;
+
+            unsigned ignoredSpecificity;
+            if (selectorChecker.match(*selector, descendantElement, context, ignoredSpecificity)) {
+                if (seenNodes.add(&descendantElement))
+                    nodeList.append(descendantElement);
+            }
+
+            if (context.pseudoIDSet) {
+                auto pseudoIDs = PseudoIdSet::fromMask(context.pseudoIDSet.data());
+
+                if (pseudoIDs.has(PseudoId::Before)) {
+                    pseudoIDs.remove(PseudoId::Before);
+                    if (auto* beforePseudoElement = descendantElement.beforePseudoElement()) {
+                        if (seenNodes.add(beforePseudoElement))
+                            nodeList.append(*beforePseudoElement);
+                    }
+                }
+
+                if (pseudoIDs.has(PseudoId::After)) {
+                    pseudoIDs.remove(PseudoId::After);
+                    if (auto* afterPseudoElement = descendantElement.afterPseudoElement()) {
+                        if (seenNodes.add(afterPseudoElement))
+                            nodeList.append(*afterPseudoElement);
+                    }
+                }
+
+                if (pseudoIDs) {
+                    if (seenNodes.add(&descendantElement))
+                        nodeList.append(descendantElement);
+                }
+            }
+        }
     }
 
-    auto highlightConfig = highlightConfigFromInspectorObject(errorString, &highlightInspectorObject);
-    if (!highlightConfig)
-        return;
-
-    m_overlay->highlightNodeList(queryResult.releaseReturnValue(), *highlightConfig);
+    m_overlay->highlightNodeList(StaticNodeList::create(WTFMove(nodeList)), *highlightConfig);
 }
 
 void InspectorDOMAgent::highlightNode(ErrorString& errorString, const JSON::Object& highlightInspectorObject, const int* nodeId, const String* objectId)
@@ -1395,7 +1462,7 @@ void InspectorDOMAgent::setInspectedNode(ErrorString& errorString, int nodeId)
     if (!node)
         return;
 
-    if (node->isInUserAgentShadowTree()) {
+    if (node->isInUserAgentShadowTree() && !m_allowEditingUserAgentShadowTrees) {
         errorString = "Node for given nodeId is in a shadow tree"_s;
         return;
     }
@@ -1687,7 +1754,7 @@ Ref<Inspector::Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEv
             document = &downcast<Node>(eventTarget).document();
 
         JSC::JSObject* handlerObject = nullptr;
-        JSC::ExecState* exec = nullptr;
+        JSC::JSGlobalObject* exec = nullptr;
 
         JSC::JSLockHolder lock(scriptListener.isolatedWorld().vm());
 
@@ -1761,7 +1828,7 @@ Ref<Inspector::Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEv
     return value;
 }
 
-void InspectorDOMAgent::processAccessibilityChildren(AccessibilityObject& axObject, JSON::ArrayOf<int>& childNodeIds)
+void InspectorDOMAgent::processAccessibilityChildren(AXCoreObject& axObject, JSON::ArrayOf<int>& childNodeIds)
 {
     const auto& children = axObject.children();
     if (!children.size())
@@ -1824,13 +1891,13 @@ RefPtr<Inspector::Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::bui
     unsigned level = 0;
 
     if (AXObjectCache* axObjectCache = node->document().axObjectCache()) {
-        if (AccessibilityObject* axObject = axObjectCache->getOrCreate(node)) {
+        if (AXCoreObject* axObject = axObjectCache->getOrCreate(node)) {
 
-            if (AccessibilityObject* activeDescendant = axObject->activeDescendant())
+            if (AXCoreObject* activeDescendant = axObject->activeDescendant())
                 activeDescendantNode = activeDescendant->node();
 
             // An AX object is "busy" if it or any ancestor has aria-busy="true" set.
-            AccessibilityObject* current = axObject;
+            AXCoreObject* current = axObject;
             while (!busy && current) {
                 busy = current->isBusy();
                 current = current->parentObject();
@@ -1971,7 +2038,7 @@ RefPtr<Inspector::Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::bui
                 }
             }
 
-            if (AccessibilityObject* parentObject = axObject->parentObjectUnignored())
+            if (AXCoreObject* parentObject = axObject->parentObjectUnignored())
                 parentNode = parentObject->node();
 
             supportsPressed = axObject->pressedIsPresent();
@@ -1988,7 +2055,7 @@ RefPtr<Inspector::Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::bui
             role = axObject->computedRoleString();
             selected = axObject->isSelected();
 
-            AccessibilityObject::AccessibilityChildrenVector selectedChildren;
+            AXCoreObject::AccessibilityChildrenVector selectedChildren;
             axObject->selectedChildren(selectedChildren);
             if (selectedChildren.size()) {
                 selectedChildNodeIds = JSON::ArrayOf<int>::create();
@@ -2608,10 +2675,15 @@ Node* InspectorDOMAgent::scriptValueAsNode(JSC::JSValue value)
     return JSNode::toWrapped(value.getObject()->vm(), value.getObject());
 }
 
-JSC::JSValue InspectorDOMAgent::nodeAsScriptValue(JSC::ExecState& state, Node* node)
+JSC::JSValue InspectorDOMAgent::nodeAsScriptValue(JSC::JSGlobalObject& state, Node* node)
 {
     JSC::JSLockHolder lock(&state);
     return toJS(&state, deprecatedGlobalObjectForPrototype(&state), BindingSecurity::checkSecurityForNode(state, node));
+}
+
+void InspectorDOMAgent::setAllowEditingUserAgentShadowTrees(ErrorString&, bool allow)
+{
+    m_allowEditingUserAgentShadowTrees = allow;
 }
 
 } // namespace WebCore

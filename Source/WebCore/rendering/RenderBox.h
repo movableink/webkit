@@ -53,7 +53,7 @@ public:
     {
         return isDocumentElementRenderer() || isPositioned() || createsGroup() || hasClipPath() || hasOverflowClip()
             || hasTransformRelatedProperty() || hasHiddenBackface() || hasReflection() || style().specifiesColumns()
-            || !style().hasAutoZIndex() || hasRunningAcceleratedAnimations();
+            || !style().hasAutoUsedZIndex() || hasRunningAcceleratedAnimations();
     }
 
     bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect) const final;
@@ -653,6 +653,9 @@ protected:
     void willBeDestroyed() override;
 
     bool createsNewFormattingContext() const;
+
+    virtual bool shouldResetLogicalHeightBeforeLayout() const { return false; }
+    void resetLogicalHeightBeforeLayoutIfNeeded();
 
     virtual ItemPosition selfAlignmentNormalBehavior(const RenderBox* = nullptr) const { return ItemPosition::Stretch; }
 

@@ -872,7 +872,7 @@ ExceptionOr<Storage*> DOMWindow::localStorage()
     return m_localStorage.get();
 }
 
-ExceptionOr<void> DOMWindow::postMessage(JSC::ExecState& state, DOMWindow& incumbentWindow, JSC::JSValue messageValue, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+ExceptionOr<void> DOMWindow::postMessage(JSC::JSGlobalObject& lexicalGlobalObject, DOMWindow& incumbentWindow, JSC::JSValue messageValue, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
 {
     if (!isCurrentlyDisplayedInFrame())
         return { };
@@ -895,7 +895,7 @@ ExceptionOr<void> DOMWindow::postMessage(JSC::ExecState& state, DOMWindow& incum
     }
 
     Vector<RefPtr<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(state, messageValue, WTFMove(transfer), ports, SerializationContext::WindowPostMessage);
+    auto messageData = SerializedScriptValue::create(lexicalGlobalObject, messageValue, WTFMove(transfer), ports, SerializationContext::WindowPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 
@@ -921,7 +921,7 @@ ExceptionOr<void> DOMWindow::postMessage(JSC::ExecState& state, DOMWindow& incum
     auto* timer = new PostMessageTimer(*this, WTFMove(message), sourceOrigin, WTFMove(incumbentWindowProxy), WTFMove(target), WTFMove(stackTrace));
     timer->startOneShot(0_s);
 
-    InspectorInstrumentation::didPostMessage(*frame(), *timer, state);
+    InspectorInstrumentation::didPostMessage(*frame(), *timer, lexicalGlobalObject);
 
     return { };
 }
@@ -1057,6 +1057,8 @@ void DOMWindow::close()
 
     if (!frame->loader().shouldClose())
         return;
+
+    ResourceLoadObserver::shared().updateCentralStatisticsStore();
 
     page->setIsClosing();
     page->chrome().closeWindowSoon();
@@ -1523,9 +1525,9 @@ RefPtr<CSSRuleList> DOMWindow::getMatchedCSSRules(Element* element, const String
     auto* frame = this->frame();
     frame->document()->styleScope().flushPendingUpdate();
 
-    unsigned rulesToInclude = StyleResolver::AuthorCSSRules;
+    unsigned rulesToInclude = Style::Resolver::AuthorCSSRules;
     if (!authorOnly)
-        rulesToInclude |= StyleResolver::UAAndUserCSSRules;
+        rulesToInclude |= Style::Resolver::UAAndUserCSSRules;
 
     PseudoId pseudoId = CSSSelector::pseudoId(pseudoType);
 
@@ -1705,7 +1707,7 @@ void DOMWindow::resizeTo(float width, float height) const
     page->chrome().setWindowRect(adjustWindowRect(*page, update));
 }
 
-ExceptionOr<int> DOMWindow::setTimeout(JSC::ExecState& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
+ExceptionOr<int> DOMWindow::setTimeout(JSC::JSGlobalObject& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
     auto* context = scriptExecutionContext();
     if (!context)
@@ -1730,7 +1732,7 @@ void DOMWindow::clearTimeout(int timeoutId)
     DOMTimer::removeById(*context, timeoutId);
 }
 
-ExceptionOr<int> DOMWindow::setInterval(JSC::ExecState& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
+ExceptionOr<int> DOMWindow::setInterval(JSC::JSGlobalObject& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
     auto* context = scriptExecutionContext();
     if (!context)
@@ -2122,8 +2124,9 @@ bool DOMWindow::removeEventListener(const AtomString& eventType, EventListener& 
 
 void DOMWindow::languagesChanged()
 {
-    if (auto* document = this->document())
-        document->enqueueWindowEvent(Event::create(eventNames().languagechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    // https://html.spec.whatwg.org/multipage/system-state.html#dom-navigator-languages
+    if (auto document = makeRefPtr(this->document()))
+        document->queueTaskToDispatchEventOnWindow(TaskSource::DOMManipulation, Event::create(eventNames().languagechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void DOMWindow::dispatchLoadEvent()

@@ -34,9 +34,8 @@ namespace Layout {
 
 class TextUtil {
 public:
-    static LayoutUnit width(const Box&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
+    static LayoutUnit width(const Box&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft = { });
     static Optional<unsigned> hyphenPositionBefore(const InlineItem&, unsigned from, unsigned length);
-    static bool isTrimmableContent(const InlineItem&);
     struct SplitData {
         unsigned start { 0 };
         unsigned length { 0 };
@@ -45,7 +44,7 @@ public:
     static SplitData split(const Box&, unsigned startPosition, unsigned length, LayoutUnit textWidth, LayoutUnit availableWidth, LayoutUnit contentLogicalLeft);
 
 private:
-    static LayoutUnit fixedPitchWidth(String, const RenderStyle&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
+    static LayoutUnit fixedPitchWidth(const StringView&, const RenderStyle&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
 };
 
 }

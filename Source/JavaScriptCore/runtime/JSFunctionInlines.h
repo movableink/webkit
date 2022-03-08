@@ -69,11 +69,6 @@ inline bool JSFunction::isBuiltinFunction() const
     return !isHostFunction() && jsExecutable()->isBuiltinFunction();
 }
 
-inline bool JSFunction::isAnonymousBuiltinFunction() const
-{
-    return !isHostFunction() && jsExecutable()->isAnonymousBuiltinFunction();
-}
-
 inline bool JSFunction::isHostOrBuiltinFunction() const
 {
     return isHostFunction() || isBuiltinFunction();
@@ -106,16 +101,12 @@ inline bool isHostFunction(JSValue value, TaggedNativeFunction nativeFunction)
 
 inline bool JSFunction::hasReifiedLength() const
 {
-    return m_rareData ? m_rareData->hasReifiedLength() : false;
+    return m_rareData && m_rareData->hasReifiedLength();
 }
 
 inline bool JSFunction::hasReifiedName() const
 {
-    if (m_rareData)
-        return m_rareData->hasReifiedName();
-    if (isAnonymousBuiltinFunction())
-        return true;
-    return false;
+    return m_rareData && m_rareData->hasReifiedName();
 }
 
 inline bool JSFunction::canUseAllocationProfile()
@@ -138,13 +129,13 @@ inline bool JSFunction::canUseAllocationProfile()
     return jsExecutable()->hasPrototypeProperty();
 }
 
-inline FunctionRareData* JSFunction::ensureRareDataAndAllocationProfile(ExecState* exec, unsigned inlineCapacity)
+inline FunctionRareData* JSFunction::ensureRareDataAndAllocationProfile(JSGlobalObject* globalObject, unsigned inlineCapacity)
 {
     ASSERT(canUseAllocationProfile());
     if (UNLIKELY(!m_rareData))
-        return allocateAndInitializeRareData(exec, inlineCapacity);
+        return allocateAndInitializeRareData(globalObject, inlineCapacity);
     if (UNLIKELY(!m_rareData->isObjectAllocationProfileInitialized()))
-        return initializeRareData(exec, inlineCapacity);
+        return initializeRareData(globalObject, inlineCapacity);
     return m_rareData.get();
 }
 

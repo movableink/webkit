@@ -39,7 +39,7 @@ public:
     static Ref<WebsiteDataStoreConfiguration> create(IsPersistent isPersistent) { return adoptRef(*new WebsiteDataStoreConfiguration(isPersistent)); }
     WebsiteDataStoreConfiguration(IsPersistent);
 
-    Ref<WebsiteDataStoreConfiguration> copy();
+    Ref<WebsiteDataStoreConfiguration> copy() const;
 
     bool isPersistent() const { return m_isPersistent == IsPersistent::Yes; }
 
@@ -84,10 +84,13 @@ public:
 
     bool testingSessionEnabled() const { return m_testingSessionEnabled; }
     void setTestingSessionEnabled(bool enabled) { m_testingSessionEnabled = enabled; }
-    
+
+    bool staleWhileRevalidateEnabled() const { return m_staleWhileRevalidateEnabled; }
+    void setStaleWhileRevalidateEnabled(bool enabled) { m_staleWhileRevalidateEnabled = enabled; }
+
     unsigned testSpeedMultiplier() const { return m_testSpeedMultiplier; }
     void setTestSpeedMultiplier(unsigned multiplier) { m_testSpeedMultiplier = multiplier; }
-    
+
 #if PLATFORM(COCOA)
     CFDictionaryRef proxyConfiguration() const { return m_proxyConfiguration.get(); }
     void setProxyConfiguration(CFDictionaryRef configuration) { m_proxyConfiguration = configuration; }
@@ -117,9 +120,6 @@ public:
     bool serviceWorkerProcessTerminationDelayEnabled() const { return m_serviceWorkerProcessTerminationDelayEnabled; }
     void setServiceWorkerProcessTerminationDelayEnabled(bool enabled) { m_serviceWorkerProcessTerminationDelayEnabled = enabled; }
 
-    const HashSet<String> serviceWorkerRegisteredSchemes() const { return m_serviceWorkerRegisteredSchemes; }
-    void registerServiceWorkerScheme(String&& scheme) { m_serviceWorkerRegisteredSchemes.add(scheme); }
-    
     const String& sourceApplicationBundleIdentifier() const { return m_sourceApplicationBundleIdentifier; }
     void setSourceApplicationBundleIdentifier(String&& identifier) { m_sourceApplicationBundleIdentifier = WTFMove(identifier); }
 
@@ -162,6 +162,7 @@ private:
 #else
     bool m_networkCacheSpeculativeValidationEnabled { false };
 #endif
+    bool m_staleWhileRevalidateEnabled { false };
     String m_localStorageDirectory;
     String m_mediaKeysStorageDirectory;
     String m_deviceIdHashSaltsStorageDirectory;
@@ -182,7 +183,6 @@ private:
     bool m_testingSessionEnabled { false };
     bool m_suppressesConnectionTerminationOnSystemChange { false };
     unsigned m_testSpeedMultiplier { 1 };
-    HashSet<String> m_serviceWorkerRegisteredSchemes;
 #if PLATFORM(COCOA)
     RetainPtr<CFDictionaryRef> m_proxyConfiguration;
 #endif

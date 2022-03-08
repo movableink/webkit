@@ -78,6 +78,7 @@
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "FullscreenManager.h"
+#include "GCReachableRef.h"
 #include "GenericCachedHTMLCollection.h"
 #include "HTMLAllCollection.h"
 #include "HTMLAnchorElement.h"
@@ -213,6 +214,7 @@
 #include "SubresourceLoader.h"
 #include "TextAutoSizing.h"
 #include "TextEvent.h"
+#include "TextManipulationController.h"
 #include "TextNodeTraversal.h"
 #include "TouchAction.h"
 #include "TransformSource.h"
@@ -360,6 +362,14 @@ struct FrameFlatteningLayoutDisallower {
 private:
     FrameView& m_frameView;
     bool m_disallowLayout { false };
+};
+
+// Defined here to avoid including GCReachableRef.h in Document.h
+struct Document::PendingScrollEventTargetList {
+    WTF_MAKE_FAST_ALLOCATED;
+
+public:
+    Vector<GCReachableRef<ContainerNode>> targets;
 };
 
 #if ENABLE(INTERSECTION_OBSERVER)
@@ -544,7 +554,6 @@ Document::Document(Frame* frame, const URL& url, unsigned documentClasses, unsig
     , m_xmlVersion("1.0"_s)
     , m_constantPropertyMap(makeUnique<ConstantPropertyMap>(*this))
     , m_documentClasses(documentClasses)
-    , m_eventQueue(*this)
 #if ENABLE(FULLSCREEN_API)
     , m_fullscreenManager { makeUniqueRef<FullscreenManager>(*this) }
 #endif
@@ -758,6 +767,8 @@ void Document::commonTeardown()
         accessSVGExtensions().pauseAnimations();
 
     clearScriptedAnimationController();
+
+    m_pendingScrollEventTargetList = nullptr;
 }
 
 Element* Document::elementForAccessKey(const String& key)
@@ -1597,7 +1608,9 @@ void Document::setTitle(const String& title)
             m_titleElement = SVGTitleElement::create(SVGNames::titleTag, *this);
             element->insertBefore(*m_titleElement, element->firstChild());
         }
-        m_titleElement->setTextContent(title);
+        // insertBefore above may have ran scripts which removed m_titleElement
+        if (m_titleElement)
+            m_titleElement->setTextContent(title);
     } else if (is<HTMLElement>(element)) {
         if (!m_titleElement) {
             auto* headElement = head();
@@ -1606,7 +1619,9 @@ void Document::setTitle(const String& title)
             m_titleElement = HTMLTitleElement::create(HTMLNames::titleTag, *this);
             headElement->appendChild(*m_titleElement);
         }
-        m_titleElement->setTextContent(title);
+        // appendChild above may have ran scripts which removed m_titleElement
+        if (m_titleElement)
+            m_titleElement->setTextContent(title);
     }
 }
 
@@ -1691,7 +1706,8 @@ void Document::unregisterForVisibilityStateChangedCallbacks(VisibilityChangeClie
 
 void Document::visibilityStateChanged()
 {
-    enqueueDocumentEvent(Event::create(eventNames().visibilitychangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    // // https://w3c.github.io/page-visibility/#reacting-to-visibilitychange-changes
+    queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().visibilitychangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     for (auto* client : m_visibilityStateCallbackClients)
         client->visibilityStateChanged();
 
@@ -1978,12 +1994,6 @@ void Document::resolveStyle(ResolveStyleType type)
         // FIXME: Assert ASSERT(!needsStyleRecalc()) here. Do we still have some cases where it's not true?
     }
 
-    // If we wanted to call implicitClose() during recalcStyle, do so now that we're finished.
-    if (m_closeAfterStyleRecalc) {
-        m_closeAfterStyleRecalc = false;
-        implicitClose();
-    }
-
     InspectorInstrumentation::didRecalculateStyle(*this);
 
     // Some animated images may now be inside the viewport due to style recalc,
@@ -1991,9 +2001,6 @@ void Document::resolveStyle(ResolveStyleType type)
     // check if they need to be resumed after layout.
     if (updatedCompositingLayers && !frameView.needsLayout())
         frameView.viewportContentsChanged();
-
-    if (m_gotoAnchorNeededAfterStylesheetsLoad && !styleScope().hasPendingSheets())
-        frameView.scrollToFragment(m_url);
 }
 
 void Document::updateTextRenderer(Text& text, unsigned offsetOfReplacedText, unsigned lengthOfReplacedText)
@@ -2121,7 +2128,7 @@ std::unique_ptr<RenderStyle> Document::styleForElementIgnoringPendingStylesheets
     auto& resolver = element.styleResolver();
 
     if (pseudoElementSpecifier != PseudoId::None)
-        return resolver.pseudoStyleForElement(element, PseudoStyleRequest(pseudoElementSpecifier), *parentStyle);
+        return resolver.pseudoStyleForElement(element, { pseudoElementSpecifier }, *parentStyle);
 
     auto elementStyle = resolver.styleForElement(element, parentStyle);
     if (elementStyle.relations) {
@@ -2280,10 +2287,10 @@ void Document::pageSizeAndMarginsInPixels(int pageIndex, IntSize& pageSize, int&
     marginLeft = style->marginLeft().isAuto() ? marginLeft : intValueForLength(style->marginLeft(), width);
 }
 
-StyleResolver& Document::userAgentShadowTreeStyleResolver()
+Style::Resolver& Document::userAgentShadowTreeStyleResolver()
 {
     if (!m_userAgentShadowTreeStyleResolver)
-        m_userAgentShadowTreeStyleResolver = makeUnique<StyleResolver>(*this);
+        m_userAgentShadowTreeStyleResolver = makeUnique<Style::Resolver>(*this);
     return *m_userAgentShadowTreeStyleResolver;
 }
 
@@ -2295,7 +2302,7 @@ void Document::fontsNeedUpdate(FontSelector&)
 void Document::invalidateMatchedPropertiesCacheAndForceStyleRecalc()
 {
     if (auto* resolver = styleScope().resolverIfExists())
-        resolver->invalidateMatchedPropertiesCache();
+        resolver->invalidateMatchedDeclarationsCache();
     if (backForwardCacheState() != NotInBackForwardCache || !renderView())
         return;
     scheduleFullStyleRebuild();
@@ -2485,6 +2492,8 @@ void Document::prepareForDestruction()
 
     m_undoManager->removeAllItems();
 
+    m_textManipulationController = nullptr; // Free nodes kept alive by TextManipulationController.
+
 #if ENABLE(ACCESSIBILITY)
     if (this != &topDocument()) {
         // Let the ax cache know that this subframe goes out of scope.
@@ -2523,7 +2532,6 @@ void Document::prepareForDestruction()
     InspectorInstrumentation::documentDetached(*this);
 
     stopActiveDOMObjects();
-    m_eventQueue.close();
 #if ENABLE(FULLSCREEN_API)
     m_fullscreenManager->emptyEventQueue();
 #endif
@@ -2624,8 +2632,9 @@ void Document::resumeDeviceMotionAndOrientationUpdates()
 bool Document::shouldBypassMainWorldContentSecurityPolicy() const
 {
     // Bypass this policy when the world is known, and it not the normal world.
-    auto& callFrame = *commonVM().topCallFrame;
-    return &callFrame != JSC::CallFrame::noCaller() && !currentWorld(callFrame).isNormal();
+    JSC::VM& vm = commonVM();
+    auto& callFrame = *vm.topCallFrame;
+    return &callFrame != JSC::CallFrame::noCaller() && !currentWorld(*callFrame.lexicalGlobalObject(vm)).isNormal();
 }
 
 void Document::platformSuspendOrStopActiveDOMObjects()
@@ -2637,6 +2646,8 @@ void Document::platformSuspendOrStopActiveDOMObjects()
 
 void Document::suspendActiveDOMObjects(ReasonForSuspension why)
 {
+    if (m_documentTaskGroup)
+        m_documentTaskGroup->suspend();
     ScriptExecutionContext::suspendActiveDOMObjects(why);
     suspendDeviceMotionAndOrientationUpdates();
     platformSuspendOrStopActiveDOMObjects();
@@ -2644,6 +2655,8 @@ void Document::suspendActiveDOMObjects(ReasonForSuspension why)
 
 void Document::resumeActiveDOMObjects(ReasonForSuspension why)
 {
+    if (m_documentTaskGroup)
+        m_documentTaskGroup->resume();
     ScriptExecutionContext::resumeActiveDOMObjects(why);
     resumeDeviceMotionAndOrientationUpdates();
     // FIXME: For iOS, do we need to add content change observers that were removed in Document::suspendActiveDOMObjects()?
@@ -2651,6 +2664,8 @@ void Document::resumeActiveDOMObjects(ReasonForSuspension why)
 
 void Document::stopActiveDOMObjects()
 {
+    if (m_documentTaskGroup)
+        m_documentTaskGroup->stopAndDiscardAllTasks();
     ScriptExecutionContext::stopActiveDOMObjects();
     platformSuspendOrStopActiveDOMObjects();
 }
@@ -2738,6 +2753,9 @@ ExceptionOr<void> Document::open(Document* responsibleDocument)
     if (m_ignoreOpensDuringUnloadCount)
         return { };
 
+    if (m_activeParserWasAborted)
+        return { };
+
     if (m_frame) {
         if (ScriptableDocumentParser* parser = scriptableDocumentParser()) {
             if (parser->isParsing()) {
@@ -2807,6 +2825,9 @@ void Document::cancelParsing()
     if (!m_parser)
         return;
 
+    if (m_parser->processingData())
+        m_activeParserWasAborted = true;
+
     // We have to clear the parser to avoid possibly triggering
     // the onload handler when closing as a side effect of a cancel-style
     // change, such as opening a new document or closing the window while
@@ -2821,7 +2842,7 @@ void Document::implicitOpen()
 
     setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
 
-    cancelParsing();
+    detachParser();
     m_parser = createParser();
 
     if (hasActiveParserYieldToken())
@@ -2920,12 +2941,7 @@ void Document::explicitClose()
 
 void Document::implicitClose()
 {
-    // If we're in the middle of recalcStyle, we need to defer the close until the style information is accurate and all elements are re-attached.
-    if (m_inStyleRecalc) {
-        m_closeAfterStyleRecalc = true;
-        return;
-    }
-
+    RELEASE_ASSERT(!m_inStyleRecalc);
     bool wasLocationChangePending = frame() && frame()->navigationScheduler().locationChangePending();
     bool doload = !parsing() && m_parser && !m_processingLoadEvent && !wasLocationChangePending;
     
@@ -2971,11 +2987,8 @@ void Document::implicitClose()
         HTMLLinkElement::dispatchPendingLoadEvents();
         HTMLStyleElement::dispatchPendingLoadEvents();
 
-        // To align the HTML load event and the SVGLoad event for the outermost <svg> element, fire it from
-        // here, instead of doing it from SVGElement::finishedParsingChildren (if externalResourcesRequired="false",
-        // which is the default, for ='true' its fired at a later time, once all external resources finished loading).
         if (svgExtensions())
-            accessSVGExtensions().dispatchSVGLoadEventToOutermostSVGElements();
+            accessSVGExtensions().dispatchLoadEventToOutermostSVGElements();
     }
 
     dispatchWindowLoadEvent();
@@ -3099,6 +3112,9 @@ Seconds Document::timeSinceDocumentCreation() const
 
 ExceptionOr<void> Document::write(Document* responsibleDocument, SegmentedString&& text)
 {
+    if (m_activeParserWasAborted)
+        return { };
+
     NestingLevelIncrementer nestingLevelIncrementer(m_writeRecursionDepth);
 
     m_writeRecursionIsTooDeep = (m_writeRecursionDepth > 1) && m_writeRecursionIsTooDeep;
@@ -3452,6 +3468,20 @@ void Document::didRemoveAllPendingStylesheet()
 {
     if (auto* parser = scriptableDocumentParser())
         parser->executeScriptsWaitingForStylesheetsSoon();
+
+    if (m_gotoAnchorNeededAfterStylesheetsLoad) {
+        // https://html.spec.whatwg.org/multipage/browsing-the-web.html#try-to-scroll-to-the-fragment
+        eventLoop().queueTask(TaskSource::Networking, [protectedThis = makeRef(*this), this] {
+            auto frameView = makeRefPtr(view());
+            if (!frameView)
+                return;
+            if (!haveStylesheetsLoaded()) {
+                m_gotoAnchorNeededAfterStylesheetsLoad = true;
+                return;
+            }
+            frameView->scrollToFragment(m_url);
+        });
+    }
 }
 
 bool Document::usesStyleBasedEditability() const
@@ -3913,37 +3943,26 @@ StyleSheetList& Document::styleSheets()
     return *m_styleSheetList;
 }
 
-void Document::evaluateMediaQueryList()
+void Document::updateElementsAffectedByMediaQueries()
 {
-    if (m_mediaQueryMatcher)
-        m_mediaQueryMatcher->styleResolverChanged();
-    
-    checkViewportDependentPictures();
-    checkAppearanceDependentPictures();
+    ScriptDisallowedScope::InMainThread scriptDisallowedScope;
+
+    // FIXME: copyToVector doesn't work with WeakHashSet
+    Vector<Ref<HTMLImageElement>> images;
+    images.reserveInitialCapacity(m_dynamicMediaQueryDependentImages.computeSize());
+    for (auto& image : m_dynamicMediaQueryDependentImages)
+        images.append(image);
+
+    for (auto& image : images)
+        image->evaluateDynamicMediaQueryDependencies();
 }
 
-void Document::checkViewportDependentPictures()
+void Document::evaluateMediaQueriesAndReportChanges()
 {
-    Vector<HTMLPictureElement*, 16> changedPictures;
-    HashSet<HTMLPictureElement*>::iterator end = m_viewportDependentPictures.end();
-    for (HashSet<HTMLPictureElement*>::iterator it = m_viewportDependentPictures.begin(); it != end; ++it) {
-        if ((*it)->viewportChangeAffectedPicture())
-            changedPictures.append(*it);
-    }
-    for (auto* picture : changedPictures)
-        picture->sourcesChanged();
-}
+    if (!m_mediaQueryMatcher)
+        return;
 
-void Document::checkAppearanceDependentPictures()
-{
-    Vector<HTMLPictureElement*, 16> changedPictures;
-    for (auto* picture : m_appearanceDependentPictures) {
-        if (picture->appearanceChangeAffectedPicture())
-            changedPictures.append(picture);
-    }
-
-    for (auto* picture : changedPictures)
-        picture->sourcesChanged();
+    m_mediaQueryMatcher->evaluateAll();
 }
 
 void Document::updateViewportUnitsOnResize()
@@ -3951,7 +3970,7 @@ void Document::updateViewportUnitsOnResize()
     if (!hasStyleWithViewportUnits())
         return;
 
-    styleScope().resolver().clearCachedPropertiesAffectedByViewportUnits();
+    styleScope().resolver().clearCachedDeclarationsAffectedByViewportUnits();
 
     // FIXME: Ideally, we should save the list of elements that have viewport units and only iterate over those.
     for (Element* element = ElementTraversal::firstWithin(rootNode()); element; element = ElementTraversal::nextIncludingPseudo(*element)) {
@@ -3978,15 +3997,57 @@ void Document::runResizeSteps()
 {
     // FIXME: The order of dispatching is not specified: https://github.com/WICG/visual-viewport/issues/65.
     if (m_needsDOMWindowResizeEvent) {
-        LOG(Events, "Document %p sending resize events to window", this);
+        LOG_WITH_STREAM(Events, stream << "Document" << this << "sending resize events to window");
         m_needsDOMWindowResizeEvent = false;
         dispatchWindowEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     }
     if (m_needsVisualViewportResizeEvent) {
-        LOG(Events, "Document %p sending resize events to visualViewport", this);
+        LOG_WITH_STREAM(Events, stream << "Document" << this << "sending resize events to visualViewport");
         m_needsVisualViewportResizeEvent = false;
         if (auto* window = domWindow())
             window->visualViewport().dispatchEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    }
+}
+
+void Document::addPendingScrollEventTarget(ContainerNode& target)
+{
+    if (!m_pendingScrollEventTargetList)
+        m_pendingScrollEventTargetList = makeUnique<PendingScrollEventTargetList>();
+
+    auto& targets = m_pendingScrollEventTargetList->targets;
+    if (targets.findMatching([&] (auto& entry) { return entry.ptr() == &target; }) != notFound)
+        return;
+
+    if (targets.isEmpty())
+        scheduleTimedRenderingUpdate();
+
+    targets.append(target);
+}
+
+void Document::setNeedsVisualViewportScrollEvent()
+{
+    if (!m_needsVisualViewportScrollEvent)
+        scheduleTimedRenderingUpdate();
+    m_needsVisualViewportScrollEvent = true;
+}
+
+// https://drafts.csswg.org/cssom-view/#run-the-scroll-steps
+void Document::runScrollSteps()
+{
+    // FIXME: The order of dispatching is not specified: https://github.com/WICG/visual-viewport/issues/66.
+    if (m_pendingScrollEventTargetList && !m_pendingScrollEventTargetList->targets.isEmpty()) {
+        LOG_WITH_STREAM(Events, stream << "Document" << this << "sending scroll events to pending scroll event targets");
+        auto currentTargets = WTFMove(m_pendingScrollEventTargetList->targets);
+        for (auto& target : currentTargets) {
+            auto bubbles = target->isDocumentNode() ? Event::CanBubble::Yes : Event::CanBubble::No;
+            target->dispatchEvent(Event::create(eventNames().scrollEvent, bubbles, Event::IsCancelable::No));
+        }
+    }
+    if (m_needsVisualViewportScrollEvent) {
+        LOG_WITH_STREAM(Events, stream << "Document" << this << "sending scroll events to visualViewport");
+        m_needsVisualViewportResizeEvent = false;
+        if (auto* window = domWindow())
+            window->visualViewport().dispatchEvent(Event::create(eventNames().scrollEvent, Event::CanBubble::No, Event::IsCancelable::No));
     }
 }
 
@@ -4658,21 +4719,32 @@ void Document::dispatchWindowLoadEvent()
     m_cachedResourceLoader->documentDidFinishLoadEvent();
 }
 
-void Document::enqueueWindowEvent(Ref<Event>&& event)
+void Document::queueTaskToDispatchEvent(TaskSource source, Ref<Event>&& event)
 {
-    event->setTarget(m_domWindow.get());
-    m_eventQueue.enqueueEvent(WTFMove(event));
+    eventLoop().queueTask(source, [document = makeRef(*this), event = WTFMove(event)] {
+        document->dispatchEvent(event);
+    });
 }
 
-void Document::enqueueDocumentEvent(Ref<Event>&& event)
+void Document::queueTaskToDispatchEventOnWindow(TaskSource source, Ref<Event>&& event)
 {
-    event->setTarget(this);
-    m_eventQueue.enqueueEvent(WTFMove(event));
+    eventLoop().queueTask(source, [this, protectedThis = makeRef(*this), event = WTFMove(event)] {
+        if (!m_domWindow)
+            return;
+        m_domWindow->dispatchEvent(event);
+    });
 }
 
 void Document::enqueueOverflowEvent(Ref<Event>&& event)
 {
-    m_eventQueue.enqueueEvent(WTFMove(event));
+    // https://developer.mozilla.org/en-US/docs/Web/API/Element/overflow_event
+    // FIXME: This event is totally unspecified.
+    auto* target = event->target();
+    RELEASE_ASSERT(target);
+    RELEASE_ASSERT(is<Node>(target));
+    eventLoop().queueTask(TaskSource::DOMManipulation, [protectedTarget = GCReachableRef<Node>(downcast<Node>(*target)), event = WTFMove(event)] {
+        protectedTarget->dispatchEvent(event);
+    });
 }
 
 ExceptionOr<Ref<Event>> Document::createEvent(const String& type)
@@ -5150,10 +5222,19 @@ void Document::setBackForwardCacheState(BackForwardCacheState state)
         m_styleRecalcTimer.stop();
 
         clearSharedObjectPool();
+
+#if ENABLE(INDEXED_DATABASE)
+        if (m_idbConnectionProxy)
+            m_idbConnectionProxy->setContextSuspended(*scriptExecutionContext(), true);
+#endif
         break;
     case NotInBackForwardCache:
         if (childNeedsStyleRecalc())
             scheduleStyleRecalc();
+#if ENABLE(INDEXED_DATABASE)
+        if (m_idbConnectionProxy)
+            m_idbConnectionProxy->setContextSuspended(*scriptExecutionContext(), false);
+#endif
         break;
     case AboutToEnterBackForwardCache:
         break;
@@ -5245,7 +5326,7 @@ void Document::resume(ReasonForSuspension reason)
 
 #if ENABLE(SERVICE_WORKER)
     if (RuntimeEnabledFeatures::sharedFeatures().serviceWorkerEnabled() && reason == ReasonForSuspension::BackForwardCache)
-        setServiceWorkerConnection(ServiceWorkerProvider::singleton().existingServiceWorkerConnection());
+        setServiceWorkerConnection(&ServiceWorkerProvider::singleton().serviceWorkerConnection());
 #endif
 }
 
@@ -5297,6 +5378,17 @@ bool Document::videoPlaybackRequiresUserGesture() const
     }
 
     return settings().videoPlaybackRequiresUserGesture();
+}
+
+bool Document::mediaDataLoadsAutomatically() const
+{
+    if (auto* loader = this->loader()) {
+        AutoplayPolicy policy = loader->autoplayPolicy();
+        if (policy != AutoplayPolicy::Default)
+            return policy != AutoplayPolicy::Deny;
+    }
+
+    return settings().mediaDataLoadsAutomatically();
 }
 
 void Document::storageBlockingStateDidChange()
@@ -5705,7 +5797,7 @@ void Document::finishedParsing()
 
     if (!page() || !page()->isForSanitizingWebContent()) {
         // FIXME: Schedule a task to fire DOMContentLoaded event instead. See webkit.org/b/82931
-        MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+        eventLoop().performMicrotaskCheckpoint();
     }
 
     dispatchEvent(Event::create(eventNames().DOMContentLoadedEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
@@ -6124,7 +6216,7 @@ void Document::addConsoleMessage(MessageSource source, MessageLevel level, const
         m_consoleMessageListener->scheduleCallback(*this, message);
 }
 
-void Document::addMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&& callStack, JSC::ExecState* state, unsigned long requestIdentifier)
+void Document::addMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&& callStack, JSC::JSGlobalObject* state, unsigned long requestIdentifier)
 {
     if (!isContextThread()) {
         postTask(AddConsoleMessageTask(source, level, message));
@@ -6159,16 +6251,18 @@ void Document::pendingTasksTimerFired()
         task.performTask(*this);
 }
 
-WindowEventLoop& Document::eventLoop()
+EventLoopTaskGroup& Document::eventLoop()
 {
-    if (!m_eventLoop) {
-        if (m_contextDocument)
-            m_eventLoop = &m_contextDocument->eventLoop();
-        else // FIXME: Documents of similar origin should share the same event loop.
-            m_eventLoop = WindowEventLoop::create();
+    ASSERT(isMainThread());
+    if (UNLIKELY(!m_documentTaskGroup)) {
+        m_eventLoop = WindowEventLoop::ensureForRegistrableDomain(RegistrableDomain { securityOrigin().data() });
+        m_documentTaskGroup = makeUnique<EventLoopTaskGroup>(*m_eventLoop);
+        if (activeDOMObjectsAreStopped())
+            m_documentTaskGroup->stopAndDiscardAllTasks();
+        else if (activeDOMObjectsAreSuspended())
+            m_documentTaskGroup->suspend();
     }
-    return *m_eventLoop;
-
+    return *m_documentTaskGroup;
 }
 
 void Document::suspendScheduledTasks(ReasonForSuspension reason)
@@ -6271,12 +6365,13 @@ void Document::dispatchPageshowEvent(PageshowEventPersistence persisted)
 
 void Document::enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEvent::Init&& eventInit)
 {
-    enqueueDocumentEvent(SecurityPolicyViolationEvent::create(eventNames().securitypolicyviolationEvent, WTFMove(eventInit), Event::IsTrusted::Yes));
+    queueTaskToDispatchEvent(TaskSource::DOMManipulation, SecurityPolicyViolationEvent::create(eventNames().securitypolicyviolationEvent, WTFMove(eventInit), Event::IsTrusted::Yes));
 }
 
 void Document::enqueueHashchangeEvent(const String& oldURL, const String& newURL)
 {
-    enqueueWindowEvent(HashChangeEvent::create(oldURL, newURL));
+    // FIXME: popstate event and hashchange event are supposed to fire in a single task.
+    queueTaskToDispatchEventOnWindow(TaskSource::DOMManipulation, HashChangeEvent::create(oldURL, newURL));
 }
 
 void Document::dispatchPopstateEvent(RefPtr<SerializedScriptValue>&& stateObject)
@@ -7227,6 +7322,14 @@ void Document::setShouldPlayToPlaybackTarget(uint64_t clientId, bool shouldPlay)
     it->value->setShouldPlayToPlaybackTarget(shouldPlay);
 }
 
+void Document::playbackTargetPickerWasDismissed(uint64_t clientId)
+{
+    auto it = m_idToClientMap.find(clientId);
+    if (it == m_idToClientMap.end())
+        return;
+
+    it->value->playbackTargetPickerWasDismissed();
+}
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 #if ENABLE(MEDIA_SESSION)
@@ -7312,24 +7415,14 @@ void Document::applyContentDispositionAttachmentSandbox()
         enforceSandboxFlags(SandboxOrigin);
 }
 
-void Document::addViewportDependentPicture(HTMLPictureElement& picture)
+void Document::addDynamicMediaQueryDependentImage(HTMLImageElement& element)
 {
-    m_viewportDependentPictures.add(&picture);
+    m_dynamicMediaQueryDependentImages.add(element);
 }
 
-void Document::removeViewportDependentPicture(HTMLPictureElement& picture)
+void Document::removeDynamicMediaQueryDependentImage(HTMLImageElement& element)
 {
-    m_viewportDependentPictures.remove(&picture);
-}
-
-void Document::addAppearanceDependentPicture(HTMLPictureElement& picture)
-{
-    m_appearanceDependentPictures.add(&picture);
-}
-
-void Document::removeAppearanceDependentPicture(HTMLPictureElement& picture)
-{
-    m_appearanceDependentPictures.remove(&picture);
+    m_dynamicMediaQueryDependentImages.remove(element);
 }
 
 void Document::scheduleTimedRenderingUpdate()
@@ -8322,11 +8415,18 @@ MessagePortChannelProvider& Document::messagePortChannelProvider()
 }
 
 #if USE(SYSTEM_PREVIEW)
-void Document::dispatchSystemPreviewActionEvent(const String& message)
+void Document::dispatchSystemPreviewActionEvent(const SystemPreviewInfo& systemPreviewInfo, const String& message)
 {
+    auto* element = searchForElementByIdentifier(systemPreviewInfo.element.elementIdentifier);
+    if (!element)
+        return;
+
+    if (!is<HTMLAnchorElement>(element))
+        return;
+
     auto event = MessageEvent::create(message, origin());
     UserGestureIndicator gestureIndicator(ProcessingUserGesture, this);
-    dispatchWindowEvent(event, domWindow());
+    element->dispatchEvent(event);
 }
 #endif
 
@@ -8341,5 +8441,12 @@ void Document::setPictureInPictureElement(HTMLVideoElement* element)
     m_pictureInPictureElement = makeWeakPtr(element);
 }
 #endif
+
+TextManipulationController& Document::textManipulationController()
+{
+    if (!m_textManipulationController)
+        m_textManipulationController = makeUnique<TextManipulationController>(*this);
+    return *m_textManipulationController;
+}
 
 } // namespace WebCore

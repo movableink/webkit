@@ -336,6 +336,11 @@
     return _processPoolConfiguration->suppressesConnectionTerminationOnSystemChange();
 }
 
+- (void)setSuppressesConnectionTerminationOnSystemChange:(BOOL)suppressesConnectionTerminationOnSystemChange
+{
+    _processPoolConfiguration->setSuppressesConnectionTerminationOnSystemChange(suppressesConnectionTerminationOnSystemChange);
+}
+
 - (BOOL)isJITEnabled
 {
     return _processPoolConfiguration->isJITEnabled();
@@ -358,11 +363,6 @@
 - (NSURL *)hstsStorageDirectory
 {
     return [NSURL fileURLWithPath:WebKit::LegacyGlobalSettings::singleton().hstsStorageDirectory() isDirectory:YES];
-}
-
-- (void)setSuppressesConnectionTerminationOnSystemChange:(BOOL)suppressesConnectionTerminationOnSystemChange
-{
-    _processPoolConfiguration->setSuppressesConnectionTerminationOnSystemChange(suppressesConnectionTerminationOnSystemChange);
 }
 
 #if PLATFORM(IOS_FAMILY)

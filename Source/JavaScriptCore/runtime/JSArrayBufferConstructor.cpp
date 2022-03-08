@@ -61,7 +61,7 @@ JSGenericArrayBufferConstructor<sharingMode>::JSGenericArrayBufferConstructor(VM
 template<ArrayBufferSharingMode sharingMode>
 void JSGenericArrayBufferConstructor<sharingMode>::finishCreation(VM& vm, JSArrayBufferPrototype* prototype, GetterSetter* speciesSymbol)
 {
-    Base::finishCreation(vm, arrayBufferSharingModeName(sharingMode), NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, arrayBufferSharingModeName(sharingMode), NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
@@ -81,12 +81,12 @@ EncodedJSValue JSC_HOST_CALL JSGenericArrayBufferConstructor<sharingMode>::const
 
     JSGenericArrayBufferConstructor* constructor = jsCast<JSGenericArrayBufferConstructor*>(callFrame->jsCallee());
 
-    Structure* arrayBufferStructure = InternalFunction::createSubclassStructure(callFrame, callFrame->newTarget(), constructor->globalObject()->arrayBufferStructure(sharingMode));
+    Structure* arrayBufferStructure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), constructor->globalObject()->arrayBufferStructure(sharingMode));
     RETURN_IF_EXCEPTION(scope, { });
 
     unsigned length;
     if (callFrame->argumentCount()) {
-        length = callFrame->uncheckedArgument(0).toIndex(callFrame, "length");
+        length = callFrame->uncheckedArgument(0).toIndex(globalObject, "length");
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     } else {
         // Although the documentation doesn't say so, it is in fact correct to say
@@ -97,7 +97,7 @@ EncodedJSValue JSC_HOST_CALL JSGenericArrayBufferConstructor<sharingMode>::const
 
     auto buffer = ArrayBuffer::tryCreate(length, 1);
     if (!buffer)
-        return JSValue::encode(throwOutOfMemoryError(callFrame, scope));
+        return JSValue::encode(throwOutOfMemoryError(globalObject, scope));
     
     if (sharingMode == ArrayBufferSharingMode::Shared)
         buffer->makeShared();
@@ -119,11 +119,11 @@ const ClassInfo* JSGenericArrayBufferConstructor<sharingMode>::info()
     return &JSGenericArrayBufferConstructor<sharingMode>::s_info;
 }
 
-static EncodedJSValue JSC_HOST_CALL callArrayBuffer(JSGlobalObject* globalObject, CallFrame* callFrame)
+static EncodedJSValue JSC_HOST_CALL callArrayBuffer(JSGlobalObject* globalObject, CallFrame*)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(callFrame, scope, "ArrayBuffer"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "ArrayBuffer"));
 }
 
 // ------------------------------ Functions --------------------------------

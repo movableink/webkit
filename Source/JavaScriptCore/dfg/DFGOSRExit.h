@@ -138,6 +138,9 @@ struct OSRExitState : RefCounted<OSRExitState> {
     Profiler::OSRExit* profilerExit { nullptr };
 };
 
+void JIT_OPERATION operationCompileOSRExit(CallFrame*) WTF_INTERNAL;
+void JIT_OPERATION operationDebugPrintSpeculationFailure(CallFrame*, void*, void*) WTF_INTERNAL;
+
 // === OSRExit ===
 //
 // This structure describes how to exit the speculative path by
@@ -145,7 +148,8 @@ struct OSRExitState : RefCounted<OSRExitState> {
 struct OSRExit : public OSRExitBase {
     OSRExit(ExitKind, JSValueSource, MethodOfGettingAValueProfile, SpeculativeJIT*, unsigned streamIndex, unsigned recoveryIndex = UINT_MAX);
 
-    static void JIT_OPERATION compileOSRExit(ExecState*) WTF_INTERNAL;
+    friend void JIT_OPERATION operationCompileOSRExit(CallFrame*);
+
     static void executeOSRExit(Probe::Context&);
 
     CodeLocationLabel<JSInternalPtrTag> m_patchableJumpLocation;
@@ -168,15 +172,15 @@ struct OSRExit : public OSRExitBase {
 
 private:
     static void compileExit(CCallHelpers&, VM&, const OSRExit&, const Operands<ValueRecovery>&, SpeculationRecovery*);
-    static void emitRestoreArguments(CCallHelpers&, const Operands<ValueRecovery>&);
-    static void JIT_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*, void*) WTF_INTERNAL;
+    static void emitRestoreArguments(CCallHelpers&, VM&, const Operands<ValueRecovery>&);
+    friend void JIT_OPERATION operationDebugPrintSpeculationFailure(CallFrame*, void*, void*);
 };
 
 struct SpeculationFailureDebugInfo {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     CodeBlock* codeBlock;
     ExitKind kind;
-    unsigned bytecodeOffset;
+    BytecodeIndex bytecodeIndex;
 };
 
 } } // namespace JSC::DFG

@@ -546,13 +546,6 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         return;
     }
 
-    if (WKStringIsEqualToUTF8CString(messageName, "SetCacheModel")) {
-        ASSERT(WKGetTypeID(messageBody) == WKUInt64GetTypeID());
-        uint64_t model = WKUInt64GetValue(static_cast<WKUInt64Ref>(messageBody));
-        WKContextSetCacheModel(TestController::singleton().context(), model);
-        return;
-    }
-
     if (WKStringIsEqualToUTF8CString(messageName, "SetCustomPolicyDelegate")) {
         ASSERT(WKGetTypeID(messageBody) == WKDictionaryGetTypeID());
         WKDictionaryRef messageBodyDictionary = static_cast<WKDictionaryRef>(messageBody);
@@ -879,6 +872,13 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
         return result;
     }
 
+    if (WKStringIsEqualToUTF8CString(messageName, "SetCacheModel")) {
+        ASSERT(WKGetTypeID(messageBody) == WKUInt64GetTypeID());
+        uint64_t model = WKUInt64GetValue(static_cast<WKUInt64Ref>(messageBody));
+        WKWebsiteDataStoreSetCacheModelSynchronouslyForTesting(TestController::websiteDataStore(), model);
+        return nullptr;
+    }
+
     if (WKStringIsEqualToUTF8CString(messageName, "IsWorkQueueEmpty")) {
         bool isEmpty = TestController::singleton().workQueueManager().isWorkQueueEmpty();
         WKRetainPtr<WKTypeRef> result = adoptWK(WKBooleanCreate(isEmpty));
@@ -1069,6 +1069,13 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
     if (WKStringIsEqualToUTF8CString(messageName, "IsDoingMediaCapture")) {
         WKRetainPtr<WKTypeRef> result = adoptWK(WKBooleanCreate(TestController::singleton().isDoingMediaCapture()));
         return result;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsEnabled")) {
+        ASSERT(WKGetTypeID(messageBody) == WKBooleanGetTypeID());
+        WKBooleanRef value = static_cast<WKBooleanRef>(messageBody);
+        TestController::singleton().setStatisticsEnabled(WKBooleanGetValue(value));
+        return nullptr;
     }
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetStatisticsDebugMode")) {

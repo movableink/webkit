@@ -53,7 +53,6 @@ namespace JSC {
 
 class CodeBlock;
 class CallFrame;
-using ExecState = CallFrame;
 
 namespace DFG {
 
@@ -442,7 +441,7 @@ public:
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
-        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object->globalExec(), NotStrictMode));
+        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object, NotStrictMode));
     }
     
     ScriptExecutable* executableFor(InlineCallFrame* inlineCallFrame)
@@ -857,6 +856,7 @@ public:
 
         CodeOrigin* codeOriginPtr = &codeOrigin;
         
+        bool isCallerOrigin = false;
         for (;;) {
             InlineCallFrame* inlineCallFrame = codeOriginPtr->inlineCallFrame();
             VirtualRegister stackOffset(inlineCallFrame ? inlineCallFrame->stackOffset : 0);
@@ -870,7 +870,7 @@ public:
             
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
             FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
-            const FastBitVector& liveness = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex());
+            const auto& livenessAtBytecode = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex(), appropriateLivenessCalculationPoint(*codeOriginPtr, isCallerOrigin));
             for (unsigned relativeLocal = codeBlock->numCalleeLocals(); relativeLocal--;) {
                 VirtualRegister reg = stackOffset + virtualRegisterForLocal(relativeLocal);
                 
@@ -878,7 +878,7 @@ public:
                 if (reg >= exclusionStart && reg < exclusionEnd)
                     continue;
                 
-                if (liveness[relativeLocal])
+                if (livenessAtBytecode[relativeLocal])
                     functor(reg);
             }
             
@@ -900,12 +900,43 @@ public:
             // We need to handle tail callers because we may decide to exit to the
             // the return bytecode following the tail call.
             codeOriginPtr = &inlineCallFrame->directCaller;
+            isCallerOrigin = true;
         }
     }
     
     // Get a BitVector of all of the non-argument locals live right now. This is mostly useful if
     // you want to compare two sets of live locals from two different CodeOrigins.
     BitVector localsLiveInBytecode(CodeOrigin);
+
+    LivenessCalculationPoint appropriateLivenessCalculationPoint(CodeOrigin origin, bool isCallerOrigin)
+    {
+        if (isCallerOrigin) {
+            // We do not need to keep used registers of call bytecodes live when terminating in inlined function,
+            // except for inlining invoked by non call bytecodes including getter/setter calls.
+            BytecodeIndex bytecodeIndex = origin.bytecodeIndex();
+            InlineCallFrame* inlineCallFrame = origin.inlineCallFrame();
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            auto instruction = codeBlock->instructions().at(bytecodeIndex.offset());
+            switch (instruction->opcodeID()) {
+            case op_call_varargs:
+            case op_tail_call_varargs:
+            case op_construct_varargs:
+                // When inlining varargs call, uses include array used for varargs. But when we are in inlined function,
+                // the content of this is already read and flushed to the stack. So, at this point, we no longer need to
+                // keep these use registers. We can use the liveness at LivenessCalculationPoint::AfterUse point.
+                // This is important to kill arguments allocations in DFG (not in FTL) when calling a function in a
+                // `func.apply(undefined, arguments)` manner.
+                return LivenessCalculationPoint::AfterUse;
+            default:
+                // We could list up the other bytecodes here, like, `op_call`, `op_get_by_id` (getter inlining). But we don't do that.
+                // To list up bytecodes here, we must ensure that these bytecodes never use `uses` registers after inlining. So we cannot
+                // return LivenessCalculationPoint::AfterUse blindly if isCallerOrigin = true. And since excluding liveness in the other
+                // bytecodes does not offer practical benefit, we do not try it.
+                break;
+            }
+        }
+        return LivenessCalculationPoint::BeforeUse;
+    }
     
     // Tells you all of the arguments and locals live at the given CodeOrigin. This is a small
     // extension to forAllLocalsLiveInBytecode(), since all arguments are always presumed live.
@@ -1095,7 +1126,7 @@ public:
 
     // This maps an entrypoint index to a particular op_catch bytecode offset. By convention,
     // it'll never have zero as a key because we use zero to mean the op_enter entrypoint.
-    HashMap<unsigned, unsigned> m_entrypointIndexToCatchBytecodeOffset;
+    HashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
 
     HashSet<String> m_localStrings;
     HashMap<const StringImpl*, String> m_copiedStrings;
@@ -1121,6 +1152,8 @@ public:
 
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
+
+    HashSet<Node*> m_slowGetByVal;
 
 private:
     bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);

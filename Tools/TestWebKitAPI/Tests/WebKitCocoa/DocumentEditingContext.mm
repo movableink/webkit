@@ -28,7 +28,7 @@
 #if PLATFORM(IOS_FAMILY) && HAVE(UI_WK_DOCUMENT_CONTEXT)
 
 #import "PlatformUtilities.h"
-#import "Test.h"
+#import "TestCocoa.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
 #import "UIKitSPI.h"
@@ -37,6 +37,7 @@
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKTextInputContext.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/Vector.h>
 
 #define EXPECT_NSSTRING_EQ(expected, actual) \
     EXPECT_TRUE([actual isKindOfClass:[NSString class]]); \
@@ -45,12 +46,6 @@
 #define EXPECT_ATTRIBUTED_STRING_EQ(expected, actual) \
     EXPECT_TRUE([actual isKindOfClass:[NSAttributedString class]]); \
     EXPECT_WK_STREQ(expected, [(NSAttributedString *)actual string]);
-
-#define EXPECT_RECT_EQ(xExpected, yExpected, widthExpected, heightExpected, rect) \
-    EXPECT_DOUBLE_EQ(xExpected, rect.origin.x); \
-    EXPECT_DOUBLE_EQ(yExpected, rect.origin.y); \
-    EXPECT_DOUBLE_EQ(widthExpected, rect.size.width); \
-    EXPECT_DOUBLE_EQ(heightExpected, rect.size.height);
 
 @interface WKContentView ()
 - (void)requestDocumentContext:(UIWKDocumentRequest *)request completionHandler:(void (^)(UIWKDocumentContext *))completionHandler;
@@ -67,6 +62,43 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
     [request setInputElementIdentifier:inputElementIdentifier];
     return request.autorelease();
 }
+
+@interface UIWKDocumentContext (TestRunner)
+@property (nonatomic, readonly) NSArray<NSValue *> *markedTextRects;
+@property (nonatomic, readonly) NSArray<NSValue *> *textRects;
+@end
+
+@implementation UIWKDocumentContext (TestRunner)
+
+- (NSArray<NSValue *> *)markedTextRects
+{
+    // This should ideally be equivalent to [self characterRectsForCharacterRange:self.markedTextRange]. However, the implementation
+    // of -characterRectsForCharacterRange: in UIKit doesn't guarantee any order to the returned character rects. See: <rdar://57338528>.
+    NSRange range = self.markedTextRange;
+    NSMutableArray *rects = [NSMutableArray arrayWithCapacity:range.length];
+    for (auto location = range.location; location < range.location + range.length; ++location)
+        [rects addObject:[self characterRectsForCharacterRange:NSMakeRange(location, 1)].firstObject];
+    return rects;
+}
+
+- (NSArray<NSValue *> *)textRects
+{
+    Vector<std::pair<NSRange, CGRect>> rangesAndRects;
+    [self enumerateLayoutRects:[&](NSRange characterRange, CGRect layoutRect, BOOL *) {
+        rangesAndRects.append(std::make_pair(characterRange, layoutRect));
+    }];
+
+    std::sort(rangesAndRects.begin(), rangesAndRects.end(), [](auto& a, auto& b) {
+        return a.first.location < b.first.location;
+    });
+
+    auto result = adoptNS([[NSMutableArray alloc] initWithCapacity:rangesAndRects.size()]);
+    for (auto& rangeAndRect : rangesAndRects)
+        [result addObject:[NSValue valueWithCGRect:rangeAndRect.second]];
+    return result.autorelease();
+}
+
+@end
 
 @implementation TestWKWebView (SynchronousDocumentContext)
 
@@ -105,14 +137,16 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
 
 @end
 
-static NSString *applyStyle(NSString *HTMLString)
+static NSString *applyStyle(NSString *htmlString)
 {
-    return [@"<style>body { margin: 0; } iframe { border: none; }</style><meta name='viewport' content='initial-scale=1'>" stringByAppendingString:HTMLString];
+    return [@"<style>body { margin: 0; } </style><meta name='viewport' content='initial-scale=1'>" stringByAppendingString:htmlString];
 }
 
-static NSString *applyAhemStyle(NSString *HTMLString)
+constexpr unsigned glyphWidth { 25 }; // pixels
+
+static NSString *applyAhemStyle(NSString *htmlString)
 {
-    return [@"<style>@font-face { font-family: customFont; src: url(Ahem.ttf); } body { margin: 0; font-family: customFont; } iframe { border: none; }</style><meta name='viewport' content='initial-scale=1'>" stringByAppendingString:HTMLString];
+    return [NSString stringWithFormat:@"<style>@font-face { font-family: Ahem; src: url(Ahem.ttf); } body { margin: 0; font: %upx/1 Ahem; -webkit-text-size-adjust: 100%%; }</style><meta name='viewport' content='width=980, initial-scale=1.0'>%@", glyphWidth, htmlString];
 }
 
 TEST(WebKit, DocumentEditingContext)
@@ -210,10 +244,10 @@ TEST(WebKit, DocumentEditingContext)
         return [@(a.CGRectValue.origin.x) compare:@(b.CGRectValue.origin.x)];
     }];
     EXPECT_EQ(4UL, rects.count);
-    EXPECT_RECT_EQ(0, 0, 23, 24, rects[0].CGRectValue);
-    EXPECT_RECT_EQ(23, 0, 23, 24, rects[1].CGRectValue);
-    EXPECT_RECT_EQ(46, 0, 23, 24, rects[2].CGRectValue);
-    EXPECT_RECT_EQ(69, 0, 23, 24, rects[3].CGRectValue);
+    EXPECT_EQ(CGRectMake(0, 0, glyphWidth, glyphWidth), rects[0].CGRectValue);
+    EXPECT_EQ(CGRectMake(glyphWidth, 0, glyphWidth, glyphWidth), rects[1].CGRectValue);
+    EXPECT_EQ(CGRectMake(2 * glyphWidth, 0, glyphWidth, glyphWidth), rects[2].CGRectValue);
+    EXPECT_EQ(CGRectMake(3 * glyphWidth, 0, glyphWidth, glyphWidth), rects[3].CGRectValue);
     rects = [context characterRectsForCharacterRange:NSMakeRange(5, 1)];
     EXPECT_EQ(0UL, rects.count);
 
@@ -221,21 +255,144 @@ TEST(WebKit, DocumentEditingContext)
     EXPECT_NSSTRING_EQ(" MMM", context.contextAfter);
     rects = [context characterRectsForCharacterRange:NSMakeRange(0, 1)];
     EXPECT_EQ(1UL, rects.count);
-    EXPECT_RECT_EQ(0, 0, 23, 24, rects.firstObject.CGRectValue);
+    EXPECT_EQ(CGRectMake(0, 0, glyphWidth, glyphWidth), rects.firstObject.CGRectValue);
     rects = [context characterRectsForCharacterRange:NSMakeRange(6, 1)];
     EXPECT_EQ(1UL, rects.count);
-    EXPECT_RECT_EQ(138, 0, 23, 24, rects.firstObject.CGRectValue);
+    EXPECT_EQ(CGRectMake(6 * glyphWidth, 0, glyphWidth, glyphWidth), rects.firstObject.CGRectValue);
 
     // Text Input Context
     [webView synchronouslyLoadHTMLString:applyStyle(@"<input type='text' style='width: 50px; height: 50px;' value='hello, world'>")];
     NSArray<_WKTextInputContext *> *textInputContexts = [webView synchronouslyRequestTextInputContextsInRect:[webView frame]];
     EXPECT_EQ(1UL, textInputContexts.count);
-    EXPECT_RECT_EQ(0, 0, 50, 50, textInputContexts[0].boundingRect);
+    EXPECT_EQ(CGRectMake(0, 0, 50, 50), textInputContexts[0].boundingRect);
 
     context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText, UITextGranularityWord, 0, CGRectZero, textInputContexts[0])];
     EXPECT_NSSTRING_EQ("hello,", context.contextBefore);
     EXPECT_NULL(context.selectedText);
     EXPECT_NSSTRING_EQ(" world", context.contextAfter);
+}
+
+TEST(WebKit, DocumentEditingContextWithMarkedText)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    auto *contentView = [webView textInputContentView];
+
+    [webView synchronouslyLoadHTMLString:@"<body style='-webkit-text-size-adjust: none;' contenteditable>"];
+    [webView evaluateJavaScript:@"document.body.focus()" completionHandler:nil];
+    [webView _synchronouslyExecuteEditCommand:@"InsertText" argument:@"Hello world"];
+
+    [contentView selectWordBackward];
+    [contentView setMarkedText:@"world" selectedRange:NSMakeRange(0, 5)];
+    [webView waitForNextPresentationUpdate];
+    {
+        UIWKDocumentContext *context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestMarkedTextRects, UITextGranularityCharacter, 0)];
+        EXPECT_NULL(context.contextBefore);
+        EXPECT_NULL(context.contextAfter);
+        EXPECT_NSSTRING_EQ("world", context.selectedText);
+        EXPECT_NSSTRING_EQ("world", context.markedText);
+        EXPECT_EQ(0U, context.markedTextRange.location);
+        EXPECT_EQ(5U, context.markedTextRange.length);
+
+        NSArray<NSValue *> *rectValues = context.markedTextRects;
+        EXPECT_EQ(5U, rectValues.count);
+        if (rectValues.count >= 5) {
+            EXPECT_EQ(CGRectMake(47, 8, 13, 19), [rectValues[0] CGRectValue]);
+            EXPECT_EQ(CGRectMake(59, 8, 9, 19), [rectValues[1] CGRectValue]);
+            EXPECT_EQ(CGRectMake(67, 8, 6, 19), [rectValues[2] CGRectValue]);
+            EXPECT_EQ(CGRectMake(72, 8, 5, 19), [rectValues[3] CGRectValue]);
+            EXPECT_EQ(CGRectMake(76, 8, 9, 19), [rectValues[4] CGRectValue]);
+        }
+    }
+    [contentView unmarkText];
+    [webView stringByEvaluatingJavaScript:@"getSelection().setBaseAndExtent(document.body.childNodes[0], 0, document.body.childNodes[0], 5)"];
+    [contentView setMarkedText:@"Hello" selectedRange:NSMakeRange(0, 5)];
+    [webView waitForNextPresentationUpdate];
+    {
+        UIWKDocumentContext *context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestMarkedTextRects, UITextGranularityParagraph, 1)];
+        EXPECT_NULL(context.contextBefore);
+        EXPECT_NSSTRING_EQ(" world", context.contextAfter);
+        EXPECT_NSSTRING_EQ("Hello", context.selectedText);
+        EXPECT_NSSTRING_EQ("Hello", context.markedText);
+        EXPECT_EQ(0U, context.markedTextRange.location);
+        EXPECT_EQ(5U, context.markedTextRange.length);
+
+        NSArray<NSValue *> *rectValues = context.markedTextRects;
+        EXPECT_EQ(5U, rectValues.count);
+        if (rectValues.count >= 5) {
+            EXPECT_EQ(CGRectMake(8, 8, 12, 19), [rectValues[0] CGRectValue]);
+            EXPECT_EQ(CGRectMake(19, 8, 8, 19), [rectValues[1] CGRectValue]);
+            EXPECT_EQ(CGRectMake(26, 8, 6, 19), [rectValues[2] CGRectValue]);
+            EXPECT_EQ(CGRectMake(31, 8, 5, 19), [rectValues[3] CGRectValue]);
+            EXPECT_EQ(CGRectMake(35, 8, 9, 19), [rectValues[4] CGRectValue]);
+        }
+    }
+    [contentView unmarkText];
+    [webView selectAll:nil];
+    [contentView setMarkedText:@"foo" selectedRange:NSMakeRange(0, 3)];
+    [webView waitForNextPresentationUpdate];
+    {
+        UIWKDocumentContext *context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestMarkedTextRects, UITextGranularitySentence, 1)];
+        EXPECT_NULL(context.contextBefore);
+        EXPECT_NULL(context.contextAfter);
+        EXPECT_NSSTRING_EQ("foo", context.selectedText);
+        EXPECT_NSSTRING_EQ("foo", context.markedText);
+        EXPECT_EQ(0U, context.markedTextRange.location);
+        EXPECT_EQ(3U, context.markedTextRange.length);
+
+        NSArray<NSValue *> *rectValues = context.markedTextRects;
+        EXPECT_EQ(3U, rectValues.count);
+        if (rectValues.count >= 3) {
+            EXPECT_EQ(CGRectMake(8, 8, 6, 19), [rectValues[0] CGRectValue]);
+            EXPECT_EQ(CGRectMake(13, 8, 9, 19), [rectValues[1] CGRectValue]);
+            EXPECT_EQ(CGRectMake(21, 8, 9, 19), [rectValues[2] CGRectValue]);
+        }
+    }
+    [contentView unmarkText];
+    [webView collapseToEnd];
+    [contentView setMarkedText:@"bar" selectedRange:NSMakeRange(0, 3)];
+    [webView waitForNextPresentationUpdate];
+    {
+        UIWKDocumentContext *context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestMarkedTextRects, UITextGranularityWord, 1)];
+        EXPECT_NSSTRING_EQ("foo", context.contextBefore);
+        EXPECT_NULL(context.contextAfter);
+        EXPECT_NSSTRING_EQ("bar", context.selectedText);
+        EXPECT_NSSTRING_EQ("bar", context.markedText);
+        EXPECT_EQ(3U, context.markedTextRange.location);
+        EXPECT_EQ(3U, context.markedTextRange.length);
+
+        NSArray<NSValue *> *rectValues = context.markedTextRects;
+        EXPECT_EQ(3U, rectValues.count);
+        if (rectValues.count >= 3) {
+            EXPECT_EQ(CGRectMake(29, 8, 9, 19), [rectValues[0] CGRectValue]);
+            EXPECT_EQ(CGRectMake(37, 8, 8, 19), [rectValues[1] CGRectValue]);
+            EXPECT_EQ(CGRectMake(44, 8, 6, 19), [rectValues[2] CGRectValue]);
+        }
+    }
+}
+
+TEST(WebKit, DocumentEditingContextSpatialRequestInTextField)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadHTMLString:@"<span style='-webkit-text-size-adjust: none;'>Hello<input type='text' value='foo bar' />world</span>"];
+    [webView stringByEvaluatingJavaScript:@"document.querySelector('input').focus()"];
+
+    auto request = retainPtr(makeRequest(UIWKDocumentRequestRects | UIWKDocumentRequestText | UIWKDocumentRequestSpatial, UITextGranularityCharacter, 0, [webView textInputContentView].bounds));
+    auto context = retainPtr([webView synchronouslyRequestDocumentContext:request.get()]);
+    auto *textRects = [context textRects];
+    EXPECT_EQ(10U, textRects.count);
+    if (textRects.count >= 10) {
+        EXPECT_EQ(CGRectMake(8, 9, 12, 19), textRects[0].CGRectValue);
+        EXPECT_EQ(CGRectMake(19, 9, 8, 19), textRects[1].CGRectValue);
+        EXPECT_EQ(CGRectMake(26, 9, 6, 19), textRects[2].CGRectValue);
+        EXPECT_EQ(CGRectMake(31, 9, 5, 19), textRects[3].CGRectValue);
+        EXPECT_EQ(CGRectMake(35, 9, 9, 19), textRects[4].CGRectValue);
+        EXPECT_EQ(CGRectMake(182, 9, 13, 19), textRects[5].CGRectValue);
+        EXPECT_EQ(CGRectMake(194, 9, 9, 19), textRects[6].CGRectValue);
+        EXPECT_EQ(CGRectMake(202, 9, 6, 19), textRects[7].CGRectValue);
+        EXPECT_EQ(CGRectMake(207, 9, 6, 19), textRects[8].CGRectValue);
+        EXPECT_EQ(CGRectMake(212, 9, 9, 19), textRects[9].CGRectValue);
+    }
 }
 
 #endif // PLATFORM(IOS_FAMILY) && HAVE(UI_WK_DOCUMENT_CONTEXT)

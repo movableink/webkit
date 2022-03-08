@@ -30,6 +30,10 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#if HAVE(PENCILKIT)
+@class PKCanvasView;
+#endif
+
 namespace WebCore {
 class FloatPoint;
 class FloatRect;
@@ -125,6 +129,7 @@ public:
     void beginBackSwipe(JSValueRef) override;
     void completeBackSwipe(JSValueRef) override;
     bool isShowingDataListSuggestions() const override;
+    void activateDataListSuggestion(unsigned, JSValueRef) override;
     void drawSquareInEditableImage() override;
     long numberOfStrokesInEditableImage() override;
     void setKeyboardInputModeIdentifier(JSStringRef) override;
@@ -138,8 +143,8 @@ public:
 
     void setDidStartFormControlInteractionCallback(JSValueRef) override;
     void setDidEndFormControlInteractionCallback(JSValueRef) override;
-    void setDidShowForcePressPreviewCallback(JSValueRef) override;
-    void setDidDismissForcePressPreviewCallback(JSValueRef) override;
+    void setDidShowContextMenuCallback(JSValueRef) override;
+    void setDidDismissContextMenuCallback(JSValueRef) override;
     void setWillBeginZoomingCallback(JSValueRef) override;
     void setDidEndZoomingCallback(JSValueRef) override;
     void setDidShowKeyboardCallback(JSValueRef) override;
@@ -153,6 +158,9 @@ private:
     void waitForSingleTapToReset() const;
     WebCore::FloatRect rectForMenuAction(CFStringRef) const;
     void singleTapAtPointWithModifiers(WebCore::FloatPoint location, Vector<String>&& modifierFlags, BlockPtr<void()>&&);
+#if HAVE(PENCILKIT)
+    PKCanvasView *findEditableImageCanvas() const;
+#endif
 };
 
 }

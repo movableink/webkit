@@ -29,21 +29,39 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "APIWebAuthenticationPanelClient.h"
+#include "AuthenticatorManager.h"
+#include <WebCore/WebAuthenticationConstants.h>
 
 namespace API {
+using namespace WebCore;
+using namespace WebKit;
 
-Ref<WebAuthenticationPanel> WebAuthenticationPanel::create(const String& rpId)
+Ref<WebAuthenticationPanel> WebAuthenticationPanel::create(const AuthenticatorManager& manager, const WTF::String& rpId, const TransportSet& transports, ClientDataType type)
 {
-    return adoptRef(*new WebAuthenticationPanel(rpId));
+    return adoptRef(*new WebAuthenticationPanel(manager, rpId, transports, type));
 }
 
-WebAuthenticationPanel::WebAuthenticationPanel(const String& rpId)
-    : m_rpId(rpId)
+WebAuthenticationPanel::WebAuthenticationPanel(const AuthenticatorManager& manager, const WTF::String& rpId, const TransportSet& transports, ClientDataType type)
+    : m_manager(makeWeakPtr(manager))
+    , m_rpId(rpId)
     , m_client(WTF::makeUniqueRef<WebAuthenticationPanelClient>())
+    , m_clientDataType(type)
 {
+    m_transports = Vector<AuthenticatorTransport>();
+    m_transports.reserveInitialCapacity(AuthenticatorManager::maxTransportNumber);
+    if (transports.contains(AuthenticatorTransport::Usb))
+        m_transports.uncheckedAppend(AuthenticatorTransport::Usb);
+    if (transports.contains(AuthenticatorTransport::Nfc))
+        m_transports.uncheckedAppend(AuthenticatorTransport::Nfc);
 }
 
 WebAuthenticationPanel::~WebAuthenticationPanel() = default;
+
+void WebAuthenticationPanel::cancel() const
+{
+    if (m_manager)
+        m_manager->cancelRequest(*this);
+}
 
 void WebAuthenticationPanel::setClient(UniqueRef<WebAuthenticationPanelClient>&& client)
 {

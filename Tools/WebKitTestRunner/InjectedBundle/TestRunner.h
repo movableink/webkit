@@ -130,6 +130,7 @@ public:
     void setShouldSwapToDefaultSessionOnNextNavigation(bool);
     void setEncryptedMediaAPIEnabled(bool);
     void setPictureInPictureAPIEnabled(bool);
+    void setGenericCueAPIEnabled(bool);
     void setMediaDevicesEnabled(bool);
     void setWebRTCMDNSICECandidatesEnabled(bool);
     void setCustomUserAgent(JSStringRef);
@@ -379,6 +380,7 @@ public:
     void setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
     
     // Resource Load Statistics
+    void setStatisticsEnabled(bool value);
     void installStatisticsDidModifyDataRecordsCallback(JSValueRef callback);
     void installStatisticsDidScanDataRecordsCallback(JSValueRef callback);
     void installStatisticsDidRunTelemetryCallback(JSValueRef callback);
@@ -509,6 +511,8 @@ public:
     void setAdClickAttributionOverrideTimerForTesting(bool value);
     void setAdClickAttributionConversionURLForTesting(JSStringRef);
     void markAdClickAttributionsAsExpiredForTesting();
+
+    void setOffscreenCanvasEnabled(bool);
 
 private:
     TestRunner();

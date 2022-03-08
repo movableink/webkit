@@ -26,64 +26,57 @@
 #include "config.h"
 #include "WindowEventLoop.h"
 
+#include "CommonVM.h"
 #include "Document.h"
+#include "Microtasks.h"
 
 namespace WebCore {
 
-Ref<WindowEventLoop> WindowEventLoop::create()
+static HashMap<RegistrableDomain, WindowEventLoop*>& windowEventLoopMap()
 {
-    return adoptRef(*new WindowEventLoop);
+    RELEASE_ASSERT(isMainThread());
+    static NeverDestroyed<HashMap<RegistrableDomain, WindowEventLoop*>> map;
+    return map.get();
 }
 
-WindowEventLoop::WindowEventLoop()
+Ref<WindowEventLoop> WindowEventLoop::ensureForRegistrableDomain(const RegistrableDomain& domain)
 {
-}
-
-void WindowEventLoop::queueTask(TaskSource source, Document& document, TaskFunction&& task)
-{
-    if (!m_activeTaskCount) {
-        callOnMainThread([eventLoop = makeRef(*this)] () {
-            eventLoop->run();
-        });
+    auto addResult = windowEventLoopMap().add(domain, nullptr);
+    if (UNLIKELY(addResult.isNewEntry)) {
+        auto newEventLoop = adoptRef(*new WindowEventLoop(domain));
+        addResult.iterator->value = newEventLoop.ptr();
+        return newEventLoop;
     }
-    ++m_activeTaskCount;
-    m_tasks.append(Task { source, WTFMove(task), document.identifier() });
+    return *addResult.iterator->value;
 }
 
-void WindowEventLoop::suspend(Document&)
+inline WindowEventLoop::WindowEventLoop(const RegistrableDomain& domain)
+    : m_domain(domain)
+    , m_timer(*this, &WindowEventLoop::run)
 {
 }
 
-void WindowEventLoop::resume(Document& document)
+WindowEventLoop::~WindowEventLoop()
 {
-    if (!m_documentIdentifiersForSuspendedTasks.contains(document.identifier()))
-        return;
-
-    callOnMainThread([eventLoop = makeRef(*this)] () {
-        eventLoop->run();
-    });
+    auto didRemove = windowEventLoopMap().remove(m_domain);
+    RELEASE_ASSERT(didRemove);
 }
 
-void WindowEventLoop::run()
+void WindowEventLoop::scheduleToRun()
 {
-    m_activeTaskCount = 0;
-    Vector<Task> tasks = WTFMove(m_tasks);
-    m_documentIdentifiersForSuspendedTasks.clear();
-    Vector<Task> remainingTasks;
-    for (auto& task : tasks) {
-        auto* document = Document::allDocumentsMap().get(task.documentIdentifier);
-        if (!document || document->activeDOMObjectsAreStopped())
-            continue;
-        if (document->activeDOMObjectsAreSuspended()) {
-            m_documentIdentifiersForSuspendedTasks.add(task.documentIdentifier);
-            remainingTasks.append(WTFMove(task));
-            continue;
-        }
-        task.task();
-    }
-    for (auto& task : m_tasks)
-        remainingTasks.append(WTFMove(task));
-    m_tasks = WTFMove(remainingTasks);
+    m_timer.startOneShot(0_s);
+}
+
+bool WindowEventLoop::isContextThread() const
+{
+    return isMainThread();
+}
+
+MicrotaskQueue& WindowEventLoop::microtaskQueue()
+{
+    // MicrotaskQueue must be one per event loop.
+    static NeverDestroyed<MicrotaskQueue> queue(commonVM());
+    return queue;
 }
 
 } // namespace WebCore

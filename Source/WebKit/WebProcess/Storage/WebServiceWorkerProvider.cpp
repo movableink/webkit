@@ -36,6 +36,7 @@
 #include <WebCore/Exception.h>
 #include <WebCore/ExceptionCode.h>
 #include <WebCore/LegacySchemeRegistry.h>
+#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/ServiceWorkerJob.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,15 +56,18 @@ WebServiceWorkerProvider::WebServiceWorkerProvider()
 
 WebCore::SWClientConnection& WebServiceWorkerProvider::serviceWorkerConnection()
 {
+    ASSERT(RuntimeEnabledFeatures::sharedFeatures().serviceWorkerEnabled());
     return WebProcess::singleton().ensureNetworkProcessConnection().serviceWorkerConnection();
 }
 
-WebCore::SWClientConnection* WebServiceWorkerProvider::existingServiceWorkerConnection()
+void WebServiceWorkerProvider::updateThrottleState(bool isThrottleable)
 {
     auto* networkProcessConnection = WebProcess::singleton().existingNetworkProcessConnection();
     if (!networkProcessConnection)
-        return nullptr;
-    return networkProcessConnection->existingServiceWorkerConnection();
+        return;
+    auto& connection = networkProcessConnection->serviceWorkerConnection();
+    if (isThrottleable != connection.isThrottleable())
+        connection.updateThrottleState();
 }
 
 } // namespace WebKit

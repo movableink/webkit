@@ -59,6 +59,8 @@ imported/w3c/web-platform-tests/mediacapture-streams
 http/tests/media/media-stream
 http/tests/ssl/media-stream
 inspector/page/overrideSetting-MockCaptureDevicesEnabled.html [ Skip ]
+http/tests/navigation/page-cache-getUserMedia-pending-promise.html [ Skip ]
+http/tests/navigation/page-cache-mediastream.html [ Skip ]
 
 # Datalist is unsupported in WK1
 accessibility/datalist.html [ WontFix ]
@@ -67,6 +69,9 @@ imported/w3c/web-platform-tests/html/semantics/forms/the-datalist-element [ Wont
 
 # DOM paste access requests are not implemented in WebKit1.
 editing/async-clipboard/clipboard-change-data-while-reading.html [ Skip ]
+editing/async-clipboard/clipboard-do-not-read-text-from-platform-if-text-changes.html [ Skip ]
+editing/async-clipboard/clipboard-read-text-from-platform.html [ Skip ]
+editing/async-clipboard/clipboard-read-text-same-origin.html [ Skip ]
 
 imported/w3c/web-platform-tests/websockets/Close-1000-reason.any.html [ Pass Failure ]
 imported/w3c/web-platform-tests/websockets/Close-1000-reason.any.worker.html [ Pass Failure ]
@@ -271,8 +276,6 @@ http/wpt/loading/redirect-headers.html [ Skip ]
 # No service worker implementation for WK1
 http/tests/appcache/main-resource-redirect-with-sw.html [ Skip ]
 http/tests/cache-storage [ Skip ]
-http/tests/navigation/page-cache-domcache-pending-promise.html [ Skip ]
-http/tests/navigation/page-cache-domcachestorage-pending-promise.html [ Skip ]
 http/tests/cookies/same-site/fetch-in-cross-origin-service-worker.html [ Skip ]
 http/tests/cookies/same-site/fetch-in-same-origin-service-worker.html [ Skip ]
 http/wpt/cache-storage [ Skip ]
@@ -290,6 +293,7 @@ imported/w3c/web-platform-tests/content-security-policy/worker-src/service-worke
 imported/w3c/web-platform-tests/content-security-policy/worker-src/service-worker-src-self-fallback.https.sub.html [ Skip ]
 imported/w3c/web-platform-tests/fetch/api/request/destination [ Skip ]
 imported/w3c/web-platform-tests/fetch/cross-origin-resource-policy [ Skip ]
+imported/w3c/web-platform-tests/fetch/range/sw.https.window.html [ Skip ]
 imported/w3c/web-platform-tests/server-timing/service_worker_idl.html [ Skip ]
 imported/w3c/web-platform-tests/service-workers [ Skip ]
 imported/w3c/web-platform-tests/streams/readable-byte-streams/detached-buffers.serviceworker.https.html [ Skip ]
@@ -299,6 +303,7 @@ imported/w3c/web-platform-tests/IndexedDB/key-generators/reading-autoincrement-i
 imported/w3c/web-platform-tests/IndexedDB/key-generators/reading-autoincrement-indexes.any.serviceworker.html [ Skip ]
 imported/w3c/web-platform-tests/IndexedDB/key-generators/reading-autoincrement-store-cursors.any.serviceworker.html [ Skip ]
 imported/w3c/web-platform-tests/IndexedDB/key-generators/reading-autoincrement-store.any.serviceworker.html [ Skip ]
+imported/w3c/web-platform-tests/html/webappapis/scripting/processing-model-2/integration-with-the-javascript-agent-formalism/requires-failure.https.any.serviceworker.html [ Skip ]
 
 # Quota check missing in WK1
 http/tests/IndexedDB/storage-limit.https.html [ Skip ]
@@ -368,6 +373,7 @@ fast/scrolling/scroll-container-horizontally.html [ Failure ]
 compositing/rtl/rtl-fixed-overflow-scrolled.html [ Failure ]
 compositing/iframes/overlapped-nested-iframes.html [ Pass Failure ]
 compositing/clipping/border-radius-async-overflow-non-stacking.html [ ImageOnlyFailure ]
+compositing/visibility/visibility-change-in-subframe.html [ Failure ]
 
 # Disk cache is WK2 only
 http/tests/cache/disk-cache
@@ -460,6 +466,9 @@ imported/w3c/web-platform-tests/html/browsers/history/the-history-interface/hist
 # Newly imported WPT tests that are flaky only on WK1.
 imported/w3c/web-platform-tests/html/browsers/history/the-location-interface/assign_after_load.html [ Pass Failure ]
 imported/w3c/web-platform-tests/html/browsers/history/the-location-interface/assign_before_load.html [ Pass Failure ]
+
+# Console logs are flaky.
+imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/module/integrity.html [ DumpJSConsoleLogInStdErr ]
 
 # MathML WPT tests failing on WK1
 webkit.org/b/201680 imported/w3c/web-platform-tests/mathml/relations/css-styling/displaystyle-013.html [ ImageOnlyFailure ]
@@ -564,7 +573,7 @@ http/tests/websocket/tests/hybi/network-process-crash-error.html [ Skip ]
 # auto-sizing produces inconsistent image results
 css3/viewport-percentage-lengths/vh-auto-size.html [ Skip ]
 
-webkit.org/b/170877 [ Debug ] webgl/1.0.2/conformance/glsl/misc/shader-with-reserved-words.html [ Pass Timeout ]
+webkit.org/b/170877 [ Debug ] webgl/1.0.3/conformance/glsl/misc/shader-with-reserved-words.html [ Pass Timeout ]
 
 webkit.org/b/180554 imported/w3c/web-platform-tests/xhr/event-upload-progress-crossorigin.htm [ Skip ]
 
@@ -724,8 +733,6 @@ webkit.org/b/187711 [ Debug ] svg/custom/linking-uri-01-b.svg [ Pass Failure ]
 [ Mojave+ ] displaylists/layer-dispay-list.html [ Failure ]
 [ Mojave+ ] displaylists/replay-skip-clipped-rect.html [ Failure ]
 
-webkit.org/b/188357 legacy-animation-engine/compositing/backing/transform-transition-from-outside-view.html [ Pass Failure ]
-
 webkit.org/b/184611 compositing/layer-creation/fixed-overlap-extent.html [ Pass Failure ]
 
 # <rdar://problem/42904780>
@@ -793,6 +800,9 @@ webkit.org/b/198676 imported/w3c/web-platform-tests/content-security-policy/repo
 
 webkit.org/b/199242 [ Debug ] http/tests/performance/performance-resource-timing-resourcetimingbufferfull-shrinking-buffer-crash.html [ Pass Failure ]
 
+# No support for reftest-wait in DRT.
+imported/w3c/web-platform-tests/html/semantics/forms/the-input-element/range-setattribute-value.html [ ImageOnlyFailure ]
+
 # <rdar://problem/42625657> REGRESSION (Mojave): 12 fast/images tests timing out on WK1
 [ Mojave+ ] fast/images/animated-heics-draw.html [ Skip ]
 [ Mojave+ ] fast/images/animated-heics-verify.html [ Skip ]
@@ -801,3 +811,18 @@ webkit.org/b/200002 [ Mojave+ Debug ] imported/blink/storage/indexeddb/blob-basi
 
 # Skip IsLoggedIn
 http/tests/is-logged-in/ [ Skip ]
+
+webkit.org/b/203305 [ Debug ] imported/w3c/web-platform-tests/css/css-transitions/properties-value-inherit-001.html [ Pass Failure ]
+
+# wpt css-position failures
+webkit.org/b/203466 imported/w3c/web-platform-tests/css/css-position/position-sticky-change-top.html [ ImageOnlyFailure ]
+webkit.org/b/203466 imported/w3c/web-platform-tests/css/css-position/position-sticky-scroll-with-clip-and-abspos.html [ ImageOnlyFailure ]
+webkit.org/b/203466 imported/w3c/web-platform-tests/css/css-position/z-index-blend-will-change-overlapping-layers.html [ ImageOnlyFailure ]
+
+webkit.org/b/203501 imported/w3c/web-platform-tests/css/css-animations/animation-opacity-pause-and-set-time.html [ ImageOnlyFailure ]
+webkit.org/b/203501 imported/w3c/web-platform-tests/css/css-animations/animation-transform-pause-and-set-time.html [ ImageOnlyFailure ]
+
+webkit.org/b/203517 imported/w3c/web-platform-tests/css/css-sizing/dynamic-available-size-iframe.html [ Pass ImageOnlyFailure ]
+
+# Stale-while-revalidate is not supported on WK1
+imported/w3c/web-platform-tests/fetch/stale-while-revalidate [ Skip ]

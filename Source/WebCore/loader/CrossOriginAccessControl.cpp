@@ -127,11 +127,15 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
     return cachedRequest;
 }
 
-bool isValidCrossOriginRedirectionURL(const URL& redirectURL)
+String validateCrossOriginRedirectionURL(const URL& redirectURL)
 {
-    return LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol().toStringWithoutCopying())
-        && redirectURL.user().isEmpty()
-        && redirectURL.pass().isEmpty();
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol().toStringWithoutCopying()))
+        return makeString("not allowed to follow a cross-origin CORS redirection with non CORS scheme");
+
+    if (redirectURL.hasUsername() || redirectURL.hasPassword())
+        return makeString("redirection URL ", redirectURL.string(), " has credentials");
+
+    return { };
 }
 
 OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTTPHeaderMap& headers)
@@ -153,8 +157,11 @@ OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTT
 void cleanHTTPRequestHeadersForAccessControl(ResourceRequest& request, OptionSet<HTTPHeadersToKeepFromCleaning> headersToKeep)
 {
     // Remove headers that may have been added by the network layer that cause access control to fail.
-    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::ContentType) && !isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, request.httpContentType()))
-        request.clearHTTPContentType();
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::ContentType)) {
+        auto contentType = request.httpContentType();
+        if (!contentType.isNull() && !isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, contentType))
+            request.clearHTTPContentType();
+    }
     if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Referer))
         request.clearHTTPReferrer();
     if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Origin))
@@ -244,6 +251,13 @@ Optional<ResourceError> validateCrossOriginResourcePolicy(const SecurityOrigin& 
 {
     if (shouldCrossOriginResourcePolicyCancelLoad(origin, response))
         return ResourceError { errorDomainWebKitInternal, 0, requestURL, makeString("Cancelled load to ", response.url().stringCenterEllipsizedToLength(), " because it violates the resource's Cross-Origin-Resource-Policy response header."), ResourceError::Type::AccessControl };
+    return WTF::nullopt;
+}
+
+Optional<ResourceError> validateRangeRequestedFlag(const ResourceRequest& request, const ResourceResponse& response)
+{
+    if (response.isRangeRequested() && response.httpStatusCode() == 206 && response.type() == ResourceResponse::Type::Opaque && !request.hasHTTPHeaderField(HTTPHeaderName::Range))
+        return ResourceError({ }, 0, response.url(), { }, ResourceError::Type::General);
     return WTF::nullopt;
 }
 

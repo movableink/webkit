@@ -36,6 +36,7 @@
 namespace WebCore {
 
 class Document;
+class Frame;
 class Page;
 
 class PageDebuggerAgent final : public WebDebuggerAgent {
@@ -50,10 +51,10 @@ public:
     void evaluateOnCallFrame(ErrorString&, const String& callFrameId, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex) override;
 
     // ScriptDebugListener
-    void breakpointActionLog(JSC::ExecState&, const String&) override;
+    void breakpointActionLog(JSC::JSGlobalObject*, const String&) override;
 
     // InspectorInstrumentation
-    void didClearMainFrameWindowObject();
+    void didClearWindowObjectInWorld(Frame&);
     void mainFrameStartedLoading();
     void mainFrameStoppedLoading();
     void mainFrameNavigated();

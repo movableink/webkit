@@ -27,7 +27,6 @@
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
 
-#include "Connection.h"
 #include "StorageAccessStatus.h"
 #include "WebPageProxyIdentifier.h"
 #include "WebsiteDataType.h"
@@ -105,8 +104,9 @@ public:
 
     static const OptionSet<WebsiteDataType>& monitoredDataTypes();
 
-    WorkQueue& statisticsQueue() { return m_statisticsQueue.get(); }
+    WTF::WorkQueue& statisticsQueue() { return m_statisticsQueue.get(); }
 
+    void populateMemoryStoreFromDisk(CompletionHandler<void()>&&);
     void setNotifyPagesWhenDataRecordsWereScanned(bool);
     void setNotifyPagesWhenTelemetryWasCaptured(bool, CompletionHandler<void()>&&);
     void setShouldClassifyResourcesBeforeDataRecordsRemoval(bool, CompletionHandler<void()>&&);
@@ -179,7 +179,7 @@ public:
     void callHasStorageAccessForFrameHandler(const SubFrameDomain&, const TopFrameDomain&, WebCore::FrameIdentifier, WebCore::PageIdentifier, CompletionHandler<void(bool)>&&);
 
     void hasCookies(const RegistrableDomain&, CompletionHandler<void(bool)>&&);
-
+    void setIsThirdPartyCookieBlockingEnabled(bool);
     void didCreateNetworkProcess();
 
     void notifyResourceLoadStatisticsProcessed();
@@ -206,7 +206,7 @@ private:
     void flushAndDestroyPersistentStore();
 
     WeakPtr<NetworkSession> m_networkSession;
-    Ref<WorkQueue> m_statisticsQueue;
+    Ref<WTF::WorkQueue> m_statisticsQueue;
     std::unique_ptr<ResourceLoadStatisticsStore> m_statisticsStore;
     std::unique_ptr<ResourceLoadStatisticsPersistentStorage> m_persistentStorage;
 

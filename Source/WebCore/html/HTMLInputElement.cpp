@@ -62,7 +62,7 @@
 #include "ScopedEventQueue.h"
 #include "SearchInputType.h"
 #include "Settings.h"
-#include "StyleResolver.h"
+#include "StyleGeneratedImage.h"
 #include "TextControlInnerElements.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
@@ -1550,7 +1550,7 @@ Node::InsertedIntoAncestorResult HTMLInputElement::insertedIntoAncestor(Insertio
 void HTMLInputElement::didFinishInsertingNode()
 {
     HTMLTextFormControlElement::didFinishInsertingNode();
-    if (isConnected() && !form())
+    if (isInTreeScope() && !form())
         addToRadioButtonGroup();
 }
 
@@ -2056,16 +2056,18 @@ static Ref<CSSLinearGradientValue> autoFillStrongPasswordMaskImage()
 {
     CSSGradientColorStop firstStop;
     firstStop.m_color = CSSValuePool::singleton().createColorValue(Color::black);
-    firstStop.m_position = CSSValuePool::singleton().createValue(50, CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+    firstStop.m_position = CSSValuePool::singleton().createValue(50, CSSUnitType::CSS_PERCENTAGE);
 
     CSSGradientColorStop secondStop;
     secondStop.m_color = CSSValuePool::singleton().createColorValue(Color::transparent);
-    secondStop.m_position = CSSValuePool::singleton().createValue(100, CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+    secondStop.m_position = CSSValuePool::singleton().createValue(100, CSSUnitType::CSS_PERCENTAGE);
 
     auto gradient = CSSLinearGradientValue::create(CSSGradientRepeat::NonRepeating, CSSGradientType::CSSLinearGradient);
-    gradient->setAngle(CSSValuePool::singleton().createValue(90, CSSPrimitiveValue::UnitType::CSS_DEG));
+    gradient->setAngle(CSSValuePool::singleton().createValue(90, CSSUnitType::CSS_DEG));
     gradient->addStop(firstStop);
     gradient->addStop(secondStop);
+    gradient->resolveRGBColors();
+
     return gradient;
 }
 
@@ -2088,10 +2090,10 @@ RenderStyle HTMLInputElement::createInnerTextStyle(const RenderStyle& style)
         textBlockStyle.setMaxWidth(Length { 100, Percent });
         textBlockStyle.setColor({ 0.0f, 0.0f, 0.0f, 0.6f });
         textBlockStyle.setTextOverflow(TextOverflow::Clip);
-        textBlockStyle.setMaskImage(styleResolver().styleImage(autoFillStrongPasswordMaskImage()));
+        textBlockStyle.setMaskImage(StyleGeneratedImage::create(autoFillStrongPasswordMaskImage()));
         // A stacking context is needed for the mask.
-        if (textBlockStyle.hasAutoZIndex())
-            textBlockStyle.setZIndex(0);
+        if (textBlockStyle.hasAutoUsedZIndex())
+            textBlockStyle.setUsedZIndex(0);
     }
 
     // Do not allow line-height to be smaller than our default.

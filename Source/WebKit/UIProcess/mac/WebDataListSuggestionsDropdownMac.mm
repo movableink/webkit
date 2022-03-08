@@ -199,7 +199,9 @@ void WebDataListSuggestionsDropdownMac::close()
 - (void)setBackgroundStyle:(NSBackgroundStyle)backgroundStyle
 {
     [super setBackgroundStyle:backgroundStyle];
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     self.textField.textColor = backgroundStyle == NSBackgroundStyleLight ? [NSColor textColor] : [NSColor alternateSelectedControlTextColor];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (BOOL)acceptsFirstResponder
@@ -402,7 +404,11 @@ void WebDataListSuggestionsDropdownMac::close()
 
 - (void)selectedRow:(NSTableView *)sender
 {
-    _dropdown->didSelectOption(_suggestions.at([sender selectedRow]));
+    auto selectedString = self.currentSelectedString;
+    if (!selectedString)
+        return;
+
+    _dropdown->didSelectOption(selectedString);
 }
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView

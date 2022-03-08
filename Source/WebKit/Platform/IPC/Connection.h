@@ -32,7 +32,6 @@
 #include "Encoder.h"
 #include "HandleMessage.h"
 #include "MessageReceiver.h"
-#include <WebCore/ScriptDisallowedScope.h>
 #include <atomic>
 #include <wtf/Condition.h>
 #include <wtf/Deque.h>
@@ -52,7 +51,7 @@
 #endif
 
 #if USE(GLIB) && !PLATFORM(QT)
-#include "GSocketMonitor.h"
+#include <wtf/glib/GSocketMonitor.h>
 #endif
 
 #if PLATFORM(QT)
@@ -189,29 +188,33 @@ public:
 
     void postConnectionDidCloseOnConnectionWorkQueue();
 
-    template<typename T, typename C> void sendWithAsyncReply(T&& message, C&& completionHandler, uint64_t destinationID = 0, OptionSet<SendOption> = { });
-    template<typename T> bool send(T&& message, uint64_t destinationID, OptionSet<SendOption> sendOptions = { });
-    template<typename T> bool sendSync(T&& message, typename T::Reply&& reply, uint64_t destinationID, Seconds timeout = Seconds::infinity(), OptionSet<SendSyncOption> sendSyncOptions = { });
-    template<typename T> bool waitForAndDispatchImmediately(uint64_t destinationID, Seconds timeout, OptionSet<WaitForOption> waitForOptions = { });
+    template<typename T, typename C> void sendWithAsyncReply(T&& message, C&& completionHandler, uint64_t destinationID = 0, OptionSet<SendOption> = { }); // Thread-safe.
+    template<typename T> bool send(T&& message, uint64_t destinationID, OptionSet<SendOption> sendOptions = { }); // Thread-safe.
+    template<typename T> bool sendSync(T&& message, typename T::Reply&& reply, uint64_t destinationID, Seconds timeout = Seconds::infinity(), OptionSet<SendSyncOption> sendSyncOptions = { }); // Main thread only.
+    template<typename T> bool waitForAndDispatchImmediately(uint64_t destinationID, Seconds timeout, OptionSet<WaitForOption> waitForOptions = { }); // Main thread only.
     
+    // Thread-safe.
     template<typename T, typename C, typename U>
     void sendWithAsyncReply(T&& message, C&& completionHandler, ObjectIdentifier<U> destinationID = { }, OptionSet<SendOption> sendOptions = { })
     {
         sendWithAsyncReply<T, C>(WTFMove(message), WTFMove(completionHandler), destinationID.toUInt64(), sendOptions);
     }
     
+    // Thread-safe.
     template<typename T, typename U>
     bool send(T&& message, ObjectIdentifier<U> destinationID, OptionSet<SendOption> sendOptions = { })
     {
         return send<T>(WTFMove(message), destinationID.toUInt64(), sendOptions);
     }
 
+    // Main thread only.
     template<typename T, typename U>
     bool sendSync(T&& message, typename T::Reply&& reply, ObjectIdentifier<U> destinationID, Seconds timeout = Seconds::infinity(), OptionSet<SendSyncOption> sendSyncOptions = { })
     {
         return sendSync<T>(WTFMove(message), WTFMove(reply), destinationID.toUInt64(), timeout, sendSyncOptions);
     }
     
+    // Main thread only.
     template<typename T, typename U>
     bool waitForAndDispatchImmediately(ObjectIdentifier<U> destinationID, Seconds timeout, OptionSet<WaitForOption> waitForOptions = { })
     {
@@ -492,6 +495,7 @@ void moveTuple(std::tuple<A...>&& a, std::tuple<B...>& b)
 template<typename T> bool Connection::sendSync(T&& message, typename T::Reply&& reply, uint64_t destinationID, Seconds timeout, OptionSet<SendSyncOption> sendSyncOptions)
 {
     COMPILE_ASSERT(T::isSync, SyncMessageExpected);
+    RELEASE_ASSERT(RunLoop::isMain());
 
     uint64_t syncRequestID = 0;
     std::unique_ptr<Encoder> encoder = createSyncMessageEncoder(T::receiverName(), T::name(), destinationID, syncRequestID);
@@ -520,6 +524,7 @@ template<typename T> bool Connection::sendSync(T&& message, typename T::Reply&& 
 
 template<typename T> bool Connection::waitForAndDispatchImmediately(uint64_t destinationID, Seconds timeout, OptionSet<WaitForOption> waitForOptions)
 {
+    RELEASE_ASSERT(RunLoop::isMain());
     std::unique_ptr<Decoder> decoder = waitForMessage(T::receiverName(), T::name(), destinationID, timeout, waitForOptions);
     if (!decoder)
         return false;

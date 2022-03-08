@@ -40,7 +40,13 @@
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+#include "DisplayBox.h"
+#include "InvalidationContext.h"
+#include "InvalidationState.h"
 #include "LayoutContext.h"
+#include "LayoutState.h"
+#include "LayoutTreeBuilder.h"
+#include "RenderDescendantIterator.h"
 #endif
 
 #include <wtf/SetForScope.h>
@@ -50,12 +56,48 @@
 namespace WebCore {
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-static void layoutUsingFormattingContext(const RenderView& renderView)
+void FrameViewLayoutContext::layoutUsingFormattingContext()
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled())
         return;
-    Layout::LayoutContext::runLayoutAndVerify(renderView);
-} 
+
+    auto& renderView = *this->renderView();
+    if (!m_layoutTreeContent) {
+        m_layoutTreeContent = Layout::TreeBuilder::buildLayoutTree(renderView);
+        // FIXME: New layout tree requires a new state for now.
+        m_layoutState = nullptr;
+    }
+    if (!m_layoutState)
+        m_layoutState = makeUnique<Layout::LayoutState>(*m_layoutTreeContent);
+
+    // FIXME: This is not the real invalidation yet.
+    auto invalidationState = Layout::InvalidationState { };
+    auto invalidationContext = Layout::InvalidationContext { invalidationState };
+    invalidationContext.styleChanged(*m_layoutState->root().firstChild(), StyleDifference::Layout);
+
+    auto layoutContext = Layout::LayoutContext { *m_layoutState };
+    layoutContext.layout(view().layoutSize(), invalidationState);
+
+    // Clean up the render tree state when we don't run RenderView::layout.
+    if (renderView.needsLayout()) {
+        auto contentSize = m_layoutState->displayBoxForLayoutBox(*m_layoutState->root().firstChild()).size();
+        renderView.setSize(contentSize);
+        renderView.repaintViewRectangle({ 0, 0, contentSize.width(), contentSize.height() });
+
+        for (auto& descendant : descendantsOfType<RenderObject>(renderView))
+            descendant.clearNeedsLayout();
+        renderView.clearNeedsLayout();
+    }
+
+#ifndef NDEBUG
+    Layout::LayoutContext::verifyAndOutputMismatchingLayoutTree(*m_layoutState);
+#endif
+}
+
+void FrameViewLayoutContext::invalidateLayoutTreeContent()
+{
+    m_layoutTreeContent = nullptr;
+}
 #endif
 
 static bool isObjectAncestorContainerOf(RenderElement& ancestor, RenderElement& descendant)
@@ -204,7 +246,7 @@ void FrameViewLayoutContext::layout()
 #endif
         layoutRoot->layout();
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-        layoutUsingFormattingContext(*renderView());
+        layoutUsingFormattingContext();
 #endif
         ++m_layoutCount;
 #if ENABLE(TEXT_AUTOSIZING)
@@ -519,7 +561,7 @@ void FrameViewLayoutContext::updateStyleForLayout()
     // Viewport-dependent media queries may cause us to need completely different style information.
     document.styleScope().evaluateMediaQueriesForViewportChange();
 
-    document.evaluateMediaQueryList();
+    document.updateElementsAffectedByMediaQueries();
     // If there is any pagination to apply, it will affect the RenderView's style, so we should
     // take care of that now.
     view().applyPaginationToViewport();

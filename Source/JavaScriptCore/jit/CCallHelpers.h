@@ -43,7 +43,6 @@ namespace JSC {
 
 class CallFrame;
 class Structure;
-using ExecState = CallFrame;
 namespace DFG {
 class RegisteredStructure;
 };
@@ -651,7 +650,7 @@ public:
 #define FIRST_ARGUMENT_TYPE typename FunctionTraits<OperationType>::template ArgumentType<0>
 
     template<typename OperationType, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<std::is_same<FIRST_ARGUMENT_TYPE, ExecState*>::value> setupArguments(Args... args)
+    ALWAYS_INLINE std::enable_if_t<std::is_same<FIRST_ARGUMENT_TYPE, CallFrame*>::value> setupArguments(Args... args)
     {
 #if USE(JSVALUE64)
         // This only really works for 64-bit since jsvalue regs mess things up for 32-bit...
@@ -661,7 +660,7 @@ public:
     }
 
     template<typename OperationType, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<!std::is_same<FIRST_ARGUMENT_TYPE, ExecState*>::value> setupArguments(Args... args)
+    ALWAYS_INLINE std::enable_if_t<!std::is_same<FIRST_ARGUMENT_TYPE, CallFrame*>::value> setupArguments(Args... args)
     {
 #if USE(JSVALUE64)
         // This only really works for 64-bit since jsvalue regs mess things up for 32-bit...

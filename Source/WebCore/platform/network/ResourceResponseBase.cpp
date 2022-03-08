@@ -94,6 +94,7 @@ ResourceResponseBase::CrossThreadData ResourceResponseBase::crossThreadData() co
     data.type = m_type;
     data.tainting = m_tainting;
     data.isRedirected = m_isRedirected;
+    data.isRangeRequested = m_isRangeRequested;
 
     return data;
 }
@@ -116,6 +117,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     response.m_type = data.type;
     response.m_tainting = data.tainting;
     response.m_isRedirected = data.isRedirected;
+    response.m_isRangeRequested = data.isRangeRequested;
 
     return response;
 }
@@ -653,6 +655,13 @@ Optional<Seconds> ResourceResponseBase::cacheControlMaxAge() const
     if (!m_haveParsedCacheControlHeader)
         parseCacheControlDirectives();
     return m_cacheControlDirectives.maxAge;
+}
+
+Optional<Seconds> ResourceResponseBase::cacheControlStaleWhileRevalidate() const
+{
+    if (!m_haveParsedCacheControlHeader)
+        parseCacheControlDirectives();
+    return m_cacheControlDirectives.staleWhileRevalidate;
 }
 
 static Optional<WallTime> parseDateValueInHeader(const HTTPHeaderMap& headers, HTTPHeaderName headerName)

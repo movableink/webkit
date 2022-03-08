@@ -180,6 +180,9 @@ window.test_driver_internal.send_keys = function(element, keys)
 
 window.test_driver_internal.click = function (element, coords)
 {
+    if (!window.testRunner)
+        return Promise.resolve();
+
     if (!window.eventSender)
         return Promise.reject(new Error("window.eventSender is undefined."));
 
@@ -241,7 +244,7 @@ window.test_driver_internal.action_sequence = function(sources)
 
     if (pointerType === "touch")
         return dispatchTouchActions(pointerSource.actions);
-    if ("createTouch" in document)
+    if (testRunner.isIOSFamily && "createTouch" in document)
         return dispatchTouchActions(pointerSource.actions, { insertPauseAfterPointerUp: true });
     if (pointerType === "mouse")
         return dispatchMouseActions(pointerSource.actions);

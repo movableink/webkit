@@ -35,11 +35,11 @@ class FixedVMPoolExecutableAllocator;
 
 #if CPU(ARM64) || PLATFORM(WATCHOS)
 constexpr size_t PageSize = 16 * KB;
-constexpr size_t ConfigSizeToProtect = 1 * PageSize;
 #else
 constexpr size_t PageSize = 4 * KB;
-constexpr size_t ConfigSizeToProtect = 1 * PageSize;
 #endif
+
+constexpr size_t ConfigSizeToProtect = PageSize;
 
 #if ENABLE(SEPARATED_WX_HEAP)
 using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
@@ -81,29 +81,7 @@ struct Config {
             bool useFastPermisionsJITCopy;
 #endif
 
-            bool typeBoolOptions[NumberOfBoolOptions];
-            bool typeBoolDefaultOptions[NumberOfBoolOptions];
-
-            GCLogging::Level typeGCLogLevelOptions[NumberOfGCLogLevelOptions];
-            GCLogging::Level typeGCLogLevelDefaultOptions[NumberOfGCLogLevelOptions];
-
-            int32_t typeInt32Options[NumberOfInt32Options];
-            int32_t typeInt32DefaultOptions[NumberOfInt32Options];
-
-            unsigned typeUnsignedOptions[NumberOfUnsignedOptions];
-            unsigned typeUnsignedDefaultOptions[NumberOfUnsignedOptions];
-
-            double typeDoubleOptions[NumberOfDoubleOptions];
-            double typeDoubleDefaultOptions[NumberOfDoubleOptions];
-
-            size_t typeSizeOptions[NumberOfSizeOptions];
-            size_t typeSizeDefaultOptions[NumberOfSizeOptions];
-
-            const char* typeOptionStringOptions[NumberOfOptionStringOptions];
-            const char* typeOptionStringDefaultOptions[NumberOfOptionStringOptions];
-
-            OptionRange typeOptionRangeOptions[NumberOfOptionRangeOptions];
-            OptionRange typeOptionRangeDefaultOptions[NumberOfOptionRangeOptions];
+            OptionsStorage options;
         };
         char ensureSize[ConfigSizeToProtect];
     };

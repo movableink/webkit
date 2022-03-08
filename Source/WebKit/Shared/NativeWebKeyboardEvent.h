@@ -41,8 +41,6 @@ struct KeypressCommand;
 #endif
 
 #if PLATFORM(GTK)
-#include "InputMethodFilter.h"
-#include <WebCore/CompositionResults.h>
 #include <WebCore/GUniquePtrGtk.h>
 typedef union _GdkEvent GdkEvent;
 #endif
@@ -75,7 +73,9 @@ public:
     explicit NativeWebKeyboardEvent(QKeyEvent*);
 #elif PLATFORM(GTK)
     NativeWebKeyboardEvent(const NativeWebKeyboardEvent&);
-    NativeWebKeyboardEvent(GdkEvent*, const WebCore::CompositionResults&, InputMethodFilter::EventFakedForComposition, Vector<String>&& commands);
+    enum class HandledByInputMethod : bool { No, Yes };
+    enum class FakedForComposition : bool { No, Yes };
+    NativeWebKeyboardEvent(GdkEvent*, const String&, HandledByInputMethod, FakedForComposition, Vector<String>&& commands);
 #elif PLATFORM(IOS_FAMILY)
     enum class HandledByInputMethod : bool { No, Yes };
     NativeWebKeyboardEvent(::WebEvent *, HandledByInputMethod);
@@ -91,8 +91,9 @@ public:
     const QKeyEvent* nativeEvent() const { return &m_nativeEvent; }
 #elif PLATFORM(GTK)
     GdkEvent* nativeEvent() const { return m_nativeEvent.get(); }
-    const WebCore::CompositionResults& compositionResults() const  { return m_compositionResults; }
-    bool isFakeEventForComposition() const { return m_fakeEventForComposition; }
+    const String& text() const { return m_text; }
+    bool handledByInputMethod() const { return m_handledByInputMethod == HandledByInputMethod::Yes; }
+    bool fakedForComposition() const { return m_fakedForComposition == FakedForComposition::Yes; }
 #elif PLATFORM(IOS_FAMILY)
     ::WebEvent* nativeEvent() const { return m_nativeEvent.get(); }
 #elif PLATFORM(WIN)
@@ -108,8 +109,9 @@ private:
     QKeyEvent m_nativeEvent;
 #elif PLATFORM(GTK)
     GUniquePtr<GdkEvent> m_nativeEvent;
-    WebCore::CompositionResults m_compositionResults;
-    bool m_fakeEventForComposition;
+    String m_text;
+    HandledByInputMethod m_handledByInputMethod;
+    FakedForComposition m_fakedForComposition;
 #elif PLATFORM(IOS_FAMILY)
     RetainPtr<::WebEvent> m_nativeEvent;
 #elif PLATFORM(WIN)

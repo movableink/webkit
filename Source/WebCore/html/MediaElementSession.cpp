@@ -436,7 +436,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return true;
     }
 
-    if (client().presentationType() == Audio) {
+    if (client().presentationType() == Audio && purpose == PlaybackControlsPurpose::ControlsManager) {
         if (!hasBehaviorRestriction(RequireUserGestureToControlControlsManager) || m_element.document().processingUserGestureForMedia()) {
             INFO_LOG(LOGIDENTIFIER, "returning TRUE: audio element with user gesture");
             return true;
@@ -600,6 +600,11 @@ bool MediaElementSession::wirelessVideoPlaybackDisabled() const
     }
 #endif
 
+    if (m_element.document().settings().remotePlaybackEnabled() && m_element.hasAttributeWithoutSynchronization(HTMLNames::disableremoteplaybackAttr)) {
+        LOG(Media, "MediaElementSession::wirelessVideoPlaybackDisabled - returning TRUE because of RemotePlayback attribute");
+        return true;
+    }
+
     auto player = m_element.player();
     if (!player)
         return true;
@@ -676,6 +681,12 @@ void MediaElementSession::setShouldPlayToPlaybackTarget(bool shouldPlay)
     m_shouldPlayToPlaybackTarget = shouldPlay;
     updateClientDataBuffering();
     client().setShouldPlayToPlaybackTarget(shouldPlay);
+}
+
+void MediaElementSession::playbackTargetPickerWasDismissed()
+{
+    INFO_LOG(LOGIDENTIFIER);
+    client().playbackTargetPickerWasDismissed();
 }
 
 void MediaElementSession::mediaStateDidChange(MediaProducer::MediaStateFlags state)

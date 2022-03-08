@@ -150,7 +150,8 @@ void PointerCaptureController::elementWasRemoved(Element& element)
             auto pointerId = static_cast<PointerID>(keyAndValue.key);
             auto pointerType = capturingData.pointerType;
             releasePointerCapture(&element, pointerId);
-            element.document().enqueueDocumentEvent(PointerEvent::create(eventNames().lostpointercaptureEvent, pointerId, pointerType));
+            // FIXME: Spec doesn't specify which task soruce to use.
+            element.document().queueTaskToDispatchEvent(TaskSource::UserInteraction, PointerEvent::create(eventNames().lostpointercaptureEvent, pointerId, pointerType));
             return;
         }
     }
@@ -159,11 +160,10 @@ void PointerCaptureController::elementWasRemoved(Element& element)
 void PointerCaptureController::reset()
 {
     m_activePointerIdsToCapturingData.clear();
-#if !ENABLE(TOUCH_EVENTS)
+
     CapturingData capturingData;
     capturingData.pointerType = PointerEvent::mousePointerType();
     m_activePointerIdsToCapturingData.add(mousePointerID, capturingData);
-#endif
 }
 
 void PointerCaptureController::touchWithIdentifierWasRemoved(PointerID pointerId)

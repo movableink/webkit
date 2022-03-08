@@ -71,9 +71,9 @@
 #import <pal/spi/cf/CFUtilitiesSPI.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
+#import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/cocoa/pthreadSPI.h>
-#import <pal/spi/mac/NSAccessibilitySPI.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <stdio.h>
 #import <wtf/FileSystem.h>
@@ -297,27 +297,54 @@ void WebProcess::processTaskStateDidChange(ProcessTaskStateObserver::TaskState t
 {
     // NOTE: This will be called from a background thread.
     RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() - taskState(%d)", this, taskState);
-    if (taskState == ProcessTaskStateObserver::None)
+    if (taskState != ProcessTaskStateObserver::Running)
         return;
 
-    if (taskState == ProcessTaskStateObserver::Suspended) {
-        if (m_processIsSuspended)
-            return;
-
-        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() - unexpectedly entered Suspended state", this);
-        return;
-    }
-
-    if (!m_processIsSuspended)
+    LockHolder holder(m_processWasResumedAssertionsLock);
+    if (m_processWasResumedUIAssertion && m_processWasResumedOwnAssertion)
         return;
 
     // We were awakened from suspension unexpectedly. Notify the WebProcessProxy, but take a process assertion on our parent PID
     // to ensure that it too is awakened.
+    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() Taking 'WebProcess was resumed' assertion on behalf on UIProcess", this);
+    m_processWasResumedUIAssertion = adoptNS([[BKSProcessAssertion alloc] initWithPID:parentProcessConnection()->remoteProcessID() flags:BKSProcessAssertionPreventTaskSuspend reason:BKSProcessAssertionReasonFinishTask name:@"WebProcess was resumed" withHandler:^(BOOL acquired) {
+        if (!acquired)
+            RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() failed to take 'WebProcess was resumed' assertion for parent process", this);
+    }]);
+    m_processWasResumedUIAssertion.get().invalidationHandler = [this] {
+        RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() Releasing 'WebProcess was resumed' assertion on behalf on UIProcess due to invalidation", this);
+        releaseProcessWasResumedAssertions();
+    };
+    m_processWasResumedOwnAssertion = adoptNS([[BKSProcessAssertion alloc] initWithPID:getpid() flags:BKSProcessAssertionPreventTaskSuspend reason:BKSProcessAssertionReasonFinishTask name:@"WebProcess was resumed" withHandler:^(BOOL acquired) {
+        if (!acquired)
+            RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() failed to take 'WebProcess was resumed' assertion for WebContent process", this);
+    }]);
+    m_processWasResumedOwnAssertion.get().invalidationHandler = [this] {
+        RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() Releasing 'WebProcess was resumed' assertion on behalf on WebContent process due to invalidation", this);
+        releaseProcessWasResumedAssertions();
+    };
 
-    auto uiProcessAssertion = adoptNS([[BKSProcessAssertion alloc] initWithPID:parentProcessConnection()->remoteProcessID() flags:BKSProcessAssertionPreventTaskSuspend reason:BKSProcessAssertionReasonFinishTask name:@"Unexpectedly resumed" withHandler:nil]);
-    parentProcessConnection()->send(Messages::WebProcessProxy::ProcessWasUnexpectedlyUnsuspended(), 0);
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), [assertion = WTFMove(uiProcessAssertion)] { [assertion invalidate]; });
+    parentProcessConnection()->sendWithAsyncReply(Messages::WebProcessProxy::ProcessWasResumed(), [this] {
+        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() Parent process handled ProcessWasResumed IPC, releasing our assertions", this);
+        releaseProcessWasResumedAssertions();
+    });
 }
+
+void WebProcess::releaseProcessWasResumedAssertions()
+{
+    LockHolder holder(m_processWasResumedAssertionsLock);
+    if (m_processWasResumedUIAssertion) {
+        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::releaseProcessWasResumedAssertions() Releasing parent process 'WebProcess was resumed' assertion", this);
+        [m_processWasResumedUIAssertion invalidate];
+        m_processWasResumedUIAssertion = nullptr;
+    }
+    if (m_processWasResumedOwnAssertion) {
+        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::releaseProcessWasResumedAssertions() Releasing WebContent process 'WebProcess was resumed' assertion", this);
+        [m_processWasResumedOwnAssertion invalidate];
+        m_processWasResumedOwnAssertion = nullptr;
+    }
+}
+
 #endif
 
 #if PLATFORM(IOS_FAMILY)

@@ -103,14 +103,17 @@ class WPEPort(Port):
     def _path_to_image_diff(self):
         return self._built_executables_path('ImageDiff')
 
+    def _path_to_default_image_diff(self):
+        return self._path_to_image_diff()
+
     def _search_paths(self):
         return [self.port_name, 'wk2'] + self.get_option("additional_platform_directory", [])
 
     def default_baseline_search_path(self, **kwargs):
-        return map(self._webkit_baseline_path, self._search_paths())
+        return list(map(self._webkit_baseline_path, self._search_paths()))
 
     def _port_specific_expectations_files(self, **kwargs):
-        return map(lambda x: self._filesystem.join(self._webkit_baseline_path(x), 'TestExpectations'), reversed(self._search_paths()))
+        return list(map(lambda x: self._filesystem.join(self._webkit_baseline_path(x), 'TestExpectations'), reversed(self._search_paths())))
 
     def test_expectations_file_position(self):
         # WPE port baseline search path is wpe -> wk2 -> generic, so port test expectations file is at third to last position.
@@ -118,3 +121,8 @@ class WPEPort(Port):
 
     def _get_crash_log(self, name, pid, stdout, stderr, newer_than, target_host=None):
         return GDBCrashLogGenerator(self._executive, name, pid, newer_than, self._filesystem, self._path_to_driver).generate_crash_log(stdout, stderr)
+
+    def configuration_for_upload(self, host=None):
+        configuration = super(WPEPort, self).configuration_for_upload(host=host)
+        configuration['platform'] = 'WPE'
+        return configuration

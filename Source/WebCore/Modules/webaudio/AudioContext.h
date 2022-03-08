@@ -126,11 +126,8 @@ public:
 
     AudioListener* listener() { return m_listener.get(); }
 
-    using ActiveDOMObject::suspend;
-    using ActiveDOMObject::resume;
-
-    void suspend(DOMPromiseDeferred<void>&&);
-    void resume(DOMPromiseDeferred<void>&&);
+    void suspendRendering(DOMPromiseDeferred<void>&&);
+    void resumeRendering(DOMPromiseDeferred<void>&&);
     void close(DOMPromiseDeferred<void>&&);
 
     enum class State { Suspended, Running, Interrupted, Closed };
@@ -294,6 +291,9 @@ public:
     const SecurityOrigin* origin() const;
     void addConsoleMessage(MessageSource, MessageLevel, const String& message);
 
+    // EventTarget
+    ScriptExecutionContext* scriptExecutionContext() const final;
+
 protected:
     explicit AudioContext(Document&);
     AudioContext(Document&, AudioBuffer* renderTarget);
@@ -323,7 +323,6 @@ private:
     void mediaCanStart(Document&) override;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final;
     void dispatchEvent(Event&) final;
 
     // MediaProducer
@@ -338,8 +337,9 @@ private:
     void derefNode(AudioNode&);
 
     // ActiveDOMObject API.
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
     void stop() override;
-    bool shouldPreventEnteringBackForwardCache_DEPRECATED() const override;
     const char* activeDOMObjectName() const override;
 
     // When the context goes away, there might still be some sources which haven't finished playing.

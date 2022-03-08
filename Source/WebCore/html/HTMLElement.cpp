@@ -34,6 +34,7 @@
 #include "DOMTokenList.h"
 #include "DocumentFragment.h"
 #include "ElementAncestorIterator.h"
+#include "EnterKeyHint.h"
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
@@ -113,7 +114,7 @@ unsigned HTMLElement::parseBorderWidthAttribute(const AtomString& value) const
 
 void HTMLElement::applyBorderAttributeToStyle(const AtomString& value, MutableStyleProperties& style)
 {
-    addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSPrimitiveValue::CSS_PX);
+    addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSUnitType::CSS_PX);
     addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 }
 
@@ -1117,6 +1118,21 @@ const AtomString& HTMLElement::inputMode() const
 void HTMLElement::setInputMode(const AtomString& value)
 {
     setAttributeWithoutSynchronization(inputmodeAttr, value);
+}
+
+EnterKeyHint HTMLElement::canonicalEnterKeyHint() const
+{
+    return enterKeyHintForAttributeValue(attributeWithoutSynchronization(enterkeyhintAttr));
+}
+
+String HTMLElement::enterKeyHint() const
+{
+    return attributeValueForEnterKeyHint(canonicalEnterKeyHint());
+}
+
+void HTMLElement::setEnterKeyHint(const String& value)
+{
+    setAttributeWithoutSynchronization(enterkeyhintAttr, value);
 }
 
 } // namespace WebCore

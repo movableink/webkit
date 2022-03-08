@@ -29,10 +29,12 @@
 #include "Connection.h"
 #include "DownloadID.h"
 #include "NetworkActivityTracker.h"
-#include "NetworkConnectionToWebProcessMessages.h"
+#include "NetworkConnectionToWebProcessMessagesReplies.h"
 #include "NetworkMDNSRegister.h"
 #include "NetworkRTCProvider.h"
 #include "NetworkResourceLoadMap.h"
+#include "SandboxExtension.h"
+#include "WebPageProxyIdentifier.h"
 #include "WebPaymentCoordinatorProxy.h"
 #include "WebResourceLoadObserver.h"
 #include <WebCore/FrameIdentifier.h>
@@ -50,6 +52,7 @@ class SessionID;
 
 namespace WebCore {
 class BlobDataFileReference;
+class BlobPart;
 class BlobRegistryImpl;
 class ResourceError;
 class ResourceRequest;
@@ -62,8 +65,10 @@ enum class IncludeSecureCookies : bool;
 
 namespace WebKit {
 
+class NetworkSchemeRegistry;
 class NetworkProcess;
 class NetworkResourceLoader;
+class NetworkResourceLoadParameters;
 class NetworkSession;
 class NetworkSocketChannel;
 class NetworkSocketStream;
@@ -157,7 +162,10 @@ public:
 
 #if ENABLE(SERVICE_WORKER)
     void serverToContextConnectionNoLongerNeeded();
+    WebSWServerConnection& swConnection();
 #endif
+
+    NetworkSchemeRegistry& schemeRegistry() { return m_schemeRegistry.get(); }
 
 private:
     NetworkConnectionToWebProcess(NetworkProcess&, WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Identifier);
@@ -176,8 +184,8 @@ private:
     void didReceiveSyncNetworkConnectionToWebProcessMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&);
 
     void scheduleResourceLoad(NetworkResourceLoadParameters&&);
-    void performSynchronousLoad(NetworkResourceLoadParameters&&, Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad::DelayedReply&&);
-    void testProcessIncomingSyncMessagesWhenWaitingForSyncReply(WebPageProxyIdentifier, Messages::NetworkConnectionToWebProcess::TestProcessIncomingSyncMessagesWhenWaitingForSyncReply::DelayedReply&&);
+    void performSynchronousLoad(NetworkResourceLoadParameters&&, Messages::NetworkConnectionToWebProcess::PerformSynchronousLoadDelayedReply&&);
+    void testProcessIncomingSyncMessagesWhenWaitingForSyncReply(WebPageProxyIdentifier, Messages::NetworkConnectionToWebProcess::TestProcessIncomingSyncMessagesWhenWaitingForSyncReplyDelayedReply&&);
     void loadPing(NetworkResourceLoadParameters&&);
     void prefetchDNS(const String&);
     void preconnectTo(uint64_t preconnectionIdentifier, NetworkResourceLoadParameters&&);
@@ -187,6 +195,8 @@ private:
     void crossOriginRedirectReceived(ResourceLoadIdentifier, const URL& redirectURL);
     void startDownload(DownloadID, const WebCore::ResourceRequest&, const String& suggestedName = { });
     void convertMainResourceLoadToDownload(uint64_t mainResourceLoadIdentifier, DownloadID, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&);
+
+    void registerURLSchemesAsCORSEnabled(Vector<String>&& schemes);
 
     void cookiesForDOM(const URL& firstParty, const WebCore::SameSiteInfo&, const URL&, Optional<WebCore::FrameIdentifier>, Optional<WebCore::PageIdentifier>, WebCore::IncludeSecureCookies, CompletionHandler<void(String cookieString, bool secureCookiesAccessed)>&&);
     void setCookiesFromDOM(const URL& firstParty, const WebCore::SameSiteInfo&, const URL&, Optional<WebCore::FrameIdentifier>, Optional<WebCore::PageIdentifier>, const String&);
@@ -341,6 +351,7 @@ private:
 
     HashSet<WebCore::MessagePortIdentifier> m_processEntangledPorts;
     HashMap<uint64_t, Function<void()>> m_messageBatchDeliveryCompletionHandlers;
+    Ref<NetworkSchemeRegistry> m_schemeRegistry;
 };
 
 } // namespace WebKit

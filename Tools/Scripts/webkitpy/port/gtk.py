@@ -188,6 +188,9 @@ class GtkPort(Port):
     def _path_to_image_diff(self):
         return self._built_executables_path('ImageDiff')
 
+    def _path_to_default_image_diff(self):
+        return self._path_to_image_diff()
+
     def _path_to_webcore_library(self):
         gtk_library_names = [
             "libwebkitgtk-1.0.so",
@@ -211,7 +214,7 @@ class GtkPort(Port):
         return search_paths
 
     def default_baseline_search_path(self, **kwargs):
-        return map(self._webkit_baseline_path, self._search_paths())
+        return list(map(self._webkit_baseline_path, self._search_paths()))
 
     def _port_specific_expectations_files(self, **kwargs):
         return [self._filesystem.join(self._webkit_baseline_path(p), 'TestExpectations') for p in reversed(self._search_paths())]
@@ -250,3 +253,9 @@ class GtkPort(Port):
         command = super(GtkPort, self).run_webkit_tests_command()
         command.append("--gtk")
         return command
+
+    def configuration_for_upload(self, host=None):
+        configuration = super(GtkPort, self).configuration_for_upload(host=host)
+        configuration['platform'] = 'GTK'
+        configuration['version_name'] = self._display_server.capitalize() if self._display_server else 'Xvfb'
+        return configuration

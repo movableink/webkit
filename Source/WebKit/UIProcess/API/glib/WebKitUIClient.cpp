@@ -27,6 +27,7 @@
 #include "WebKitGeolocationPermissionRequestPrivate.h"
 #include "WebKitNavigationActionPrivate.h"
 #include "WebKitNotificationPermissionRequestPrivate.h"
+#include "WebKitPointerLockPermissionRequestPrivate.h"
 #include "WebKitURIRequestPrivate.h"
 #include "WebKitUserMediaPermissionRequestPrivate.h"
 #include "WebKitWebViewPrivate.h"
@@ -50,6 +51,14 @@ public:
     {
     }
 
+    ~UIClient()
+    {
+#if ENABLE(POINTER_LOCK)
+        if (m_pointerLockPermissionRequest)
+            g_object_remove_weak_pointer(G_OBJECT(m_pointerLockPermissionRequest), reinterpret_cast<void**>(&m_pointerLockPermissionRequest));
+#endif
+    }
+
 private:
     void createNewPage(WebPageProxy& page, WebCore::WindowFeatures&& windowFeatures, Ref<API::NavigationAction>&& apiNavigationAction, CompletionHandler<void(RefPtr<WebPageProxy>&&)>&& completionHandler) final
     {
@@ -67,24 +76,24 @@ private:
         webkitWebViewClosePage(m_webView);
     }
 
-    void runJavaScriptAlert(WebPageProxy*, const String& message, WebFrameProxy*, const WebCore::SecurityOriginData&, Function<void()>&& completionHandler) final
+    void runJavaScriptAlert(WebPageProxy&, const String& message, WebFrameProxy*, WebCore::SecurityOriginData&&, Function<void()>&& completionHandler) final
     {
         webkitWebViewRunJavaScriptAlert(m_webView, message.utf8(), WTFMove(completionHandler));
     }
 
-    void runJavaScriptConfirm(WebPageProxy*, const String& message, WebFrameProxy*, const WebCore::SecurityOriginData&, Function<void(bool)>&& completionHandler) final
+    void runJavaScriptConfirm(WebPageProxy&, const String& message, WebFrameProxy*, WebCore::SecurityOriginData&&, Function<void(bool)>&& completionHandler) final
     {
         webkitWebViewRunJavaScriptConfirm(m_webView, message.utf8(), WTFMove(completionHandler));
     }
 
-    void runJavaScriptPrompt(WebPageProxy*, const String& message, const String& defaultValue, WebFrameProxy*, const WebCore::SecurityOriginData&, Function<void(const String&)>&& completionHandler) final
+    void runJavaScriptPrompt(WebPageProxy&, const String& message, const String& defaultValue, WebFrameProxy*, WebCore::SecurityOriginData&&, Function<void(const String&)>&& completionHandler) final
     {
         webkitWebViewRunJavaScriptPrompt(m_webView, message.utf8(), defaultValue.utf8(), WTFMove(completionHandler));
     }
 
     bool canRunBeforeUnloadConfirmPanel() const final { return true; }
 
-    void runBeforeUnloadConfirmPanel(WebPageProxy*, const String& message, WebFrameProxy*, const WebCore::SecurityOriginData&, Function<void(bool)>&& completionHandler) final
+    void runBeforeUnloadConfirmPanel(WebPageProxy&, const String& message, WebFrameProxy*, WebCore::SecurityOriginData&&, Function<void(bool)>&& completionHandler) final
     {
         webkitWebViewRunJavaScriptBeforeUnloadConfirm(m_webView, message.utf8(), WTFMove(completionHandler));
     }
@@ -130,13 +139,15 @@ private:
     }
 
 #if PLATFORM(GTK)
-    static void windowConfigureEventCallback(GtkWindow* window, GdkEventConfigure*, GdkRectangle* targetGeometry)
+    static gboolean windowConfigureEventCallback(GtkWindow* window, GdkEventConfigure*, GdkRectangle* targetGeometry)
     {
         GdkRectangle geometry = { 0, 0, 0, 0 };
         gtk_window_get_position(window, &geometry.x, &geometry.y);
         gtk_window_get_size(window, &geometry.width, &geometry.height);
         if (geometry.x == targetGeometry->x && geometry.y == targetGeometry->y && geometry.width == targetGeometry->width && geometry.height == targetGeometry->height)
             RunLoop::current().stop();
+
+        return FALSE;
     }
 
     void setWindowFrameTimerFired()
@@ -200,7 +211,7 @@ private:
         completionHandler(defaultQuota);
     }
 
-    bool runOpenPanel(WebPageProxy*, WebFrameProxy*, const WebCore::SecurityOriginData&, API::OpenPanelParameters* parameters, WebOpenPanelResultListenerProxy* listener) final
+    bool runOpenPanel(WebPageProxy&, WebFrameProxy*, WebCore::SecurityOriginData&&, API::OpenPanelParameters* parameters, WebOpenPanelResultListenerProxy* listener) final
     {
         GRefPtr<WebKitFileChooserRequest> request = adoptGRef(webkitFileChooserRequestCreate(parameters, listener));
         webkitWebViewRunFileChooserRequest(m_webView, request.get());
@@ -250,7 +261,31 @@ private:
         webkitWebViewIsPlayingAudioChanged(m_webView);
     }
 
+#if ENABLE(POINTER_LOCK)
+    void requestPointerLock(WebPageProxy* page) final
+    {
+        GRefPtr<WebKitPointerLockPermissionRequest> permissionRequest = adoptGRef(webkitPointerLockPermissionRequestCreate(m_webView));
+        RELEASE_ASSERT(!m_pointerLockPermissionRequest);
+        m_pointerLockPermissionRequest = permissionRequest.get();
+        g_object_add_weak_pointer(G_OBJECT(m_pointerLockPermissionRequest), reinterpret_cast<void**>(&m_pointerLockPermissionRequest));
+        webkitWebViewMakePermissionRequest(m_webView, WEBKIT_PERMISSION_REQUEST(permissionRequest.get()));
+    }
+
+    void didLosePointerLock(WebPageProxy*) final
+    {
+        if (m_pointerLockPermissionRequest) {
+            webkitPointerLockPermissionRequestDidLosePointerLock(m_pointerLockPermissionRequest);
+            g_object_remove_weak_pointer(G_OBJECT(m_pointerLockPermissionRequest), reinterpret_cast<void**>(&m_pointerLockPermissionRequest));
+            m_pointerLockPermissionRequest = nullptr;
+        }
+        webkitWebViewDidLosePointerLock(m_webView);
+    }
+#endif
+
     WebKitWebView* m_webView;
+#if ENABLE(POINTER_LOCK)
+    WebKitPointerLockPermissionRequest* m_pointerLockPermissionRequest { nullptr };
+#endif
 };
 
 void attachUIClientToView(WebKitWebView* webView)

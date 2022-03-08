@@ -45,9 +45,16 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
+#include "RuntimeEnabledFeatures.h"
 #include "StyleResolver.h"
 #include "StyleTreeResolver.h"
 #include <wtf/SystemTracing.h>
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+#include "FrameView.h"
+#include "FrameViewLayoutContext.h"
+#include "LayoutState.h"
+#endif
 
 #if PLATFORM(IOS_FAMILY)
 #include "ContentChangeObserver.h"
@@ -272,7 +279,7 @@ static bool pseudoStyleCacheIsInvalid(RenderElement* renderer, RenderStyle* newS
 
     for (auto& cache : *pseudoStyleCache) {
         PseudoId pseudoId = cache->styleType();
-        std::unique_ptr<RenderStyle> newPseudoStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(pseudoId), newStyle, newStyle);
+        std::unique_ptr<RenderStyle> newPseudoStyle = renderer->getUncachedPseudoStyle({ pseudoId }, newStyle, newStyle);
         if (!newPseudoStyle)
             return true;
         if (*newPseudoStyle != *cache) {
@@ -288,6 +295,14 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
     auto oldStyle = RenderStyle::clone(renderer.style());
     renderer.setStyle(WTFMove(newStyle), minimalStyleDifference);
     m_builder.normalizeTreeAfterStyleChange(renderer, oldStyle);
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled()) {
+        if (!m_document.view() || !m_document.view()->layoutContext().layoutTreeContent())
+            return;
+        if (auto* layoutBox = m_document.view()->layoutContext().layoutTreeContent()->layoutBoxForRenderer(renderer))
+            layoutBox->updateStyle(renderer.style());
+    }
+#endif
 }
 
 void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::ElementUpdate& update)

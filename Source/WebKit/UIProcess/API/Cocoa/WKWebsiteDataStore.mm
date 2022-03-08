@@ -29,6 +29,7 @@
 #import "APIString.h"
 #import "AuthenticationChallengeDispositionCocoa.h"
 #import "CompletionHandlerCallChecker.h"
+#import "ShouldGrandfatherStatistics.h"
 #import "WKHTTPCookieStoreInternal.h"
 #import "WKNSArray.h"
 #import "WKNSURLAuthenticationChallenge.h"
@@ -462,6 +463,17 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #endif
 }
 
+- (void)_logUserInteraction:(NSURL *)domain completionHandler:(void (^)(void))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    _websiteDataStore->logUserInteraction(domain, [completionHandler = makeBlockPtr(completionHandler)] {
+        completionHandler();
+    });
+#else
+    completionHandler();
+#endif
+}
+
 - (void)_setPrevalentDomain:(NSURL *)domain completionHandler:(void (^)(void))completionHandler
 {
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
@@ -495,6 +507,28 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #endif
 }
 
+- (void)_clearResourceLoadStatistics:(void (^)(void))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    _websiteDataStore->scheduleClearInMemoryAndPersistent(WebKit::ShouldGrandfatherStatistics::No, [completionHandler = makeBlockPtr(completionHandler)]() {
+        completionHandler();
+    });
+#else
+    completionHandler();
+#endif
+}
+
+- (void)_isRegisteredAsSubresourceUnderFirstParty:(NSURL *)firstPartyURL thirdParty:(NSURL *)thirdPartyURL completionHandler:(void (^)(BOOL))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    _websiteDataStore->isRegisteredAsSubresourceUnder(thirdPartyURL, firstPartyURL, [completionHandler = makeBlockPtr(completionHandler)](bool enabled) {
+        completionHandler(enabled);
+    });
+#else
+    completionHandler(NO);
+#endif
+}
+
 - (void)_processStatisticsAndDataRecords:(void (^)(void))completionHandler
 {
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
@@ -524,6 +558,11 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 {
     _delegate = delegate;
     _websiteDataStore->setClient(makeUniqueRef<WebsiteDataStoreClient>(delegate));
+}
+
+- (_WKWebsiteDataStoreConfiguration *)_configuration
+{
+    return wrapper(_websiteDataStore->configuration().copy());
 }
 
 @end

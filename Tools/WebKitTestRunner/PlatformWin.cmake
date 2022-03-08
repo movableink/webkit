@@ -4,6 +4,7 @@ set(WebKitTestRunnerLib_SOURCES
     win/EventSenderProxyWin.cpp
     win/PlatformWebViewWin.cpp
     win/TestControllerWin.cpp
+    win/UIScriptControllerWin.cpp
     win/main.cpp
 )
 
@@ -35,8 +36,8 @@ set(WebKitTestRunnerLib_LIBRARIES
     Oleacc
 )
 
-list(APPEND WebKitTestRunner_LIBRARIES
-    WebKit
+set(WebKitTestRunner_LIBRARIES
+    shlwapi
 )
 
 set(WebKitTestRunnerInjectedBundle_LIBRARIES

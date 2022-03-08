@@ -48,16 +48,16 @@ static void checkElementTypeAndBoundingRect(_WKActivatedElementInfo *elementInfo
     EXPECT_EQ(CGRectGetMinY(expectedBoundingRect), CGRectGetMinY(observedBoundingRect));
     EXPECT_EQ(expectedType, elementInfo.type);
 }
-    
-TEST(WebKit, RequestActivatedElementInfoForLink)
+
+TEST(_WKActivatedElementInfo, InfoForLink)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
-    [webView loadHTMLString:@"<html><head><meta name='viewport' content='initial-scale=1'></head><body style = 'margin: 0px;'><a href='testURL.test' style='display: block; height: 100%;' title='HitTestLinkTitle' id='testID'></a></body></html>" baseURL:nil];
+    [webView loadHTMLString:@"<html><head><meta name='viewport' content='initial-scale=1'></head><body style='margin: 0px;'><a href='testURL.test' style='display: block; height: 100%;' title='HitTestLinkTitle' id='testID'></a></body></html>" baseURL:nil];
     [webView _test_waitForDidFinishNavigation];
-    
+
     __block bool finished = false;
     [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
-        
+
         EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeLink);
         EXPECT_WK_STREQ(elementInfo.URL.absoluteString, "testURL.test");
         EXPECT_WK_STREQ(elementInfo.title, "HitTestLinkTitle");
@@ -67,23 +67,43 @@ TEST(WebKit, RequestActivatedElementInfoForLink)
         EXPECT_EQ(elementInfo.boundingRect.size.height, 500);
         EXPECT_EQ(elementInfo.image.size.width, 320);
         EXPECT_EQ(elementInfo.image.size.height, 500);
-        
+
         finished = true;
     }];
-    
+
     TestWebKitAPI::Util::run(&finished);
 }
-    
-TEST(WebKit, RequestActivatedElementInfoForImage)
+
+TEST(_WKActivatedElementInfo, InfoForImage)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 215, 174)]);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"image" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
+    [webView loadRequest:request];
+    [webView _test_waitForDidFinishNavigation];
+
+    __block bool finished = false;
+    [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
+
+        EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeImage);
+        EXPECT_WK_STREQ(elementInfo.imageURL.lastPathComponent, "large-red-square.png");
+        EXPECT_NOT_NULL(elementInfo.image);
+
+        finished = true;
+    }];
+
+    TestWebKitAPI::Util::run(&finished);
+}
+
+TEST(_WKActivatedElementInfo, InfoForMediaDocument)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 215, 174)]);
     NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"icon" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]];
     [webView loadRequest:request];
     [webView _test_waitForDidFinishNavigation];
-    
+
     __block bool finished = false;
     [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
-        
+
         EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeImage);
         EXPECT_WK_STREQ(elementInfo.imageURL.lastPathComponent, "icon.png");
         EXPECT_NOT_NULL(elementInfo.image);
@@ -91,18 +111,42 @@ TEST(WebKit, RequestActivatedElementInfoForImage)
         EXPECT_EQ(elementInfo.boundingRect.size.height, 174);
         EXPECT_EQ(elementInfo.image.size.width, 215);
         EXPECT_EQ(elementInfo.image.size.height, 174);
-        
+
         finished = true;
     }];
-    
+
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WebKit, RequestActivatedElementInfoForRotatedImage)
+TEST(_WKActivatedElementInfo, InfoForLinkAroundImage)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"link-with-image" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
+    [webView loadRequest:request];
+    [webView _test_waitForDidFinishNavigation];
+
+    __block bool finished = false;
+    [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
+
+        EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeLink);
+        EXPECT_WK_STREQ(elementInfo.URL.lastPathComponent, "testURL.test");
+        EXPECT_WK_STREQ(elementInfo.title, "HitTestImageTitle");
+        EXPECT_WK_STREQ(elementInfo.ID, @"testID");
+        EXPECT_NOT_NULL(elementInfo.image);
+        EXPECT_EQ(elementInfo.boundingRect.size.width, 320);
+        EXPECT_EQ(elementInfo.boundingRect.size.height, 500);
+
+        finished = true;
+    }];
+
+    TestWebKitAPI::Util::run(&finished);
+}
+
+
+TEST(_WKActivatedElementInfo, InfoForRotatedImage)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"img-with-rotated-image" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
-
     [webView loadRequest:request];
     [webView _test_waitForDidFinishNavigation];
 
@@ -155,45 +199,45 @@ TEST(WebKit, RequestActivatedElementInfoForRotatedImage)
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WebKit, RequestActivatedElementInfoForBlank)
+TEST(_WKActivatedElementInfo, InfoForBlank)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
-    [webView loadHTMLString:@"<html><head><meta name='viewport' content='initial-scale=1'></head><body style = 'margin: 0px;'></body></html>" baseURL:nil];
+    [webView loadHTMLString:@"<html><head><meta name='viewport' content='initial-scale=1'></head><body style='margin: 0px;'></body></html>" baseURL:nil];
     [webView _test_waitForDidFinishNavigation];
-    
+
     __block bool finished = false;
     [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
-        
+
         EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeUnspecified);
         EXPECT_EQ(elementInfo.boundingRect.size.width, 320);
         EXPECT_EQ(elementInfo.boundingRect.size.height, 500);
-        
+
         finished = true;
     }];
-    
+
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WebKit, RequestActivatedElementInfoForBrokenImage)
+TEST(_WKActivatedElementInfo, InfoForBrokenImage)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
-    [webView loadHTMLString:@"<html><head><meta name='viewport' content='initial-scale=1'></head><body style = 'margin: 0px;'><img  src='missing.gif' height='100' width='100'></body></html>" baseURL:nil];
+    [webView loadHTMLString:@"<html><head><meta name='viewport' content='initial-scale=1'></head><body style='margin: 0px;'><img  src='missing.gif' height='100' width='100'></body></html>" baseURL:nil];
     [webView _test_waitForDidFinishNavigation];
-    
+
     __block bool finished = false;
     [webView _requestActivatedElementAtPosition:CGPointMake(50, 50) completionBlock: ^(_WKActivatedElementInfo *elementInfo) {
-        
+
         EXPECT_TRUE(elementInfo.type == _WKActivatedElementTypeUnspecified);
         EXPECT_EQ(elementInfo.boundingRect.size.width, 100);
         EXPECT_EQ(elementInfo.boundingRect.size.height, 100);
-        
+
         finished = true;
     }];
-    
+
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WebKit, RequestActivatedElementInfoForAttachment)
+TEST(_WKActivatedElementInfo, InfoForAttachment)
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     [configuration _setAttachmentElementEnabled:YES];
@@ -212,7 +256,7 @@ TEST(WebKit, RequestActivatedElementInfoForAttachment)
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WebKit, RequestActivatedElementInfoWithNestedSynchronousUpdates)
+TEST(_WKActivatedElementInfo, InfoWithNestedSynchronousUpdates)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='initial-scale=1'><style>body { margin:0 } a { display:block; width:200px; height:200px }</style><a href='https://www.apple.com'>FOO</a>"];
@@ -236,7 +280,7 @@ TEST(WebKit, RequestActivatedElementInfoWithNestedSynchronousUpdates)
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WebKit, RequestActivatedElementInfoWithNestedRequests)
+TEST(_WKActivatedElementInfo, InfoWithNestedRequests)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     [webView synchronouslyLoadTestPageNamed:@"image-and-contenteditable"];

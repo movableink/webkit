@@ -101,7 +101,7 @@ public:
     WEBCORE_EXPORT void didComposite(Frame&);
 
     bool isUnderTest() const { return m_isUnderTest; }
-    WEBCORE_EXPORT void setIsUnderTest(bool);
+    void setIsUnderTest(bool isUnderTest) { m_isUnderTest = isUnderTest; }
     WEBCORE_EXPORT void evaluateForTestInFrontend(const String& script);
 
     InspectorClient* inspectorClient() const { return m_inspectorClient; }
@@ -113,7 +113,7 @@ public:
 
     // InspectorEnvironment
     bool developerExtrasEnabled() const override;
-    bool canAccessInspectedScriptState(JSC::ExecState*) const override;
+    bool canAccessInspectedScriptState(JSC::JSGlobalObject*) const override;
     Inspector::InspectorFunctionCallHandler functionCallHandler() const override;
     Inspector::InspectorEvaluateHandler evaluateHandler() const override;
     void frontendInitialized() override;

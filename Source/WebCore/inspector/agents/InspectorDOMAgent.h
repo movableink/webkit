@@ -48,12 +48,11 @@ class InjectedScriptManager;
 namespace JSC {
 class CallFrame;
 class JSValue;
-using ExecState = CallFrame;
 }
 
 namespace WebCore {
 
-class AccessibilityObject;
+class AXCoreObject;
 class CharacterData;
 class DOMEditor;
 class Document;
@@ -99,7 +98,7 @@ public:
     static Node* innerParentNode(Node*);
 
     static Node* scriptValueAsNode(JSC::JSValue);
-    static JSC::JSValue nodeAsScriptValue(JSC::ExecState&, Node*);
+    static JSC::JSValue nodeAsScriptValue(JSC::JSGlobalObject&, Node*);
 
     // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
@@ -148,6 +147,7 @@ public:
     void markUndoableState(ErrorString&) override;
     void focus(ErrorString&, int nodeId) override;
     void setInspectedNode(ErrorString&, int nodeId) override;
+    void setAllowEditingUserAgentShadowTrees(ErrorString&, bool allow) final;
 
     // InspectorInstrumentation
     int identifierForNode(Node&);
@@ -178,6 +178,7 @@ public:
 
     void styleAttributeInvalidated(const Vector<Element*>& elements);
 
+    int pushNodeToFrontend(Node*);
     int pushNodeToFrontend(ErrorString&, int documentNodeId, Node*);
     Node* nodeForId(int nodeId);
     int boundNodeId(const Node*);
@@ -225,7 +226,7 @@ private:
     RefPtr<JSON::ArrayOf<Inspector::Protocol::DOM::Node>> buildArrayForPseudoElements(const Element&, NodeToIdMap* nodesMap);
     Ref<Inspector::Protocol::DOM::EventListener> buildObjectForEventListener(const RegisteredEventListener&, int identifier, EventTarget&, const AtomString& eventType, bool disabled, bool hasBreakpoint);
     RefPtr<Inspector::Protocol::DOM::AccessibilityProperties> buildObjectForAccessibilityProperties(Node*);
-    void processAccessibilityChildren(AccessibilityObject&, JSON::ArrayOf<int>&);
+    void processAccessibilityChildren(AXCoreObject&, JSON::ArrayOf<int>&);
     
     Node* nodeForPath(const String& path);
     Node* nodeForObjectId(const String& objectId);
@@ -256,10 +257,6 @@ private:
     std::unique_ptr<HighlightConfig> m_inspectModeHighlightConfig;
     std::unique_ptr<InspectorHistory> m_history;
     std::unique_ptr<DOMEditor> m_domEditor;
-    bool m_searchingForNode { false };
-    bool m_suppressAttributeModifiedEvent { false };
-    bool m_suppressEventListenerChangedEvent { false };
-    bool m_documentRequested { false };
 
 #if ENABLE(VIDEO)
     Timer m_mediaMetricsTimer;
@@ -318,6 +315,12 @@ private:
     HashSet<const Event*> m_dispatchedEvents;
     HashMap<int, InspectorEventListener> m_eventListenerEntries;
     int m_lastEventListenerId { 1 };
+
+    bool m_searchingForNode { false };
+    bool m_suppressAttributeModifiedEvent { false };
+    bool m_suppressEventListenerChangedEvent { false };
+    bool m_documentRequested { false };
+    bool m_allowEditingUserAgentShadowTrees { false };
 };
 
 } // namespace WebCore

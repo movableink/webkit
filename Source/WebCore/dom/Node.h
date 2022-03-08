@@ -797,6 +797,8 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
         moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
 }
 
+bool areNodesConnectedInSameTreeScope(const Node*, const Node*);
+
 } // namespace WebCore
 
 #if ENABLE(TREE_DEBUGGING)

@@ -28,6 +28,7 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#ifndef NDEBUG
 #include "DisplayBox.h"
 #include "InlineFormattingState.h"
 #include "InlineTextBox.h"
@@ -125,8 +126,7 @@ static bool checkForMatchingTextRuns(const Display::Run& inlineRun, const Inline
         && areEssentiallyEqual(inlineTextBox.logicalRight(), inlineRun.logicalRight())
         && areEssentiallyEqual(inlineTextBox.logicalTop(), inlineRun.logicalTop())
         && areEssentiallyEqual(inlineTextBox.logicalBottom(), inlineRun.logicalBottom())
-        && inlineTextBox.start() == inlineRun.textContext()->start()
-        && inlineTextBox.end() == inlineRun.textContext()->end();
+        && (inlineTextBox.isLineBreak() || (inlineTextBox.start() == inlineRun.textContext()->start() && inlineTextBox.end() == inlineRun.textContext()->end()));
 }
 
 static void collectFlowBoxSubtree(const InlineFlowBox& flowbox, Vector<WebCore::InlineBox*>& inlineBoxes)
@@ -324,15 +324,16 @@ static bool verifyAndOutputSubtree(TextStream& stream, const LayoutState& contex
     return mismtachingGeometry;
 }
 
-void LayoutContext::verifyAndOutputMismatchingLayoutTree(const LayoutState& layoutState, const RenderView& renderView)
+void LayoutContext::verifyAndOutputMismatchingLayoutTree(const LayoutState& layoutState)
 {
     TextStream stream;
     auto& layoutRoot = layoutState.root();
-    auto mismatchingGeometry = verifyAndOutputSubtree(stream, layoutState, renderView, layoutRoot);
+    auto& rootRenderer = layoutState.rootRenderer();
+    auto mismatchingGeometry = verifyAndOutputSubtree(stream, layoutState, rootRenderer, layoutRoot);
     if (!mismatchingGeometry)
         return;
 #if ENABLE(TREE_DEBUGGING)
-    showRenderTree(&renderView);
+    showRenderTree(&rootRenderer);
     showLayoutTree(layoutRoot, &layoutState);
 #endif
     WTFLogAlways("%s", stream.release().utf8().data());
@@ -341,5 +342,7 @@ void LayoutContext::verifyAndOutputMismatchingLayoutTree(const LayoutState& layo
 
 }
 }
+
+#endif
 
 #endif

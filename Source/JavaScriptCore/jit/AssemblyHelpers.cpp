@@ -252,6 +252,7 @@ void AssemblyHelpers::callExceptionFuzz(VM& vm)
     // Set up one argument.
     move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
     move(TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationExceptionFuzz)), GPRInfo::nonPreservedNonReturnGPR);
+    prepareCallOperation(vm);
     call(GPRInfo::nonPreservedNonReturnGPR, OperationPtrTag);
 
     for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
@@ -624,9 +625,10 @@ void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFra
 #endif
 }
 
-void AssemblyHelpers::emitDumbVirtualCall(VM& vm, CallLinkInfo* info)
+void AssemblyHelpers::emitDumbVirtualCall(VM& vm, JSGlobalObject* globalObject, CallLinkInfo* info)
 {
     move(TrustedImmPtr(info), GPRInfo::regT2);
+    move(TrustedImmPtr(globalObject), GPRInfo::regT3);
     Call call = nearCall();
     addLinkTask(
         [=, &vm] (LinkBuffer& linkBuffer) {
@@ -930,6 +932,7 @@ void AssemblyHelpers::debugCall(VM& vm, V_DebugOperation_EPP function, void* arg
 #else
 #error "JIT not supported on this platform."
 #endif
+    prepareCallOperation(vm);
     move(TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(function)), scratch);
     call(scratch, OperationPtrTag);
 
@@ -983,18 +986,6 @@ void AssemblyHelpers::sanitizeStackInline(VM& vm, GPRReg scratch)
     done.link(this);
     move(stackPointerRegister, scratch);
     storePtr(scratch, vm.addressOfLastStackTop());
-}
-
-void AssemblyHelpers::emitPreparePreciseIndexMask32(GPRReg index, GPRReg length, GPRReg result)
-{
-    if (length == result) {
-        negPtr(length);
-        addPtr(index, length);
-    } else {
-        move(index, result);
-        subPtr(length, result);
-    }
-    rshiftPtr(TrustedImm32(preciseIndexMaskShift<void*>()), result);
 }
 
 } // namespace JSC

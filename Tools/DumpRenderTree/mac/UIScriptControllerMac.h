@@ -25,16 +25,16 @@
 
 #pragma once
 
-#import "UIScriptController.h"
+#import "UIScriptControllerCocoa.h"
 
 #if PLATFORM(MAC)
 
 namespace WTR {
 
-class UIScriptControllerMac : public UIScriptController {
+class UIScriptControllerMac : public UIScriptControllerCocoa {
 public:
     explicit UIScriptControllerMac(UIScriptContext& context)
-        : UIScriptController(context)
+        : UIScriptControllerCocoa(context)
     {
     }
 
@@ -49,6 +49,8 @@ public:
     void toggleCapsLock(JSValueRef) override;
     void simulateAccessibilitySettingsChangeNotification(JSValueRef) override;
     NSUndoManager *platformUndoManager() const override;
+    void copyText(JSStringRef) override;
+    void activateDataListSuggestion(unsigned, JSValueRef) override;
 };
 
 }

@@ -30,18 +30,6 @@
 
 namespace JSC {
 
-inline MacroAssembler::JumpList JIT::emitDoubleGetByVal(const Instruction* instruction, PatchableJump& badType)
-{
-#if USE(JSVALUE64)
-    JSValueRegs result = JSValueRegs(regT0);
-#else
-    JSValueRegs result = JSValueRegs(regT1, regT0);
-#endif
-    JumpList slowCases = emitDoubleLoad(instruction, badType);
-    boxDouble(fpRegT0, result);
-    return slowCases;
-}
-
 ALWAYS_INLINE MacroAssembler::JumpList JIT::emitLoadForArrayMode(const Instruction* currentInstruction, JITArrayMode arrayMode, PatchableJump& badType)
 {
     switch (arrayMode) {
@@ -58,16 +46,6 @@ ALWAYS_INLINE MacroAssembler::JumpList JIT::emitLoadForArrayMode(const Instructi
     }
     RELEASE_ASSERT_NOT_REACHED();
     return MacroAssembler::JumpList();
-}
-
-inline MacroAssembler::JumpList JIT::emitContiguousGetByVal(const Instruction* instruction, PatchableJump& badType, IndexingType expectedShape)
-{
-    return emitContiguousLoad(instruction, badType, expectedShape);
-}
-
-inline MacroAssembler::JumpList JIT::emitArrayStorageGetByVal(const Instruction* instruction, PatchableJump& badType)
-{
-    return emitArrayStorageLoad(instruction, badType);
 }
 
 ALWAYS_INLINE bool JIT::isOperandConstantDouble(int src)
@@ -109,28 +87,27 @@ ALWAYS_INLINE void JIT::emitLoadCharacterString(RegisterID src, RegisterID dst, 
 
 ALWAYS_INLINE JIT::Call JIT::emitNakedCall(CodePtr<NoPtrTag> target)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
     Call nakedCall = nearCall();
-    m_calls.append(CallRecord(nakedCall, m_bytecodeOffset, FunctionPtr<OperationPtrTag>(target.retagged<OperationPtrTag>())));
+    m_calls.append(CallRecord(nakedCall, m_bytecodeIndex, FunctionPtr<OperationPtrTag>(target.retagged<OperationPtrTag>())));
     return nakedCall;
 }
 
 ALWAYS_INLINE JIT::Call JIT::emitNakedTailCall(CodePtr<NoPtrTag> target)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
     Call nakedCall = nearTailCall();
-    m_calls.append(CallRecord(nakedCall, m_bytecodeOffset, FunctionPtr<OperationPtrTag>(target.retagged<OperationPtrTag>())));
+    m_calls.append(CallRecord(nakedCall, m_bytecodeIndex, FunctionPtr<OperationPtrTag>(target.retagged<OperationPtrTag>())));
     return nakedCall;
 }
 
 ALWAYS_INLINE void JIT::updateTopCallFrame()
 {
-    ASSERT(static_cast<int>(m_bytecodeOffset) >= 0);
 #if USE(JSVALUE32_64)
-    const Instruction* instruction = m_codeBlock->instructions().at(m_bytecodeOffset).ptr();
-    uint32_t locationBits = CallSiteIndex(instruction).bits();
+    const Instruction* instruction = m_codeBlock->instructions().at(m_bytecodeIndex.offset()).ptr();
+    uint32_t locationBits = CallSiteIndex(BytecodeIndex(bitwise_cast<uint32_t>(instruction))).bits();
 #else
-    uint32_t locationBits = CallSiteIndex(m_bytecodeOffset).bits();
+    uint32_t locationBits = CallSiteIndex(m_bytecodeIndex).bits();
 #endif
     store32(TrustedImm32(locationBits), tagFor(CallFrameSlot::argumentCount));
     
@@ -196,45 +173,52 @@ ALWAYS_INLINE void JIT::linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator&
         linkSlowCase(iter);
 }
 
-ALWAYS_INLINE void JIT::linkAllSlowCasesForBytecodeOffset(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, unsigned bytecodeOffset)
+ALWAYS_INLINE void JIT::linkAllSlowCasesForBytecodeIndex(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, BytecodeIndex bytecodeIndex)
 {
-    while (iter != slowCases.end() && iter->to == bytecodeOffset)
+    while (iter != slowCases.end() && iter->to == bytecodeIndex)
         linkSlowCase(iter);
+}
+
+ALWAYS_INLINE bool JIT::hasAnySlowCases(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, BytecodeIndex bytecodeIndex)
+{
+    if (iter != slowCases.end() && iter->to == bytecodeIndex)
+        return true;
+    return false;
 }
 
 ALWAYS_INLINE void JIT::addSlowCase(Jump jump)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
 
-    m_slowCases.append(SlowCaseEntry(jump, m_bytecodeOffset));
+    m_slowCases.append(SlowCaseEntry(jump, m_bytecodeIndex));
 }
 
 ALWAYS_INLINE void JIT::addSlowCase(const JumpList& jumpList)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
 
     for (const Jump& jump : jumpList.jumps())
-        m_slowCases.append(SlowCaseEntry(jump, m_bytecodeOffset));
+        m_slowCases.append(SlowCaseEntry(jump, m_bytecodeIndex));
 }
 
 ALWAYS_INLINE void JIT::addSlowCase()
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
     
     Jump emptyJump; // Doing it this way to make Windows happy.
-    m_slowCases.append(SlowCaseEntry(emptyJump, m_bytecodeOffset));
+    m_slowCases.append(SlowCaseEntry(emptyJump, m_bytecodeIndex));
 }
 
 ALWAYS_INLINE void JIT::addJump(Jump jump, int relativeOffset)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
 
-    m_jmpTable.append(JumpTable(jump, m_bytecodeOffset + relativeOffset));
+    m_jmpTable.append(JumpTable(jump, m_bytecodeIndex.offset() + relativeOffset));
 }
 
 ALWAYS_INLINE void JIT::addJump(const JumpList& jumpList, int relativeOffset)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
 
     for (auto& jump : jumpList.jumps())
         addJump(jump, relativeOffset);
@@ -242,9 +226,9 @@ ALWAYS_INLINE void JIT::addJump(const JumpList& jumpList, int relativeOffset)
 
 ALWAYS_INLINE void JIT::emitJumpSlowToHot(Jump jump, int relativeOffset)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
 
-    jump.linkTo(m_labels[m_bytecodeOffset + relativeOffset], this);
+    jump.linkTo(m_labels[m_bytecodeIndex.offset() + relativeOffset], this);
 }
 
 #if ENABLE(SAMPLING_FLAGS)
@@ -573,7 +557,7 @@ ALWAYS_INLINE bool JIT::getOperandConstantInt(int op1, int op2, int& op, int32_t
 // get arg puts an arg from the SF register array into a h/w register
 ALWAYS_INLINE void JIT::emitGetVirtualRegister(int src, RegisterID dst)
 {
-    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
 
     if (m_codeBlock->isConstantRegisterIndex(src)) {
         JSValue value = m_codeBlock->getConstant(src);
@@ -717,13 +701,13 @@ ALWAYS_INLINE GetPutInfo JIT::copiedGetPutInfo(OpPutToScope bytecode)
 }
 
 template<typename BinaryOp>
-ALWAYS_INLINE ArithProfile JIT::copiedArithProfile(BinaryOp bytecode)
+ALWAYS_INLINE BinaryArithProfile JIT::copiedArithProfile(BinaryOp bytecode)
 {
     uint64_t key = (static_cast<uint64_t>(BinaryOp::opcodeID) + 1) << 32 | static_cast<uint64_t>(bytecode.m_metadataID);
     auto iterator = m_copiedArithProfiles.find(key);
     if (iterator != m_copiedArithProfiles.end())
         return iterator->value;
-    ArithProfile arithProfile = bytecode.metadata(m_codeBlock).m_arithProfile;
+    BinaryArithProfile arithProfile = bytecode.metadata(m_codeBlock).m_arithProfile;
     m_copiedArithProfiles.add(key, arithProfile);
     return arithProfile;
 }

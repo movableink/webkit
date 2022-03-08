@@ -33,9 +33,12 @@
 #include "DeclarativeAnimation.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
+#include "EventLoop.h"
 #include "EventNames.h"
+#include "InspectorInstrumentation.h"
 #include "JSWebAnimation.h"
 #include "KeyframeEffect.h"
+#include "KeyframeEffectStack.h"
 #include "Microtasks.h"
 #include "WebAnimationUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -74,8 +77,17 @@ WebAnimation::WebAnimation(Document& document)
 
 WebAnimation::~WebAnimation()
 {
+    InspectorInstrumentation::willDestroyWebAnimation(*this);
+
     if (m_timeline)
         m_timeline->forgetAnimation(this);
+}
+
+void WebAnimation::contextDestroyed()
+{
+    InspectorInstrumentation::willDestroyWebAnimation(*this);
+
+    ActiveDOMObject::contextDestroyed();
 }
 
 void WebAnimation::remove()
@@ -173,6 +185,8 @@ void WebAnimation::setEffectInternal(RefPtr<AnimationEffect>&& newEffect, bool d
         if (m_timeline && newTarget && previousTarget != newTarget)
             m_timeline->animationWasAddedToElement(*this, *newTarget);
     }
+
+    InspectorInstrumentation::didChangeWebAnimationEffect(*this);
 }
 
 void WebAnimation::setTimeline(RefPtr<AnimationTimeline>&& timeline)
@@ -224,6 +238,9 @@ void WebAnimation::setTimelineInternal(RefPtr<AnimationTimeline>&& timeline)
         m_timeline->removeAnimation(*this);
 
     m_timeline = WTFMove(timeline);
+
+    if (m_effect)
+        m_effect->animationTimelineDidChange(m_timeline.get());
 }
 
 void WebAnimation::effectTargetDidChange(Element* previousTarget, Element* newTarget)
@@ -544,7 +561,7 @@ Seconds WebAnimation::effectEndTime() const
 {
     // The target effect end of an animation is equal to the end time of the animation's target effect.
     // If the animation has no target effect, the target effect end is zero.
-    return m_effect ? m_effect->getBasicTiming().endTime : 0_s;
+    return m_effect ? m_effect->endTime() : 0_s;
 }
 
 void WebAnimation::cancel()
@@ -598,6 +615,9 @@ void WebAnimation::cancel(Silently silently)
     timingDidChange(DidSeek::No, SynchronouslyNotify::No);
 
     invalidateEffect();
+
+    if (m_effect)
+        m_effect->animationWasCanceled();
 }
 
 void WebAnimation::enqueueAnimationPlaybackEvent(const AtomString& type, Optional<Seconds> currentTime, Optional<Seconds> timelineTime)
@@ -613,10 +633,7 @@ void WebAnimation::enqueueAnimationPlaybackEvent(const AtomString& type, Optiona
         downcast<DocumentTimeline>(*m_timeline).enqueueAnimationPlaybackEvent(WTFMove(event));
     } else {
         // Otherwise, queue a task to dispatch event at animation. The task source for this task is the DOM manipulation task source.
-        callOnMainThread([this, pendingActivity = makePendingActivity(*this), event = WTFMove(event)]() {
-            if (!m_isStopped)
-                this->dispatchEvent(event);
-        });
+        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, WTFMove(event));
     }
 }
 
@@ -779,12 +796,14 @@ void WebAnimation::updateFinishedState(DidSeek didSeek, SynchronouslyNotify sync
             // Otherwise, if synchronously notify is false, queue a microtask to run finish notification steps for animation unless there
             // is already a microtask queued to run those steps for animation.
             m_finishNotificationStepsMicrotaskPending = true;
-            MicrotaskQueue::mainThreadQueue().append(makeUnique<VoidMicrotask>([this, protectedThis = makeRef(*this)] () {
-                if (m_finishNotificationStepsMicrotaskPending) {
-                    m_finishNotificationStepsMicrotaskPending = false;
-                    finishNotificationSteps();
-                }
-            }));
+            if (auto* context = scriptExecutionContext()) {
+                context->eventLoop().queueMicrotask([this, protectedThis = makeRef(*this)] {
+                    if (m_finishNotificationStepsMicrotaskPending) {
+                        m_finishNotificationStepsMicrotaskPending = false;
+                        finishNotificationSteps();
+                    }
+                });
+            }
         }
     }
 
@@ -1157,19 +1176,19 @@ const char* WebAnimation::activeDOMObjectName() const
     return "Animation";
 }
 
-// FIXME: This should never prevent entering the back/forward cache.
-bool WebAnimation::shouldPreventEnteringBackForwardCache_DEPRECATED() const
+void WebAnimation::suspend(ReasonForSuspension)
 {
-    // Use the base class's implementation of hasPendingActivity() since we wouldn't want the custom implementation
-    // in this class designed to keep JS wrappers alive to interfere with the ability for a page using animations
-    // to enter the back/forward cache.
-    return ActiveDOMObject::hasPendingActivity();
+    setSuspended(true);
+}
+
+void WebAnimation::resume()
+{
+    setSuspended(false);
 }
 
 void WebAnimation::stop()
 {
     ActiveDOMObject::stop();
-    m_isStopped = true;
     removeAllEventListeners();
 }
 
@@ -1248,8 +1267,12 @@ void WebAnimation::persist()
     auto previousReplaceState = std::exchange(m_replaceState, ReplaceState::Persisted);
 
     if (previousReplaceState == ReplaceState::Removed && m_timeline) {
-        if (is<KeyframeEffect>(m_effect))
-            m_timeline->animationWasAddedToElement(*this, *downcast<KeyframeEffect>(m_effect.get())->target());
+        if (is<KeyframeEffect>(m_effect)) {
+            auto& keyframeEffect = downcast<KeyframeEffect>(*m_effect);
+            auto& target = *keyframeEffect.target();
+            m_timeline->animationWasAddedToElement(*this, target);
+            target.ensureKeyframeEffectStack().addEffect(keyframeEffect);
+        }
     }
 }
 
@@ -1290,7 +1313,7 @@ Seconds WebAnimation::timeToNextTick() const
                 return animationEffect->delay() - localTime;
         }
     } else if (auto animationCurrentTime = currentTime())
-        return effect()->getBasicTiming().endTime - *animationCurrentTime;
+        return effect()->endTime() - *animationCurrentTime;
 
     ASSERT_NOT_REACHED();
     return Seconds::infinity();

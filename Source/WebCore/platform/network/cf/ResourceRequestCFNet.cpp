@@ -193,8 +193,13 @@ void ResourceRequest::doUpdatePlatformRequest()
     if (httpPipeliningEnabled())
         CFURLRequestSetShouldPipelineHTTP(cfRequest, true, true);
 
-    if (resourcePrioritiesEnabled())
+    if (resourcePrioritiesEnabled()) {
         CFURLRequestSetRequestPriority(cfRequest, toPlatformRequestPriority(priority()));
+
+        // Used by PLT to ignore very low priority beacon and ping loads.
+        if (priority() == ResourceLoadPriority::VeryLow)
+            _CFURLRequestSetProtocolProperty(cfRequest, CFSTR("WKVeryLowLoadPriority"), kCFBooleanTrue);
+    }
 
     setHeaderFields(cfRequest, httpHeaderFields());
 
@@ -409,7 +414,7 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     if (!ResourceRequest::resourcePrioritiesEnabled())
         return maximumHTTPConnectionCountPerHost;
 
-    _CFNetworkHTTPConnectionCacheSetLimit(kHTTPPriorityNumLevels, toPlatformRequestPriority(ResourceLoadPriority::Highest));
+    _CFNetworkHTTPConnectionCacheSetLimit(kHTTPPriorityNumLevels, resourceLoadPriorityCount);
 #if !PLATFORM(WIN)
     // FIXME: <rdar://problem/9375609> Implement minimum fast lane priority setting on Windows
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPMinimumFastLanePriority, toPlatformRequestPriority(ResourceLoadPriority::Medium));
@@ -428,7 +433,7 @@ void initializeHTTPConnectionSettingsOnStartup()
     static const unsigned preferredConnectionCount = 6;
     static const unsigned fastLaneConnectionCount = 1;
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPLoadWidth, preferredConnectionCount);
-    _CFNetworkHTTPConnectionCacheSetLimit(kHTTPPriorityNumLevels, toPlatformRequestPriority(ResourceLoadPriority::Highest));
+    _CFNetworkHTTPConnectionCacheSetLimit(kHTTPPriorityNumLevels, resourceLoadPriorityCount);
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPMinimumFastLanePriority, toPlatformRequestPriority(ResourceLoadPriority::Medium));
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPNumFastLanes, fastLaneConnectionCount);
 }

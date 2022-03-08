@@ -43,7 +43,6 @@ class Document;
 class Element;
 class Node;
 class ProcessingInstruction;
-class StyleResolver;
 class StyleSheet;
 class StyleSheetContents;
 class StyleSheetList;
@@ -52,10 +51,12 @@ class TreeScope;
 
 namespace Style {
 
+class Resolver;
+
 // This is used to identify style scopes that can affect an element.
 // Scopes are in tree-of-trees order. Styles from earlier scopes win over later ones (modulo !important).
 enum class ScopeOrdinal : int {
-    ContainingHost = -1, // Author-exposed UA pseudo classes from the host tree scope.
+    ContainingHost = -1, // ::part rules and author-exposed UA pseudo classes from the host tree scope.
     Element = 0, // Normal rules in the same tree where the element is.
     FirstSlot = 1, // ::slotted rules in the parent's shadow tree. Values greater than FirstSlot indicate subsequent slots in the chain.
     Shadow = std::numeric_limits<int>::max(), // :host rules in element's own shadow tree.
@@ -114,8 +115,8 @@ public:
     Vector<Ref<ProcessingInstruction>> collectXSLTransforms();
 #endif
 
-    StyleResolver& resolver();
-    StyleResolver* resolverIfExists();
+    Resolver& resolver();
+    Resolver* resolverIfExists();
     void clearResolver();
     void releaseMemory();
 
@@ -140,13 +141,13 @@ private:
 
     void collectActiveStyleSheets(Vector<RefPtr<StyleSheet>>&);
 
-    enum StyleResolverUpdateType {
+    enum ResolverUpdateType {
         Reconstruct,
         Reset,
         Additive
     };
-    StyleResolverUpdateType analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets, bool& requiresFullStyleRecalc);
-    void updateStyleResolver(Vector<RefPtr<CSSStyleSheet>>&, StyleResolverUpdateType);
+    ResolverUpdateType analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets, bool& requiresFullStyleRecalc);
+    void updateResolver(Vector<RefPtr<CSSStyleSheet>>&, ResolverUpdateType);
 
     void pendingUpdateTimerFired();
     void clearPendingUpdate();
@@ -154,7 +155,7 @@ private:
     Document& m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
-    std::unique_ptr<StyleResolver> m_resolver;
+    std::unique_ptr<Resolver> m_resolver;
 
     Vector<RefPtr<StyleSheet>> m_styleSheetsForStyleSheetList;
     Vector<RefPtr<CSSStyleSheet>> m_activeStyleSheets;

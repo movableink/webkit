@@ -63,6 +63,7 @@
 - (NSString *)stringByEvaluatingJavaScript:(NSString *)script;
 - (id)objectByEvaluatingJavaScriptWithUserGesture:(NSString *)script;
 - (id)objectByEvaluatingJavaScript:(NSString *)script;
+- (unsigned)waitUntilClientWidthIs:(unsigned)expectedClientWidth;
 @end
 
 @interface TestMessageHandler : NSObject <WKScriptMessageHandler>
@@ -83,6 +84,7 @@
 - (void)collapseToStart;
 - (void)collapseToEnd;
 - (void)addToTestWindow;
+- (BOOL)selectionRangeHasStartOffset:(int)start endOffset:(int)end;
 @end
 
 #if PLATFORM(IOS_FAMILY)

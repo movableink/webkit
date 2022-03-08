@@ -38,6 +38,7 @@
 #include "FocusDirection.h"
 #include "FontSelectorClient.h"
 #include "FrameDestructionObserver.h"
+#include "FrameLoaderTypes.h"
 #include "GenericTaskQueue.h"
 #include "GraphicsTypes.h"
 #include "MediaProducer.h"
@@ -83,11 +84,11 @@
 namespace JSC {
 class CallFrame;
 class InputCursor;
-using ExecState = CallFrame;
 }
 
 namespace WebCore {
 
+class EventLoop;
 class ApplicationStateChangeListener;
 class AXObjectCache;
 class Attr;
@@ -120,6 +121,7 @@ class DocumentSharedObjectPool;
 class DocumentTimeline;
 class DocumentType;
 class EditingBehavior;
+class EventLoopTaskGroup;
 class ExtensionStyleSheets;
 class FloatQuad;
 class FloatRect;
@@ -128,6 +130,7 @@ class FormController;
 class Frame;
 class FrameView;
 class FullscreenManager;
+class GPUCanvasContext;
 class HTMLAllCollection;
 class HTMLBodyElement;
 class HTMLCanvasElement;
@@ -141,7 +144,6 @@ class HTMLImageElement;
 class HTMLMapElement;
 class HTMLMediaElement;
 class HTMLVideoElement;
-class HTMLPictureElement;
 class HTMLScriptElement;
 class HitTestLocation;
 class HitTestRequest;
@@ -191,11 +193,11 @@ class SelectorQueryCache;
 class SerializedScriptValue;
 class Settings;
 class StringCallback;
-class StyleResolver;
 class StyleSheet;
 class StyleSheetContents;
 class StyleSheetList;
 class Text;
+class TextManipulationController;
 class TextResourceDecoder;
 class TreeWalker;
 class UndoManager;
@@ -204,7 +206,6 @@ class VisitedLinkState;
 class WebAnimation;
 class WebGL2RenderingContext;
 class WebGLRenderingContext;
-class GPUCanvasContext;
 class WindowEventLoop;
 class WindowProxy;
 class Worklet;
@@ -262,6 +263,7 @@ class ResizeObserver;
 #endif
 
 namespace Style {
+class Resolver;
 class Scope;
 };
 
@@ -538,7 +540,7 @@ public:
 
     bool sawElementsInKnownNamespaces() const { return m_sawElementsInKnownNamespaces; }
 
-    StyleResolver& userAgentShadowTreeStyleResolver();
+    Style::Resolver& userAgentShadowTreeStyleResolver();
 
     CSSFontSelector& fontSelector() { return m_fontSelector; }
 
@@ -555,7 +557,8 @@ public:
     bool gotoAnchorNeededAfterStylesheetsLoad() { return m_gotoAnchorNeededAfterStylesheetsLoad; }
     void setGotoAnchorNeededAfterStylesheetsLoad(bool b) { m_gotoAnchorNeededAfterStylesheetsLoad = b; }
 
-    void evaluateMediaQueryList();
+    void updateElementsAffectedByMediaQueries();
+    void evaluateMediaQueriesAndReportChanges();
 
     FormController& formController();
     Vector<String> formElementsState() const;
@@ -1060,8 +1063,7 @@ public:
 
     WEBCORE_EXPORT void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
 
-    WindowEventLoop& eventLoop();
-    WindowEventLoop* eventLoopIfExists() { return m_eventLoop.get(); }
+    EventLoopTaskGroup& eventLoop() final;
 
     ScriptedAnimationController* scriptedAnimationController() { return m_scriptedAnimationController.get(); }
     void suspendScriptedAnimationControllerCallbacks();
@@ -1092,6 +1094,7 @@ public:
 
     bool audioPlaybackRequiresUserGesture() const;
     bool videoPlaybackRequiresUserGesture() const;
+    bool mediaDataLoadsAutomatically() const;
 
 #if ENABLE(MEDIA_SESSION)
     MediaSession& defaultMediaSession();
@@ -1164,14 +1167,13 @@ public:
     bool isSecureContext() const final;
     bool isJSExecutionForbidden() const final { return false; }
 
-    void enqueueWindowEvent(Ref<Event>&&);
-    void enqueueDocumentEvent(Ref<Event>&&);
+    void queueTaskToDispatchEvent(TaskSource, Ref<Event>&&);
+    void queueTaskToDispatchEventOnWindow(TaskSource, Ref<Event>&&);
     void enqueueOverflowEvent(Ref<Event>&&);
     void dispatchPageshowEvent(PageshowEventPersistence);
     WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEvent::Init&&);
     void enqueueHashchangeEvent(const String& oldURL, const String& newURL);
     void dispatchPopstateEvent(RefPtr<SerializedScriptValue>&& stateObject);
-    DocumentEventQueue& eventQueue() const final { return m_eventQueue; }
 
     WEBCORE_EXPORT void addMediaCanStartListener(MediaCanStartListener&);
     WEBCORE_EXPORT void removeMediaCanStartListener(MediaCanStartListener&);
@@ -1338,7 +1340,7 @@ public:
 
     // The following addMessage function is deprecated.
     // Callers should try to create the ConsoleMessage themselves.
-    void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::ExecState* = nullptr, unsigned long requestIdentifier = 0) final;
+    void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0) final;
 
     SecurityOrigin& securityOrigin() const { return *SecurityContext::securityOrigin(); }
     SecurityOrigin& topOrigin() const final { return topDocument().securityOrigin(); }
@@ -1362,6 +1364,10 @@ public:
     void setNeedsVisualViewportResize();
     void runResizeSteps();
 
+    void addPendingScrollEventTarget(ContainerNode&);
+    void setNeedsVisualViewportScrollEvent();
+    void runScrollSteps();
+
     WEBCORE_EXPORT void addAudioProducer(MediaProducer&);
     WEBCORE_EXPORT void removeAudioProducer(MediaProducer&);
     MediaProducer::MediaStateFlags mediaState() const { return m_mediaState; }
@@ -1379,17 +1385,15 @@ public:
     void setPlaybackTarget(uint64_t, Ref<MediaPlaybackTarget>&&);
     void playbackTargetAvailabilityDidChange(uint64_t, bool);
     void setShouldPlayToPlaybackTarget(uint64_t, bool);
+    void playbackTargetPickerWasDismissed(uint64_t);
 #endif
 
     ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicyToPropagate() const;
     bool shouldEnforceContentDispositionAttachmentSandbox() const;
     void applyContentDispositionAttachmentSandbox();
 
-    void addViewportDependentPicture(HTMLPictureElement&);
-    void removeViewportDependentPicture(HTMLPictureElement&);
-
-    void addAppearanceDependentPicture(HTMLPictureElement&);
-    void removeAppearanceDependentPicture(HTMLPictureElement&);
+    void addDynamicMediaQueryDependentImage(HTMLImageElement&);
+    void removeDynamicMediaQueryDependentImage(HTMLImageElement&);
 
     void scheduleTimedRenderingUpdate();
 
@@ -1548,13 +1552,16 @@ public:
     MessagePortChannelProvider& messagePortChannelProvider();
 
 #if USE(SYSTEM_PREVIEW)
-    WEBCORE_EXPORT void dispatchSystemPreviewActionEvent(const String& message);
+    WEBCORE_EXPORT void dispatchSystemPreviewActionEvent(const SystemPreviewInfo&, const String& message);
 #endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
     HTMLVideoElement* pictureInPictureElement() const;
     void setPictureInPictureElement(HTMLVideoElement*);
 #endif
+
+    WEBCORE_EXPORT TextManipulationController& textManipulationController();
+    TextManipulationController* textManipulationControllerIfExists() { return m_textManipulationController.get(); }
 
 protected:
     enum ConstructionFlags { Synthesized = 1, NonRenderedPlaceholder = 1 << 1 };
@@ -1643,9 +1650,6 @@ private:
     void invalidateDOMCookieCache();
     void didLoadResourceSynchronously() final;
 
-    void checkViewportDependentPictures();
-    void checkAppearanceDependentPictures();
-
     bool canNavigateInternal(Frame& targetFrame);
     bool isNavigationBlockedByThirdPartyIFrameRedirectBlocking(Frame& targetFrame, const URL& destinationURL);
 
@@ -1668,7 +1672,7 @@ private:
 
     UniqueRef<Quirks> m_quirks;
 
-    std::unique_ptr<StyleResolver> m_userAgentShadowTreeStyleResolver;
+    std::unique_ptr<Style::Resolver> m_userAgentShadowTreeStyleResolver;
 
     RefPtr<DOMWindow> m_domWindow;
     WeakPtr<Document> m_contextDocument;
@@ -1813,7 +1817,6 @@ private:
     DocumentClassFlags m_documentClasses;
 
     RenderPtr<RenderView> m_renderView;
-    mutable DocumentEventQueue m_eventQueue;
 
     HashSet<MediaCanStartListener*> m_mediaCanStartListeners;
 
@@ -1821,8 +1824,7 @@ private:
     UniqueRef<FullscreenManager> m_fullscreenManager;
 #endif
 
-    HashSet<HTMLPictureElement*> m_viewportDependentPictures;
-    HashSet<HTMLPictureElement*> m_appearanceDependentPictures;
+    WeakHashSet<HTMLImageElement> m_dynamicMediaQueryDependentImages;
 
 #if ENABLE(INTERSECTION_OBSERVER)
     Vector<WeakPtr<IntersectionObserver>> m_intersectionObservers;
@@ -1961,6 +1963,7 @@ private:
 
     MutationObserverOptions m_mutationObserverTypes { 0 };
 
+    bool m_activeParserWasAborted { false };
     bool m_writeRecursionIsTooDeep { false };
     bool m_wellFormed { false };
     bool m_createRenderers { true };
@@ -1992,7 +1995,6 @@ private:
 
     bool m_needsFullStyleRebuild { false };
     bool m_inStyleRecalc { false };
-    bool m_closeAfterStyleRecalc { false };
     bool m_inRenderTreeUpdate { false };
     bool m_isResolvingTreeStyle { false };
 
@@ -2013,6 +2015,7 @@ private:
     bool m_hasStyleWithViewportUnits { false };
     bool m_needsDOMWindowResizeEvent { false };
     bool m_needsVisualViewportResizeEvent { false };
+    bool m_needsVisualViewportScrollEvent { false };
     bool m_isTimerThrottlingEnabled { false };
     bool m_isSuspended { false };
 
@@ -2028,6 +2031,9 @@ private:
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
     bool m_isTelephoneNumberParsingAllowed { true };
 #endif
+
+    struct PendingScrollEventTargetList;
+    std::unique_ptr<PendingScrollEventTargetList> m_pendingScrollEventTargetList;
 
 #if ENABLE(MEDIA_STREAM)
     HashSet<HTMLMediaElement*> m_mediaStreamStateChangeElements;
@@ -2049,6 +2055,7 @@ private:
     DocumentIdentifier m_identifier;
 
     RefPtr<WindowEventLoop> m_eventLoop;
+    std::unique_ptr<EventLoopTaskGroup> m_documentTaskGroup;
 
 #if ENABLE(SERVICE_WORKER)
     RefPtr<SWClientConnection> m_serviceWorkerConnection;
@@ -2084,6 +2091,8 @@ private:
 #if ENABLE(PICTURE_IN_PICTURE_API)
     WeakPtr<HTMLVideoElement> m_pictureInPictureElement;
 #endif
+
+    std::unique_ptr<TextManipulationController> m_textManipulationController;
 
     HashMap<Element*, ElementIdentifier> m_identifiedElementsMap;
 };

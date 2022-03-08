@@ -212,6 +212,7 @@ public:
 
     static ExpressionType emptyExpression() { return { }; };
     Stack createStack() { return Stack(); }
+    bool isControlTypeIf(const ControlType& control) { return control.blockType() == BlockType::If; }
 
     using ErrorType = String;
     using UnexpectedResult = Unexpected<ErrorType>;
@@ -284,6 +285,8 @@ public:
     PartialResult WARN_UNUSED_RETURN endBlock(ControlEntry&, Stack& expressionStack);
     PartialResult WARN_UNUSED_RETURN addEndToUnreachable(ControlEntry&, const Stack& expressionStack = { });
 
+    PartialResult WARN_UNUSED_RETURN endTopLevel(BlockSignature, const Stack&) { return { }; }
+
     // Calls
     PartialResult WARN_UNUSED_RETURN addCall(uint32_t calleeIndex, const Signature&, Vector<ExpressionType>& args, Vector<ExpressionType, 1>& results);
     PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const Signature&, Vector<ExpressionType>& args, Vector<ExpressionType, 1>& results);
@@ -297,6 +300,8 @@ public:
 
     void dump(const Vector<ControlEntry>& controlStack, const Stack* expressionStack);
     void setParser(FunctionParser<AirIRGenerator>* parser) { m_parser = parser; };
+    void didFinishParsingLocals() { }
+    void didPopValueFromStack() { }
 
     static Vector<Tmp> toTmpVector(const Vector<TypedTmp>& vector)
     {
@@ -1056,7 +1061,7 @@ auto AirIRGenerator::addRefFunc(uint32_t index, ExpressionType& result) -> Parti
 {
     // FIXME: Emit this inline <https://bugs.webkit.org/show_bug.cgi?id=198506>.
     result = tmpForType(Type::Funcref);
-    emitCCall(&doWasmRefFunc, result, instanceValue(), addConstant(Type::I32, index));
+    emitCCall(&operationWasmRefFunc, result, instanceValue(), addConstant(Type::I32, index));
 
     return { };
 }
@@ -1068,7 +1073,7 @@ auto AirIRGenerator::addTableGet(unsigned tableIndex, ExpressionType& index, Exp
     ASSERT(index.type() == Type::I32);
     result = tmpForType(m_info.tables[tableIndex].wasmType());
 
-    emitCCall(&getWasmTableElement, result, instanceValue(), addConstant(Type::I32, tableIndex), index);
+    emitCCall(&operationGetWasmTableElement, result, instanceValue(), addConstant(Type::I32, tableIndex), index);
     emitCheck([&] {
         return Inst(BranchTest32, nullptr, Arg::resCond(MacroAssembler::Zero), result, result);
     }, [=] (CCallHelpers& jit, const B3::StackmapGenerationParams&) {
@@ -1086,7 +1091,7 @@ auto AirIRGenerator::addTableSet(unsigned tableIndex, ExpressionType& index, Exp
     ASSERT(value.tmp());
 
     auto shouldThrow = g32();
-    emitCCall(&setWasmTableElement, shouldThrow, instanceValue(), addConstant(Type::I32, tableIndex), index, value);
+    emitCCall(&operationSetWasmTableElement, shouldThrow, instanceValue(), addConstant(Type::I32, tableIndex), index, value);
 
     emitCheck([&] {
         return Inst(BranchTest32, nullptr, Arg::resCond(MacroAssembler::Zero), shouldThrow, shouldThrow);
@@ -1102,11 +1107,7 @@ auto AirIRGenerator::addTableSize(unsigned tableIndex, ExpressionType& result) -
     // FIXME: Emit this inline <https://bugs.webkit.org/show_bug.cgi?id=198506>.
     result = tmpForType(Type::I32);
 
-    int32_t (*doSize)(Instance*, unsigned) = [] (Instance* instance, unsigned tableIndex) -> int32_t {
-        return instance->table(tableIndex)->length();
-    };
-
-    emitCCall(doSize, result, instanceValue(), addConstant(Type::I32, tableIndex));
+    emitCCall(&operationGetWasmTableSize, result, instanceValue(), addConstant(Type::I32, tableIndex));
 
     return { };
 }
@@ -1119,7 +1120,7 @@ auto AirIRGenerator::addTableGrow(unsigned tableIndex, ExpressionType& fill, Exp
     ASSERT(delta.type() == Type::I32);
     result = tmpForType(Type::I32);
 
-    emitCCall(&doWasmTableGrow, result, instanceValue(), addConstant(Type::I32, tableIndex), fill, delta);
+    emitCCall(&operationWasmTableGrow, result, instanceValue(), addConstant(Type::I32, tableIndex), fill, delta);
 
     return { };
 }
@@ -1134,7 +1135,7 @@ auto AirIRGenerator::addTableFill(unsigned tableIndex, ExpressionType& offset, E
     ASSERT(count.type() == Type::I32);
 
     auto result = tmpForType(Type::I32);
-    emitCCall(&doWasmTableFill, result, instanceValue(), addConstant(Type::I32, tableIndex), offset, fill, count);
+    emitCCall(&operationWasmTableFill, result, instanceValue(), addConstant(Type::I32, tableIndex), offset, fill, count);
 
     emitCheck([&] {
         return Inst(BranchTest32, nullptr, Arg::resCond(MacroAssembler::Zero), result, result);
@@ -1166,29 +1167,8 @@ auto AirIRGenerator::addUnreachable() -> PartialResult
 
 auto AirIRGenerator::addGrowMemory(ExpressionType delta, ExpressionType& result) -> PartialResult
 {
-    int32_t (*growMemory)(void*, Instance*, int32_t) = [] (void* callFrame, Instance* instance, int32_t delta) -> int32_t {
-        instance->storeTopCallFrame(callFrame);
-
-        if (delta < 0)
-            return -1;
-
-        auto grown = instance->memory()->grow(PageCount(delta));
-        if (!grown) {
-            switch (grown.error()) {
-            case Memory::GrowFailReason::InvalidDelta:
-            case Memory::GrowFailReason::InvalidGrowSize:
-            case Memory::GrowFailReason::WouldExceedMaximum:
-            case Memory::GrowFailReason::OutOfMemory:
-                return -1;
-            }
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-
-        return grown.value().pageCount();
-    };
-
     result = g32();
-    emitCCall(growMemory, result, TypedTmp { Tmp(GPRInfo::callFrameRegister), Type::I64 }, instanceValue(), delta);
+    emitCCall(&operationGrowMemory, result, TypedTmp { Tmp(GPRInfo::callFrameRegister), Type::I64 }, instanceValue(), delta);
     restoreWebAssemblyGlobalState(RestoreCachedStackLimit::No, m_info.memory, instanceValue(), m_currentBlock);
 
     return { };
@@ -1304,12 +1284,7 @@ inline void AirIRGenerator::emitWriteBarrierForJSWrapper()
     m_currentBlock->setSuccessors(continuation, doSlowPath);
     m_currentBlock = doSlowPath;
 
-    void (*writeBarrier)(JSWebAssemblyInstance*, VM*) = [] (JSWebAssemblyInstance* cell, VM* vm) -> void {
-        ASSERT(cell);
-        ASSERT(vm);
-        vm->heap.writeBarrierSlowPath(cell);
-    };
-    emitCCall(writeBarrier, TypedTmp(), cell, vm);
+    emitCCall(&operationWasmWriteBarrierSlowPath, TypedTmp(), cell, vm);
     append(Jump);
     m_currentBlock->setSuccessors(continuation);
     m_currentBlock = continuation;
@@ -1742,10 +1717,6 @@ void AirIRGenerator::emitLoopTierUpCheck(uint32_t loopIndex)
         ExpressionList& expressionStack = m_parser->controlStack()[controlIndex].enclosedExpressionStack;
         for (auto& value : expressionStack)
             patchArgs.append(ConstrainedTmp(value, B3::ValueRep::ColdAny));
-
-        const auto& results = m_parser->controlStack()[controlIndex].controlData.results;
-        for (auto& value : results)
-            patchArgs.append(ConstrainedTmp(value, B3::ValueRep::ColdAny));
     }
 
     TierUpCount::TriggerReason* forceEntryTrigger = &(m_tierUp->osrEntryTriggers().last());
@@ -1768,7 +1739,7 @@ void AirIRGenerator::emitLoopTierUpCheck(uint32_t loopIndex)
             forceOSREntry.link(&jit);
             tierUp.link(&jit);
 
-            jit.probe(triggerOSREntryNow, osrEntryDataPtr);
+            jit.probe(operationWasmTriggerOSREntryNow, osrEntryDataPtr);
             jit.branchTestPtr(CCallHelpers::Zero, GPRInfo::argumentGPR0).linkTo(tierUpResume, &jit);
             jit.farJump(GPRInfo::argumentGPR1, WasmEntryPtrTag);
         });
@@ -2627,8 +2598,7 @@ auto AirIRGenerator::addOp<OpType::I32Popcnt>(ExpressionType arg, ExpressionType
     }
 #endif
 
-    uint32_t (*popcount)(int32_t) = [] (int32_t value) -> uint32_t { return __builtin_popcount(value); };
-    emitCCall(popcount, result, arg);
+    emitCCall(&operationPopcount32, result, arg);
     return { };
 }
 
@@ -2649,8 +2619,7 @@ auto AirIRGenerator::addOp<OpType::I64Popcnt>(ExpressionType arg, ExpressionType
     }
 #endif
 
-    uint64_t (*popcount)(int64_t) = [] (int64_t value) -> uint64_t { return __builtin_popcountll(value); };
-    emitCCall(popcount, result, arg);
+    emitCCall(&operationPopcount64, result, arg);
     return { };
 }
 

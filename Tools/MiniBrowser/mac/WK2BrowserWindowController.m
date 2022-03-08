@@ -203,11 +203,16 @@ static BOOL areEssentiallyEqual(double a, double b)
     return (fabs(a - b) <= tolerance);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-implementations"
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
+#pragma GCC diagnostic pop
 {
     SEL action = menuItem.action;
 
     if (action == @selector(saveAsPDF:))
+        return YES;
+    if (action == @selector(saveAsWebArchive:))
         return YES;
 
     if (action == @selector(zoomIn:))
@@ -273,12 +278,12 @@ static BOOL areEssentiallyEqual(double a, double b)
         _zoomTextOnly = NO;
         double currentTextZoom = _webView._textZoomFactor;
         _webView._textZoomFactor = 1;
-        _webView._pageZoomFactor = currentTextZoom;
+        _webView.pageZoom = currentTextZoom;
     } else {
         _zoomTextOnly = YES;
         double currentPageZoom = _webView._pageZoomFactor;
         _webView._textZoomFactor = currentPageZoom;
-        _webView._pageZoomFactor = 1;
+        _webView.pageZoom = 1;
     }
 }
 
@@ -290,12 +295,12 @@ static BOOL areEssentiallyEqual(double a, double b)
     if (_zoomTextOnly)
         _webView._textZoomFactor = 1;
     else
-        _webView._pageZoomFactor = 1;
+        _webView.pageZoom = 1;
 }
 
 - (BOOL)canResetZoom
 {
-    return _zoomTextOnly ? (_webView._textZoomFactor != 1) : (_webView._pageZoomFactor != 1);
+    return _zoomTextOnly ? (_webView._textZoomFactor != 1) : (_webView.pageZoom != 1);
 }
 
 - (IBAction)toggleShrinkToFit:(id)sender
@@ -376,7 +381,7 @@ static BOOL areEssentiallyEqual(double a, double b)
 
 - (CGFloat)currentZoomFactor
 {
-    return _zoomTextOnly ? _webView._textZoomFactor : _webView._pageZoomFactor;
+    return _zoomTextOnly ? _webView._textZoomFactor : _webView.pageZoom;
 }
 
 - (void)setCurrentZoomFactor:(CGFloat)factor
@@ -384,7 +389,7 @@ static BOOL areEssentiallyEqual(double a, double b)
     if (_zoomTextOnly)
         _webView._textZoomFactor = factor;
     else
-        _webView._pageZoomFactor = factor;
+        _webView.pageZoom = factor;
 }
 
 - (BOOL)canZoomIn
@@ -644,7 +649,7 @@ static NSSet *dataTypes()
 
 - (IBAction)printWebView:(id)sender
 {
-    [[_webView _printOperationWithPrintInfo:[NSPrintInfo sharedPrintInfo]] runOperationModalForWindow:self.window delegate:nil didRunSelector:nil contextInfo:nil];
+    [[_webView printOperationWithPrintInfo:[NSPrintInfo sharedPrintInfo]] runOperationModalForWindow:self.window delegate:nil didRunSelector:nil contextInfo:nil];
 }
 
 #pragma mark WKNavigationDelegate
@@ -823,8 +828,21 @@ static NSSet *dataTypes()
     panel.allowedFileTypes = @[ @"pdf" ];
     [panel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
         if (result == NSModalResponseOK) {
-            [_webView _takePDFSnapshotWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+            [_webView createPDFWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
                 [pdfSnapshotData writeToURL:[panel URL] options:0 error:nil];
+            }];
+        }
+    }];
+}
+
+- (IBAction)saveAsWebArchive:(id)sender
+{
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.allowedFileTypes = @[ @"webarchive" ];
+    [panel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+        if (result == NSModalResponseOK) {
+            [_webView createWebArchiveDataWithCompletionHandler:^(NSData *archiveData, NSError *error) {
+                [archiveData writeToURL:[panel URL] options:0 error:nil];
             }];
         }
     }];

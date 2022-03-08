@@ -246,7 +246,7 @@ void CodeBlock::dumpBytecode(PrintStream& out)
 {
     ICStatusMap statusMap;
     getICStatusMap(statusMap);
-    BytecodeDumper<CodeBlock>::dumpBlock(this, instructions(), out, statusMap);
+    CodeBlockBytecodeDumper<CodeBlock>::dumpBlock(this, instructions(), out, statusMap);
 }
 
 void CodeBlock::dumpBytecode(PrintStream& out, const InstructionStream::Ref& it, const ICStatusMap& statusMap)
@@ -399,12 +399,6 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
     setConstantRegisters(unlinkedCodeBlock->constantRegisters(), unlinkedCodeBlock->constantsSourceCodeRepresentation(), topLevelExecutable);
     RETURN_IF_EXCEPTION(throwScope, false);
 
-    for (unsigned i = 0; i < LinkTimeConstantCount; i++) {
-        LinkTimeConstant type = static_cast<LinkTimeConstant>(i);
-        if (unsigned registerIndex = unlinkedCodeBlock->registerIndexForLinkTimeConstant(type))
-            m_constantRegisters[registerIndex].set(vm, this, m_globalObject->jsCellForLinkTimeConstant(type));
-    }
-
     // We already have the cloned symbol table for the module environment since we need to instantiate
     // the module environments before linking the code block. We replace the stored symbol table with the already cloned one.
     if (UnlinkedModuleProgramCodeBlock* unlinkedModuleProgramCodeBlock = jsDynamicCast<UnlinkedModuleProgramCodeBlock*>(vm, unlinkedCodeBlock)) {
@@ -538,6 +532,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
         LINK(OpGetByValWithThis, profile)
         LINK(OpGetFromArguments, profile)
         LINK(OpToNumber, profile)
+        LINK(OpToNumeric, profile)
         LINK(OpToObject, profile)
         LINK(OpGetArgument, profile)
         LINK(OpGetInternalField, profile)
@@ -577,6 +572,8 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
         LINK(OpSub)
 
         LINK(OpNegate)
+        LINK(OpInc)
+        LINK(OpDec)
 
         LINK(OpJneqPtr)
 
@@ -589,7 +586,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
             const Identifier& ident = identifier(bytecode.m_var);
             RELEASE_ASSERT(bytecode.m_resolveType != LocalClosureVar);
 
-            ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), bytecode.m_localScopeDepth, scope, ident, Get, bytecode.m_resolveType, InitializationMode::NotInitialization);
+            ResolveOp op = JSScope::abstractResolve(m_globalObject.get(), bytecode.m_localScopeDepth, scope, ident, Get, bytecode.m_resolveType, InitializationMode::NotInitialization);
             RETURN_IF_EXCEPTION(throwScope, false);
 
             metadata.m_resolveType = op.type;
@@ -624,7 +621,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
             }
 
             const Identifier& ident = identifier(bytecode.m_var);
-            ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), bytecode.m_localScopeDepth, scope, ident, Get, bytecode.m_getPutInfo.resolveType(), InitializationMode::NotInitialization);
+            ResolveOp op = JSScope::abstractResolve(m_globalObject.get(), bytecode.m_localScopeDepth, scope, ident, Get, bytecode.m_getPutInfo.resolveType(), InitializationMode::NotInitialization);
             RETURN_IF_EXCEPTION(throwScope, false);
 
             metadata.m_getPutInfo = GetPutInfo(bytecode.m_getPutInfo.resolveMode(), op.type, bytecode.m_getPutInfo.initializationMode());
@@ -658,7 +655,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
 
             const Identifier& ident = identifier(bytecode.m_var);
             metadata.m_watchpointSet = nullptr;
-            ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), bytecode.m_symbolTableOrScopeDepth.scopeDepth(), scope, ident, Put, bytecode.m_getPutInfo.resolveType(), bytecode.m_getPutInfo.initializationMode());
+            ResolveOp op = JSScope::abstractResolve(m_globalObject.get(), bytecode.m_symbolTableOrScopeDepth.scopeDepth(), scope, ident, Put, bytecode.m_getPutInfo.resolveType(), bytecode.m_getPutInfo.initializationMode());
             RETURN_IF_EXCEPTION(throwScope, false);
 
             metadata.m_getPutInfo = GetPutInfo(bytecode.m_getPutInfo.resolveMode(), op.type, bytecode.m_getPutInfo.initializationMode());
@@ -691,7 +688,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
                 unsigned localScopeDepth = bytecode.m_symbolTableOrScopeDepth.scopeDepth();
                 // Even though type profiling may be profiling either a Get or a Put, we can always claim a Get because
                 // we're abstractly "read"ing from a JSScope.
-                ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), localScopeDepth, scope, ident, Get, bytecode.m_resolveType, InitializationMode::NotInitialization);
+                ResolveOp op = JSScope::abstractResolve(m_globalObject.get(), localScopeDepth, scope, ident, Get, bytecode.m_resolveType, InitializationMode::NotInitialization);
                 RETURN_IF_EXCEPTION(throwScope, false);
 
                 if (op.type == ClosureVar || op.type == ModuleVar)
@@ -873,19 +870,18 @@ void CodeBlock::setConstantIdentifierSetRegisters(VM& vm, const Vector<ConstantI
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSGlobalObject* globalObject = m_globalObject.get();
-    ExecState* exec = globalObject->globalExec();
 
     for (const auto& entry : constants) {
         const IdentifierSet& set = entry.first;
 
         Structure* setStructure = globalObject->setStructure();
         RETURN_IF_EXCEPTION(scope, void());
-        JSSet* jsSet = JSSet::create(exec, vm, setStructure, set.size());
+        JSSet* jsSet = JSSet::create(globalObject, vm, setStructure, set.size());
         RETURN_IF_EXCEPTION(scope, void());
 
         for (const auto& setEntry : set) {
             JSString* jsString = jsOwnedString(vm, setEntry.get()); 
-            jsSet->add(exec, jsString);
+            jsSet->add(globalObject, jsString);
             RETURN_IF_EXCEPTION(scope, void());
         }
         m_constantRegisters[entry.second].set(vm, this, jsSet);
@@ -897,7 +893,6 @@ void CodeBlock::setConstantRegisters(const Vector<WriteBarrier<Unknown>>& consta
     VM& vm = *m_vm;
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSGlobalObject* globalObject = m_globalObject.get();
-    ExecState* exec = globalObject->globalExec();
 
     ASSERT(constants.size() == constantsSourceCodeRepresentation.size());
     size_t count = constants.size();
@@ -907,29 +902,36 @@ void CodeBlock::setConstantRegisters(const Vector<WriteBarrier<Unknown>>& consta
     }
     for (size_t i = 0; i < count; i++) {
         JSValue constant = constants[i].get();
+        switch (constantsSourceCodeRepresentation[i]) {
+        case SourceCodeRepresentation::LinkTimeConstant:
+            constant = globalObject->linkTimeConstant(static_cast<LinkTimeConstant>(constant.asInt32AsAnyInt()));
+            break;
+        case SourceCodeRepresentation::Other:
+        case SourceCodeRepresentation::Integer:
+        case SourceCodeRepresentation::Double:
+            if (!constant.isEmpty()) {
+                if (constant.isCell()) {
+                    JSCell* cell = constant.asCell();
+                    if (SymbolTable* symbolTable = jsDynamicCast<SymbolTable*>(vm, cell)) {
+                        if (m_unlinkedCode->wasCompiledWithTypeProfilerOpcodes()) {
+                            ConcurrentJSLocker locker(symbolTable->m_lock);
+                            symbolTable->prepareForTypeProfiling(locker);
+                        }
 
-        if (!constant.isEmpty()) {
-            if (constant.isCell()) {
-                JSCell* cell = constant.asCell();
-                if (SymbolTable* symbolTable = jsDynamicCast<SymbolTable*>(vm, cell)) {
-                    if (m_unlinkedCode->wasCompiledWithTypeProfilerOpcodes()) {
-                        ConcurrentJSLocker locker(symbolTable->m_lock);
-                        symbolTable->prepareForTypeProfiling(locker);
+                        SymbolTable* clone = symbolTable->cloneScopePart(vm);
+                        if (wasCompiledWithDebuggingOpcodes())
+                            clone->setRareDataCodeBlock(this);
+
+                        constant = clone;
+                    } else if (auto* descriptor = jsDynamicCast<JSTemplateObjectDescriptor*>(vm, cell)) {
+                        auto* templateObject = topLevelExecutable->createTemplateObject(globalObject, descriptor);
+                        RETURN_IF_EXCEPTION(scope, void());
+                        constant = templateObject;
                     }
-
-                    SymbolTable* clone = symbolTable->cloneScopePart(vm);
-                    if (wasCompiledWithDebuggingOpcodes())
-                        clone->setRareDataCodeBlock(this);
-
-                    constant = clone;
-                } else if (auto* descriptor = jsDynamicCast<JSTemplateObjectDescriptor*>(vm, cell)) {
-                    auto* templateObject = topLevelExecutable->createTemplateObject(exec, descriptor);
-                    RETURN_IF_EXCEPTION(scope, void());
-                    constant = templateObject;
                 }
             }
+            break;
         }
-
         m_constantRegisters[i].set(vm, this, constant);
     }
 
@@ -1480,25 +1482,25 @@ StructureStubInfo* CodeBlock::addStubInfo(AccessType accessType)
     return ensureJITData(locker).m_stubInfos.add(accessType);
 }
 
-JITAddIC* CodeBlock::addJITAddIC(ArithProfile* arithProfile)
+JITAddIC* CodeBlock::addJITAddIC(BinaryArithProfile* arithProfile)
 {
     ConcurrentJSLocker locker(m_lock);
     return ensureJITData(locker).m_addICs.add(arithProfile);
 }
 
-JITMulIC* CodeBlock::addJITMulIC(ArithProfile* arithProfile)
+JITMulIC* CodeBlock::addJITMulIC(BinaryArithProfile* arithProfile)
 {
     ConcurrentJSLocker locker(m_lock);
     return ensureJITData(locker).m_mulICs.add(arithProfile);
 }
 
-JITSubIC* CodeBlock::addJITSubIC(ArithProfile* arithProfile)
+JITSubIC* CodeBlock::addJITSubIC(BinaryArithProfile* arithProfile)
 {
     ConcurrentJSLocker locker(m_lock);
     return ensureJITData(locker).m_subICs.add(arithProfile);
 }
 
-JITNegIC* CodeBlock::addJITNegIC(ArithProfile* arithProfile)
+JITNegIC* CodeBlock::addJITNegIC(UnaryArithProfile* arithProfile)
 {
     ConcurrentJSLocker locker(m_lock);
     return ensureJITData(locker).m_negICs.add(arithProfile);
@@ -1528,7 +1530,7 @@ CallLinkInfo* CodeBlock::addCallLinkInfo()
     return ensureJITData(locker).m_callLinkInfos.add();
 }
 
-CallLinkInfo* CodeBlock::getCallLinkInfoForBytecodeIndex(unsigned index)
+CallLinkInfo* CodeBlock::getCallLinkInfoForBytecodeIndex(BytecodeIndex index)
 {
     ConcurrentJSLocker locker(m_lock);
     if (auto* jitData = m_jitData.get()) {
@@ -1540,27 +1542,27 @@ CallLinkInfo* CodeBlock::getCallLinkInfoForBytecodeIndex(unsigned index)
     return nullptr;
 }
 
-RareCaseProfile* CodeBlock::addRareCaseProfile(int bytecodeOffset)
+RareCaseProfile* CodeBlock::addRareCaseProfile(BytecodeIndex bytecodeIndex)
 {
     ConcurrentJSLocker locker(m_lock);
     auto& jitData = ensureJITData(locker);
-    jitData.m_rareCaseProfiles.append(RareCaseProfile(bytecodeOffset));
+    jitData.m_rareCaseProfiles.append(RareCaseProfile(bytecodeIndex));
     return &jitData.m_rareCaseProfiles.last();
 }
 
-RareCaseProfile* CodeBlock::rareCaseProfileForBytecodeOffset(const ConcurrentJSLocker&, int bytecodeOffset)
+RareCaseProfile* CodeBlock::rareCaseProfileForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex bytecodeIndex)
 {
     if (auto* jitData = m_jitData.get()) {
-        return tryBinarySearch<RareCaseProfile, int>(
-            jitData->m_rareCaseProfiles, jitData->m_rareCaseProfiles.size(), bytecodeOffset,
-            getRareCaseProfileBytecodeOffset);
+        return tryBinarySearch<RareCaseProfile, BytecodeIndex>(
+            jitData->m_rareCaseProfiles, jitData->m_rareCaseProfiles.size(), bytecodeIndex,
+            getRareCaseProfileBytecodeIndex);
     }
     return nullptr;
 }
 
-unsigned CodeBlock::rareCaseProfileCountForBytecodeOffset(const ConcurrentJSLocker& locker, int bytecodeOffset)
+unsigned CodeBlock::rareCaseProfileCountForBytecodeIndex(const ConcurrentJSLocker& locker, BytecodeIndex bytecodeIndex)
 {
-    RareCaseProfile* profile = rareCaseProfileForBytecodeOffset(locker, bytecodeOffset);
+    RareCaseProfile* profile = rareCaseProfileForBytecodeIndex(locker, bytecodeIndex);
     if (profile)
         return profile->m_counter;
     return 0;
@@ -1732,10 +1734,10 @@ bool CodeBlock::hasOptimizedReplacement()
 }
 #endif
 
-HandlerInfo* CodeBlock::handlerForBytecodeOffset(unsigned bytecodeOffset, RequiredHandler requiredHandler)
+HandlerInfo* CodeBlock::handlerForBytecodeIndex(BytecodeIndex bytecodeIndex, RequiredHandler requiredHandler)
 {
-    RELEASE_ASSERT(bytecodeOffset < instructions().size());
-    return handlerForIndex(bytecodeOffset, requiredHandler);
+    RELEASE_ASSERT(bytecodeIndex.offset() < instructions().size());
+    return handlerForIndex(bytecodeIndex.offset(), requiredHandler);
 }
 
 HandlerInfo* CodeBlock::handlerForIndex(unsigned index, RequiredHandler requiredHandler)
@@ -1764,9 +1766,9 @@ DisposableCallSiteIndex CodeBlock::newExceptionHandlingCallSiteIndex(CallSiteInd
 
 
 
-void CodeBlock::ensureCatchLivenessIsComputedForBytecodeOffset(InstructionStream::Offset bytecodeOffset)
+void CodeBlock::ensureCatchLivenessIsComputedForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
-    auto& instruction = instructions().at(bytecodeOffset);
+    auto& instruction = instructions().at(bytecodeIndex);
     OpCatch op = instruction->as<OpCatch>();
     auto& metadata = op.metadata(this);
     if (!!metadata.m_buffer) {
@@ -1786,10 +1788,10 @@ void CodeBlock::ensureCatchLivenessIsComputedForBytecodeOffset(InstructionStream
         return;
     }
 
-    ensureCatchLivenessIsComputedForBytecodeOffsetSlow(op, bytecodeOffset);
+    ensureCatchLivenessIsComputedForBytecodeIndexSlow(op, bytecodeIndex);
 }
 
-void CodeBlock::ensureCatchLivenessIsComputedForBytecodeOffsetSlow(const OpCatch& op, InstructionStream::Offset bytecodeOffset)
+void CodeBlock::ensureCatchLivenessIsComputedForBytecodeIndexSlow(const OpCatch& op, BytecodeIndex bytecodeIndex)
 {
     BytecodeLivenessAnalysis& bytecodeLiveness = livenessAnalysis();
 
@@ -1798,8 +1800,8 @@ void CodeBlock::ensureCatchLivenessIsComputedForBytecodeOffsetSlow(const OpCatch
     // we can avoid profiling them and extracting them when doing OSR entry
     // into the DFG.
 
-    auto nextOffset = instructions().at(bytecodeOffset).next().offset();
-    FastBitVector liveLocals = bytecodeLiveness.getLivenessInfoAtBytecodeOffset(this, nextOffset);
+    auto nextOffset = instructions().at(bytecodeIndex).next().offset();
+    FastBitVector liveLocals = bytecodeLiveness.getLivenessInfoAtBytecodeIndex(this, BytecodeIndex(nextOffset));
     Vector<VirtualRegister> liveOperands;
     liveOperands.reserveInitialCapacity(liveLocals.bitCount());
     liveLocals.forEachSetBit([&] (unsigned liveLocal) {
@@ -1844,26 +1846,26 @@ void CodeBlock::removeExceptionHandlerForCallSite(DisposableCallSiteIndex callSi
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-unsigned CodeBlock::lineNumberForBytecodeOffset(unsigned bytecodeOffset)
+unsigned CodeBlock::lineNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
-    RELEASE_ASSERT(bytecodeOffset < instructions().size());
-    return ownerExecutable()->firstLine() + m_unlinkedCode->lineNumberForBytecodeOffset(bytecodeOffset);
+    RELEASE_ASSERT(bytecodeIndex.offset() < instructions().size());
+    return ownerExecutable()->firstLine() + m_unlinkedCode->lineNumberForBytecodeIndex(bytecodeIndex);
 }
 
-unsigned CodeBlock::columnNumberForBytecodeOffset(unsigned bytecodeOffset)
+unsigned CodeBlock::columnNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
     int divot;
     int startOffset;
     int endOffset;
     unsigned line;
     unsigned column;
-    expressionRangeForBytecodeOffset(bytecodeOffset, divot, startOffset, endOffset, line, column);
+    expressionRangeForBytecodeIndex(bytecodeIndex, divot, startOffset, endOffset, line, column);
     return column;
 }
 
-void CodeBlock::expressionRangeForBytecodeOffset(unsigned bytecodeOffset, int& divot, int& startOffset, int& endOffset, unsigned& line, unsigned& column) const
+void CodeBlock::expressionRangeForBytecodeIndex(BytecodeIndex bytecodeIndex, int& divot, int& startOffset, int& endOffset, unsigned& line, unsigned& column) const
 {
-    m_unlinkedCode->expressionRangeForBytecodeOffset(bytecodeOffset, divot, startOffset, endOffset, line, column);
+    m_unlinkedCode->expressionRangeForBytecodeIndex(bytecodeIndex, divot, startOffset, endOffset, line, column);
     divot += sourceOffset();
     column += line ? 1 : firstLineColumnOffset();
     line += ownerExecutable()->firstLine();
@@ -1877,7 +1879,7 @@ bool CodeBlock::hasOpDebugForLineAndColumn(unsigned line, Optional<unsigned> col
             int unused;
             unsigned opDebugLine;
             unsigned opDebugColumn;
-            expressionRangeForBytecodeOffset(it.offset(), unused, unused, unused, opDebugLine, opDebugColumn);
+            expressionRangeForBytecodeIndex(it.index(), unused, unused, unused, opDebugLine, opDebugColumn);
             if (line == opDebugLine && (!column || column == opDebugColumn))
                 return true;
         }
@@ -1906,14 +1908,14 @@ void CodeBlock::shrinkToFit(ShrinkMode shrinkMode)
 }
 
 #if ENABLE(JIT)
-void CodeBlock::linkIncomingCall(ExecState* callerFrame, CallLinkInfo* incoming)
+void CodeBlock::linkIncomingCall(CallFrame* callerFrame, CallLinkInfo* incoming)
 {
     noticeIncomingCall(callerFrame);
     ConcurrentJSLocker locker(m_lock);
     ensureJITData(locker).m_incomingCalls.push(incoming);
 }
 
-void CodeBlock::linkIncomingPolymorphicCall(ExecState* callerFrame, PolymorphicCallNode* incoming)
+void CodeBlock::linkIncomingPolymorphicCall(CallFrame* callerFrame, PolymorphicCallNode* incoming)
 {
     noticeIncomingCall(callerFrame);
     {
@@ -1942,7 +1944,7 @@ void CodeBlock::unlinkIncomingCalls()
 #endif // ENABLE(JIT)
 }
 
-void CodeBlock::linkIncomingCall(ExecState* callerFrame, LLIntCallLinkInfo* incoming)
+void CodeBlock::linkIncomingCall(CallFrame* callerFrame, LLIntCallLinkInfo* incoming)
 {
     noticeIncomingCall(callerFrame);
     m_incomingLLIntCalls.push(incoming);
@@ -2167,7 +2169,7 @@ private:
     mutable bool m_didRecurse;
 };
 
-void CodeBlock::noticeIncomingCall(ExecState* callerFrame)
+void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
 {
     CodeBlock* callerCodeBlock = callerFrame->codeBlock();
     
@@ -2231,7 +2233,7 @@ void CodeBlock::noticeIncomingCall(ExecState* callerFrame)
 
     // Recursive calls won't be inlined.
     RecursionCheckFunctor functor(callerFrame, this, Options::maximumInliningDepth());
-    vm().topCallFrame->iterate(functor);
+    vm().topCallFrame->iterate(vm(), functor);
 
     if (functor.didRecurse()) {
         if (Options::verboseCallLink())
@@ -2625,9 +2627,9 @@ bool CodeBlock::shouldReoptimizeFromLoopNow()
 }
 #endif
 
-ArrayProfile* CodeBlock::getArrayProfile(const ConcurrentJSLocker&, unsigned bytecodeOffset)
+ArrayProfile* CodeBlock::getArrayProfile(const ConcurrentJSLocker&, BytecodeIndex bytecodeIndex)
 {
-    auto instruction = instructions().at(bytecodeOffset);
+    auto instruction = instructions().at(bytecodeIndex);
     switch (instruction->opcodeID()) {
 #define CASE1(Op) \
     case Op::opcodeID: \
@@ -2657,10 +2659,10 @@ ArrayProfile* CodeBlock::getArrayProfile(const ConcurrentJSLocker&, unsigned byt
     return nullptr;
 }
 
-ArrayProfile* CodeBlock::getArrayProfile(unsigned bytecodeOffset)
+ArrayProfile* CodeBlock::getArrayProfile(BytecodeIndex bytecodeIndex)
 {
     ConcurrentJSLocker locker(m_lock);
-    return getArrayProfile(locker, bytecodeOffset);
+    return getArrayProfile(locker, bytecodeIndex);
 }
 
 #if ENABLE(DFG_JIT)
@@ -2968,9 +2970,9 @@ String CodeBlock::nameForRegister(VirtualRegister virtualRegister)
     return emptyString();
 }
 
-ValueProfile* CodeBlock::tryGetValueProfileForBytecodeOffset(int bytecodeOffset)
+ValueProfile* CodeBlock::tryGetValueProfileForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
-    auto instruction = instructions().at(bytecodeOffset);
+    auto instruction = instructions().at(bytecodeIndex);
     switch (instruction->opcodeID()) {
 
 #define CASE(Op) \
@@ -2987,23 +2989,23 @@ ValueProfile* CodeBlock::tryGetValueProfileForBytecodeOffset(int bytecodeOffset)
     }
 }
 
-SpeculatedType CodeBlock::valueProfilePredictionForBytecodeOffset(const ConcurrentJSLocker& locker, int bytecodeOffset)
+SpeculatedType CodeBlock::valueProfilePredictionForBytecodeIndex(const ConcurrentJSLocker& locker, BytecodeIndex bytecodeIndex)
 {
-    if (ValueProfile* valueProfile = tryGetValueProfileForBytecodeOffset(bytecodeOffset))
+    if (ValueProfile* valueProfile = tryGetValueProfileForBytecodeIndex(bytecodeIndex))
         return valueProfile->computeUpdatedPrediction(locker);
     return SpecNone;
 }
 
-ValueProfile& CodeBlock::valueProfileForBytecodeOffset(int bytecodeOffset)
+ValueProfile& CodeBlock::valueProfileForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
-    return *tryGetValueProfileForBytecodeOffset(bytecodeOffset);
+    return *tryGetValueProfileForBytecodeIndex(bytecodeIndex);
 }
 
 void CodeBlock::validate()
 {
     BytecodeLivenessAnalysis liveness(this); // Compute directly from scratch so it doesn't effect CodeBlock footprint.
     
-    FastBitVector liveAtHead = liveness.getLivenessInfoAtBytecodeOffset(this, 0);
+    FastBitVector liveAtHead = liveness.getLivenessInfoAtBytecodeIndex(this, BytecodeIndex(0));
     
     if (liveAtHead.numBits() != static_cast<size_t>(m_numCalleeLocals)) {
         beginValidationDidFail();
@@ -3027,7 +3029,7 @@ void CodeBlock::validate()
     const InstructionStream& instructionStream = instructions();
     for (const auto& instruction : instructionStream) {
         OpcodeID opcode = instruction->opcodeID();
-        if (!!baselineAlternative()->handlerForBytecodeOffset(instruction.offset())) {
+        if (!!baselineAlternative()->handlerForBytecodeIndex(BytecodeIndex(instruction.offset()))) {
             if (opcode == op_catch || opcode == op_enter) {
                 // op_catch/op_enter logically represent an entrypoint. Entrypoints are not allowed to be
                 // inside of a try block because they are responsible for bootstrapping state. And they
@@ -3085,16 +3087,19 @@ const Instruction* CodeBlock::outOfLineJumpTarget(const Instruction* pc)
     return instructions().at(offset + target).ptr();
 }
 
-ArithProfile* CodeBlock::arithProfileForBytecodeOffset(InstructionStream::Offset bytecodeOffset)
+BinaryArithProfile* CodeBlock::binaryArithProfileForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
-    return arithProfileForPC(instructions().at(bytecodeOffset).ptr());
+    return binaryArithProfileForPC(instructions().at(bytecodeIndex.offset()).ptr());
 }
 
-ArithProfile* CodeBlock::arithProfileForPC(const Instruction* pc)
+UnaryArithProfile* CodeBlock::unaryArithProfileForBytecodeIndex(BytecodeIndex bytecodeIndex)
+{
+    return unaryArithProfileForPC(instructions().at(bytecodeIndex.offset()).ptr());
+}
+
+BinaryArithProfile* CodeBlock::binaryArithProfileForPC(const Instruction* pc)
 {
     switch (pc->opcodeID()) {
-    case op_negate:
-        return &pc->as<OpNegate>().metadata(this).m_arithProfile;
     case op_add:
         return &pc->as<OpAdd>().metadata(this).m_arithProfile;
     case op_mul:
@@ -3110,11 +3115,27 @@ ArithProfile* CodeBlock::arithProfileForPC(const Instruction* pc)
     return nullptr;
 }
 
-bool CodeBlock::couldTakeSpecialFastCase(InstructionStream::Offset bytecodeOffset)
+UnaryArithProfile* CodeBlock::unaryArithProfileForPC(const Instruction* pc)
+{
+    switch (pc->opcodeID()) {
+    case op_negate:
+        return &pc->as<OpNegate>().metadata(this).m_arithProfile;
+    case op_inc:
+        return &pc->as<OpInc>().metadata(this).m_arithProfile;
+    case op_dec:
+        return &pc->as<OpDec>().metadata(this).m_arithProfile;
+    default:
+        break;
+    }
+
+    return nullptr;
+}
+
+bool CodeBlock::couldTakeSpecialArithFastCase(BytecodeIndex bytecodeIndex)
 {
     if (!hasBaselineJITProfiling())
         return false;
-    ArithProfile* profile = arithProfileForBytecodeOffset(bytecodeOffset);
+    BinaryArithProfile* profile = binaryArithProfileForBytecodeIndex(bytecodeIndex);
     if (!profile)
         return false;
     return profile->tookSpecialFastPath();
@@ -3233,28 +3254,28 @@ Optional<CodeOrigin> CodeBlock::findPC(void* pc)
 }
 #endif // ENABLE(JIT)
 
-Optional<unsigned> CodeBlock::bytecodeOffsetFromCallSiteIndex(CallSiteIndex callSiteIndex)
+Optional<BytecodeIndex> CodeBlock::bytecodeIndexFromCallSiteIndex(CallSiteIndex callSiteIndex)
 {
-    Optional<unsigned> bytecodeOffset;
+    Optional<BytecodeIndex> bytecodeIndex;
     JITType jitType = this->jitType();
     if (jitType == JITType::InterpreterThunk || jitType == JITType::BaselineJIT) {
 #if USE(JSVALUE64)
-        bytecodeOffset = callSiteIndex.bits();
+        bytecodeIndex = callSiteIndex.bytecodeIndex();
 #else
         Instruction* instruction = bitwise_cast<Instruction*>(callSiteIndex.bits());
-        bytecodeOffset = this->bytecodeOffset(instruction);
+        bytecodeIndex = this->bytecodeIndex(instruction);
 #endif
     } else if (jitType == JITType::DFGJIT || jitType == JITType::FTLJIT) {
 #if ENABLE(DFG_JIT)
         RELEASE_ASSERT(canGetCodeOrigin(callSiteIndex));
         CodeOrigin origin = codeOrigin(callSiteIndex);
-        bytecodeOffset = origin.bytecodeIndex();
+        bytecodeIndex = origin.bytecodeIndex();
 #else
         RELEASE_ASSERT_NOT_REACHED();
 #endif
     }
 
-    return bytecodeOffset;
+    return bytecodeIndex;
 }
 
 int32_t CodeBlock::thresholdForJIT(int32_t threshold)

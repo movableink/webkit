@@ -38,6 +38,10 @@
 #include <wtf/RunLoop.h>
 #include <wtf/Vector.h>
 
+namespace API {
+class WebAuthenticationPanel;
+}
+
 namespace WebKit {
 
 class AuthenticatorManager : public AuthenticatorTransportService::Observer, public Authenticator::Observer {
@@ -51,10 +55,14 @@ public:
     using AuthenticatorTransportService::Observer::weakPtrFactory;
     using WeakValueType = AuthenticatorTransportService::Observer::WeakValueType;
 
+    const static size_t maxTransportNumber;
+
     AuthenticatorManager();
     virtual ~AuthenticatorManager() = default;
 
     void handleRequest(WebAuthenticationRequestData&&, Callback&&);
+    void cancelRequest(const WebCore::PageIdentifier&, const Optional<WebCore::FrameIdentifier>&); // Called from WebPageProxy/WebProcessProxy.
+    void cancelRequest(const API::WebAuthenticationPanel&); // Called from panel clients.
 
     virtual bool isMock() const { return false; }
 
@@ -67,25 +75,29 @@ protected:
 private:
     // AuthenticatorTransportService::Observer
     void authenticatorAdded(Ref<Authenticator>&&) final;
+    void serviceStatusUpdated(WebAuthenticationStatus) final;
 
     // Authenticator::Observer
     void respondReceived(Respond&&) final;
     void downgrade(Authenticator* id, Ref<Authenticator>&& downgradedAuthenticator) final;
+    void authenticatorStatusUpdated(WebAuthenticationStatus) final;
 
     // Overriden by MockAuthenticatorManager.
     virtual UniqueRef<AuthenticatorTransportService> createService(WebCore::AuthenticatorTransport, AuthenticatorTransportService::Observer&) const;
     // Overriden to return every exception for tests to confirm.
-    virtual void respondReceivedInternal(Respond&&);
+    virtual void respondReceivedInternal(Respond&&) { }
+    virtual void filterTransports(TransportSet&) const;
 
     void startDiscovery(const TransportSet&);
-    void initTimeOutTimer(const Optional<unsigned>& timeOutInMs);
+    void initTimeOutTimer();
     void timeOutTimerFired();
     void runPanel();
-    void startRequest();
+    void restartDiscovery();
+    TransportSet getTransports() const;
 
     // Request: We only allow one request per time. A new request will cancel any pending ones.
     WebAuthenticationRequestData m_pendingRequestData;
-    Callback m_pendingCompletionHandler; // Should be invoked directly, use invokePendingCompletionHandler.
+    Callback m_pendingCompletionHandler; // Should not be invoked directly, use invokePendingCompletionHandler.
     RunLoop::Timer<AuthenticatorManager> m_requestTimeOutTimer;
 
     Vector<UniqueRef<AuthenticatorTransportService>> m_services;

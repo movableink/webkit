@@ -269,7 +269,7 @@ public:
     bool adjustGesturePosition(const PlatformGestureEvent&, IntPoint& adjustedPoint);
 #endif
 
-#if ENABLE(CONTEXT_MENUS)
+#if ENABLE(CONTEXT_MENU_EVENT)
     WEBCORE_EXPORT bool sendContextMenuEvent(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool sendContextMenuEventForKey();
 #if ENABLE(QT_GESTURE_EVENTS)

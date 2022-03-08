@@ -41,6 +41,7 @@
 #import "WebMemoryPressureHandler.h"
 #import "WebPageGroup.h"
 #import "WebPreferencesKeys.h"
+#import "WebProcessCache.h"
 #import "WebProcessCreationParameters.h"
 #import "WebProcessMessages.h"
 #import "WindowServerConnection.h"
@@ -285,7 +286,9 @@ void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationPara
         }
     }
 
-    parameters.enableLegacyTLS = [defaults boolForKey:@"WebKitEnableLegacyTLS"];
+    parameters.enableLegacyTLS = true;
+    if (id value = [defaults objectForKey:@"WebKitEnableLegacyTLS"])
+        parameters.enableLegacyTLS = [value boolValue];
     parameters.defaultDataStoreParameters.networkSessionParameters.enableLegacyTLS = parameters.enableLegacyTLS;
 
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());

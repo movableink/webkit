@@ -83,6 +83,7 @@ struct MockWebAuthenticationConfiguration {
         bool fastDataArrival { false };
         bool continueAfterErrorData { false };
         bool canDowngrade { false };
+        bool expectCancel { false };
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static Optional<HidConfiguration> decode(Decoder&);
@@ -92,6 +93,7 @@ struct MockWebAuthenticationConfiguration {
         NfcError error { NfcError::Success };
         Vector<String> payloadBase64;
         bool multipleTags { false };
+        bool multiplePhysicalTags { false };
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static Optional<NfcConfiguration> decode(Decoder&);
@@ -159,7 +161,7 @@ Optional<MockWebAuthenticationConfiguration::LocalConfiguration> MockWebAuthenti
 template<class Encoder>
 void MockWebAuthenticationConfiguration::HidConfiguration::encode(Encoder& encoder) const
 {
-    encoder << payloadBase64 << stage << subStage << error << isU2f << keepAlive << fastDataArrival << continueAfterErrorData << canDowngrade;
+    encoder << payloadBase64 << stage << subStage << error << isU2f << keepAlive << fastDataArrival << continueAfterErrorData << canDowngrade << expectCancel;
 }
 
 template<class Decoder>
@@ -184,13 +186,15 @@ Optional<MockWebAuthenticationConfiguration::HidConfiguration> MockWebAuthentica
         return WTF::nullopt;
     if (!decoder.decode(result.canDowngrade))
         return WTF::nullopt;
+    if (!decoder.decode(result.expectCancel))
+        return WTF::nullopt;
     return result;
 }
 
 template<class Encoder>
 void MockWebAuthenticationConfiguration::NfcConfiguration::encode(Encoder& encoder) const
 {
-    encoder << error << payloadBase64 << multipleTags;
+    encoder << error << payloadBase64 << multipleTags << multiplePhysicalTags;
 }
 
 template<class Decoder>
@@ -202,6 +206,8 @@ Optional<MockWebAuthenticationConfiguration::NfcConfiguration> MockWebAuthentica
     if (!decoder.decode(result.payloadBase64))
         return WTF::nullopt;
     if (!decoder.decode(result.multipleTags))
+        return WTF::nullopt;
+    if (!decoder.decode(result.multiplePhysicalTags))
         return WTF::nullopt;
     return result;
 }

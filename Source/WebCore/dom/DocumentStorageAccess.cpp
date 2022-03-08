@@ -31,11 +31,11 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "EventLoop.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "JSDOMPromiseDeferred.h"
-#include "Microtasks.h"
 #include "Page.h"
 #include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
@@ -43,6 +43,13 @@
 #include "UserGestureIndicator.h"
 
 namespace WebCore {
+
+DocumentStorageAccess::DocumentStorageAccess(Document& document)
+    : m_document(document)
+{
+}
+
+DocumentStorageAccess::~DocumentStorageAccess() = default;
 
 DocumentStorageAccess* DocumentStorageAccess::from(Document& document)
 {
@@ -175,10 +182,10 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
         bool shouldPreserveUserGesture = wasGranted == StorageAccessWasGranted::Yes || promptWasShown == StorageAccessPromptWasShown::No;
 
         if (shouldPreserveUserGesture) {
-            MicrotaskQueue::mainThreadQueue().append(makeUnique<VoidMicrotask>([this, weakThis] () {
+            m_document.eventLoop().queueMicrotask([this, weakThis = makeWeakPtr(*weakThis)] {
                 if (weakThis)
                     enableTemporaryTimeUserGesture();
-            }));
+            });
         }
 
         if (wasGranted == StorageAccessWasGranted::Yes)
@@ -190,10 +197,10 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
         }
 
         if (shouldPreserveUserGesture) {
-            MicrotaskQueue::mainThreadQueue().append(makeUnique<VoidMicrotask>([this, weakThis = WTFMove(weakThis)] () {
+            m_document.eventLoop().queueMicrotask([this, weakThis = makeWeakPtr(*weakThis)] {
                 if (weakThis)
                     consumeTemporaryTimeUserGesture();
-            }));
+            });
         }
     });
 }

@@ -64,30 +64,35 @@ InProcessIDBServer::~InProcessIDBServer() = default;
 StorageQuotaManager* InProcessIDBServer::quotaManager(const ClientOrigin& origin)
 {
     return m_quotaManagers.ensure(origin, [] {
-        return makeUnique<StorageQuotaManager>(StorageQuotaManager::defaultQuota(), [](uint64_t quota, uint64_t currentSpace, uint64_t spaceIncrease, auto callback) {
+        return StorageQuotaManager::create(StorageQuotaManager::defaultQuota(), [] {
+            return 0;
+        }, [](uint64_t quota, uint64_t currentSpace, uint64_t spaceIncrease, auto callback) {
             callback(quota + currentSpace + spaceIncrease);
         });
     }).iterator->value.get();
 }
 
-static inline IDBServer::IDBServer::QuotaManagerGetter storageQuotaManagerGetter(InProcessIDBServer& server)
+static inline IDBServer::IDBServer::StorageQuotaManagerSpaceRequester storageQuotaManagerSpaceRequester(InProcessIDBServer& server)
 {
-    return [weakServer = makeWeakPtr(server)](PAL::SessionID, const auto& origin) {
-        return weakServer ? weakServer->quotaManager(origin) : nullptr;
+    return [server = &server, weakServer = makeWeakPtr(server)](const ClientOrigin& origin, uint64_t spaceRequested) mutable {
+        auto* storageQuotaManager = weakServer ? server->quotaManager(origin) : nullptr;
+        return storageQuotaManager ? storageQuotaManager->requestSpaceOnBackgroundThread(spaceRequested) : StorageQuotaManager::Decision::Deny;
     };
 }
 
 InProcessIDBServer::InProcessIDBServer(PAL::SessionID sessionID)
-    : m_server(IDBServer::IDBServer::create(sessionID, *this, storageQuotaManagerGetter(*this)))
+    : m_server(IDBServer::IDBServer::create(sessionID, storageQuotaManagerSpaceRequester(*this)))
 {
+    ASSERT(isMainThread());
     relaxAdoptionRequirement();
     m_connectionToServer = IDBClient::IDBConnectionToServer::create(*this);
     m_connectionToClient = IDBServer::IDBConnectionToClient::create(*this);
 }
 
 InProcessIDBServer::InProcessIDBServer(PAL::SessionID sessionID, const String& databaseDirectoryPath)
-    : m_server(IDBServer::IDBServer::create(sessionID, databaseDirectoryPath, *this, storageQuotaManagerGetter(*this)))
+    : m_server(IDBServer::IDBServer::create(sessionID, databaseDirectoryPath, storageQuotaManagerSpaceRequester(*this)))
 {
+    ASSERT(isMainThread());
     relaxAdoptionRequirement();
     m_connectionToServer = IDBClient::IDBConnectionToServer::create(*this);
     m_connectionToClient = IDBServer::IDBConnectionToClient::create(*this);
@@ -425,10 +430,10 @@ void InProcessIDBServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionId
     });
 }
 
-void InProcessIDBServer::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier)
+void InProcessIDBServer::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosed)
 {
-    RunLoop::current().dispatch([this, protectedThis = makeRef(*this), databaseConnectionIdentifier, requestIdentifier] {
-        m_server->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier);
+    RunLoop::current().dispatch([this, protectedThis = makeRef(*this), databaseConnectionIdentifier, requestIdentifier, connectionClosed] {
+        m_server->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, connectionClosed);
     });
 }
 
@@ -458,11 +463,6 @@ void InProcessIDBServer::didGetAllDatabaseNames(uint64_t callbackID, const Vecto
     RunLoop::current().dispatch([this, protectedThis = makeRef(*this), callbackID, databaseNames] {
         m_connectionToServer->didGetAllDatabaseNames(callbackID, databaseNames);
     });
-}
-
-void InProcessIDBServer::accessToTemporaryFileComplete(const String& path)
-{
-    FileSystem::deleteFile(path);
 }
 
 } // namespace WebCore

@@ -30,6 +30,7 @@
 #include "StorageAreaImplIdentifier.h"
 #include <WebCore/SecurityOriginData.h>
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 class StorageMap;
@@ -40,7 +41,7 @@ namespace WebKit {
 class LocalStorageDatabase;
 class LocalStorageNamespace;
 
-class StorageArea {
+class StorageArea : public CanMakeWeakPtr<StorageArea> {
     WTF_MAKE_NONCOPYABLE(StorageArea);
     WTF_MAKE_FAST_ALLOCATED;
 public:

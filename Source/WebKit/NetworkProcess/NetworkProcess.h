@@ -125,11 +125,7 @@ namespace CacheStorage {
 class Engine;
 }
 
-class NetworkProcess : public AuxiliaryProcess, private DownloadManager::Client, public ThreadSafeRefCounted<NetworkProcess>
-#if ENABLE(INDEXED_DATABASE)
-    , public WebCore::IDBServer::IDBBackingStoreTemporaryFileHandler
-#endif
-    , public CanMakeWeakPtr<NetworkProcess>
+class NetworkProcess : public AuxiliaryProcess, private DownloadManager::Client, public ThreadSafeRefCounted<NetworkProcess>, public CanMakeWeakPtr<NetworkProcess>
 {
     WTF_MAKE_NONCOPYABLE(NetworkProcess);
 public:
@@ -182,10 +178,8 @@ public:
     void ensureSession(const PAL::SessionID&, bool shouldUseTestingNetworkSession, const String& identifier);
 #endif
 
-    void processWillSuspendImminently();
     void processWillSuspendImminentlyForTestingSync(CompletionHandler<void()>&&);
-    void prepareToSuspend();
-    void cancelPrepareToSuspend();
+    void prepareToSuspend(bool isSuspensionImminent, CompletionHandler<void()>&&);
     void processDidResume();
     void resume();
 
@@ -195,8 +189,8 @@ public:
     void logDiagnosticMessageWithValue(WebPageProxyIdentifier, const String& message, const String& description, double value, unsigned significantFigures, WebCore::ShouldSample);
 
 #if PLATFORM(COCOA)
-    RetainPtr<CFDataRef> sourceApplicationAuditData() const;
     bool suppressesConnectionTerminationOnSystemChange() const { return m_suppressesConnectionTerminationOnSystemChange; }
+    RetainPtr<CFDataRef> sourceApplicationAuditData() const;
 #endif
 #if PLATFORM(COCOA) || USE(SOUP)
     void getHostNamesWithHSTSCache(WebCore::NetworkStorageSession&, HashSet<String>&);
@@ -292,14 +286,13 @@ public:
 
 #if ENABLE(INDEXED_DATABASE)
     WebCore::IDBServer::IDBServer& idbServer(PAL::SessionID);
-    // WebCore::IDBServer::IDBBackingStoreFileHandler.
-    void accessToTemporaryFileComplete(const String& path) final;
 #endif
 
     void syncLocalStorage(CompletionHandler<void()>&&);
     void clearLegacyPrivateBrowsingLocalStorage();
 
     void updateQuotaBasedOnSpaceUsageForTesting(PAL::SessionID, const WebCore::ClientOrigin&);
+    void resetQuota(PAL::SessionID, CompletionHandler<void()>&&);
 
 #if ENABLE(SANDBOX_EXTENSIONS)
     void getSandboxExtensionsForBlobFiles(const Vector<String>& filenames, CompletionHandler<void(SandboxExtension::HandleArray&&)>&&);
@@ -343,7 +336,7 @@ public:
     void setAdClickAttributionConversionURLForTesting(PAL::SessionID, URL&&, CompletionHandler<void()>&&);
     void markAdClickAttributionsAsExpiredForTesting(PAL::SessionID, CompletionHandler<void()>&&);
 
-    WebCore::StorageQuotaManager& storageQuotaManager(PAL::SessionID, const WebCore::ClientOrigin&);
+    RefPtr<WebCore::StorageQuotaManager> storageQuotaManager(PAL::SessionID, const WebCore::ClientOrigin&);
 
     void addKeptAliveLoad(Ref<NetworkResourceLoader>&&);
     void removeKeptAliveLoad(NetworkResourceLoader&);
@@ -371,8 +364,6 @@ private:
     void platformProcessDidTransitionToForeground();
     void platformProcessDidTransitionToBackground();
 
-    enum class ShouldAcknowledgeWhenReadyToSuspend { No, Yes };
-    void actualPrepareToSuspend(ShouldAcknowledgeWhenReadyToSuspend);
     void platformPrepareToSuspend(CompletionHandler<void()>&&);
     void platformProcessDidResume();
 
@@ -428,6 +419,7 @@ private:
     void applicationWillEnterForeground();
 
     void setCacheModel(CacheModel, String overrideCacheStorageDirectory);
+    void setCacheModelSynchronouslyForTesting(CacheModel, CompletionHandler<void()>&&);
     void allowSpecificHTTPSCertificateForHost(const WebCore::CertificateInfo&, const String& host);
     void clearCacheForAllOrigins(uint32_t cachesToClear);
     void setAllowsAnySSLCertificateForWebSocket(bool, CompletionHandler<void()>&&);
@@ -456,13 +448,13 @@ private:
     void registerURLSchemeAsLocal(const String&) const;
     void registerURLSchemeAsNoAccess(const String&) const;
     void registerURLSchemeAsCORSEnabled(const String&) const;
-    void registerURLSchemeAsCanDisplayOnlyIfCanRequest(const String&) const;
 
 #if ENABLE(INDEXED_DATABASE)
     void addIndexedDatabaseSession(PAL::SessionID, String&, SandboxExtension::Handle&);
     void collectIndexedDatabaseOriginsForVersion(const String&, HashSet<WebCore::SecurityOriginData>&);
     HashSet<WebCore::SecurityOriginData> indexedDatabaseOrigins(const String& path);
     Ref<WebCore::IDBServer::IDBServer> createIDBServer(PAL::SessionID);
+    void setSessionStorageQuotaManagerIDBRootPath(PAL::SessionID, const String& idbRootPath);
 #endif
 
 #if ENABLE(SERVICE_WORKER)
@@ -474,7 +466,7 @@ private:
     
     WebSWOriginStore* existingSWOriginStoreForSession(PAL::SessionID) const;
 
-    void addServiceWorkerSession(PAL::SessionID, bool processTerminationDelayEnabled, HashSet<String>&& registeredSchemes, String&& serviceWorkerRegistrationDirectory, const SandboxExtension::Handle&);
+    void addServiceWorkerSession(PAL::SessionID, bool processTerminationDelayEnabled, String&& serviceWorkerRegistrationDirectory, const SandboxExtension::Handle&);
 #endif
 
     void postStorageTask(CrossThreadTask&&);
@@ -482,8 +474,44 @@ private:
     void performNextStorageTask();
     void ensurePathExists(const String& path);
 
-    void clearStorageQuota(PAL::SessionID);
-    void initializeStorageQuota(const WebsiteDataStoreParameters&);
+    class SessionStorageQuotaManager {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
+        SessionStorageQuotaManager(const String& cacheRootPath, uint64_t defaultQuota, uint64_t defaultThirdPartyQuota)
+            : m_cacheRootPath(cacheRootPath)
+            , m_defaultQuota(defaultQuota)
+            , m_defaultThirdPartyQuota(defaultThirdPartyQuota)
+        {
+        }
+        uint64_t defaultQuota(const WebCore::ClientOrigin& origin) const { return origin.topOrigin == origin.clientOrigin ? m_defaultQuota : m_defaultThirdPartyQuota; }
+
+        Ref<WebCore::StorageQuotaManager> ensureOriginStorageQuotaManager(WebCore::ClientOrigin origin, uint64_t quota, WebCore::StorageQuotaManager::UsageGetter&& usageGetter, WebCore::StorageQuotaManager::QuotaIncreaseRequester&& quotaIncreaseRequester)
+        {
+            auto [iter, isNewEntry] = m_storageQuotaManagers.ensure(origin, [quota, usageGetter = WTFMove(usageGetter), quotaIncreaseRequester = WTFMove(quotaIncreaseRequester)]() mutable {
+                return WebCore::StorageQuotaManager::create(quota, WTFMove(usageGetter), WTFMove(quotaIncreaseRequester));
+            });
+            return makeRef(*iter->value);
+        }
+
+        auto existingStorageQuotaManagers() { return m_storageQuotaManagers.values(); }
+
+        const String& cacheRootPath() const { return m_cacheRootPath; }
+#if ENABLE(INDEXED_DATABASE)
+        void setIDBRootPath(const String& idbRootPath) { m_idbRootPath = idbRootPath; }
+        const String& idbRootPath() const { return m_idbRootPath; }
+#endif
+
+    private:
+        String m_cacheRootPath;
+#if ENABLE(INDEXED_DATABASE)
+        String m_idbRootPath;
+#endif
+        uint64_t m_defaultQuota { WebCore::StorageQuotaManager::defaultQuota() };
+        uint64_t m_defaultThirdPartyQuota { WebCore::StorageQuotaManager::defaultThirdPartyQuota() };
+        HashMap<WebCore::ClientOrigin, RefPtr<WebCore::StorageQuotaManager>> m_storageQuotaManagers;
+    };
+    void addSessionStorageQuotaManager(PAL::SessionID, uint64_t defaultQuota, uint64_t defaultThirdPartyQuota, const String& cacheRootPath, SandboxExtension::Handle&);
+    void removeSessionStorageQuotaManager(PAL::SessionID);
 
     // Connections to WebProcesses.
     HashMap<WebCore::ProcessIdentifier, Ref<NetworkConnectionToWebProcess>> m_webProcessConnections;
@@ -516,7 +544,6 @@ private:
     // multiple requests to clear the cache can come in before previous requests complete, and we need to wait for all of them.
     // In the future using WorkQueue and a counting semaphore would work, as would WorkQueue supporting the libdispatch concept of "work groups".
     dispatch_group_t m_clearCacheDispatchGroup { nullptr };
-
     bool m_suppressesConnectionTerminationOnSystemChange { false };
 #endif
 
@@ -546,7 +573,6 @@ private:
     struct ServiceWorkerInfo {
         String databasePath;
         bool processTerminationDelayEnabled { true };
-        HashSet<String> registeredSchemes;
     };
     HashMap<PAL::SessionID, ServiceWorkerInfo> m_serviceWorkerInfo;
     HashMap<PAL::SessionID, std::unique_ptr<WebCore::SWServer>> m_swServers;
@@ -560,23 +586,8 @@ private:
     bool m_isITPDatabaseEnabled { false };
 #endif
     
-    class StorageQuotaManagers {
-    public:
-        uint64_t defaultQuota(const WebCore::ClientOrigin& origin) const { return origin.topOrigin == origin.clientOrigin ? m_defaultQuota : m_defaultThirdPartyQuota; }
-        void setDefaultQuotas(uint64_t defaultQuota, uint64_t defaultThirdPartyQuota)
-        {
-            m_defaultQuota = defaultQuota;
-            m_defaultThirdPartyQuota = defaultThirdPartyQuota;
-        }
-
-        HashMap<WebCore::ClientOrigin, std::unique_ptr<WebCore::StorageQuotaManager>>& managersPerOrigin() { return m_managersPerOrigin; }
-
-    private:
-        uint64_t m_defaultQuota { WebCore::StorageQuotaManager::defaultQuota() };
-        uint64_t m_defaultThirdPartyQuota { WebCore::StorageQuotaManager::defaultThirdPartyQuota() };
-        HashMap<WebCore::ClientOrigin, std::unique_ptr<WebCore::StorageQuotaManager>> m_managersPerOrigin;
-    };
-    HashMap<PAL::SessionID, StorageQuotaManagers> m_storageQuotaManagers;
+    Lock m_sessionStorageQuotaManagersLock;
+    HashMap<PAL::SessionID, std::unique_ptr<SessionStorageQuotaManager>> m_sessionStorageQuotaManagers;
 
     OptionSet<NetworkCache::CacheOption> m_cacheOptions;
     WebCore::MessagePortChannelRegistry m_messagePortChannelRegistry;

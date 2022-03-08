@@ -187,6 +187,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/CachedScriptFetcher.h
     bindings/js/CommonVM.h
     bindings/js/DOMWrapperWorld.h
+    bindings/js/ExceptionDetails.h
     bindings/js/GCController.h
     bindings/js/IDBBindingUtilities.h
     bindings/js/JSCSSRuleCustom.h
@@ -313,6 +314,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/CSSStyleRule.h
     css/CSSStyleSheet.h
     css/CSSToLengthConversionData.h
+    css/CSSUnits.h
     css/CSSUnknownRule.h
     css/CSSValue.h
     css/CSSValueList.h
@@ -334,6 +336,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/Rect.h
     css/StyleColor.h
     css/StyleProperties.h
+    css/StyleRuleType.h
     css/StyleSheet.h
     css/StyleSheetContents.h
     css/StyleSheetList.h
@@ -382,6 +385,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/Element.h
     dom/ElementAncestorIterator.h
     dom/ElementChildIterator.h
+    dom/ElementContext.h
     dom/ElementData.h
     dom/ElementDescendantIterator.h
     dom/ElementIdentifier.h
@@ -448,6 +452,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/SpaceSplitString.h
     dom/StyledElement.h
     dom/SuccessOr.h
+    dom/TaskSource.h
     dom/Text.h
     dom/TextEvent.h
     dom/TextEventInputType.h
@@ -501,6 +506,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     editing/TextGranularity.h
     editing/TextIterator.h
     editing/TextIteratorBehavior.h
+    editing/TextManipulationController.h
     editing/UndoStep.h
     editing/VisiblePosition.h
     editing/VisibleSelection.h
@@ -537,6 +543,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/CollectionType.h
     html/DOMTokenList.h
     html/DataListSuggestionInformation.h
+    html/EnterKeyHint.h
     html/FeaturePolicy.h
     html/FormAssociatedElement.h
     html/FormNamedItem.h
@@ -1114,6 +1121,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/WidthCache.h
     platform/graphics/WindRule.h
 
+    platform/graphics/angle/Extensions3DANGLE.h
+
     platform/graphics/cv/ImageTransferSessionVT.h
 
     platform/graphics/filters/FilterOperation.h
@@ -1372,7 +1381,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     storage/StorageNamespace.h
     storage/StorageNamespaceProvider.h
     storage/StorageQuotaManager.h
-    storage/StorageQuotaUser.h
     storage/StorageType.h
 
     style/StyleChange.h

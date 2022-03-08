@@ -29,7 +29,6 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "GenericEventQueue.h"
 #include "MessagePortChannel.h"
 #include "MessagePortIdentifier.h"
 #include "MessageWithMessagePorts.h"
@@ -39,7 +38,6 @@ namespace JSC {
 class CallFrame;
 class JSObject;
 class JSValue;
-using ExecState = CallFrame;
 }
 
 namespace WebCore {
@@ -53,7 +51,7 @@ public:
     static Ref<MessagePort> create(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
     virtual ~MessagePort();
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
 
     void start();
     void close();
@@ -97,6 +95,8 @@ public:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    void dispatchEvent(Event&) final;
+
 private:
     explicit MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
 
@@ -127,7 +127,6 @@ private:
     MessagePortIdentifier m_remoteIdentifier;
 
     mutable std::atomic<unsigned> m_refCount { 1 };
-    UniqueRef<GenericEventQueue> m_eventQueue;
 };
 
 } // namespace WebCore

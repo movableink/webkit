@@ -104,7 +104,7 @@ void WorkerMessagingProxy::postMessageToWorkerObject(MessageWithMessagePorts&& m
             return;
 
         auto ports = MessagePort::entanglePorts(context, WTFMove(message.transferredPorts));
-        workerObject->enqueueEvent(MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
+        ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::PostedMessageQueue, MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
     });
 }
 
@@ -126,6 +126,22 @@ void WorkerMessagingProxy::postMessageToWorkerGlobalScope(MessageWithMessagePort
         m_workerThread->runLoop().postTask(WTFMove(task));
     } else
         m_queuedEarlyTasks.append(makeUnique<ScriptExecutionContext::Task>(WTFMove(task)));
+}
+
+void WorkerMessagingProxy::suspendForBackForwardCache()
+{
+    if (m_workerThread)
+        m_workerThread->suspend();
+    else
+        m_askedToSuspend = true;
+}
+
+void WorkerMessagingProxy::resumeForBackForwardCache()
+{
+    if (m_workerThread)
+        m_workerThread->resume();
+    else
+        m_askedToSuspend = false;
 }
 
 void WorkerMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
@@ -161,7 +177,7 @@ void WorkerMessagingProxy::postExceptionToWorkerObject(const String& errorMessag
 
         // We don't bother checking the askedToTerminate() flag here, because exceptions should *always* be reported even if the thread is terminated.
         // This is intentionally different than the behavior in MessageWorkerTask, because terminated workers no longer deliver messages (section 4.6 of the WebWorker spec), but they do report exceptions.
-        workerObject->enqueueEvent(ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { }));
+        ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::DOMManipulation, ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { }));
     });
 }
 
@@ -190,6 +206,11 @@ void WorkerMessagingProxy::workerThreadCreated(DedicatedWorkerThread& workerThre
         // Worker.terminate() could be called from JS before the thread was created.
         m_workerThread->stop(nullptr);
     } else {
+        if (m_askedToSuspend) {
+            m_askedToSuspend = false;
+            m_workerThread->suspend();
+        }
+
         ASSERT(!m_unconfirmedMessageCount);
         m_unconfirmedMessageCount = m_queuedEarlyTasks.size();
         m_workerThreadHadPendingActivity = true; // Worker initialization means a pending activity.

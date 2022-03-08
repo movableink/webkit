@@ -30,6 +30,12 @@ function loadImage(blob) {
     });
 }
 
+function loadDocument(blob) {
+    return new Promise(async resolve => {
+        resolve(new DOMParser().parseFromString(await loadText(blob), "text/html"));
+    });
+}
+
 function writeToClipboardUsingDataTransfer(data) {
     const input = document.createElement("input");
     document.body.appendChild(input);
@@ -77,4 +83,13 @@ async function triggerProgrammaticPaste(locationOrElement, options = []) {
                 uiController.activateAtPoint(${x}, ${y}, checkDone);
             })()`, resolve);
     });
+}
+
+async function checkClipboardItemString(item, type, expectedString)
+{
+    const observedString = await loadText(await item.getType(type));
+    if (observedString === expectedString)
+        testPassed(`getType("${type}") resolved to "${expectedString}"`);
+    else
+        testFailed(`getType("${type}") resolved to "${observedString}; expected "${expectedString}"`);
 }

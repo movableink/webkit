@@ -64,6 +64,9 @@ public:
 
     void syncTerminateWorker(WebCore::ServiceWorkerIdentifier) final;
 
+    bool isThrottleable() const { return m_isThrottleable; }
+    void updateThrottleState();
+
 private:
     WebSWClientConnection();
 
@@ -79,11 +82,11 @@ private:
     void whenRegistrationReady(const WebCore::SecurityOriginData& topOrigin, const URL& clientURL, WhenRegistrationReadyCallback&&) final;
     void registrationReady(uint64_t callbackID, WebCore::ServiceWorkerRegistrationData&&);
 
+    void setDocumentIsControlled(WebCore::DocumentIdentifier, WebCore::ServiceWorkerRegistrationData&&, CompletionHandler<void(bool)>&&);
+
     void getRegistrations(WebCore::SecurityOriginData&& topOrigin, const URL& clientURL, GetRegistrationsCallback&&) final;
 
     void didResolveRegistrationPromise(const WebCore::ServiceWorkerRegistrationKey&) final;
-    void updateThrottleState() final;
-    bool isThrottleable() const final { return m_isThrottleable; }
     void storeRegistrationsOnDiskForTesting(CompletionHandler<void()>&&) final;
 
     void scheduleStorageJob(const WebCore::ServiceWorkerJobData&);

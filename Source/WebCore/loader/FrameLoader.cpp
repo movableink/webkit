@@ -595,7 +595,8 @@ void FrameLoader::didExplicitOpen()
     if (!m_stateMachine.committedFirstRealDocumentLoad())
         m_stateMachine.advanceTo(FrameLoaderStateMachine::DisplayingInitialEmptyDocumentPostCommit);
 
-    m_client.dispatchDidExplicitOpen(m_frame.document() ? m_frame.document()->url() : URL());
+    if (auto* document = m_frame.document())
+        m_client.dispatchDidExplicitOpen(document->url(), document->contentType());
     
     // Prevent window.open(url) -- eg window.open("about:blank") -- from blowing away results
     // from a subsequent window.document.open / window.document.write call. 
@@ -842,15 +843,6 @@ void FrameLoader::checkCompleted()
     // Have we completed before?
     if (m_isComplete)
         return;
-    
-#if ENABLE(VIDEO)
-    // FIXME: Remove this code once https://webkit.org/b/185284 is fixed.
-    if (HTMLMediaElement::isRunningDestructor()) {
-        ASSERT_NOT_REACHED();
-        scheduleCheckCompleted();
-        return;
-    }
-#endif
 
     // FIXME: It would be better if resource loads were kicked off after render tree update (or didn't complete synchronously).
     //        https://bugs.webkit.org/show_bug.cgi?id=171729
@@ -1245,6 +1237,7 @@ void FrameLoader::setupForReplace()
     m_client.revertToProvisionalState(m_documentLoader.get());
     setState(FrameStateProvisional);
     m_provisionalDocumentLoader = m_documentLoader;
+    RELEASE_LOG_IF_ALLOWED("setupForReplace: Setting provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
     m_documentLoader = nullptr;
     detachChildren();
 }
@@ -1659,6 +1652,7 @@ void FrameLoader::clearProvisionalLoadForPolicyCheck()
 
     SetForScope<bool> change(m_inClearProvisionalLoadForPolicyCheck, true);
     m_provisionalDocumentLoader->stopLoading();
+    RELEASE_LOG_IF_ALLOWED("clearProvisionalLoadForPolicyCheck: Clearing provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
     setProvisionalDocumentLoader(nullptr);
 }
 
@@ -1847,6 +1841,7 @@ void FrameLoader::stopAllLoaders(ClearProvisionalItemPolicy clearProvisionalItem
     if (m_documentLoader)
         m_documentLoader->stopLoading();
 
+    RELEASE_LOG_IF_ALLOWED("allAllLoaders: Clearing provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
     setProvisionalDocumentLoader(nullptr);
 
     m_inStopAllLoaders = false;    
@@ -1858,6 +1853,7 @@ void FrameLoader::stopForBackForwardCache()
     if (!m_frame.isMainFrame()) {
         if (m_provisionalDocumentLoader)
             m_provisionalDocumentLoader->stopLoading();
+        RELEASE_LOG_IF_ALLOWED("stopForBackForwardCache: Clearing provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
         setProvisionalDocumentLoader(nullptr);
     }
 
@@ -2004,6 +2000,7 @@ void FrameLoader::setState(FrameState newState)
 
 void FrameLoader::clearProvisionalLoad()
 {
+    RELEASE_LOG_IF_ALLOWED("clearProvisionalLoad: Clearing provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
     setProvisionalDocumentLoader(nullptr);
     m_progressTracker->progressCompleted();
     setState(FrameStateComplete);
@@ -2169,6 +2166,7 @@ void FrameLoader::transitionToCommitted(CachedPage* cachedPage)
     setDocumentLoader(m_provisionalDocumentLoader.get());
     if (pdl != m_provisionalDocumentLoader)
         return;
+    RELEASE_LOG_IF_ALLOWED("transitionToCommitted: Clearing provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
     setProvisionalDocumentLoader(nullptr);
 
     // Nothing else can interrupt this commit - set the Provisional->Committed transition in stone
@@ -3152,7 +3150,8 @@ unsigned long FrameLoader::loadResourceSynchronously(const ResourceRequest& requ
             platformStrategies()->loaderStrategy()->loadResourceSynchronously(*this, identifier, newRequest, clientCredentialPolicy, options, originalRequestHeaders, error, response, buffer);
             data = SharedBuffer::create(WTFMove(buffer));
             documentLoader()->applicationCacheHost().maybeLoadFallbackSynchronously(newRequest, error, response, data);
-            ResourceLoadObserver::shared().logSubresourceLoading(&m_frame, newRequest, response);
+            ResourceLoadObserver::shared().logSubresourceLoading(&m_frame, newRequest, response,
+                (isScriptLikeDestination(options.destination) ? ResourceLoadObserver::FetchDestinationIsScriptLike::Yes : ResourceLoadObserver::FetchDestinationIsScriptLike::No));
         }
     }
     notifier().sendRemainingDelegateMessages(m_documentLoader.get(), identifier, request, response, data ? data->data() : nullptr, data ? data->size() : 0, -1, error);
@@ -3213,6 +3212,7 @@ void FrameLoader::continueFragmentScrollAfterNavigationPolicy(const ResourceRequ
     // If we have a provisional request for a different document, a fragment scroll should cancel it.
     if (m_provisionalDocumentLoader && !equalIgnoringFragmentIdentifier(m_provisionalDocumentLoader->request().url(), request.url())) {
         m_provisionalDocumentLoader->stopLoading();
+        RELEASE_LOG_IF_ALLOWED("continueFragmentScrollAfterNavigationPolicy: Clearing provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
         setProvisionalDocumentLoader(nullptr);
     }
 
@@ -3250,12 +3250,19 @@ static bool isSameDocumentReload(bool isNewNavigation, FrameLoadType loadType)
 
 void FrameLoader::scrollToFragmentWithParentBoundary(const URL& url, bool isNewNavigation)
 {
-    FrameView* view = m_frame.view();
-    if (!view)
+    auto view = makeRefPtr(m_frame.view());
+    auto document = makeRefPtr(m_frame.document());
+    if (!view || !document)
         return;
 
-    if (isSameDocumentReload(isNewNavigation, m_loadType) || itemAllowsScrollRestoration(history().currentItem()))
-        view->scrollToFragment(url);
+    if (isSameDocumentReload(isNewNavigation, m_loadType) || itemAllowsScrollRestoration(history().currentItem())) {
+        // https://html.spec.whatwg.org/multipage/browsing-the-web.html#try-to-scroll-to-the-fragment
+        if (!document->haveStylesheetsLoaded())
+            document->setGotoAnchorNeededAfterStylesheetsLoad(true);
+        else
+            view->scrollToFragment(url);
+    }
+
 }
 
 bool FrameLoader::shouldClose()
@@ -3498,6 +3505,7 @@ void FrameLoader::continueLoadAfterNavigationPolicy(const ResourceRequest& reque
     }
 
     setProvisionalDocumentLoader(m_policyDocumentLoader.get());
+    RELEASE_LOG_IF_ALLOWED("continueLoadAfterNavigationPolicy: Setting provisional document loader (frame = %p, main = %d m_provisionalDocumentLoader=%p)", &m_frame, m_frame.isMainFrame(), m_provisionalDocumentLoader.get());
     m_loadType = type;
     setState(FrameStateProvisional);
 

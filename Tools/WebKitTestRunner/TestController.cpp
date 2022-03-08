@@ -314,6 +314,8 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
     if (!m_currentInvocation->canOpenWindows())
         return nullptr;
 
+    m_createdOtherPage = true;
+
     PlatformWebView* view = platformCreateOtherPage(parentView, configuration, parentView->options());
     WKPageRef newPage = view->page();
 
@@ -530,6 +532,7 @@ WKWebsiteDataStoreRef TestController::websiteDataStore()
             WKWebsiteDataStoreConfigurationSetResourceLoadStatisticsDirectory(configuration.get(), toWK(temporaryFolder + pathSeparator + "ResourceLoadStatistics").get());
             WKWebsiteDataStoreConfigurationSetPerOriginStorageQuota(configuration.get(), 400 * 1024);
             WKWebsiteDataStoreConfigurationSetNetworkCacheSpeculativeValidationEnabled(configuration.get(), true);
+            WKWebsiteDataStoreConfigurationSetStaleWhileRevalidateEnabled(configuration.get(), true);
             WKWebsiteDataStoreConfigurationSetTestingSessionEnabled(configuration.get(), true);
         }
         dataStore = WKWebsiteDataStoreCreateWithConfiguration(configuration.get());
@@ -767,7 +770,9 @@ void TestController::ensureViewSupportsOptionsForTest(const TestInvocation& test
     auto options = test.options();
 
     if (m_mainWebView) {
-        if (m_mainWebView->viewSupportsOptions(options))
+        // Having created another page (via window.open()) prevents process swapping on navigation and it may therefore
+        // cause flakiness to reuse the view.
+        if (!m_createdOtherPage && m_mainWebView->viewSupportsOptions(options))
             return;
 
         willDestroyWebView();
@@ -777,6 +782,7 @@ void TestController::ensureViewSupportsOptionsForTest(const TestInvocation& test
         WKPageClose(m_mainWebView->page());
 
         m_mainWebView = nullptr;
+        m_createdOtherPage = false;
     }
 
     createWebViewWithOptions(options);
@@ -891,6 +897,7 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
     WKPreferencesSetMediaPreloadingEnabled(preferences, true);
     WKPreferencesSetMediaPlaybackAllowsInline(preferences, true);
     WKPreferencesSetInlineMediaPlaybackRequiresPlaysInlineAttribute(preferences, false);
+    WKPreferencesSetRemotePlaybackEnabled(preferences, true);
     WKPreferencesSetBeaconAPIEnabled(preferences, true);
     WKPreferencesSetDirectoryUploadEnabled(preferences, true);
 
@@ -975,6 +982,8 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     clearServiceWorkerRegistrations();
     clearDOMCaches();
+
+    resetQuota();
 
     WKContextSetAllowsAnySSLCertificateForServiceWorkerTesting(platformContext(), true);
 
@@ -3137,6 +3146,13 @@ void TestController::syncLocalStorage()
     runUntil(context.done, noTimeout);
 }
 
+void TestController::resetQuota()
+{
+    StorageVoidCallbackContext context(*this);
+    WKWebsiteDataStoreResetQuota(TestController::websiteDataStore(), &context, StorageVoidCallback);
+    runUntil(context.done, noTimeout);
+}
+
 struct FetchCacheOriginsCallbackContext {
     FetchCacheOriginsCallbackContext(TestController& controller, WKStringRef origin)
         : testController(controller)
@@ -3247,6 +3263,11 @@ static void resourceStatisticsBooleanResultCallback(bool result, void* userData)
     context->result = result;
     context->done = true;
     context->testController.notifyDone();
+}
+
+void TestController::setStatisticsEnabled(bool value)
+{
+    WKWebsiteDataStoreSetResourceLoadStatisticsEnabled(TestController::websiteDataStore(), value);
 }
 
 void TestController::setStatisticsDebugMode(bool value)

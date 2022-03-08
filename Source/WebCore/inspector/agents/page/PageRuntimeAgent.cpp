@@ -32,8 +32,6 @@
 #include "config.h"
 #include "PageRuntimeAgent.h"
 
-#include "Chrome.h"
-#include "ChromeClient.h"
 #include "Document.h"
 #include "Frame.h"
 #include "InspectorPageAgent.h"
@@ -44,16 +42,20 @@
 #include "ScriptController.h"
 #include "ScriptState.h"
 #include "SecurityOrigin.h"
-#include "UserGestureIndicator.h"
+#include "UserGestureEmulationScope.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 
 using Inspector::Protocol::Runtime::ExecutionContextDescription;
 
-
 namespace WebCore {
 
 using namespace Inspector;
+
+static bool asBool(const bool* b)
+{
+    return b && *b;
+}
 
 PageRuntimeAgent::PageRuntimeAgent(PageAgentContext& context)
     : InspectorRuntimeAgent(context)
@@ -85,7 +87,7 @@ void PageRuntimeAgent::disable(ErrorString& errorString)
     InspectorRuntimeAgent::disable(errorString);
 }
 
-void PageRuntimeAgent::didCreateMainWorldContext(Frame& frame)
+void PageRuntimeAgent::didClearWindowObjectInWorld(Frame& frame)
 {
     auto* pageAgent = m_instrumentingAgents.inspectorPageAgent();
     if (!pageAgent)
@@ -99,7 +101,7 @@ void PageRuntimeAgent::didCreateMainWorldContext(Frame& frame)
 InjectedScript PageRuntimeAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
 {
     if (!executionContextId) {
-        JSC::ExecState* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
+        JSC::JSGlobalObject* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
         InjectedScript result = injectedScriptManager().injectedScriptFor(scriptState);
         if (result.hasNoValue())
             errorString = "Internal error: main world execution context not found"_s;
@@ -128,14 +130,14 @@ void PageRuntimeAgent::reportExecutionContextCreation()
     if (!pageAgent)
         return;
 
-    Vector<std::pair<JSC::ExecState*, SecurityOrigin*>> isolatedContexts;
+    Vector<std::pair<JSC::JSGlobalObject*, SecurityOrigin*>> isolatedContexts;
     for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (!frame->script().canExecuteScripts(NotAboutToExecuteScript))
             continue;
 
         String frameId = pageAgent->frameId(frame);
 
-        JSC::ExecState* scriptState = mainWorldExecState(frame);
+        JSC::JSGlobalObject* scriptState = mainWorldExecState(frame);
         notifyContextCreated(frameId, scriptState, nullptr, true);
         frame->script().collectIsolatedContexts(isolatedContexts);
         if (isolatedContexts.isEmpty())
@@ -146,7 +148,7 @@ void PageRuntimeAgent::reportExecutionContextCreation()
     }
 }
 
-void PageRuntimeAgent::notifyContextCreated(const String& frameId, JSC::ExecState* scriptState, SecurityOrigin* securityOrigin, bool isPageContext)
+void PageRuntimeAgent::notifyContextCreated(const String& frameId, JSC::JSGlobalObject* scriptState, SecurityOrigin* securityOrigin, bool isPageContext)
 {
     ASSERT(securityOrigin || isPageContext);
 
@@ -166,24 +168,14 @@ void PageRuntimeAgent::notifyContextCreated(const String& frameId, JSC::ExecStat
 
 void PageRuntimeAgent::evaluate(ErrorString& errorString, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex)
 {
-    auto& pageChromeClient = m_inspectedPage.chrome().client();
-
-    auto shouldEmulateUserGesture = emulateUserGesture && *emulateUserGesture;
-
-    Optional<ProcessingUserGestureState> userGestureState = shouldEmulateUserGesture ? Optional<ProcessingUserGestureState>(ProcessingUserGesture) : WTF::nullopt;
-    UserGestureIndicator gestureIndicator(userGestureState);
-
-    bool userWasInteracting = false;
-    if (shouldEmulateUserGesture) {
-        userWasInteracting = pageChromeClient.userIsInteracting();
-        if (!userWasInteracting)
-            pageChromeClient.setUserIsInteracting(true);
-    }
-
+    UserGestureEmulationScope userGestureScope(m_inspectedPage, asBool(emulateUserGesture));
     InspectorRuntimeAgent::evaluate(errorString, expression, objectGroup, includeCommandLineAPI, doNotPauseOnExceptionsAndMuteConsole, executionContextId, returnByValue, generatePreview, saveResult, emulateUserGesture, result, wasThrown, savedResultIndex);
+}
 
-    if (shouldEmulateUserGesture && !userWasInteracting && pageChromeClient.userIsInteracting())
-        pageChromeClient.setUserIsInteracting(false);
+void PageRuntimeAgent::callFunctionOn(ErrorString& errorString, const String& objectId, const String& expression, const JSON::Array* optionalArguments, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown)
+{
+    UserGestureEmulationScope userGestureScope(m_inspectedPage, asBool(emulateUserGesture));
+    InspectorRuntimeAgent::callFunctionOn(errorString, objectId, expression, optionalArguments, doNotPauseOnExceptionsAndMuteConsole, returnByValue, generatePreview, emulateUserGesture, result, wasThrown);
 }
 
 } // namespace WebCore

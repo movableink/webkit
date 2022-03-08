@@ -42,6 +42,7 @@
 #include "SecurityOriginPolicy.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "SocketProvider.h"
+#include "WorkerEventLoop.h"
 #include "WorkerInspectorController.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerLocation.h"
@@ -67,10 +68,8 @@ WorkerGlobalScope::WorkerGlobalScope(const URL& url, Ref<SecurityOrigin>&& origi
     , m_thread(thread)
     , m_script(makeUnique<WorkerScriptController>(this))
     , m_inspectorController(makeUnique<WorkerInspectorController>(*this))
-    , m_microtaskQueue(makeUnique<MicrotaskQueue>(m_script->vm()))
     , m_isOnline(isOnline)
     , m_shouldBypassMainWorldContentSecurityPolicy(shouldBypassMainWorldContentSecurityPolicy)
-    , m_eventQueue(*this)
     , m_topOrigin(WTFMove(topOrigin))
 #if ENABLE(INDEXED_DATABASE)
     , m_connectionProxy(connectionProxy)
@@ -104,6 +103,18 @@ WorkerGlobalScope::~WorkerGlobalScope()
     thread().workerReportingProxy().workerGlobalScopeDestroyed();
 }
 
+EventLoopTaskGroup& WorkerGlobalScope::eventLoop()
+{
+    ASSERT(isContextThread());
+    if (UNLIKELY(!m_defaultTaskGroup)) {
+        m_eventLoop = WorkerEventLoop::create(*this);
+        m_defaultTaskGroup = makeUnique<EventLoopTaskGroup>(*m_eventLoop);
+        if (activeDOMObjectsAreStopped())
+            m_defaultTaskGroup->stopAndDiscardAllTasks();
+    }
+    return *m_defaultTaskGroup;
+}
+
 String WorkerGlobalScope::origin() const
 {
     auto* securityOrigin = this->securityOrigin();
@@ -116,6 +127,8 @@ void WorkerGlobalScope::prepareForTermination()
     stopIndexedDatabase();
 #endif
 
+    if (m_defaultTaskGroup)
+        m_defaultTaskGroup->stopAndDiscardAllTasks();
     stopActiveDOMObjects();
 
     if (m_cacheStorageConnection)
@@ -128,7 +141,8 @@ void WorkerGlobalScope::prepareForTermination()
     removeAllEventListeners();
 
     // MicrotaskQueue and RejectedPromiseTracker reference Heap.
-    m_microtaskQueue = nullptr;
+    if (m_eventLoop)
+        m_eventLoop->clearMicrotaskQueue();
     removeRejectedPromiseTracker();
 }
 
@@ -201,6 +215,22 @@ void WorkerGlobalScope::stopIndexedDatabase()
 #endif
 }
 
+void WorkerGlobalScope::suspend()
+{
+#if ENABLE(INDEXED_DATABASE_IN_WORKERS)
+    if (m_connectionProxy)
+        m_connectionProxy->setContextSuspended(*scriptExecutionContext(), true);
+#endif
+}
+
+void WorkerGlobalScope::resume()
+{
+#if ENABLE(INDEXED_DATABASE_IN_WORKERS)
+    if (m_connectionProxy)
+        m_connectionProxy->setContextSuspended(*scriptExecutionContext(), false);
+#endif
+}
+
 #endif // ENABLE(INDEXED_DATABASE)
 
 WorkerLocation& WorkerGlobalScope::location() const
@@ -246,7 +276,7 @@ void WorkerGlobalScope::postTask(Task&& task)
     thread().runLoop().postTask(WTFMove(task));
 }
 
-ExceptionOr<int> WorkerGlobalScope::setTimeout(JSC::ExecState& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
+ExceptionOr<int> WorkerGlobalScope::setTimeout(JSC::JSGlobalObject& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
     // FIXME: Should this check really happen here? Or should it happen when code is about to eval?
     if (action->type() == ScheduledAction::Type::Code) {
@@ -264,7 +294,7 @@ void WorkerGlobalScope::clearTimeout(int timeoutId)
     DOMTimer::removeById(*this, timeoutId);
 }
 
-ExceptionOr<int> WorkerGlobalScope::setInterval(JSC::ExecState& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
+ExceptionOr<int> WorkerGlobalScope::setInterval(JSC::JSGlobalObject& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
     // FIXME: Should this check really happen here? Or should it happen when code is about to eval?
     if (action->type() == ScheduledAction::Type::Code) {
@@ -358,7 +388,7 @@ void WorkerGlobalScope::addConsoleMessage(MessageSource source, MessageLevel lev
     addMessage(source, level, message, { }, 0, 0, nullptr, nullptr, requestIdentifier);
 }
 
-void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, const String& messageText, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<ScriptCallStack>&& callStack, JSC::ExecState* state, unsigned long requestIdentifier)
+void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, const String& messageText, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<ScriptCallStack>&& callStack, JSC::JSGlobalObject* state, unsigned long requestIdentifier)
 {
     if (!isContextThread()) {
         postTask(AddConsoleMessageTask(source, level, messageText));
@@ -381,11 +411,6 @@ bool WorkerGlobalScope::isContextThread() const
 bool WorkerGlobalScope::isJSExecutionForbidden() const
 {
     return m_script->isExecutionForbidden();
-}
-
-WorkerEventQueue& WorkerGlobalScope::eventQueue() const
-{
-    return m_eventQueue;
 }
 
 #if ENABLE(WEB_CRYPTO)

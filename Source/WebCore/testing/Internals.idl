@@ -139,6 +139,15 @@ enum CompositingPolicy {
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
+] dictionary DoViParameterSet {
+    DOMString codecName;
+    unsigned short bitstreamProfileID;
+    unsigned short bitstreamLevelID;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
 ] dictionary AcceleratedAnimation {
     DOMString property;
     double speed;
@@ -610,8 +619,11 @@ enum CompositingPolicy {
     [Conditional=VIDEO, MayThrowException] void postRemoteControlCommand(DOMString command, optional unrestricted float argument = 0);
     [Conditional=WIRELESS_PLAYBACK_TARGET] void setMockMediaPlaybackTargetPickerEnabled(boolean enabled);
     [Conditional=WIRELESS_PLAYBACK_TARGET, MayThrowException] void setMockMediaPlaybackTargetPickerState(DOMString deviceName, DOMString deviceState);
+    [Conditional=WIRELESS_PLAYBACK_TARGET] void mockMediaPlaybackTargetPickerDismissPopup();
     [Conditional=MEDIA_STREAM] void setMockMediaCaptureDevicesEnabled(boolean enabled);
     [Conditional=MEDIA_STREAM] void setCustomPrivateRecorderCreator();
+
+    [Conditional=WEB_AUDIO] void useMockAudioDestinationCocoa();
 
     [Conditional=WEB_RTC] void emulateRTCPeerConnectionPlatformEvent(RTCPeerConnection connection, DOMString action);
     [Conditional=WEB_RTC] void useMockRTCPeerConnectionFactory(DOMString testCase);
@@ -652,8 +664,8 @@ enum CompositingPolicy {
 
     void setShowAllPlugins(boolean showAll);
 
-    [Conditional=STREAMS_API, CallWith=ExecState] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
-    [Conditional=STREAMS_API, CallWith=ExecState] boolean isReadableStreamDisturbed(any stream);
+    [Conditional=STREAMS_API, CallWith=GlobalObject] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
+    [Conditional=STREAMS_API, CallWith=GlobalObject] boolean isReadableStreamDisturbed(any stream);
 
     DOMString resourceLoadStatisticsForURL(DOMURL url);
     void setResourceLoadStatisticsEnabled(boolean enable);
@@ -714,11 +726,11 @@ enum CompositingPolicy {
     [Conditional=MEDIA_STREAM] void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] void setMediaStreamTrackIdentifier(MediaStreamTrack track, DOMString identifier);
     [Conditional=MEDIA_STREAM] void setMediaStreamSourceInterrupted(MediaStreamTrack track, boolean interrupted);
-    [Conditional=MEDIA_STREAM] void setDisableGetDisplayMediaUserGestureConstraint(boolean value);
 
     unsigned long long documentIdentifier(Document document);
     boolean isDocumentAlive(unsigned long long documentIdentifier);
 
+    unsigned long long elementIdentifier(Element element);
     unsigned long long frameIdentifier(Document document);
     unsigned long long pageIdentifier(Document document);
 
@@ -744,7 +756,6 @@ enum CompositingPolicy {
 
     [Conditional=SERVICE_WORKER] Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
     [Conditional=SERVICE_WORKER] void terminateServiceWorker(ServiceWorker worker);
-    [Conditional=SERVICE_WORKER] boolean hasServiceWorkerConnection();
 
     [CallWith=Document, Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
 
@@ -754,6 +765,7 @@ enum CompositingPolicy {
     boolean usingAppleInternalSDK();
 
     void postTask(VoidCallback callback);
+    [CallWith=ScriptExecutionContext, MayThrowException] void queueTask(DOMString source, VoidCallback callback);
     void markContextAsInsecure();
 
     void setMaxCanvasPixelMemory(unsigned long size);
@@ -781,6 +793,7 @@ enum CompositingPolicy {
     boolean supportsVCPEncoder();
 
     HEVCParameterSet? parseHEVCCodecParameters(DOMString codecParameters);
+    DoViParameterSet? parseDoViCodecParameters(DOMString codecParameters);
 
     sequence<CookieData> getCookies();
 
@@ -800,4 +813,6 @@ enum CompositingPolicy {
     void addPrefetchLoadEventListener(HTMLLinkElement link, EventListener? callback);
 
     [Conditional=WEB_AUTHN] void setMockWebAuthenticationConfiguration(MockWebAuthenticationConfiguration configuration);
+
+    [Conditional=PICTURE_IN_PICTURE_API] void setPictureInPictureAPITestEnabled(HTMLVideoElement videoElement, boolean enabled);
 };

@@ -67,7 +67,7 @@ webkit.org/b/170176 fast/inline-block/baseline-vertical-03.html [ ImageOnlyFailu
 webkit.org/b/170176 fast/inline-block/baseline-vertical-04.html [ ImageOnlyFailure ]
 
 # WebGL tests which need triaging https://bugs.webkit.org/b/174100
-webgl/1.0.2/conformance/uniforms/uniform-default-values.html [ Failure ]
+webgl/1.0.3/conformance/uniforms/uniform-default-values.html [ Failure ]
 
 # This test requires Skia, which isn't available on iOS.
 webkit.org/b/174079 fast/text/variations/skia-postscript-name.html [ ImageOnlyFailure ]
@@ -117,7 +117,6 @@ webkit.org/b/189686 webgl/2.0.0/conformance/reading/read-pixels-test.html [ Slow
 # Crashes
 webkit.org/b/189686 webgl/2.0.0/conformance2/buffers/one-large-uniform-buffer.html [ Skip ]
 
-imported/w3c/web-platform-tests/css/css-lists/content-property/marker-text-matches-armenian.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-lists/content-property/marker-text-matches-georgian.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-lists/content-property/marker-text-matches-lower-greek.html [ Pass ]
 imported/w3c/web-platform-tests/css/css-lists/list-and-writing-mode-001.html [ Failure ]

@@ -27,6 +27,8 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutContainer.h"
+#include "LayoutTreeBuilder.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/IsoMalloc.h>
@@ -41,14 +43,14 @@ class Box;
 namespace Layout {
 
 class Box;
-class Container;
 class FormattingContext;
 class FormattingState;
 
 class LayoutState {
     WTF_MAKE_ISO_ALLOCATED(LayoutState);
 public:
-    LayoutState(const Container& root);
+    LayoutState(const LayoutTreeContent&);
+    ~LayoutState();
 
     FormattingState& createFormattingStateForFormattingRootIfNeeded(const Container& formattingContextRoot);
     FormattingState& establishedFormattingState(const Container& formattingRoot) const;
@@ -65,21 +67,26 @@ public:
     bool hasDisplayBox(const Box& layoutBox) const { return m_layoutToDisplayBox.contains(&layoutBox); }
 
     enum class QuirksMode { No, Limited, Yes };
-    void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
     bool inQuirksMode() const { return m_quirksMode == QuirksMode::Yes; }
     bool inLimitedQuirksMode() const { return m_quirksMode == QuirksMode::Limited; }
     bool inNoQuirksMode() const { return m_quirksMode == QuirksMode::No; }
 
-    const Container& root() const { return *m_root; }
+    const Container& root() const { return m_layoutTreeContent->rootLayoutBox(); }
+#ifndef NDEBUG
+    const RenderBox& rootRenderer() const { return m_layoutTreeContent->rootRenderer(); }
+#endif
 
 private:
-    WeakPtr<const Container> m_root;
+    void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
+
     HashMap<const Container*, std::unique_ptr<FormattingState>> m_formattingStates;
 #ifndef NDEBUG
     HashSet<const FormattingContext*> m_formattingContextList;
 #endif
     HashMap<const Box*, std::unique_ptr<Display::Box>> m_layoutToDisplayBox;
     QuirksMode m_quirksMode { QuirksMode::No };
+
+    WeakPtr<const LayoutTreeContent> m_layoutTreeContent;
 };
 
 #ifndef NDEBUG

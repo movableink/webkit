@@ -27,6 +27,7 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "InlineLineLayout.h"
 #include "LayoutUnit.h"
 
 namespace WebCore {
@@ -37,25 +38,28 @@ class InlineTextItem;
 
 class LineBreaker {
 public:
-    enum class BreakingBehavior { Keep, Split, Wrap };
     struct BreakingContext {
-        BreakingBehavior breakingBehavior;
-        bool isAtBreakingOpportunity { false };
+        enum class ContentBreak { Keep, Split, Wrap };
+        ContentBreak contentBreak;
+        struct TrailingPartialContent {
+            unsigned runIndex { 0 };
+            unsigned length { 0 };
+            LayoutUnit logicalWidth;
+        };
+        Optional<TrailingPartialContent> trailingPartialContent;
     };
-    struct LineContext {
-        LayoutUnit availableWidth;
-        LayoutUnit logicalLeft;
-        LayoutUnit trimmableWidth;
-        bool isEmpty { false };
-    };
-    BreakingContext breakingContext(const InlineItem&, LayoutUnit logicalWidth, const LineContext&);
+    BreakingContext breakingContextForInlineContent(const LineLayout::RunList&, LayoutUnit logicalWidth, LayoutUnit availableWidth, bool lineIsEmpty);
+    bool shouldWrapFloatBox(LayoutUnit floatLogicalWidth, LayoutUnit availableWidth, bool lineIsEmpty);
 
 private:
 
-    BreakingBehavior wordBreakingBehavior(const InlineTextItem&, bool lineIsEmpty) const;
-    bool isAtBreakingOpportunity(const InlineItem&);
+    Optional<BreakingContext::TrailingPartialContent> wordBreakingBehavior(const LineLayout::RunList&, LayoutUnit availableWidth) const;
 
-    bool m_hyphenationIsDisabled { true };
+    struct SplitLengthAndWidth {
+        unsigned length { 0 };
+        LayoutUnit leftLogicalWidth;
+    };
+    Optional<SplitLengthAndWidth> tryBreakingTextRun(const LineLayout::Run overflowRun, LayoutUnit availableWidth) const;
 };
 
 }

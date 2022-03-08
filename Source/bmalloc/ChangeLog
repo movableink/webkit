@@ -1,3 +1,125 @@
+2019-11-18  Basuke Suzuki  <basuke.suzuki@sony.com>
+
+        [bmalloc] Some chunks have unused region in the tail of its memory block.
+        https://bugs.webkit.org/show_bug.cgi?id=204286
+
+        Reviewed by Yusuke Suzuki.
+
+        When chunk is initialized, some amount of memory are not used and be kept untouched until its end.
+        This patch tries to decommit those region at the end of initialization.
+
+        For instance, think about the case that the pageClass is 5. Then pageSize is 24k. With this pageSize,
+        a chunk can hold 42 pages and its size is 24k * 42 = 1008k which is smaller than chunkSize = 1024k.
+        Here is the complete result:
+
+                page    page    page
+                class   size    count   remainings
+                ----------------------------------
+                0       4kB     256     0
+                1       8kB     128     0
+                2       12kB    85      4kB
+                3       16kB    64      0
+                4       20kB    51      4kB
+                5       24kB    42      16kB
+                6       28kB    36      16kB
+                7       32kB    32      0
+                8       36kB    28      16kB
+                9       40kB    25      24kB
+                10      44kB    23      12kB
+                11      48kB    21      16kB
+                12      52kB    19      36kB
+                13      56kB    18      16kB
+                14      60kB    17      4kB
+                15      64kB    16      0
+
+        Tested on Mac testmem and result is almost same or in error margin.
+
+                Before:                                 After:
+                end score:           8.5425 MB          end score:           8.5127 MB
+                peak score:          8.7997 MB          peak score:          8.7884 MB
+                total memory score:  8.6702 MB          total memory score:  8.6495 MB
+                time score:          668.19 ms          time score:          666.27 ms
+
+        * bmalloc/Chunk.h:
+        (bmalloc::Chunk::metadataSize):
+        (bmalloc::forEachPage):
+        * bmalloc/Heap.cpp:
+        (bmalloc::Heap::allocateSmallChunk):
+
+2019-11-15  Basuke Suzuki  <basuke.suzuki@sony.com>
+
+        [bmalloc] The tracking of freeableMemory of Heap doesn't count Chunk's metadata size.
+        https://bugs.webkit.org/show_bug.cgi?id=204135
+
+        Reviewed by Yusuke Suzuki.
+
+        When chunk is allocated in allocateSmallChunk(), all chunk size is added to freeableMemory.
+        This is wrong. Only free pages should be added to it.
+
+        * bmalloc/Heap.cpp:
+        (bmalloc::Heap::allocateSmallChunk):
+
+2019-11-15  Basuke Suzuki  <basuke.suzuki@sony.com>
+
+        [Mac] Use better describing name for Mac's scavenger compiler flag.
+        https://bugs.webkit.org/show_bug.cgi?id=203922
+
+        Reviewed by Yusuke Suzuki.
+
+        Changing BPLATFORM(MAC) to BUSE(PARTIAL_SCAVENGE).
+
+        * bmalloc/BPlatform.h:
+        * bmalloc/Heap.cpp:
+        (bmalloc::Heap::scavenge):
+        (bmalloc::Heap::allocateSmallChunk):
+        (bmalloc::Heap::allocateSmallPage):
+        (bmalloc::Heap::allocateLarge):
+        * bmalloc/Heap.h:
+        * bmalloc/IsoDirectory.h:
+        * bmalloc/IsoDirectoryInlines.h:
+        (bmalloc::passedNumPages>::takeFirstEligible):
+        (bmalloc::passedNumPages>::scavenge):
+        * bmalloc/IsoHeapImpl.h:
+        * bmalloc/IsoHeapImplInlines.h:
+        * bmalloc/LargeMap.cpp:
+        (bmalloc::LargeMap::add):
+        * bmalloc/LargeRange.h:
+        (bmalloc::LargeRange::LargeRange):
+        (bmalloc::merge):
+        * bmalloc/Scavenger.cpp:
+        (bmalloc::Scavenger::Scavenger):
+        (bmalloc::Scavenger::scavenge):
+        (bmalloc::Scavenger::threadRunLoop):
+        * bmalloc/Scavenger.h:
+        * bmalloc/SmallPage.h:
+
+2019-11-07  Basuke Suzuki  <Basuke.Suzuki@sony.com> and Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [bmalloc] Bug fix for wait time when it's in mini mode.
+        https://bugs.webkit.org/show_bug.cgi?id=203121
+
+        Reviewed by Saam Barati.
+
+        Basuke pointed out that we never changed m_waitTime in scavenger when we are in iOS and mini-mode.
+        So previously, we are always executing scavenger for each 10ms in mini-mode. After fixing it, we
+        found that this unintentional behavior was better policy for RAMification.
+        In this patch, we explicitly use the old behavior, "scavenge for each 10ms" in iOS mini-mode.
+        We should revisit scavenger's behavior in the future to explore further better behavior.
+
+        * bmalloc/Scavenger.cpp:
+        (bmalloc::Scavenger::threadRunLoop):
+
+2019-11-06  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Unreviewed, roll-out r251268 due to RAMification regression
+        https://bugs.webkit.org/show_bug.cgi?id=203121
+
+        The code was the bug, but it would be possible that this bug accidentally makes our policy better.
+        We should clean up to make this bug's behavior default. And we should look for a bit larger interval here.
+
+        * bmalloc/Scavenger.cpp:
+        (bmalloc::Scavenger::threadRunLoop):
+
 2019-10-17  Basuke Suzuki  <Basuke.Suzuki@sony.com>
 
         [bmalloc] Bug fix for wait time when it's in mini mode.

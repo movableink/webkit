@@ -83,10 +83,16 @@
     void unbufferedLog(DOMString message);
 
     boolean isUnderTest();
+    boolean isExperimentalBuild();
 
     void beep();
     void inspectInspector();
     boolean isBeingInspected();
+
+    readonly attribute boolean supportsDiagnosticLogging;
+#if ENABLE_INSPECTOR_TELEMETRY
+    void logDiagnosticEvent(DOMString eventName, DOMString content);
+#endif
 };
 
 dictionary ContextMenuItem {

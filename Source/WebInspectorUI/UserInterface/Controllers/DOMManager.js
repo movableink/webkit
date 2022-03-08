@@ -67,6 +67,11 @@ WI.DOMManager = class DOMManager extends WI.Object
             setTimeout(() => {
                 this.ensureDocument();
             });
+
+            if (WI.isEngineeringBuild) {
+                if (DOMManager.supportsEditingUserAgentShadowTrees({target}))
+                    target.DOMAgent.setAllowEditingUserAgentShadowTrees(WI.settings.engineeringAllowEditingUserAgentShadowTrees.value);
+            }
         }
     }
 
@@ -86,6 +91,15 @@ WI.DOMManager = class DOMManager extends WI.Object
     {
         return InspectorBackend.hasCommand("DOM.setBreakpointForEventListener")
             && InspectorBackend.hasCommand("DOM.removeBreakpointForEventListener");
+    }
+
+    static supportsEditingUserAgentShadowTrees({frontendOnly, target} = {})
+    {
+        target = target || InspectorBackend;
+        return WI.isEngineeringBuild
+            && WI.settings.engineeringAllowEditingUserAgentShadowTrees.value
+            && (frontendOnly || target.hasCommand("DOM.setAllowEditingUserAgentShadowTrees"));
+
     }
 
     // Public
@@ -585,9 +599,10 @@ WI.DOMManager = class DOMManager extends WI.Object
             if (error)
                 return;
 
+            let lastInspectedNode = this._inspectedNode;
             this._inspectedNode = node;
 
-            this.dispatchEventToListeners(WI.DOMManager.Event.InspectedNodeChanged);
+            this.dispatchEventToListeners(WI.DOMManager.Event.InspectedNodeChanged, {lastInspectedNode});
         };
 
         let target = WI.assumingMainTarget();

@@ -82,6 +82,10 @@ public:
 
     void sendMessageToFrontend(const String&);
 
+#if ENABLE(INSPECTOR_TELEMETRY)
+    void setDiagnosticLoggingAvailable(bool avaliable);
+#endif
+
     // WebCore::InspectorFrontendClient
     void windowObjectCleared() override;
     void frontendLoaded() override;
@@ -116,6 +120,12 @@ public:
     void inspectedURLChanged(const String&) override;
     void showCertificate(const WebCore::CertificateInfo&) override;
 
+#if ENABLE(INSPECTOR_TELEMETRY)
+    bool supportsDiagnosticLogging() override;
+    bool diagnosticLoggingAvailable() override { return m_diagnosticLoggingAvailable; }
+    void logDiagnosticEvent(const WTF::String& eventName, const WebCore::DiagnosticLoggingClient::ValueDictionary&) override;
+#endif
+
     void sendMessageToBackend(const String&) override;
 
     void pagePaused() override;
@@ -140,6 +150,10 @@ private:
     bool m_underTest { false };
     bool m_dockingUnavailable { false };
     bool m_isVisible { false };
+#if ENABLE(INSPECTOR_TELEMETRY)
+    bool m_diagnosticLoggingAvailable { false };
+#endif
+
     DockSide m_dockSide { DockSide::Undocked };
     unsigned m_inspectionLevel { 1 };
 };

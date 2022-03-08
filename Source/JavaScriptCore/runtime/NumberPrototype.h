@@ -51,10 +51,11 @@ private:
 };
 
 EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(JSGlobalObject*, CallFrame*);
 JSString* int32ToString(VM&, int32_t value, int32_t radix);
 JSString* int52ToString(VM&, int64_t value, int32_t radix);
 JSString* numberToString(VM&, double value, int32_t radix);
 String toStringWithRadix(double doubleValue, int32_t radix);
-int32_t extractToStringRadixArgument(ExecState*, JSValue radixValue, ThrowScope&);
+int32_t extractToStringRadixArgument(JSGlobalObject*, JSValue radixValue, ThrowScope&);
 
 } // namespace JSC

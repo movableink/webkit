@@ -30,6 +30,7 @@
 #include "Logging.h"
 #include "NetworkCORSPreflightChecker.h"
 #include "NetworkProcess.h"
+#include "NetworkSchemeRegistry.h"
 #include <WebCore/ContentRuleListResults.h>
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/CrossOriginAccessControl.h>
@@ -48,7 +49,7 @@ static inline bool isSameOrigin(const URL& url, const SecurityOrigin* origin)
     return url.protocolIsData() || url.protocolIsBlob() || !origin || origin->canRequest(url);
 }
 
-NetworkLoadChecker::NetworkLoadChecker(NetworkProcess& networkProcess, FetchOptions&& options, PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, HTTPHeaderMap&& originalRequestHeaders, URL&& url, RefPtr<SecurityOrigin>&& sourceOrigin, RefPtr<SecurityOrigin>&& topOrigin, PreflightPolicy preflightPolicy, String&& referrer, bool isHTTPSUpgradeEnabled, bool shouldCaptureExtraNetworkLoadMetrics, LoadType requestLoadType)
+NetworkLoadChecker::NetworkLoadChecker(NetworkProcess& networkProcess, NetworkSchemeRegistry* schemeRegistry, FetchOptions&& options, PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, HTTPHeaderMap&& originalRequestHeaders, URL&& url, RefPtr<SecurityOrigin>&& sourceOrigin, RefPtr<SecurityOrigin>&& topOrigin, PreflightPolicy preflightPolicy, String&& referrer, bool isHTTPSUpgradeEnabled, bool shouldCaptureExtraNetworkLoadMetrics, LoadType requestLoadType)
     : m_options(WTFMove(options))
     , m_sessionID(sessionID)
     , m_networkProcess(networkProcess)
@@ -62,6 +63,7 @@ NetworkLoadChecker::NetworkLoadChecker(NetworkProcess& networkProcess, FetchOpti
     , m_shouldCaptureExtraNetworkLoadMetrics(shouldCaptureExtraNetworkLoadMetrics)
     , m_isHTTPSUpgradeEnabled(isHTTPSUpgradeEnabled)
     , m_requestLoadType(requestLoadType)
+    , m_schemeRegistry(schemeRegistry)
 {
     m_isSameOriginRequest = isSameOrigin(m_url, m_origin.get());
     switch (options.credentials) {
@@ -99,7 +101,7 @@ void NetworkLoadChecker::checkRedirection(ResourceRequest&& request, ResourceReq
 {
     ASSERT(!isChecking());
 
-    auto error = validateResponse(redirectResponse);
+    auto error = validateResponse(request, redirectResponse);
     if (!error.isNull()) {
         handler(redirectionError(redirectResponse, makeString("Cross-origin redirection to ", redirectRequest.url().string(), " denied by Cross-Origin Resource Sharing policy: ", error.localizedDescription())));
         return;
@@ -116,6 +118,18 @@ void NetworkLoadChecker::checkRedirection(ResourceRequest&& request, ResourceReq
 
     // FIXME: We should check that redirections are only HTTP(s) as per fetch spec.
     // See https://github.com/whatwg/fetch/issues/393
+
+    if (m_options.mode == FetchOptions::Mode::Cors && (!m_isSameOriginRequest || !isSameOrigin(request.url(), m_origin.get()))) {
+        auto location = URL(redirectResponse.url(), redirectResponse.httpHeaderField(HTTPHeaderName::Location));
+        if (m_schemeRegistry && !m_schemeRegistry->shouldTreatURLSchemeAsCORSEnabled(location.protocol())) {
+            handler(redirectionError(redirectResponse, makeString("Cross-origin redirection to ", redirectRequest.url().string(), " denied by Cross-Origin Resource Sharing policy: not allowed to follow a cross-origin CORS redirection with non CORS scheme")));
+            return;
+        }
+        if (location.hasUsername() || location.hasPassword()) {
+            handler(redirectionError(redirectResponse, makeString("Cross-origin redirection to ", redirectRequest.url().string(), " denied by Cross-Origin Resource Sharing policy: redirection URL ", location.string(), " has credentials")));
+            return;
+        }
+    }
 
     if (++m_redirectCount > 20) {
         handler(redirectionError(redirectResponse, "Load cannot follow more than 20 redirections"_s));
@@ -141,7 +155,7 @@ void NetworkLoadChecker::checkRedirection(ResourceRequest&& request, ResourceReq
     });
 }
 
-ResourceError NetworkLoadChecker::validateResponse(ResourceResponse& response)
+ResourceError NetworkLoadChecker::validateResponse(const ResourceRequest& request, ResourceResponse& response)
 {
     if (m_redirectCount)
         response.setRedirected(true);
@@ -155,6 +169,9 @@ ResourceError NetworkLoadChecker::validateResponse(ResourceResponse& response)
         response.setTainting(ResourceResponse::Tainting::Basic);
         return { };
     }
+
+    if (request.hasHTTPHeaderField(HTTPHeaderName::Range))
+        response.setAsRangeRequested();
 
     if (m_options.mode == FetchOptions::Mode::NoCors) {
         if (auto error = validateCrossOriginResourcePolicy(*m_origin, m_url, response))
@@ -436,7 +453,7 @@ bool NetworkLoadChecker::doesNotNeedCORSCheck(const URL& url) const
     if (m_options.mode == FetchOptions::Mode::NoCors || m_options.mode == FetchOptions::Mode::Navigate)
         return true;
 
-    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(url.protocol().toStringWithoutCopying()))
+    if (m_schemeRegistry && !m_schemeRegistry->shouldTreatURLSchemeAsCORSEnabled(url.protocol()))
         return true;
 
     return m_isSameOriginRequest;

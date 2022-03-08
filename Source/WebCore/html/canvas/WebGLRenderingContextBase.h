@@ -69,12 +69,16 @@ class OESTextureHalfFloat;
 class OESTextureHalfFloatLinear;
 class OESVertexArrayObject;
 class OESElementIndexUint;
+#if ENABLE(OFFSCREEN_CANVAS)
 class OffscreenCanvas;
+#endif
 class WebGLActiveInfo;
 class WebGLContextGroup;
 class WebGLContextObject;
 class WebGLCompressedTextureASTC;
 class WebGLCompressedTextureATC;
+class WebGLCompressedTextureETC;
+class WebGLCompressedTextureETC1;
 class WebGLCompressedTexturePVRTC;
 class WebGLCompressedTextureS3TC;
 class WebGLDebugRendererInfo;
@@ -93,7 +97,11 @@ class WebGLUniformLocation;
 class HTMLVideoElement;
 #endif
 
+#if ENABLE(OFFSCREEN_CANVAS)
 using WebGLCanvas = WTF::Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
+#else
+using WebGLCanvas = WTF::Variant<RefPtr<HTMLCanvasElement>>;
+#endif
 
 class WebGLRenderingContextBase : public GraphicsContext3D::Client, public GPUBasedCanvasRenderingContext, private ActivityStateChangeObserver {
     WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContextBase);
@@ -379,6 +387,8 @@ protected:
     friend class WebGLDebugShaders;
     friend class WebGLCompressedTextureASTC;
     friend class WebGLCompressedTextureATC;
+    friend class WebGLCompressedTextureETC;
+    friend class WebGLCompressedTextureETC1;
     friend class WebGLCompressedTexturePVRTC;
     friend class WebGLCompressedTextureS3TC;
     friend class WebGLRenderingContextErrorMessageCallback;
@@ -607,6 +617,8 @@ protected:
     std::unique_ptr<WebGLDebugShaders> m_webglDebugShaders;
     std::unique_ptr<WebGLCompressedTextureASTC> m_webglCompressedTextureASTC;
     std::unique_ptr<WebGLCompressedTextureATC> m_webglCompressedTextureATC;
+    std::unique_ptr<WebGLCompressedTextureETC> m_webglCompressedTextureETC;
+    std::unique_ptr<WebGLCompressedTextureETC1> m_webglCompressedTextureETC1;
     std::unique_ptr<WebGLCompressedTexturePVRTC> m_webglCompressedTexturePVRTC;
     std::unique_ptr<WebGLCompressedTextureS3TC> m_webglCompressedTextureS3TC;
     std::unique_ptr<WebGLDepthTexture> m_webglDepthTexture;
@@ -837,7 +849,9 @@ protected:
     // Check if EXT_draw_buffers extension is supported and if it satisfies the WebGL requirements.
     bool supportsDrawBuffers();
 
+#if ENABLE(OFFSCREEN_CANVAS)
     OffscreenCanvas* offscreenCanvas();
+#endif
 
     template <typename T> inline Optional<T> checkedAddAndMultiply(T value, T add, T multiply);
     template <typename T> unsigned getMaxIndex(const RefPtr<JSC::ArrayBuffer> elementArrayBuffer, GC3Dintptr uoffset, GC3Dsizei n);

@@ -36,7 +36,7 @@ namespace Layout {
 class InlineItem : public CanMakeWeakPtr<InlineItem> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    enum class Type { Text, HardLineBreak, Box, Float, ContainerStart, ContainerEnd };
+    enum class Type { Text, ForcedLineBreak, Box, Float, ContainerStart, ContainerEnd };
     InlineItem(const Box& layoutBox, Type);
 
     Type type() const { return m_type; }
@@ -45,9 +45,8 @@ public:
 
     bool isText() const { return type() == Type::Text; }
     bool isBox() const { return type() == Type::Box; }
-    bool isHardLineBreak() const { return type() == Type::HardLineBreak; }
     bool isFloat() const { return type() == Type::Float; }
-    bool isLineBreak() const { return type() == Type::HardLineBreak; }
+    bool isForcedLineBreak() const { return type() == Type::ForcedLineBreak; }
     bool isContainerStart() const { return type() == Type::ContainerStart; }
     bool isContainerEnd() const { return type() == Type::ContainerEnd; }
 
@@ -55,12 +54,6 @@ private:
     const Box& m_layoutBox;
     const Type m_type;
 };
-
-inline InlineItem::InlineItem(const Box& layoutBox, Type type)
-    : m_layoutBox(layoutBox)
-    , m_type(type)
-{
-}
 
 #define SPECIALIZE_TYPE_TRAITS_INLINE_ITEM(ToValueTypeName, predicate) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Layout::ToValueTypeName) \

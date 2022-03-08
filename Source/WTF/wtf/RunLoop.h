@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Portions Copyright (c) 2010 Motorola Mobility, Inc.  All rights reserved.
  *
@@ -37,6 +37,10 @@
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/text/WTFString.h>
 
+#if USE(CF)
+#include <CoreFoundation/CFRunLoop.h>
+#endif
+
 #if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/GRefPtr.h>
 #endif
@@ -48,21 +52,23 @@ class QThread;
 
 namespace WTF {
 
+#if USE(CF)
+using RunLoopMode = CFStringRef;
+#define DefaultRunLoopMode kCFRunLoopDefaultMode
+#else
+using RunLoopMode = unsigned;
+#define DefaultRunLoopMode 0
+#endif
+
 class RunLoop : public FunctionDispatcher {
     WTF_MAKE_NONCOPYABLE(RunLoop);
 public:
     // Must be called from the main thread (except for the Mac platform, where it
     // can be called from any thread).
     WTF_EXPORT_PRIVATE static void initializeMainRunLoop();
-#if USE(WEB_THREAD)
-    WTF_EXPORT_PRIVATE static void initializeWebRunLoop();
-#endif
 
     WTF_EXPORT_PRIVATE static RunLoop& current();
     WTF_EXPORT_PRIVATE static RunLoop& main();
-#if USE(WEB_THREAD)
-    WTF_EXPORT_PRIVATE static RunLoop& web();
-#endif
     WTF_EXPORT_PRIVATE static bool isMain();
     ~RunLoop();
 
@@ -73,7 +79,7 @@ public:
     WTF_EXPORT_PRIVATE void wakeUp();
 
     enum class CycleResult { Continue, Stop };
-    WTF_EXPORT_PRIVATE CycleResult static cycle(const String& = { });
+    WTF_EXPORT_PRIVATE CycleResult static cycle(RunLoopMode = DefaultRunLoopMode);
 
 #if USE(COCOA_EVENT_LOOP)
     WTF_EXPORT_PRIVATE void runForDuration(Seconds duration);
@@ -194,10 +200,9 @@ private:
 
     Lock m_loopLock;
 #elif USE(COCOA_EVENT_LOOP)
-    static void performWork(CFMachPortRef, void* msg, CFIndex size, void* info);
+    static void performWork(void*);
     RetainPtr<CFRunLoopRef> m_runLoop;
     RetainPtr<CFRunLoopSourceRef> m_runLoopSource;
-    RetainPtr<CFMachPortRef> m_port;
 #elif PLATFORM(QT)
     class TimerObject;
     class PerformWorkTimerObject;
@@ -245,6 +250,7 @@ private:
 } // namespace WTF
 
 using WTF::RunLoop;
+using WTF::RunLoopMode;
 
 #if PLATFORM(QT)
 Q_DECLARE_METATYPE(WTF::RunLoop::TimerBase*)

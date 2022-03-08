@@ -78,12 +78,10 @@ MutableStyleProperties::MutableStyleProperties(CSSParserMode cssParserMode)
 {
 }
 
-MutableStyleProperties::MutableStyleProperties(const CSSProperty* properties, unsigned length)
+MutableStyleProperties::MutableStyleProperties(Vector<CSSProperty>&& properties)
     : StyleProperties(HTMLStandardMode, MutablePropertiesType)
+    , m_propertyVector(WTFMove(properties))
 {
-    m_propertyVector.reserveInitialCapacity(length);
-    for (unsigned i = 0; i < length; ++i)
-        m_propertyVector.uncheckedAppend(properties[i]);
 }
 
 MutableStyleProperties::~MutableStyleProperties() = default;
@@ -125,8 +123,23 @@ MutableStyleProperties::MutableStyleProperties(const StyleProperties& other)
 String StyleProperties::getPropertyValue(CSSPropertyID propertyID) const
 {
     RefPtr<CSSValue> value = getPropertyCSSValue(propertyID);
-    if (value)
-        return value->cssText();
+    if (value) {
+        switch (propertyID) {
+        case CSSPropertyFillOpacity:
+        case CSSPropertyFloodOpacity:
+        case CSSPropertyOpacity:
+        case CSSPropertyStopOpacity:
+        case CSSPropertyStrokeOpacity:
+            // Opacity values always serializes as a number.
+            if (value->isPrimitiveValue() && downcast<CSSPrimitiveValue>(value.get())->isPercentage()) {
+                auto doubleValue = downcast<CSSPrimitiveValue>(value.get())->doubleValue();
+                return makeString(doubleValue / 100.0);
+            }
+            FALLTHROUGH;
+        default:
+            return value->cssText();
+        }
+    }
 
     const StylePropertyShorthand& shorthand = shorthandForProperty(propertyID);
     if (shorthand.length()) {
@@ -1270,7 +1283,7 @@ String StyleProperties::asText() const
     // FIXME: This is a not-so-nice way to turn x/y positions into single background-position in output.
     // It is required because background-position-x/y are non-standard properties and WebKit generated output
     // would not work in Firefox (<rdar://problem/5143183>)
-    // It would be a better solution if background-position was CSS_PAIR.
+    // It would be a better solution if background-position was CSSUnitType::CSS_PAIR.
     if (positionXPropertyIndex != -1 && positionYPropertyIndex != -1 && propertyAt(positionXPropertyIndex).isImportant() == propertyAt(positionYPropertyIndex).isImportant()) {
         PropertyReference positionXProperty = propertyAt(positionXPropertyIndex);
         PropertyReference positionYProperty = propertyAt(positionYPropertyIndex);
@@ -1509,13 +1522,13 @@ Ref<MutableStyleProperties> StyleProperties::mutableCopy() const
 
 Ref<MutableStyleProperties> StyleProperties::copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const
 {
-    Vector<CSSProperty, 256> list;
+    Vector<CSSProperty> list;
     list.reserveInitialCapacity(length);
     for (unsigned i = 0; i < length; ++i) {
         if (auto value = getPropertyCSSValueInternal(set[i]))
             list.uncheckedAppend(CSSProperty(set[i], WTFMove(value), false));
     }
-    return MutableStyleProperties::create(list.data(), list.size());
+    return MutableStyleProperties::create(WTFMove(list));
 }
 
 PropertySetCSSStyleDeclaration* MutableStyleProperties::cssStyleDeclaration()
@@ -1568,9 +1581,9 @@ Ref<MutableStyleProperties> MutableStyleProperties::create(CSSParserMode cssPars
     return adoptRef(*new MutableStyleProperties(cssParserMode));
 }
 
-Ref<MutableStyleProperties> MutableStyleProperties::create(const CSSProperty* properties, unsigned count)
+Ref<MutableStyleProperties> MutableStyleProperties::create(Vector<CSSProperty>&& properties)
 {
-    return adoptRef(*new MutableStyleProperties(properties, count));
+    return adoptRef(*new MutableStyleProperties(WTFMove(properties)));
 }
 
 String StyleProperties::PropertyReference::cssName() const

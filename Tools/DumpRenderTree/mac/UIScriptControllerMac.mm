@@ -31,6 +31,7 @@
 #import <JavaScriptCore/JSContext.h>
 #import <JavaScriptCore/JSStringRefCF.h>
 #import <JavaScriptCore/JSValue.h>
+#import <JavaScriptCore/OpaqueJSString.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/WebViewPrivate.h>
 
@@ -99,6 +100,19 @@ JSObjectRef UIScriptControllerMac::contentsOfUserInterfaceItem(JSStringRef inter
 #endif
 }
 
+void UIScriptControllerMac::activateDataListSuggestion(unsigned index, JSValueRef callback)
+{
+    // FIXME: Not implemented.
+    UNUSED_PARAM(index);
+
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!m_context)
+            return;
+        m_context->asyncTaskComplete(callbackID);
+    });
+}
+
 void UIScriptControllerMac::overridePreference(JSStringRef preferenceRef, JSStringRef valueRef)
 {
     WebPreferences *preferences = mainFrame.webView.preferences;
@@ -144,6 +158,13 @@ void UIScriptControllerMac::toggleCapsLock(JSValueRef callback)
 NSUndoManager *UIScriptControllerMac::platformUndoManager() const
 {
     return nil;
+}
+
+void UIScriptControllerMac::copyText(JSStringRef text)
+{
+    NSPasteboard *pasteboard = NSPasteboard.generalPasteboard;
+    [pasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+    [pasteboard setString:text->string() forType:NSPasteboardTypeString];
 }
 
 }

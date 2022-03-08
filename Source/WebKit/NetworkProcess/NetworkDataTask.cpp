@@ -164,4 +164,9 @@ PAL::SessionID NetworkDataTask::sessionID() const
     return m_session->sessionID();
 }
 
+NetworkSession* NetworkDataTask::networkSession()
+{
+    return m_session.get();
+}
+
 } // namespace WebKit

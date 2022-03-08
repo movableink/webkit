@@ -43,7 +43,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         this._sourceMapURLMap = new Map;
         this._downloadingSourceMaps = new Set;
 
-        this._localResourceOverrideMap = new Map;
+        this._localResourceOverrides = new Set;
         this._harImportLocalResourceMap = new Set;
 
         this._pendingLocalResourceOverrideSaves = null;
@@ -72,7 +72,18 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                     this.addLocalResourceOverride(localResourceOverride);
                 }
                 this._restoringLocalResourceOverrides = false;
-            })());            
+            })());
+        }
+
+        this._bootstrapScript = null;
+        if (NetworkManager.supportsBootstrapScript()) {
+            this._bootstrapScriptEnabledSetting = new WI.Setting("bootstrap-script-enabled", true);
+
+            WI.Target.registerInitializationPromise((async () => {
+                let bootstrapScriptSource = await WI.objectStores.general.get(NetworkManager.bootstrapScriptSourceObjectStoreKey);
+                if (bootstrapScriptSource !== undefined)
+                    this.createBootstrapScript(bootstrapScriptSource);
+            })());
         }
     }
 
@@ -87,6 +98,21 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     static supportsLocalResourceOverrides()
     {
         return InspectorBackend.hasCommand("Network.setInterceptionEnabled");
+    }
+
+    static supportsBootstrapScript()
+    {
+        return InspectorBackend.hasCommand("Page.setBootstrapScript");
+    }
+
+    static get bootstrapScriptURL()
+    {
+        return "web-inspector://bootstrap.js";
+    }
+
+    static get bootstrapScriptSourceObjectStoreKey()
+    {
+        return "bootstrap-script-source";
     }
 
     static synthesizeImportError(message)
@@ -111,6 +137,10 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         if (target.hasDomain("Page")) {
             target.PageAgent.enable();
             target.PageAgent.getResourceTree(this._processMainFrameResourceTreePayload.bind(this));
+
+            // COMPATIBILITY (iOS 13.0): Page.setBootstrapScript did not exist yet.
+            if (target.hasCommand("Page.setBootstrapScript") && this._bootstrapScript && this._bootstrapScriptEnabledSetting.value)
+                target.PageAgent.setBootstrapScript(this._bootstrapScript.content);
         }
 
         if (target.hasDomain("ServiceWorker"))
@@ -128,9 +158,15 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                 if (this._interceptionEnabled)
                     target.NetworkAgent.setInterceptionEnabled(this._interceptionEnabled);
 
-                for (let [url, localResourceOverride] of this._localResourceOverrideMap) {
-                    if (!localResourceOverride.disabled)
-                        target.NetworkAgent.addInterception(localResourceOverride.url, InspectorBackend.Enum.Network.NetworkStage.Response);
+                for (let localResourceOverride of this._localResourceOverrides) {
+                    if (!localResourceOverride.disabled) {
+                        target.NetworkAgent.addInterception.invoke({
+                            url: localResourceOverride.url,
+                            caseSensitive: localResourceOverride.isCaseSensitive,
+                            isRegex: localResourceOverride.isRegex,
+                            networkStage: InspectorBackend.Enum.Network.NetworkStage.Response,
+                        });
+                    }
                 }
             }
         }
@@ -147,10 +183,8 @@ WI.NetworkManager = class NetworkManager extends WI.Object
 
     // Public
 
-    get mainFrame()
-    {
-        return this._mainFrame;
-    }
+    get mainFrame() { return this._mainFrame; }
+    get bootstrapScript() { return this._bootstrapScript; }
 
     get frames()
     {
@@ -159,7 +193,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
 
     get localResourceOverrides()
     {
-        return Array.from(this._localResourceOverrideMap.values());
+        return Array.from(this._localResourceOverrides);
     }
 
     get interceptionEnabled()
@@ -233,21 +267,113 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         loadAndParseSourceMap();
     }
 
+    get bootstrapScriptEnabled()
+    {
+        console.assert(NetworkManager.supportsBootstrapScript());
+        console.assert(this._bootstrapScript);
+
+        return this._bootstrapScriptEnabledSetting.value;
+    }
+
+    set bootstrapScriptEnabled(enabled)
+    {
+        console.assert(NetworkManager.supportsBootstrapScript());
+        console.assert(this._bootstrapScript);
+
+        this._bootstrapScriptEnabledSetting.value = !!enabled;
+
+        let source = this._bootstrapScriptEnabledSetting.value ? this._bootstrapScript.content : undefined;
+
+        // COMPATIBILITY (iOS 13.0): Page.setBootstrapScript did not exist yet.
+        for (let target of WI.targets) {
+            if (target.hasCommand("Page.setBootstrapScript"))
+                target.PageAgent.setBootstrapScript(source);
+        }
+
+        this.dispatchEventToListeners(NetworkManager.Event.BootstrapScriptEnabledChanged, {bootstrapScript: this._bootstrapScript});
+    }
+
+    async createBootstrapScript(source)
+    {
+        console.assert(NetworkManager.supportsBootstrapScript());
+
+        if (this._bootstrapScript)
+            return;
+
+        if (!arguments.length)
+            source = await WI.objectStores.general.get(NetworkManager.bootstrapScriptSourceObjectStoreKey);
+
+        if (!source) {
+            source = `
+/*
+ * ${WI.UIString("The Inspector Bootstrap Script is guaranteed to be the first script evaluated in any page, as well as any sub-frames.")}
+ * ${WI.UIString("It is evaluated immediately after the global object is created, before any other content has loaded.")}
+ * 
+ * ${WI.UIString("Modifications made here will take effect on the next load of any page or sub-frame.")}
+ * ${WI.UIString("The contents and enabled state will be preserved across Web Inspector sessions.")}
+ * 
+ * ${WI.UIString("Some examples of ways to use this script include (but are not limited to):")}
+ *  - ${WI.UIString("overriding built-in functions to log call traces or add `debugger` statements")}
+ *  - ${WI.UIString("ensuring that common debugging functions are available on every page via the Console")}
+ */
+`;
+        }
+
+        const target = null;
+        const url = null;
+        const sourceURL = NetworkManager.bootstrapScriptURL;
+        this._bootstrapScript = new WI.LocalScript(target, url, sourceURL, WI.Script.SourceType.Program, source, {injected: true, editable: true});
+        this._bootstrapScript.addEventListener(WI.SourceCode.Event.ContentDidChange, this._handleBootstrapScriptContentDidChange, this);
+
+        if (!this._bootstrapScript.content)
+            WI.objectStores.general.put("", NetworkManager.bootstrapScriptSourceObjectStoreKey);
+
+        this.dispatchEventToListeners(NetworkManager.Event.BootstrapScriptCreated, {bootstrapScript: this._bootstrapScript});
+    }
+
+    destroyBootstrapScript()
+    {
+        console.assert(NetworkManager.supportsBootstrapScript());
+
+        if (!this._bootstrapScript)
+            return;
+
+        let bootstrapScript = this._bootstrapScript;
+
+        this._bootstrapScript = null;
+        WI.objectStores.general.delete(NetworkManager.bootstrapScriptSourceObjectStoreKey);
+
+        // COMPATIBILITY (iOS 13.0): Page.setBootstrapScript did not exist yet.
+        for (let target of WI.targets) {
+            if (target.hasCommand("Page.setBootstrapScript"))
+                target.PageAgent.setBootstrapScript();
+        }
+
+        this.dispatchEventToListeners(NetworkManager.Event.BootstrapScriptDestroyed, {bootstrapScript});
+    }
+
     addLocalResourceOverride(localResourceOverride)
     {
         console.assert(localResourceOverride instanceof WI.LocalResourceOverride);
 
-        console.assert(!this._localResourceOverrideMap.get(localResourceOverride.url), "Already had an existing local resource override.");
-        this._localResourceOverrideMap.set(localResourceOverride.url, localResourceOverride);
+        console.assert(!this._localResourceOverrides.has(localResourceOverride), "Already had an existing local resource override.");
+        this._localResourceOverrides.add(localResourceOverride);
 
         if (!this._restoringLocalResourceOverrides)
             WI.objectStores.localResourceOverrides.putObject(localResourceOverride);
 
         if (!localResourceOverride.disabled) {
+            let commandArguments = {
+                url: localResourceOverride.url,
+                caseSensitive: localResourceOverride.isCaseSensitive,
+                isRegex: localResourceOverride.isRegex,
+                networkStage: InspectorBackend.Enum.Network.NetworkStage.Response,
+            };
+
             // COMPATIBILITY (iOS 13.0): Network.addInterception did not exist.
             for (let target of WI.targets) {
                 if (target.hasCommand("Network.addInterception"))
-                    target.NetworkAgent.addInterception(localResourceOverride.url, InspectorBackend.Enum.Network.NetworkStage.Response);
+                    target.NetworkAgent.addInterception.invoke(commandArguments);
             }
         }
 
@@ -258,7 +384,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     {
         console.assert(localResourceOverride instanceof WI.LocalResourceOverride);
 
-        if (!this._localResourceOverrideMap.delete(localResourceOverride.url)) {
+        if (!this._localResourceOverrides.delete(localResourceOverride)) {
             console.assert(false, "Attempted to remove a local resource override that was not known.");
             return;
         }
@@ -270,10 +396,17 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             WI.objectStores.localResourceOverrides.deleteObject(localResourceOverride);
 
         if (!localResourceOverride.disabled) {
+            let commandArguments = {
+                url: localResourceOverride.url,
+                caseSensitive: localResourceOverride.isCaseSensitive,
+                isRegex: localResourceOverride.isRegex,
+                networkStage: InspectorBackend.Enum.Network.NetworkStage.Response,
+            };
+
             // COMPATIBILITY (iOS 13.0): Network.removeInterception did not exist.
             for (let target of WI.targets) {
                 if (target.hasCommand("Network.removeInterception"))
-                    target.NetworkAgent.removeInterception(localResourceOverride.url, InspectorBackend.Enum.Network.NetworkStage.Response);
+                    target.NetworkAgent.removeInterception.invoke(commandArguments);
             }
         }
 
@@ -282,7 +415,11 @@ WI.NetworkManager = class NetworkManager extends WI.Object
 
     localResourceOverrideForURL(url)
     {
-        return this._localResourceOverrideMap.get(url);
+        for (let localResourceOverride of this._localResourceOverrides) {
+            if (localResourceOverride.matches(url))
+                return localResourceOverride;
+        }
+        return null;
     }
 
     canBeOverridden(resource)
@@ -810,7 +947,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     responseIntercepted(target, requestId, response)
     {
         let url = WI.urlWithoutFragment(response.url);
-        let localResourceOverride = this._localResourceOverrideMap.get(url);
+        let localResourceOverride = this.localResourceOverrideForURL(url);
         if (!localResourceOverride || localResourceOverride.disabled) {
             target.NetworkAgent.interceptContinue(requestId);
             return;
@@ -1015,8 +1152,9 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         WI.mainTarget.name = initializationPayload.url;
 
         // Create a main resource with this content in case the content never shows up as a WI.Script.
-        const type = WI.Script.SourceType.Program;
-        let script = new WI.LocalScript(WI.mainTarget, initializationPayload.url, type, initializationPayload.content);
+        const sourceURL = null;
+        const sourceType = WI.Script.SourceType.Program;
+        let script = new WI.LocalScript(WI.mainTarget, initializationPayload.url, sourceURL, sourceType, initializationPayload.content);
         WI.mainTarget.mainResource = script;
 
         InspectorBackend.runAfterPendingDispatches(() => {
@@ -1273,14 +1411,37 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         let localResourceOverride = event.target;
         WI.objectStores.localResourceOverrides.putObject(localResourceOverride);
 
+        let commandArguments = {
+            url: localResourceOverride.url,
+            caseSensitive: localResourceOverride.isCaseSensitive,
+            isRegex: localResourceOverride.isRegex,
+            networkStage: InspectorBackend.Enum.Network.NetworkStage.Response,
+        };
+
         // COMPATIBILITY (iOS 13.0): Network.addInterception / Network.removeInterception did not exist.
         for (let target of WI.targets) {
             if (target.hasDomain("Network")) {
                 if (localResourceOverride.disabled)
-                    target.NetworkAgent.removeInterception(localResourceOverride.url, InspectorBackend.Enum.Network.NetworkStage.Response);
+                    target.NetworkAgent.removeInterception.invoke(commandArguments);
                 else
-                    target.NetworkAgent.addInterception(localResourceOverride.url, InspectorBackend.Enum.Network.NetworkStage.Response);
+                    target.NetworkAgent.addInterception.invoke(commandArguments);
             }
+        }
+    }
+
+    _handleBootstrapScriptContentDidChange(event)
+    {
+        let source = this._bootstrapScript.content;
+
+        WI.objectStores.general.put(source, NetworkManager.bootstrapScriptSourceObjectStoreKey);
+
+        if (!this._bootstrapScriptEnabledSetting.value)
+            return;
+
+        // COMPATIBILITY (iOS 13.0): Page.setBootstrapScript did not exist yet.
+        for (let target of WI.targets) {
+            if (target.hasCommand("Page.setBootstrapScript"))
+                target.PageAgent.setBootstrapScript(source);
         }
     }
 
@@ -1305,6 +1466,9 @@ WI.NetworkManager.Event = {
     FrameWasAdded: "network-manager-frame-was-added",
     FrameWasRemoved: "network-manager-frame-was-removed",
     MainFrameDidChange: "network-manager-main-frame-did-change",
+    BootstrapScriptCreated: "network-manager-bootstrap-script-created",
+    BootstrapScriptEnabledChanged: "network-manager-bootstrap-script-enabled-changed",
+    BootstrapScriptDestroyed: "network-manager-bootstrap-script-destroyed",
     LocalResourceOverrideAdded: "network-manager-local-resource-override-added",
     LocalResourceOverrideRemoved: "network-manager-local-resource-override-removed",
 };

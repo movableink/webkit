@@ -35,8 +35,8 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/api/rtpsenderinterface.h>
-#include <webrtc/rtc_base/scoped_ref_ptr.h>
+#include <webrtc/api/rtp_sender_interface.h>
+#include <webrtc/api/scoped_refptr.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -60,6 +60,7 @@ public:
         , m_source(WTFMove(source))
     {
     }
+    ~LibWebRTCRtpSenderBackend();
 
     void setRTCSender(rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTFMove(rtcSender); }
     webrtc::RtpSenderInterface* rtcSender() { return m_rtcSender.get(); }
@@ -105,6 +106,7 @@ public:
     {
         ASSERT(backend.hasSource());
         setSource(WTFMove(backend.m_source));
+        backend.m_source = nullptr;
     }
 
 private:

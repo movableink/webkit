@@ -186,7 +186,7 @@ static const char* safeTypeForDOMToReadAndWriteForPlatformType(const String& pla
     if (platformType == String(legacyURLPasteboardType()))
         return "text/uri-list"_s;
 
-    if (platformType == String(legacyHTMLPasteboardType()) || platformType == String(WebArchivePboardType)
+    if (platformType == String(legacyHTMLPasteboardType()) || platformType == String(WebArchivePboardType) || platformType == String(kUTTypeWebArchive)
         || platformType == String(legacyRTFDPasteboardType()) || platformType == String(legacyRTFPasteboardType()))
         return "text/html"_s;
 
@@ -222,15 +222,17 @@ Vector<String> PlatformPasteboard::typesSafeForDOMToReadAndWrite(const String& o
     return copyToVector(domPasteboardTypes);
 }
 
-long PlatformPasteboard::write(const PasteboardCustomData& data)
+int64_t PlatformPasteboard::write(const PasteboardCustomData& data)
 {
     NSMutableArray *types = [NSMutableArray array];
     data.forEachType([&] (auto& type) {
-        [types addObject:platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(type)];
+        NSString *platformType = platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(type);
+        if (platformType.length)
+            [types addObject:platformType];
     });
 
-    bool hasSameOriginCustomData = data.hasSameOriginCustomData();
-    if (hasSameOriginCustomData)
+    bool shouldWriteCustomData = data.hasSameOriginCustomData() || !data.origin().isEmpty();
+    if (shouldWriteCustomData)
         [types addObject:@(PasteboardCustomData::cocoaType())];
 
     [m_pasteboard declareTypes:types owner:nil];
@@ -242,7 +244,7 @@ long PlatformPasteboard::write(const PasteboardCustomData& data)
             [m_pasteboard setString:data forType:platformType];
     });
 
-    if (hasSameOriginCustomData) {
+    if (shouldWriteCustomData) {
         if (auto serializedCustomData = data.createSharedBuffer()->createNSData())
             [m_pasteboard setData:serializedCustomData.get() forType:@(PasteboardCustomData::cocoaType())];
     }
@@ -250,7 +252,7 @@ long PlatformPasteboard::write(const PasteboardCustomData& data)
     return changeCount();
 }
 
-long PlatformPasteboard::changeCount() const
+int64_t PlatformPasteboard::changeCount() const
 {
     return [m_pasteboard.get() changeCount];
 }
@@ -284,7 +286,7 @@ URL PlatformPasteboard::url()
     return [NSURL URLFromPasteboard:m_pasteboard.get()];
 }
 
-long PlatformPasteboard::copy(const String& fromPasteboard)
+int64_t PlatformPasteboard::copy(const String& fromPasteboard)
 {
     NSPasteboard* pasteboard = [NSPasteboard pasteboardWithName:fromPasteboard];
     NSArray* types = [pasteboard types];
@@ -298,7 +300,7 @@ long PlatformPasteboard::copy(const String& fromPasteboard)
     return changeCount();
 }
 
-long PlatformPasteboard::addTypes(const Vector<String>& pasteboardTypes)
+int64_t PlatformPasteboard::addTypes(const Vector<String>& pasteboardTypes)
 {
     RetainPtr<NSMutableArray> types = adoptNS([[NSMutableArray alloc] init]);
     for (size_t i = 0; i < pasteboardTypes.size(); ++i)
@@ -307,7 +309,7 @@ long PlatformPasteboard::addTypes(const Vector<String>& pasteboardTypes)
     return [m_pasteboard.get() addTypes:types.get() owner:nil];
 }
 
-long PlatformPasteboard::setTypes(const Vector<String>& pasteboardTypes)
+int64_t PlatformPasteboard::setTypes(const Vector<String>& pasteboardTypes)
 {
     if (pasteboardTypes.isEmpty())
         return [m_pasteboard declareTypes:@[] owner:nil];
@@ -319,7 +321,7 @@ long PlatformPasteboard::setTypes(const Vector<String>& pasteboardTypes)
     return [m_pasteboard.get() declareTypes:types.get() owner:nil];
 }
 
-long PlatformPasteboard::setBufferForType(SharedBuffer* buffer, const String& pasteboardType)
+int64_t PlatformPasteboard::setBufferForType(SharedBuffer* buffer, const String& pasteboardType)
 {
     BOOL didWriteData = [m_pasteboard setData:buffer ? buffer->createNSData().get() : nil forType:pasteboardType];
     if (!didWriteData)
@@ -327,7 +329,7 @@ long PlatformPasteboard::setBufferForType(SharedBuffer* buffer, const String& pa
     return changeCount();
 }
 
-long PlatformPasteboard::setURL(const PasteboardURL& pasteboardURL)
+int64_t PlatformPasteboard::setURL(const PasteboardURL& pasteboardURL)
 {
     NSURL *cocoaURL = pasteboardURL.url;
     NSArray *urlWithTitle = @[ @[ cocoaURL.absoluteString ], @[ pasteboardURL.title ] ];
@@ -339,14 +341,14 @@ long PlatformPasteboard::setURL(const PasteboardURL& pasteboardURL)
     return changeCount();
 }
 
-long PlatformPasteboard::setColor(const Color& color)
+int64_t PlatformPasteboard::setColor(const Color& color)
 {
     NSColor *pasteboardColor = nsColor(color);
     [pasteboardColor writeToPasteboard:m_pasteboard.get()];
     return changeCount();
 }
 
-long PlatformPasteboard::setStringForType(const String& string, const String& pasteboardType)
+int64_t PlatformPasteboard::setStringForType(const String& string, const String& pasteboardType)
 {
     BOOL didWriteData;
 
@@ -420,11 +422,7 @@ RefPtr<SharedBuffer> PlatformPasteboard::readBuffer(size_t index, const String& 
     if (!item)
         return { };
 
-    auto platformType = modernPasteboardTypeForWebSafeMIMEType(type);
-    if (!platformType)
-        return nullptr;
-
-    if (NSData *data = [item dataForType:platformType]) {
+    if (NSData *data = [item dataForType:type]) {
         auto nsData = adoptNS(data.copy);
         return SharedBuffer::create(nsData.get());
     }
@@ -438,11 +436,7 @@ String PlatformPasteboard::readString(size_t index, const String& type) const
     if (!item)
         return { };
 
-    auto platformType = modernPasteboardTypeForWebSafeMIMEType(type);
-    if (!platformType)
-        return { };
-
-    return [item stringForType:platformType];
+    return [item stringForType:type];
 }
 
 URL PlatformPasteboard::readURL(size_t index, String& title) const
@@ -494,7 +488,7 @@ static RetainPtr<NSPasteboardItem> createPasteboardItem(const PasteboardCustomDa
     return item;
 }
 
-long PlatformPasteboard::write(const Vector<PasteboardCustomData>& itemData)
+int64_t PlatformPasteboard::write(const Vector<PasteboardCustomData>& itemData)
 {
     if (itemData.size() == 1)
         return write(itemData.first());
@@ -507,11 +501,14 @@ long PlatformPasteboard::write(const Vector<PasteboardCustomData>& itemData)
     return [m_pasteboard changeCount];
 }
 
-PasteboardItemInfo PlatformPasteboard::informationForItemAtIndex(size_t index)
+Optional<PasteboardItemInfo> PlatformPasteboard::informationForItemAtIndex(size_t index, int64_t changeCount)
 {
+    if (changeCount != [m_pasteboard changeCount])
+        return WTF::nullopt;
+
     NSPasteboardItem *item = itemAtIndex(index);
     if (!item)
-        return { };
+        return WTF::nullopt;
 
     PasteboardItemInfo info;
     NSArray<NSPasteboardType> *platformTypes = [item types];
@@ -528,7 +525,6 @@ PasteboardItemInfo PlatformPasteboard::informationForItemAtIndex(size_t index)
     }
     info.containsFileURLAndFileUploadContent = containsFileURL == ContainsFileURL::Yes;
     info.webSafeTypesByFidelity = copyToVector(webSafeTypes);
-    info.changeCount = changeCount();
     return info;
 }
 

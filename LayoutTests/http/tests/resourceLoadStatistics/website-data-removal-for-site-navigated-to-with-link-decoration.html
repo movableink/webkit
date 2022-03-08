@@ -10,7 +10,6 @@
 <div id="output"></div>
 <br>
 <script>
-    testRunner.setUseITPDatabase(false);
     testRunner.waitUntilDone();
     testRunner.dumpAsText();
 
@@ -213,8 +212,8 @@
     }
 
     function processWebsiteDataAndContinue() {
+        testRunner.installStatisticsDidScanDataRecordsCallback(checkWebsiteDataAndContinue);
         testRunner.statisticsProcessStatisticsAndDataRecords();
-        checkWebsiteDataAndContinue();
     }
 
     function checkWebsiteDataAndContinue() {

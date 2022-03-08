@@ -29,8 +29,9 @@
 
 #include "Connection.h"
 #include "MessageReceiver.h"
+#include "UserContentControllerIdentifier.h"
 #include "WebPageProxyIdentifier.h"
-#include "WebSWContextManagerConnectionMessages.h"
+#include "WebSWContextManagerConnectionMessagesReplies.h"
 #include <WebCore/EmptyFrameLoaderClient.h>
 #include <WebCore/SWContextManager.h>
 #include <WebCore/ServiceWorkerClientData.h>
@@ -49,11 +50,13 @@ struct ServiceWorkerContextData;
 namespace WebKit {
 
 class ServiceWorkerFrameLoaderClient;
+struct ServiceWorkerInitializationData;
 struct WebPreferencesStore;
+class WebUserContentController;
 
 class WebSWContextManagerConnection final : public WebCore::SWContextManager::Connection, public IPC::MessageReceiver {
 public:
-    WebSWContextManagerConnection(Ref<IPC::Connection>&&, WebCore::RegistrableDomain&&, uint64_t pageGroupID, WebPageProxyIdentifier, WebCore::PageIdentifier, const WebPreferencesStore&);
+    WebSWContextManagerConnection(Ref<IPC::Connection>&&, WebCore::RegistrableDomain&&, uint64_t pageGroupID, WebPageProxyIdentifier, WebCore::PageIdentifier, const WebPreferencesStore&, ServiceWorkerInitializationData&&);
     ~WebSWContextManagerConnection();
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -89,7 +92,7 @@ private:
     void fireActivateEvent(WebCore::ServiceWorkerIdentifier);
     void softUpdate(WebCore::ServiceWorkerIdentifier);
     void terminateWorker(WebCore::ServiceWorkerIdentifier);
-    void syncTerminateWorker(WebCore::ServiceWorkerIdentifier, Messages::WebSWContextManagerConnection::SyncTerminateWorker::DelayedReply&&);
+    void syncTerminateWorker(WebCore::ServiceWorkerIdentifier, Messages::WebSWContextManagerConnection::SyncTerminateWorkerDelayedReply&&);
     void findClientByIdentifierCompleted(uint64_t requestIdentifier, Optional<WebCore::ServiceWorkerClientData>&&, bool hasSecurityError);
     void matchAllCompleted(uint64_t matchAllRequestIdentifier, Vector<WebCore::ServiceWorkerClientData>&&);
     void claimCompleted(uint64_t claimRequestIdentifier);
@@ -115,6 +118,7 @@ private:
     uint64_t m_previousRequestIdentifier { 0 };
     String m_userAgent;
     bool m_isThrottleable { true };
+    RefPtr<WebUserContentController> m_userContentController;
 };
 
 class ServiceWorkerFrameLoaderClient final : public WebCore::EmptyFrameLoaderClient {

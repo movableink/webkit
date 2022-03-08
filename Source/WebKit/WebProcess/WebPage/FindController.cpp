@@ -26,6 +26,7 @@
 #include "config.h"
 #include "FindController.h"
 
+#include "CallbackID.h"
 #include "DrawingArea.h"
 #include "PluginView.h"
 #include "ShareableBitmap.h"
@@ -224,7 +225,7 @@ void FindController::updateFindUIAfterPageScroll(bool found, const String& strin
         hideFindIndicator();
 }
 
-void FindController::findString(const String& string, FindOptions options, unsigned maxMatchCount)
+void FindController::findString(const String& string, FindOptions options, unsigned maxMatchCount, Optional<CallbackID> callbackID)
 {
     auto* pluginView = WebPage::pluginViewForFrame(m_webPage->mainFrame());
 
@@ -277,6 +278,9 @@ void FindController::findString(const String& string, FindOptions options, unsig
     m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage, found, string, options, maxMatchCount, didWrap] () {
         protectedWebPage->findController().updateFindUIAfterPageScroll(found, string, options, maxMatchCount, didWrap, FindUIOriginator::FindString);
     });
+
+    if (callbackID)
+        m_webPage->send(Messages::WebPageProxy::FindStringCallback(found, *callbackID));
 }
 
 void FindController::findStringMatches(const String& string, FindOptions options, unsigned maxMatchCount)

@@ -21,6 +21,7 @@ set(DumpRenderTreeLib_SOURCES
     win/TextInputController.cpp
     win/TextInputControllerWin.cpp
     win/UIDelegate.cpp
+    win/UIScriptControllerWin.cpp
     win/WorkQueueItemWin.cpp
 )
 
@@ -68,16 +69,16 @@ list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
     TestNetscapePlugIn/Tests/win
 )
 
-list(APPEND DumpRenderTree_LIBRARIES
-    WebKitLegacy
-    shlwapi
-)
-
 set(DumpRenderTreeLib_LIBRARIES
     ${DumpRenderTree_LIBRARIES}
     Comsuppw
     Oleacc
+    WebKitLegacy
     WebKitLegacyGUID
+)
+
+set(DumpRenderTree_LIBRARIES
+    shlwapi
 )
 
 if (${WTF_PLATFORM_WIN_CAIRO})

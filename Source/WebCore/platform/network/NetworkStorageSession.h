@@ -157,6 +157,7 @@ public:
     WEBCORE_EXPORT std::pair<String, bool> cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy&) const;
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
+    void setResourceLoadStatisticsEnabled(bool enabled) { m_isResourceLoadStatisticsEnabled = enabled; }
     WEBCORE_EXPORT bool shouldBlockCookies(const ResourceRequest&, Optional<FrameIdentifier>, Optional<PageIdentifier>) const;
     WEBCORE_EXPORT bool shouldBlockCookies(const URL& firstPartyForCookies, const URL& resource, Optional<FrameIdentifier>, Optional<PageIdentifier>) const;
     WEBCORE_EXPORT bool shouldBlockThirdPartyCookies(const RegistrableDomain&) const;
@@ -178,7 +179,7 @@ public:
     WEBCORE_EXPORT Optional<Seconds> maxAgeCacheCap(const ResourceRequest&);
     WEBCORE_EXPORT void didCommitCrossSiteLoadWithDataTransferFromPrevalentResource(const RegistrableDomain& toDomain, PageIdentifier);
     WEBCORE_EXPORT void resetCrossSiteLoadsWithLinkDecorationForTesting();
-    void setIsThirdPartyCookieBlockingOnSitesWithoutUserInteractionEnabled(bool enabled) { m_isThirdPartyCookieBlockingOnSitesWithoutUserInteractionEnabled = enabled; }
+    void setIsThirdPartyCookieBlockingEnabled(bool enabled) { m_isThirdPartyCookieBlockingEnabled = enabled; }
 #endif
 
 private:
@@ -205,6 +206,7 @@ private:
     CredentialStorage m_credentialStorage;
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
+    bool m_isResourceLoadStatisticsEnabled = false;
     Optional<Seconds> clientSideCookieCap(const RegistrableDomain& firstParty, Optional<PageIdentifier>) const;
     HashSet<RegistrableDomain> m_registrableDomainsToBlockAndDeleteCookiesFor;
     HashSet<RegistrableDomain> m_registrableDomainsToBlockButKeepCookiesFor;
@@ -216,7 +218,7 @@ private:
     Optional<Seconds> m_ageCapForClientSideCookiesShort { };
     HashMap<WebCore::PageIdentifier, RegistrableDomain> m_navigatedToWithLinkDecorationByPrevalentResource;
     bool m_navigationWithLinkDecorationTestMode = false;
-    bool m_isThirdPartyCookieBlockingOnSitesWithoutUserInteractionEnabled = false;
+    bool m_isThirdPartyCookieBlockingEnabled = false;
 #endif
 
 #if PLATFORM(COCOA)

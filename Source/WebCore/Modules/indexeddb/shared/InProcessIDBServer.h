@@ -51,7 +51,7 @@ namespace IDBServer {
 class IDBServer;
 }
 
-class InProcessIDBServer final : public IDBClient::IDBConnectionToServerDelegate, public IDBServer::IDBConnectionToClientDelegate, public RefCounted<InProcessIDBServer>, public IDBServer::IDBBackingStoreTemporaryFileHandler {
+class InProcessIDBServer final : public IDBClient::IDBConnectionToServerDelegate, public IDBServer::IDBConnectionToClientDelegate, public RefCounted<InProcessIDBServer> {
 public:
     using IDBClient::IDBConnectionToServerDelegate::weakPtrFactory;
     using WeakValueType = IDBClient::IDBConnectionToServerDelegate::WeakValueType;
@@ -64,7 +64,6 @@ public:
     WEBCORE_EXPORT IDBClient::IDBConnectionToServer& connectionToServer() const;
     IDBServer::IDBConnectionToClient& connectionToClient() const;
     IDBServer::IDBServer& server() { return m_server.get(); }
-
     IDBServer::IDBServer& idbServer() { return m_server.get(); }
 
     // IDBConnectionToServer
@@ -91,7 +90,7 @@ public:
     void databaseConnectionPendingClose(uint64_t databaseConnectionIdentifier) final;
     void databaseConnectionClosed(uint64_t databaseConnectionIdentifier) final;
     void abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier) final;
-    void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier) final;
+    void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer = IndexedDB::ConnectionClosedOnBehalfOfServer::No) final;
     void openDBRequestCancelled(const IDBRequestData&) final;
     void confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier) final;
     void getAllDatabaseNames(const SecurityOriginData& mainFrameOrigin, const SecurityOriginData& openingOrigin, uint64_t callbackID) final;
@@ -125,8 +124,6 @@ public:
     void ref() override { RefCounted<InProcessIDBServer>::ref(); }
     void deref() override { RefCounted<InProcessIDBServer>::deref(); }
 
-    void accessToTemporaryFileComplete(const String& path) override;
-
     StorageQuotaManager* quotaManager(const ClientOrigin&);
 
 private:
@@ -137,7 +134,7 @@ private:
     RefPtr<IDBClient::IDBConnectionToServer> m_connectionToServer;
     RefPtr<IDBServer::IDBConnectionToClient> m_connectionToClient;
 
-    HashMap<ClientOrigin, std::unique_ptr<StorageQuotaManager>> m_quotaManagers;
+    HashMap<ClientOrigin, RefPtr<StorageQuotaManager>> m_quotaManagers;
 };
 
 } // namespace WebCore

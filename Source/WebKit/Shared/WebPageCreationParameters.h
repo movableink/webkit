@@ -182,10 +182,6 @@ struct WebPageCreationParameters {
     Optional<WebCore::ApplicationManifest> applicationManifest;
 #endif
 
-#if ENABLE(SERVICE_WORKER)
-    bool hasRegisteredServiceWorkers { true };
-#endif
-
     bool needsFontAttributes { false };
 
     // WebRTC members.
@@ -204,6 +200,8 @@ struct WebPageCreationParameters {
     Optional<WebCore::Color> backgroundColor;
 
     Optional<WebCore::PageIdentifier> oldPageID;
+
+    String overriddenMediaType;
 };
 
 } // namespace WebKit

@@ -34,7 +34,9 @@
 #include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkProcessMessages.h"
 #include "ServiceWorkerFetchTaskMessages.h"
+#include "ServiceWorkerInitializationData.h"
 #include "WebCacheStorageProvider.h"
+#include "WebCompiledContentRuleListData.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebDatabaseProvider.h"
 #include "WebDocumentLoader.h"
@@ -43,9 +45,11 @@
 #include "WebPreferencesStore.h"
 #include "WebProcess.h"
 #include "WebProcessPoolMessages.h"
+#include "WebSWContextManagerConnectionMessages.h"
 #include "WebSWServerToContextConnectionMessages.h"
 #include "WebServiceWorkerFetchTaskClient.h"
 #include "WebSocketProvider.h"
+#include "WebUserContentController.h"
 #include <WebCore/EditorClient.h>
 #include <WebCore/EmptyClients.h>
 #include <WebCore/LibWebRTCProvider.h>
@@ -61,7 +65,7 @@
 #include <wtf/ProcessID.h>
 
 #if USE(QUICK_LOOK)
-#include <WebCore/PreviewLoaderClient.h>
+#include <WebCore/LegacyPreviewLoaderClient.h>
 #endif
 
 namespace WebKit {
@@ -82,7 +86,7 @@ Ref<DocumentLoader> ServiceWorkerFrameLoaderClient::createDocumentLoader(const R
     return WebDocumentLoader::create(request, substituteData);
 }
 
-WebSWContextManagerConnection::WebSWContextManagerConnection(Ref<IPC::Connection>&& connection, WebCore::RegistrableDomain&& registrableDomain, uint64_t pageGroupID, WebPageProxyIdentifier webPageProxyID, PageIdentifier pageID, const WebPreferencesStore& store)
+WebSWContextManagerConnection::WebSWContextManagerConnection(Ref<IPC::Connection>&& connection, WebCore::RegistrableDomain&& registrableDomain, uint64_t pageGroupID, WebPageProxyIdentifier webPageProxyID, PageIdentifier pageID, const WebPreferencesStore& store, ServiceWorkerInitializationData&& initializationData)
     : m_connectionToNetworkProcess(WTFMove(connection))
     , m_registrableDomain(WTFMove(registrableDomain))
     , m_pageGroupID(pageGroupID)
@@ -94,6 +98,13 @@ WebSWContextManagerConnection::WebSWContextManagerConnection(Ref<IPC::Connection
     , m_userAgent(standardUserAgent())
 #endif
 {
+    if (initializationData.userContentControllerIdentifier) {
+        m_userContentController = WebUserContentController::getOrCreate(*initializationData.userContentControllerIdentifier);
+#if ENABLE(CONTENT_EXTENSIONS)
+        m_userContentController->addContentRuleLists(WTFMove(initializationData.contentRuleLists));
+#endif
+    }
+
     updatePreferencesStore(store);
     m_connectionToNetworkProcess->send(Messages::NetworkConnectionToWebProcess::EstablishSWContextConnection { m_registrableDomain }, 0);
     WebProcess::singleton().disableTermination();
@@ -127,6 +138,7 @@ void WebSWContextManagerConnection::installServiceWorker(const ServiceWorkerCont
     pageConfiguration.databaseProvider = WebDatabaseProvider::getOrCreate(m_pageGroupID);
 #endif
     pageConfiguration.socketProvider = WebSocketProvider::create();
+    pageConfiguration.userContentProvider = m_userContentController;
 
     auto effectiveUserAgent =  WTFMove(userAgent);
     if (effectiveUserAgent.isNull())

@@ -209,6 +209,8 @@ Modules/pictureinpicture/EnterPictureInPictureEvent.cpp
 Modules/pictureinpicture/HTMLVideoElementPictureInPicture.cpp
 Modules/pictureinpicture/PictureInPictureWindow.cpp
 
+Modules/remoteplayback/RemotePlayback.cpp
+
 Modules/speech/DOMWindowSpeechSynthesis.cpp
 Modules/speech/SpeechSynthesis.cpp
 Modules/speech/SpeechSynthesisEvent.cpp
@@ -264,7 +266,6 @@ Modules/webaudio/WaveShaperNode.cpp
 Modules/webaudio/WaveShaperProcessor.cpp
 
 Modules/webauthn/AuthenticatorCoordinator.cpp
-Modules/webauthn/AuthenticatorCoordinatorClient.cpp
 Modules/webauthn/PublicKeyCredential.cpp
 Modules/webauthn/WebAuthenticationUtils.cpp
 Modules/webauthn/apdu/ApduCommand.cpp
@@ -447,6 +448,7 @@ accessibility/isolatedtree/AXIsolatedTree.cpp
 accessibility/isolatedtree/AXIsolatedTreeNode.cpp
 
 animation/AnimationEffect.cpp
+animation/KeyframeEffectStack.cpp
 animation/AnimationPlaybackEvent.cpp
 animation/AnimationTimeline.cpp
 animation/CSSAnimation.cpp
@@ -456,7 +458,6 @@ animation/DocumentTimeline.cpp
 animation/KeyframeEffect.cpp
 animation/WebAnimation.cpp
 
-bindings/js/JSAudioNodeCustom.cpp
 bindings/js/CachedModuleScriptLoader.cpp
 bindings/js/CachedScriptFetcher.cpp
 bindings/js/CallTracer.cpp
@@ -681,7 +682,6 @@ css/CSSCrossfadeValue.cpp
 css/CSSCursorImageValue.cpp
 css/CSSCustomIdentValue.cpp
 css/CSSCustomPropertyValue.cpp
-css/CSSDefaultStyleSheets.cpp
 css/CSSFilterImageValue.cpp
 css/FontFaceSet.cpp
 css/FontFace.cpp
@@ -739,6 +739,7 @@ css/CSSTimingFunctionValue.cpp
 css/CSSToLengthConversionData.cpp
 css/CSSToStyleMap.cpp
 css/CSSUnicodeRangeValue.cpp
+css/CSSUnits.cpp
 css/CSSUnsetValue.cpp
 css/CSSValue.cpp
 css/CSSValueList.cpp
@@ -753,10 +754,7 @@ css/DOMMatrixReadOnly.cpp
 css/DeprecatedCSSOMPrimitiveValue.cpp
 css/DeprecatedCSSOMValue.cpp
 css/DeprecatedCSSOMValueList.cpp
-css/DocumentRuleSets.cpp
-css/ElementRuleCollector.cpp
 css/FontVariantBuilder.cpp
-css/InspectorCSSOMWrappers.cpp
 css/LengthFunctions.cpp
 css/MediaFeatureNames.cpp
 css/MediaList.cpp
@@ -766,11 +764,8 @@ css/MediaQueryExpression.cpp
 css/MediaQueryList.cpp
 css/MediaQueryMatcher.cpp
 css/MediaQueryParserContext.cpp
-css/PageRuleCollector.cpp
 css/PropertySetCSSStyleDeclaration.cpp
 css/RGBColor.cpp
-css/RuleFeature.cpp
-css/RuleSet.cpp
 css/SVGCSSComputedStyleDeclaration.cpp
 css/SelectorChecker.cpp
 css/SelectorFilter.cpp
@@ -778,7 +773,6 @@ css/StyleColor.cpp
 css/StyleMedia.cpp
 css/StyleProperties.cpp
 css/StylePropertyShorthand.cpp
-css/StyleResolver.cpp
 css/StyleRule.cpp
 css/StyleRuleImport.cpp
 css/StyleSheet.cpp
@@ -824,7 +818,6 @@ cssjit/SelectorCompiler.cpp
 dom/AbortController.cpp
 dom/AbortSignal.cpp
 dom/ActiveDOMCallback.cpp
-dom/ActiveDOMCallbackMicrotask.cpp
 dom/ActiveDOMObject.cpp
 dom/AllDescendantsCollection.cpp
 dom/AnimationEvent.cpp
@@ -886,6 +879,7 @@ dom/Event.cpp
 dom/EventContext.cpp
 dom/EventDispatcher.cpp
 dom/EventListenerMap.cpp
+dom/EventLoop.cpp
 dom/EventNames.cpp
 dom/EventPath.cpp
 dom/EventTarget.cpp
@@ -1062,6 +1056,7 @@ editing/SplitTextNodeContainingElementCommand.cpp
 editing/TextCheckingHelper.cpp
 editing/TextInsertionBaseCommand.cpp
 editing/TextIterator.cpp
+editing/TextManipulationController.cpp
 editing/TypingCommand.cpp
 editing/UnlinkCommand.cpp
 editing/VisiblePosition.cpp
@@ -1110,6 +1105,7 @@ html/DateInputType.cpp
 html/DateTimeInputType.cpp
 html/DateTimeLocalInputType.cpp
 html/EmailInputType.cpp
+html/EnterKeyHint.cpp
 html/FTPDirectoryDocument.cpp
 html/FileListCreator.cpp
 html/FeaturePolicy.cpp
@@ -1284,6 +1280,8 @@ html/canvas/WebGL2RenderingContext.cpp
 html/canvas/WebGLBuffer.cpp
 html/canvas/WebGLCompressedTextureASTC.cpp
 html/canvas/WebGLCompressedTextureATC.cpp
+html/canvas/WebGLCompressedTextureETC.cpp
+html/canvas/WebGLCompressedTextureETC1.cpp
 html/canvas/WebGLCompressedTexturePVRTC.cpp
 html/canvas/WebGLCompressedTextureS3TC.cpp
 html/canvas/WebGLContextEvent.cpp
@@ -1378,6 +1376,7 @@ inspector/WebInjectedScriptManager.cpp
 inspector/WorkerInspectorController.cpp
 inspector/WorkerScriptDebugServer.cpp
 
+inspector/agents/InspectorAnimationAgent.cpp
 inspector/agents/InspectorApplicationCacheAgent.cpp
 inspector/agents/InspectorCPUProfilerAgent.cpp
 inspector/agents/InspectorCSSAgent.cpp
@@ -1404,6 +1403,7 @@ inspector/agents/page/PageDebuggerAgent.cpp
 inspector/agents/page/PageHeapAgent.cpp
 inspector/agents/page/PageNetworkAgent.cpp
 inspector/agents/page/PageRuntimeAgent.cpp
+inspector/agents/page/UserGestureEmulationScope.cpp
 
 inspector/agents/worker/ServiceWorkerAgent.cpp
 inspector/agents/worker/WorkerAuditAgent.cpp
@@ -1427,7 +1427,6 @@ layout/blockformatting/BlockFormattingContextGeometry.cpp
 layout/blockformatting/BlockFormattingContextQuirks.cpp
 layout/blockformatting/BlockFormattingState.cpp
 layout/blockformatting/BlockMarginCollapse.cpp
-layout/blockformatting/BlockInvalidation.cpp
 layout/displaytree/DisplayBox.cpp
 layout/displaytree/DisplayPainter.cpp
 layout/floats/FloatAvoider.cpp
@@ -1438,12 +1437,14 @@ layout/inlineformatting/InlineFormattingContext.cpp
 layout/inlineformatting/InlineFormattingContextGeometry.cpp
 layout/inlineformatting/InlineFormattingContextQuirks.cpp
 layout/inlineformatting/InlineFormattingState.cpp
-layout/inlineformatting/InlineInvalidation.cpp
+layout/inlineformatting/InlineItem.cpp
 layout/inlineformatting/InlineLine.cpp
 layout/inlineformatting/InlineLineBreaker.cpp
 layout/inlineformatting/InlineLineLayout.cpp
 layout/inlineformatting/InlineTextItem.cpp
 layout/inlineformatting/text/TextUtil.cpp
+layout/invalidation/InvalidationContext.cpp
+layout/invalidation/InvalidationState.cpp
 layout/layouttree/LayoutBox.cpp
 layout/layouttree/LayoutContainer.cpp
 layout/layouttree/LayoutReplaced.cpp
@@ -1452,7 +1453,6 @@ layout/tableformatting/TableFormattingContext.cpp
 layout/tableformatting/TableFormattingContextGeometry.cpp
 layout/tableformatting/TableFormattingState.cpp
 layout/tableformatting/TableGrid.cpp
-layout/tableformatting/TableInvalidation.cpp
 
 loader/AdClickAttribution.cpp
 loader/CanvasActivityRecord.cpp
@@ -1739,6 +1739,7 @@ platform/PlatformSpeechSynthesisUtterance.cpp
 platform/PlatformSpeechSynthesisVoice.cpp
 platform/PlatformSpeechSynthesizer.cpp
 platform/PlatformStrategies.cpp
+platform/PreviewConverter.cpp
 platform/ProcessIdentifier.cpp
 platform/ReferrerPolicy.cpp
 platform/RemoteCommandListener.cpp
@@ -1754,7 +1755,6 @@ platform/SharedBuffer.cpp
 platform/SharedBufferChunkReader.cpp
 platform/SharedStringHash.cpp
 platform/StaticPasteboard.cpp
-platform/SuspendableTaskQueue.cpp
 platform/Theme.cpp
 platform/ThreadGlobalData.cpp
 platform/ThreadTimers.cpp
@@ -2336,18 +2336,32 @@ storage/StorageNamespaceProvider.cpp
 
 style/AttributeChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp
+style/ElementRuleCollector.cpp
 style/IdChangeInvalidation.cpp
 style/InlineTextBoxStyle.cpp
+style/InspectorCSSOMWrappers.cpp
+style/MatchedDeclarationsCache.cpp
+style/PageRuleCollector.cpp
+style/PropertyCascade.cpp
+style/RuleData.cpp
+style/RuleFeature.cpp
+style/RuleSet.cpp
+style/StyleAdjuster.cpp
+style/StyleBuilder.cpp
+style/StyleBuilderState.cpp
 style/StyleChange.cpp
 style/StyleFontSizeFunctions.cpp
 style/StyleInvalidator.cpp
 style/StylePendingResources.cpp
 style/StyleRelations.cpp
+style/StyleResolver.cpp
 style/StyleResolveForDocument.cpp
 style/StyleScope.cpp
+style/StyleScopeRuleSets.cpp
 style/StyleSharingResolver.cpp
 style/StyleTreeResolver.cpp
 style/StyleUpdate.cpp
+style/UserAgentStyle.cpp
 
 svg/SVGAElement.cpp
 svg/SVGAltGlyphDefElement.cpp
@@ -2370,7 +2384,6 @@ svg/SVGDocument.cpp
 svg/SVGDocumentExtensions.cpp
 svg/SVGElement.cpp
 svg/SVGEllipseElement.cpp
-svg/SVGExternalResourcesRequired.cpp
 svg/SVGFEBlendElement.cpp
 svg/SVGFEColorMatrixElement.cpp
 svg/SVGFEComponentTransferElement.cpp
@@ -2416,7 +2429,6 @@ svg/SVGGraphicsElement.cpp
 svg/SVGHKernElement.cpp
 svg/SVGImageElement.cpp
 svg/SVGImageLoader.cpp
-svg/SVGLangSpace.cpp
 svg/SVGLengthContext.cpp
 svg/SVGLengthValue.cpp
 svg/SVGLineElement.cpp
@@ -2495,6 +2507,7 @@ workers/DedicatedWorkerGlobalScope.cpp
 workers/DedicatedWorkerThread.cpp
 workers/Worker.cpp
 workers/WorkerConsoleClient.cpp
+workers/WorkerEventLoop.cpp
 workers/WorkerEventQueue.cpp
 workers/WorkerGlobalScope.cpp
 workers/WorkerInspectorProxy.cpp
@@ -2595,7 +2608,7 @@ HTMLEntityTable.cpp
 MathMLElementFactory.cpp
 PlugInsResourcesData.cpp
 SVGElementFactory.cpp
-StyleBuilder.cpp
+StyleBuilderGenerated.cpp
 StylePropertyShorthandFunctions.cpp
 UserAgentStyleSheetsData.cpp
 WebCoreJSBuiltinInternals.cpp
@@ -2710,6 +2723,7 @@ JSClipboard.cpp
 JSClipboardEvent.cpp
 JSClipboardItem.cpp
 JSCloseEvent.cpp
+JSColorGamut.cpp
 JSCommandLineAPIHost.cpp
 JSComment.cpp
 JSCompositionEvent.cpp
@@ -2970,6 +2984,7 @@ JSHTMLUnknownElement.cpp
 JSHTMLVideoElement.cpp
 JSHTMLVideoElementPictureInPicture.cpp
 JSHashChangeEvent.cpp
+JSHdrMetadataType.cpp
 JSHistory.cpp
 JSHkdfParams.cpp
 JSHmacKeyParams.cpp
@@ -3239,7 +3254,6 @@ JSSVGDescElement.cpp
 JSSVGDocument.cpp
 JSSVGElement.cpp
 JSSVGEllipseElement.cpp
-JSSVGExternalResourcesRequired.cpp
 JSSVGFEBlendElement.cpp
 JSSVGFEColorMatrixElement.cpp
 JSSVGFEComponentTransferElement.cpp
@@ -3354,7 +3368,6 @@ JSSVGViewSpec.cpp
 JSSVGZoomAndPan.cpp
 JSSVGZoomEvent.cpp
 JSScreen.cpp
-JSScreenLuminance.cpp
 JSScriptProcessorNode.cpp
 JSScrollIntoViewOptions.cpp
 JSScrollLogicalPosition.cpp
@@ -3395,6 +3408,7 @@ JSTextEncoder.cpp
 JSTextEvent.cpp
 JSTextMetrics.cpp
 JSTimeRanges.cpp
+JSTransferFunction.cpp
 JSTransitionEvent.cpp
 JSTreeWalker.cpp
 JSUndoItem.cpp
@@ -3546,6 +3560,8 @@ JSWebGLActiveInfo.cpp
 JSWebGLBuffer.cpp
 JSWebGLCompressedTextureASTC.cpp
 JSWebGLCompressedTextureATC.cpp
+JSWebGLCompressedTextureETC.cpp
+JSWebGLCompressedTextureETC1.cpp
 JSWebGLCompressedTexturePVRTC.cpp
 JSWebGLCompressedTextureS3TC.cpp
 JSWebGLContextAttributes.cpp
@@ -3616,5 +3632,12 @@ JSWorkerNavigatorStorageQuota.cpp
 JSUserMessageHandler.cpp
 JSUserMessageHandlersNamespace.cpp
 JSWebKitNamespace.cpp
+
+#endif
+
+#if ENABLE_WIRELESS_PLAYBACK_TARGET
+
+JSRemotePlayback.cpp
+JSRemotePlaybackAvailabilityCallback.cpp
 
 #endif

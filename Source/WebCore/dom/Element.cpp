@@ -303,7 +303,7 @@ static bool isForceEvent(const PlatformMouseEvent& platformEvent)
     return platformEvent.type() == PlatformEvent::MouseForceChanged || platformEvent.type() == PlatformEvent::MouseForceDown || platformEvent.type() == PlatformEvent::MouseForceUp;
 }
 
-#if ENABLE(POINTER_EVENTS) && !ENABLE(TOUCH_EVENTS)
+#if ENABLE(POINTER_EVENTS)
 static bool isCompatibilityMouseEvent(const MouseEvent& mouseEvent)
 {
     // https://www.w3.org/TR/pointerevents/#compatibility-mapping-with-mouse-events
@@ -311,6 +311,40 @@ static bool isCompatibilityMouseEvent(const MouseEvent& mouseEvent)
     return type != eventNames().clickEvent && type != eventNames().mouseoverEvent && type != eventNames().mouseoutEvent && type != eventNames().mouseenterEvent && type != eventNames().mouseleaveEvent;
 }
 #endif
+
+static bool shouldIgnoreMouseEvent(Element& element, const MouseEvent& mouseEvent, const PlatformMouseEvent& platformEvent, bool& didNotSwallowEvent)
+{
+#if ENABLE(POINTER_EVENTS)
+    if (RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled()) {
+        if (auto* page = element.document().page()) {
+            auto& pointerCaptureController = page->pointerCaptureController();
+#if ENABLE(TOUCH_EVENTS)
+            if (platformEvent.pointerId() != mousePointerID && mouseEvent.type() != eventNames().clickEvent && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(platformEvent.pointerId()))
+                return true;
+#else
+            UNUSED_PARAM(platformEvent);
+#endif
+            if (auto pointerEvent = pointerCaptureController.pointerEventForMouseEvent(mouseEvent)) {
+                pointerCaptureController.dispatchEvent(*pointerEvent, &element);
+                if (isCompatibilityMouseEvent(mouseEvent) && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(pointerEvent->pointerId()))
+                    return true;
+                if (pointerEvent->defaultPrevented() || pointerEvent->defaultHandled()) {
+                    didNotSwallowEvent = false;
+                    if (pointerEvent->type() == eventNames().pointerdownEvent)
+                        return true;
+                }
+            }
+        }
+    }
+#else
+    UNUSED_PARAM(element);
+    UNUSED_PARAM(mouseEvent);
+    UNUSED_PARAM(platformEvent);
+    UNUSED_PARAM(didNotSwallowEvent);
+#endif
+
+    return false;
+}
 
 bool Element::dispatchMouseEvent(const PlatformMouseEvent& platformEvent, const AtomString& eventType, int detail, Element* relatedTarget)
 {
@@ -327,28 +361,8 @@ bool Element::dispatchMouseEvent(const PlatformMouseEvent& platformEvent, const 
 
     bool didNotSwallowEvent = true;
 
-#if ENABLE(POINTER_EVENTS)
-    if (RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled()) {
-        if (auto* page = document().page()) {
-            auto& pointerCaptureController = page->pointerCaptureController();
-#if ENABLE(TOUCH_EVENTS)
-            if (mouseEvent->type() != eventNames().clickEvent && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(platformEvent.pointerId()))
-                return false;
-#else
-            if (auto pointerEvent = pointerCaptureController.pointerEventForMouseEvent(mouseEvent)) {
-                pointerCaptureController.dispatchEvent(*pointerEvent, this);
-                if (isCompatibilityMouseEvent(mouseEvent) && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(pointerEvent->pointerId()))
-                    return false;
-                if (pointerEvent->defaultPrevented() || pointerEvent->defaultHandled()) {
-                    didNotSwallowEvent = false;
-                    if (pointerEvent->type() == eventNames().pointerdownEvent)
-                        return false;
-                }
-            }
-#endif
-        }
-    }
-#endif
+    if (shouldIgnoreMouseEvent(*this, mouseEvent.get(), platformEvent, didNotSwallowEvent))
+        return false;
 
     ASSERT(!mouseEvent->target() || mouseEvent->target() != relatedTarget);
     dispatchEvent(mouseEvent);
@@ -1880,7 +1894,7 @@ bool Element::allowsDoubleTapGesture() const
 }
 #endif
 
-StyleResolver& Element::styleResolver()
+Style::Resolver& Element::styleResolver()
 {
     if (auto* shadowRoot = containingShadowRoot())
         return shadowRoot->styleScope().resolver();
@@ -1888,7 +1902,7 @@ StyleResolver& Element::styleResolver()
     return document().styleScope().resolver();
 }
 
-ElementStyle Element::resolveStyle(const RenderStyle* parentStyle)
+Style::ElementStyle Element::resolveStyle(const RenderStyle* parentStyle)
 {
     return styleResolver().styleForElement(*this, parentStyle);
 }
@@ -2346,14 +2360,14 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init)
     return result;
 }
 
-ShadowRoot* Element::shadowRootForBindings(JSC::ExecState& state) const
+ShadowRoot* Element::shadowRootForBindings(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
     auto* shadow = shadowRoot();
     if (!shadow)
         return nullptr;
     if (shadow->mode() == ShadowRootMode::Open)
         return shadow;
-    if (JSC::jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject())->world().shadowRootIsAlwaysOpen())
+    if (JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->world().shadowRootIsAlwaysOpen())
         return shadow;
     return nullptr;
 }
@@ -2888,9 +2902,22 @@ bool Element::hasAttributeNS(const AtomString& namespaceURI, const AtomString& l
     return elementData()->findAttributeByName(qName);
 }
 
+static RefPtr<ShadowRoot> shadowRootWithDelegatesFocus(const Element& element)
+{
+    if (auto* root = element.shadowRoot()) {
+        if (root->delegatesFocus())
+            return root;
+    }
+    return nullptr;
+}
+
 static bool isProgramaticallyFocusable(Element& element)
 {
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
+
+    if (shadowRootWithDelegatesFocus(element))
+        return false;
+
     // If the stylesheets have already been loaded we can reliably check isFocusable.
     // If not, we continue and set the focused node on the focus controller below so that it can be updated soon after attach.
     if (element.document().haveStylesheetsLoaded()) {
@@ -2932,21 +2959,18 @@ void Element::focus(bool restorePreviousSelection, FocusDirection direction)
     if (&newTarget->document() != document.ptr())
         return;
 
-    if (auto root = makeRefPtr(shadowRoot())) {
-        if (root->delegatesFocus()) {
-            newTarget = findFirstProgramaticallyFocusableElementInComposedTree(*this);            
-            if (!newTarget)
-                return;
+    if (auto root = shadowRootWithDelegatesFocus(*this)) {
+        auto currentlyFocusedElement = makeRefPtr(document->focusedElement());
+        if (root->containsIncludingShadowDOM(currentlyFocusedElement.get())) {
+            if (document->page())
+                document->page()->chrome().client().elementDidRefocus(*currentlyFocusedElement);
+            return;
         }
-    }
 
-    if (document->focusedElement() == newTarget) {
-        if (document->page())
-            document->page()->chrome().client().elementDidRefocus(*newTarget);
-        return;
-    }
-
-    if (!isProgramaticallyFocusable(*newTarget))
+        newTarget = findFirstProgramaticallyFocusableElementInComposedTree(*this);            
+        if (!newTarget)
+            return;
+    } else if (!isProgramaticallyFocusable(*newTarget))
         return;
 
     if (Page* page = document->page()) {
@@ -3663,6 +3687,38 @@ IntersectionObserverData* Element::intersectionObserverData()
 }
 #endif
 
+KeyframeEffectStack& Element::ensureKeyframeEffectStack()
+{
+    auto& rareData = ensureElementRareData();
+    if (!rareData.keyframeEffectStack())
+        rareData.setKeyframeEffectStack(makeUnique<KeyframeEffectStack>());
+    return *rareData.keyframeEffectStack();
+}
+
+bool Element::hasKeyframeEffects() const
+{
+    if (!hasRareData())
+        return false;
+
+    auto* keyframeEffectStack = elementRareData()->keyframeEffectStack();
+    return keyframeEffectStack && keyframeEffectStack->hasEffects();
+}
+
+bool Element::applyKeyframeEffects(RenderStyle& targetStyle)
+{
+    bool hasNonAcceleratedAnimationProperty = false;
+
+    for (const auto& effect : ensureKeyframeEffectStack().sortedEffects()) {
+        ASSERT(effect->animation());
+        effect->animation()->resolve(targetStyle);
+
+        if (!hasNonAcceleratedAnimationProperty && !effect->isAccelerated())
+            hasNonAcceleratedAnimationProperty = true;
+    }
+
+    return !hasNonAcceleratedAnimationProperty;
+}
+
 #if ENABLE(RESIZE_OBSERVER)
 void Element::disconnectFromResizeObservers()
 {
@@ -4033,7 +4089,7 @@ void Element::didDetachRenderers()
     ASSERT(hasCustomStyleResolveCallbacks());
 }
 
-Optional<ElementStyle> Element::resolveCustomStyle(const RenderStyle&, const RenderStyle*)
+Optional<Style::ElementStyle> Element::resolveCustomStyle(const RenderStyle&, const RenderStyle*)
 {
     ASSERT(hasCustomStyleResolveCallbacks());
     return WTF::nullopt;
@@ -4280,7 +4336,7 @@ Element* Element::findAnchorElementForLink(String& outAnchorName)
     return nullptr;
 }
 
-ExceptionOr<Ref<WebAnimation>> Element::animate(JSC::ExecState& state, JSC::Strong<JSC::JSObject>&& keyframes, Optional<Variant<double, KeyframeAnimationOptions>>&& options)
+ExceptionOr<Ref<WebAnimation>> Element::animate(JSC::JSGlobalObject& lexicalGlobalObject, JSC::Strong<JSC::JSObject>&& keyframes, Optional<Variant<double, KeyframeAnimationOptions>>&& options)
 {
     String id = "";
     Optional<Variant<double, KeyframeEffectOptions>> keyframeEffectOptions;
@@ -4297,7 +4353,7 @@ ExceptionOr<Ref<WebAnimation>> Element::animate(JSC::ExecState& state, JSC::Stro
         keyframeEffectOptions = keyframeEffectOptionsVariant;
     }
 
-    auto keyframeEffectResult = KeyframeEffect::create(state, this, WTFMove(keyframes), WTFMove(keyframeEffectOptions));
+    auto keyframeEffectResult = KeyframeEffect::create(lexicalGlobalObject, this, WTFMove(keyframes), WTFMove(keyframeEffectOptions));
     if (keyframeEffectResult.hasException())
         return keyframeEffectResult.releaseException();
 

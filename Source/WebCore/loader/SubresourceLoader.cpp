@@ -64,8 +64,8 @@
 #endif
 
 #if USE(QUICK_LOOK)
+#include "LegacyPreviewLoader.h"
 #include "PreviewConverter.h"
-#include "PreviewLoader.h"
 #endif
 
 #undef RELEASE_LOG_IF_ALLOWED
@@ -195,7 +195,8 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
 
     if (newRequest.requester() != ResourceRequestBase::Requester::Main) {
         tracePoint(SubresourceLoadWillStart);
-        ResourceLoadObserver::shared().logSubresourceLoading(m_frame.get(), newRequest, redirectResponse);
+        ResourceLoadObserver::shared().logSubresourceLoading(m_frame.get(), newRequest, redirectResponse,
+            (isScriptLikeDestination(options().destination) ? ResourceLoadObserver::FetchDestinationIsScriptLike::Yes : ResourceLoadObserver::FetchDestinationIsScriptLike::No));
     }
 
     auto continueWillSendRequest = [this, protectedThis = makeRef(*this), redirectResponse] (CompletionHandler<void(ResourceRequest&&)>&& completionHandler, ResourceRequest&& newRequest) mutable {
@@ -334,7 +335,7 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
 
 #if USE(QUICK_LOOK)
     if (shouldCreatePreviewLoaderForResponse(response)) {
-        m_previewLoader = PreviewLoader::create(*this, response);
+        m_previewLoader = makeUnique<LegacyPreviewLoader>(*this, response);
         if (m_previewLoader->didReceiveResponse(response))
             return;
     }
@@ -350,6 +351,12 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
         }
     }
 #endif
+
+    if (auto error = validateRangeRequestedFlag(request(), response)) {
+        RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because receiving a range requested response for a non-range request (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+        cancel(WTFMove(*error));
+        return;
+    }
 
     // We want redirect responses to be processed through willSendRequestInternal. Exceptions are
     // redirection with no Location headers and fetch in manual redirect mode. Or in rare circumstances,
@@ -594,9 +601,11 @@ bool SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceR
 
     // Implementing https://fetch.spec.whatwg.org/#concept-http-redirect-fetch step 7 & 8.
     if (options().mode == FetchOptions::Mode::Cors) {
-        if (m_resource->isCrossOrigin() && !isValidCrossOriginRedirectionURL(newRequest.url())) {
-            errorMessage = "URL is either a non-HTTP URL or contains credentials."_s;
-            return false;
+        if (m_resource->isCrossOrigin()) {
+            auto locationString = redirectResponse.httpHeaderField(HTTPHeaderName::Location);
+            errorMessage = validateCrossOriginRedirectionURL(URL(redirectResponse.url(), locationString));
+            if (!errorMessage.isNull())
+                return false;
         }
 
         ASSERT(m_origin);

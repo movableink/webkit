@@ -25,15 +25,13 @@
 
 WI.TimelineDataGridNode = class TimelineDataGridNode extends WI.DataGridNode
 {
-    constructor(records, options = {})
+    constructor(records, {hasChildren, includesGraph, graphDataSource} = {})
     {
-        super({}, options.hasChildren);
-
-        this.copyable = false;
+        super({}, {hasChildren, copyable: false});
 
         this._records = records;
-        this._includesGraph = options.includesGraph || false;
-        this._graphDataSource = options.graphDataSource || null;
+        this._includesGraph = includesGraph || false;
+        this._graphDataSource = graphDataSource || null;
         this._cachedData = null;
 
         if (this._graphDataSource) {
@@ -197,6 +195,11 @@ WI.TimelineDataGridNode = class TimelineDataGridNode extends WI.DataGridNode
             fragment.append(icon, functionName);
 
             return fragment;
+        }
+
+        if (value instanceof WI.DOMNode) {
+            cell.classList.add(WI.DOMTreeElementPathComponent.iconClassNameForNode(value));
+            return WI.linkifyNodeReference(value);
         }
 
         return super.createCellContent(columnIdentifier, cell);

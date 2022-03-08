@@ -132,7 +132,7 @@ class JSWebAssemblyCodeBlockHeapCellType;
 class JSWebAssemblyInstance;
 class LLIntOffsetsExtractor;
 class NativeExecutable;
-class PromiseDeferredTimer;
+class PromiseTimer;
 class RegExp;
 class RegExpCache;
 class Register;
@@ -158,6 +158,7 @@ class UnlinkedProgramCodeBlock;
 class UnlinkedModuleProgramCodeBlock;
 class VirtualRegister;
 class VMEntryScope;
+class TopLevelGlobalObjectScope;
 class Watchdog;
 class Watchpoint;
 class WatchpointSet;
@@ -179,8 +180,6 @@ struct EntryFrame;
 struct HashTable;
 struct Instruction;
 struct ValueProfile;
-
-using ExecState = CallFrame;
 
 struct LocalTimeOffsetCache {
     LocalTimeOffsetCache()
@@ -309,7 +308,7 @@ public:
     inline CallFrame* topJSCallFrame() const;
 
     // Global object in which execution began.
-    JS_EXPORT_PRIVATE JSGlobalObject* vmEntryGlobalObject(const CallFrame*) const;
+    JS_EXPORT_PRIVATE JSGlobalObject* deprecatedVMEntryGlobalObject(JSGlobalObject*) const;
 
     WeakRandom& random() { return m_random; }
     Integrity::Random& integrityRandom() { return m_integrityRandom; }
@@ -375,15 +374,19 @@ public:
     CompleteSubspace cellSpace;
     CompleteSubspace variableSizedCellSpace; // FIXME: This space is problematic because we have things in here like DirectArguments and ScopedArguments; those should be split into JSValueOOB cells and JSValueStrict auxiliaries. https://bugs.webkit.org/show_bug.cgi?id=182858
     CompleteSubspace destructibleCellSpace;
-    CompleteSubspace stringSpace;
     CompleteSubspace destructibleObjectSpace;
-    CompleteSubspace eagerlySweptDestructibleObjectSpace;
     
+    IsoSubspace bigIntSpace;
     IsoSubspace executableToCodeBlockEdgeSpace;
     IsoSubspace functionSpace;
+    IsoSubspace getterSetterSpace;
     IsoSubspace internalFunctionSpace;
     IsoSubspace nativeExecutableSpace;
     IsoSubspace propertyTableSpace;
+    IsoSubspace ropeStringSpace;
+    IsoSubspace scopedArgumentsSpace;
+    IsoSubspace sparseArrayValueMapSpace;
+    IsoSubspace stringSpace;
     IsoSubspace structureRareDataSpace;
     IsoSubspace structureSpace;
     IsoSubspace symbolTableSpace;
@@ -396,7 +399,7 @@ public:
             return m_##name.get(); \
         return name##Slow(); \
     } \
-    IsoSubspace* name##Slow(); \
+    JS_EXPORT_PRIVATE IsoSubspace* name##Slow(); \
     std::unique_ptr<IsoSubspace> m_##name;
 
 
@@ -407,14 +410,22 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(callbackFunctionSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(customGetterSetterFunctionSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(errorInstanceSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(functionRareDataSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(nativeStdFunctionSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(proxyObjectSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(proxyRevokeSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(symbolSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(unlinkedEvalCodeBlockSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(unlinkedFunctionCodeBlockSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(unlinkedModuleProgramCodeBlockSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(unlinkedProgramCodeBlockSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(weakObjectRefSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(weakSetSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(weakMapSpace)
 #if ENABLE(WEBASSEMBLY)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(webAssemblyCodeBlockSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(webAssemblyFunctionSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(webAssemblyMemorySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(webAssemblyWrapperFunctionSpace)
 #endif
 
@@ -490,12 +501,12 @@ public:
 
     VMType vmType;
     ClientData* clientData;
-    EntryFrame* topEntryFrame;
+    EntryFrame* topEntryFrame { nullptr };
     // NOTE: When throwing an exception while rolling back the call frame, this may be equal to
     // topEntryFrame.
     // FIXME: This should be a void*, because it might not point to a CallFrame.
     // https://bugs.webkit.org/show_bug.cgi?id=160441
-    ExecState* topCallFrame { nullptr };
+    CallFrame* topCallFrame { nullptr };
 #if ENABLE(WEBASSEMBLY)
     Wasm::Context wasmContext;
 #endif
@@ -537,8 +548,6 @@ public:
     Strong<Structure> propertyTableStructure;
     Strong<Structure> functionRareDataStructure;
     Strong<Structure> exceptionStructure;
-    Strong<Structure> promiseDeferredStructure;
-    Strong<Structure> internalPromiseDeferredStructure;
     Strong<Structure> nativeStdFunctionCellStructure;
     Strong<Structure> programCodeBlockStructure;
     Strong<Structure> moduleProgramCodeBlockStructure;
@@ -557,7 +566,7 @@ public:
     Strong<JSCell> m_sentinelSetBucket;
     Strong<JSCell> m_sentinelMapBucket;
 
-    Ref<PromiseDeferredTimer> promiseDeferredTimer;
+    Ref<PromiseTimer> promiseTimer;
     
     JSCell* currentlyDestructingCallbackObject;
     const ClassInfo* currentlyDestructingCallbackObjectClassInfo { nullptr };
@@ -576,6 +585,8 @@ public:
 
     AtomStringTable* atomStringTable() const { return m_atomStringTable; }
     WTF::SymbolRegistry& symbolRegistry() { return m_symbolRegistry; }
+
+    Strong<JSBigInt> bigIntConstantOne;
 
     Structure* setIteratorStructure()
     {
@@ -723,7 +734,7 @@ public:
 
     void clearLastException() { m_lastException = nullptr; }
 
-    ExecState** addressOfCallFrameForCatch() { return &callFrameForCatch; }
+    CallFrame** addressOfCallFrameForCatch() { return &callFrameForCatch; }
 
     JSCell** addressOfException() { return reinterpret_cast<JSCell**>(&m_exception); }
 
@@ -785,8 +796,8 @@ public:
 
     JSValue hostCallReturnValue;
     unsigned varargsLength;
-    ExecState* newCallFrameReturnValue;
-    ExecState* callFrameForCatch;
+    CallFrame* newCallFrameReturnValue;
+    CallFrame* callFrameForCatch;
     void* targetMachinePCForThrow;
     const Instruction* targetInterpreterPCForThrow;
     uint32_t osrExitIndex;
@@ -921,7 +932,7 @@ public:
 
     VMTraps& traps() { return m_traps; }
 
-    void handleTraps(ExecState* exec, VMTraps::Mask mask = VMTraps::Mask::allEventTypes()) { m_traps.handleTraps(exec, mask); }
+    void handleTraps(JSGlobalObject* globalObject, CallFrame* callFrame, VMTraps::Mask mask = VMTraps::Mask::allEventTypes()) { m_traps.handleTraps(globalObject, callFrame, mask); }
 
     bool needTrapHandling() { return m_traps.needTrapHandling(); }
     bool needTrapHandling(VMTraps::Mask mask) { return m_traps.needTrapHandling(mask); }
@@ -976,7 +987,6 @@ private:
 
     bool isSafeToRecurse(void* stackLimit) const
     {
-        ASSERT(Thread::current().stack().isGrowingDownward());
         void* curr = currentStackPointer();
         return curr >= stackLimit;
     }
@@ -1008,9 +1018,9 @@ private:
     bool isSafeToRecurseSoftCLoop() const;
 #endif // ENABLE(C_LOOP)
 
-    JS_EXPORT_PRIVATE Exception* throwException(ExecState*, Exception*);
-    JS_EXPORT_PRIVATE Exception* throwException(ExecState*, JSValue);
-    JS_EXPORT_PRIVATE Exception* throwException(ExecState*, JSObject*);
+    JS_EXPORT_PRIVATE Exception* throwException(JSGlobalObject*, Exception*);
+    JS_EXPORT_PRIVATE Exception* throwException(JSGlobalObject*, JSValue);
+    JS_EXPORT_PRIVATE Exception* throwException(JSGlobalObject*, JSObject*);
 
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     void verifyExceptionCheckNeedIsSatisfied(unsigned depth, ExceptionEventLocation&);
@@ -1097,6 +1107,7 @@ private:
     friend class Heap;
     friend class CatchScope;
     friend class ExceptionScope;
+    friend class JSDollarVMHelper;
     friend class ThrowScope;
     friend class VMTraps;
     friend class WTF::DoublyLinkedListNode<VM>;
@@ -1116,7 +1127,7 @@ inline void VM::setInitializingObjectClass(const ClassInfo* initializingObjectCl
 
 inline Heap* WeakSet::heap() const
 {
-    return &m_vm.heap;
+    return &m_vm->heap;
 }
 
 #if !ENABLE(C_LOOP)

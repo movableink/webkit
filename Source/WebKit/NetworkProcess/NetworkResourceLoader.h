@@ -29,7 +29,7 @@
 #include "MessageSender.h"
 #include "NetworkCache.h"
 #include "NetworkConnectionToWebProcess.h"
-#include "NetworkConnectionToWebProcessMessages.h"
+#include "NetworkConnectionToWebProcessMessagesReplies.h"
 #include "NetworkLoadClient.h"
 #include "NetworkResourceLoadParameters.h"
 #include <WebCore/AdClickAttribution.h>
@@ -65,7 +65,7 @@ class NetworkResourceLoader final
     , public WebCore::ContentSecurityPolicyClient
     , public CanMakeWeakPtr<NetworkResourceLoader> {
 public:
-    static Ref<NetworkResourceLoader> create(NetworkResourceLoadParameters&& parameters, NetworkConnectionToWebProcess& connection, Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad::DelayedReply&& reply = nullptr)
+    static Ref<NetworkResourceLoader> create(NetworkResourceLoadParameters&& parameters, NetworkConnectionToWebProcess& connection, Messages::NetworkConnectionToWebProcess::PerformSynchronousLoadDelayedReply&& reply = nullptr)
     {
         return adoptRef(*new NetworkResourceLoader(WTFMove(parameters), connection, WTFMove(reply)));
     }
@@ -126,12 +126,12 @@ public:
     bool isKeptAlive() const { return m_isKeptAlive; }
 
 #if ENABLE(SERVICE_WORKER)
-    void startWithServiceWorker(WebSWServerConnection*);
+    void startWithServiceWorker();
     void serviceWorkerDidNotHandle();
 #endif
 
 private:
-    NetworkResourceLoader(NetworkResourceLoadParameters&&, NetworkConnectionToWebProcess&, Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad::DelayedReply&&);
+    NetworkResourceLoader(NetworkResourceLoadParameters&&, NetworkConnectionToWebProcess&, Messages::NetworkConnectionToWebProcess::PerformSynchronousLoadDelayedReply&&);
 
     // IPC::MessageSender
     IPC::Connection* messageSenderConnection() const override;
@@ -155,6 +155,7 @@ private:
     void startNetworkLoad(WebCore::ResourceRequest&&, FirstLoad);
     void restartNetworkLoad(WebCore::ResourceRequest&&);
     void continueDidReceiveResponse();
+    void didReceiveMainResourceResponse(const WebCore::ResourceResponse&);
 
     enum class LoadResult {
         Unknown,

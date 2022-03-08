@@ -101,7 +101,7 @@ Shared/API/c/mac/WKCertificateInfoMac.mm
 Shared/API/c/mac/WKObjCTypeWrapperRef.mm
 Shared/API/c/mac/WKURLRequestNS.mm
 Shared/API/c/mac/WKURLResponseNS.mm
-Shared/API/c/mac/WKWebArchive.cpp
+Shared/API/c/mac/WKWebArchiveRef.cpp
 Shared/API/c/mac/WKWebArchiveResource.cpp
 
 Shared/API/Cocoa/_WKFrameHandle.mm
@@ -173,7 +173,6 @@ Shared/ios/InteractionInformationRequest.cpp
 Shared/ios/NativeWebKeyboardEventIOS.mm
 Shared/ios/NativeWebMouseEventIOS.mm
 Shared/ios/NativeWebTouchEventIOS.mm
-Shared/ios/QuickLookDocumentData.cpp
 Shared/ios/WebAutocorrectionData.mm
 Shared/ios/WebIconUtilities.mm
 Shared/ios/WebIOSEventFactory.mm
@@ -260,6 +259,10 @@ UIProcess/API/Cocoa/_WKProcessPoolConfiguration.mm
 UIProcess/API/Cocoa/_WKRemoteWebInspectorViewController.mm
 UIProcess/API/Cocoa/_WKSessionState.mm
 UIProcess/API/Cocoa/_WKTextInputContext.mm
+UIProcess/API/Cocoa/_WKTextManipulationConfiguration.mm
+UIProcess/API/Cocoa/_WKTextManipulationExclusionRule.mm
+UIProcess/API/Cocoa/_WKTextManipulationItem.mm
+UIProcess/API/Cocoa/_WKTextManipulationToken.mm
 UIProcess/API/Cocoa/_WKThumbnailView.mm
 UIProcess/API/Cocoa/_WKUserContentExtensionStore.mm
 UIProcess/API/Cocoa/_WKUserContentFilter.mm
@@ -287,6 +290,8 @@ UIProcess/API/Cocoa/WKContentRuleList.mm
 UIProcess/API/Cocoa/WKContentRuleListStore.mm
 UIProcess/API/Cocoa/WKContextMenuElementInfo.mm
 UIProcess/API/Cocoa/WKError.mm
+UIProcess/API/Cocoa/WKFindConfiguration.mm
+UIProcess/API/Cocoa/WKFindResult.mm
 UIProcess/API/Cocoa/WKFrameInfo.mm
 UIProcess/API/Cocoa/WKHTTPCookieStore.mm
 UIProcess/API/Cocoa/WKMenuItemIdentifiers.mm
@@ -296,6 +301,7 @@ UIProcess/API/Cocoa/WKNavigationData.mm
 UIProcess/API/Cocoa/WKNavigationResponse.mm
 UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm
 UIProcess/API/Cocoa/WKOpenPanelParameters.mm
+UIProcess/API/Cocoa/WKPDFConfiguration.mm
 UIProcess/API/Cocoa/WKPreferences.mm
 UIProcess/API/Cocoa/WKPreviewActionItem.mm
 UIProcess/API/Cocoa/WKPreviewActionItemIdentifiers.mm
@@ -401,6 +407,7 @@ UIProcess/ios/fullscreen/WKFullscreenStackView.mm
 UIProcess/ios/fullscreen/WKFullScreenViewController.mm
 UIProcess/ios/fullscreen/WKFullScreenWindowControllerIOS.mm
 
+UIProcess/ios/AppKitSoftLink.mm
 UIProcess/ios/DragDropInteractionState.mm
 UIProcess/ios/EditableImageController.mm
 UIProcess/ios/InputViewUpdateDeferrer.mm
@@ -426,6 +433,7 @@ UIProcess/ios/WKGeolocationProviderIOSObjCSecurityOrigin.mm
 UIProcess/ios/WKHighlightLongPressGestureRecognizer.mm
 UIProcess/ios/WKInspectorNodeSearchGestureRecognizer.mm
 UIProcess/ios/WKKeyboardScrollingAnimator.mm
+UIProcess/ios/WKMouseGestureRecognizer.mm
 UIProcess/ios/WKPasswordView.mm
 UIProcess/ios/WKPDFPageNumberIndicator.mm
 UIProcess/ios/WKPDFView.mm

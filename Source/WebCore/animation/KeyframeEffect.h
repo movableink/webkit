@@ -47,8 +47,8 @@ class FilterOperations;
 class KeyframeEffect : public AnimationEffect
     , public CSSPropertyBlendingClient {
 public:
-    static ExceptionOr<Ref<KeyframeEffect>> create(JSC::ExecState&, Element*, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeEffectOptions>>&&);
-    static ExceptionOr<Ref<KeyframeEffect>> create(JSC::ExecState&, Ref<KeyframeEffect>&&);
+    static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Element*, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeEffectOptions>>&&);
+    static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Ref<KeyframeEffect>&&);
     static Ref<KeyframeEffect> create(const Element&);
     ~KeyframeEffect() { }
 
@@ -101,8 +101,8 @@ public:
     Element* target() const { return m_target.get(); }
     void setTarget(RefPtr<Element>&&);
 
-    Vector<JSC::Strong<JSC::JSObject>> getKeyframes(JSC::ExecState&);
-    ExceptionOr<void> setKeyframes(JSC::ExecState&, JSC::Strong<JSC::JSObject>&&);
+    Vector<JSC::Strong<JSC::JSObject>> getKeyframes(JSC::JSGlobalObject&);
+    ExceptionOr<void> setKeyframes(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&);
 
     IterationCompositeOperation iterationComposite() const { return m_iterationCompositeOperation; }
     void setIterationComposite(IterationCompositeOperation iterationCompositeOperation) { m_iterationCompositeOperation = iterationCompositeOperation; }
@@ -113,14 +113,18 @@ public:
     void apply(RenderStyle&) override;
     void invalidate() override;
     void animationDidSeek() final;
+    void animationWasCanceled() final;
     void animationSuspensionStateDidChange(bool) final;
+    void animationTimelineDidChange(AnimationTimeline*) final;
     void applyPendingAcceleratedActions();
     bool isRunningAccelerated() const { return m_lastRecordedAcceleratedAction != AcceleratedAction::Stop; }
     bool hasPendingAcceleratedAction() const { return !m_pendingAcceleratedActions.isEmpty() && isRunningAccelerated(); }
 
+    void setAnimation(WebAnimation*) final;
+
     RenderElement* renderer() const override;
     const RenderStyle& currentStyle() const override;
-    bool isAccelerated() const override { return m_shouldRunAccelerated; }
+    bool isAccelerated() const { return m_shouldRunAccelerated; }
     bool filterFunctionListsMatch() const override { return m_filterFunctionListsMatch; }
     bool transformFunctionListsMatch() const override { return m_transformFunctionListsMatch; }
 #if ENABLE(FILTERS_LEVEL_2)
@@ -141,9 +145,10 @@ private:
     KeyframeEffect(Element*);
 
     enum class AcceleratedAction : uint8_t { Play, Pause, Seek, Stop };
+    enum class BlendingKeyframesSource : uint8_t { CSSAnimation, CSSTransition, WebAnimation };
 
     void copyPropertiesFromSource(Ref<KeyframeEffect>&&);
-    ExceptionOr<void> processKeyframes(JSC::ExecState&, JSC::Strong<JSC::JSObject>&&);
+    ExceptionOr<void> processKeyframes(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&);
     void addPendingAcceleratedAction(AcceleratedAction);
     void updateAcceleratedAnimationState();
     void setAnimatedPropertiesInStyle(RenderStyle&, double);
@@ -151,6 +156,7 @@ private:
     Ref<const Animation> backingAnimationForCompositedRenderer() const;
     void computedNeedsForcedLayout();
     void computeStackingContextImpact();
+    void clearBlendingKeyframes();
     void updateBlendingKeyframes(RenderStyle&);
     void computeCSSAnimationBlendingKeyframes();
     void computeCSSTransitionBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle);
@@ -170,6 +176,7 @@ private:
     RefPtr<Element> m_target;
 
     AcceleratedAction m_lastRecordedAcceleratedAction { AcceleratedAction::Stop };
+    BlendingKeyframesSource m_blendingKeyframesSource { BlendingKeyframesSource::WebAnimation };
     IterationCompositeOperation m_iterationCompositeOperation { IterationCompositeOperation::Replace };
     CompositeOperation m_compositeOperation { CompositeOperation::Replace };
     bool m_shouldRunAccelerated { false };

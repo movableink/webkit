@@ -51,6 +51,8 @@ WI.LayoutDirection = {
 WI.loaded = function()
 {
     // Register observers for events from the InspectorBackend.
+    if (InspectorBackend.registerAnimationDispatcher)
+        InspectorBackend.registerAnimationDispatcher(WI.AnimationObserver);
     if (InspectorBackend.registerApplicationCacheDispatcher)
         InspectorBackend.registerApplicationCacheDispatcher(WI.ApplicationCacheObserver);
     if (InspectorBackend.registerCPUProfilerDispatcher)
@@ -151,6 +153,26 @@ WI.loaded = function()
     ]);
     WI._selectedTabIndexSetting = new WI.Setting("selected-tab-index", 0);
 
+    // Replace the Debugger/Resources Tab with the Sources Tab.
+    let debuggerIndex = WI._openTabsSetting.value.indexOf("debugger");
+    let resourcesIndex = WI._openTabsSetting.value.indexOf("resources");
+    if (debuggerIndex >= 0 || resourcesIndex >= 0) {
+        WI._openTabsSetting.value.remove("debugger");
+        WI._openTabsSetting.value.remove("resources");
+
+        if (debuggerIndex === -1)
+            debuggerIndex = Infinity;
+        if (resourcesIndex === -1)
+            resourcesIndex = Infinity;
+
+        let sourcesIndex = Math.min(debuggerIndex, resourcesIndex);
+        WI._openTabsSetting.value.splice(sourcesIndex, 1, WI.SourcesTabContentView.Type);
+        WI._openTabsSetting.save();
+
+        if (WI._selectedTabIndexSetting.value === debuggerIndex || WI._selectedTabIndexSetting.value === resourcesIndex)
+            WI._selectedTabIndexSetting.value = sourcesIndex;
+    }
+
     // State.
     WI.printStylesEnabled = false;
     WI.setZoomFactor(WI.settings.zoomFactor.value);
@@ -163,8 +185,10 @@ WI.loaded = function()
 
     // Targets.
     WI.backendTarget = null;
+    WI._backendTargetAvailablePromise = new WI.WrappedPromise;
+
     WI.pageTarget = null;
-    WI._targetsAvailablePromise = new WI.WrappedPromise;
+    WI._pageTargetAvailablePromise = new WI.WrappedPromise;
 
     // COMPATIBILITY (iOS 13.0): Target.exists was "replaced" by differentiating "web" debuggables
     // into "page" (direct) and "web-page" debuggables (multiplexing).
@@ -181,70 +205,6 @@ WI.loaded = function()
             WI.targetManager.createMultiplexingBackendTarget();
     } else
         WI.targetManager.createDirectBackendTarget();
-};
-
-WI.initializeBackendTarget = function(target)
-{
-    console.assert(!WI.mainTarget);
-
-    WI.backendTarget = target;
-
-    WI.resetMainExecutionContext();
-
-    WI._targetsAvailablePromise.resolve();
-};
-
-WI.initializePageTarget = function(target)
-{
-    console.assert(WI.sharedApp.isWebDebuggable());
-    console.assert(target.type === WI.TargetType.Page || target instanceof WI.DirectBackendTarget);
-
-    WI.pageTarget = target;
-
-    WI.resetMainExecutionContext();
-};
-
-WI.transitionPageTarget = function(target)
-{
-    console.assert(!WI.pageTarget);
-    console.assert(WI.sharedApp.debuggableType === WI.DebuggableType.WebPage);
-    console.assert(target.type === WI.TargetType.Page);
-
-    WI.pageTarget = target;
-
-    WI.resetMainExecutionContext();
-
-    // Actions to transition the page target.
-    WI.notifications.dispatchEventToListeners(WI.Notification.TransitionPageTarget);
-    WI.domManager.transitionPageTarget();
-    WI.networkManager.transitionPageTarget();
-    WI.timelineManager.transitionPageTarget();
-};
-
-WI.terminatePageTarget = function(target)
-{
-    console.assert(WI.pageTarget);
-    console.assert(WI.pageTarget === target);
-    console.assert(WI.sharedApp.debuggableType === WI.DebuggableType.WebPage);
-
-    // Remove any Worker targets associated with this page.
-    let workerTargets = WI.targets.filter((x) => x.type === WI.TargetType.Worker);
-    for (let workerTarget of workerTargets)
-        WI.workerManager.workerTerminated(workerTarget.identifier);
-
-    WI.pageTarget = null;
-};
-
-WI.resetMainExecutionContext = function()
-{
-    if (WI.mainTarget instanceof WI.MultiplexingBackendTarget)
-        return;
-
-    if (WI.mainTarget.executionContext) {
-        WI.runtimeManager.activeExecutionContext = WI.mainTarget.executionContext;
-        if (WI.quickConsole)
-            WI.quickConsole.initializeMainExecutionContextPathComponent();
-    }
 };
 
 WI.contentLoaded = function()
@@ -569,7 +529,7 @@ WI.contentLoaded = function()
     updateConsoleSavedResultPrefixCSSVariable();
 
     // Signal that the frontend is now ready to receive messages.
-    WI.whenTargetsAvailable().then(() => {
+    WI._backendTargetAvailablePromise.promise.then(() => {
         InspectorFrontendAPI.loadCompleted();
     });
 
@@ -587,6 +547,11 @@ WI.contentLoaded = function()
 
     if (WI.runBootstrapOperations)
         WI.runBootstrapOperations();
+
+    if (InspectorFrontendHost.supportsDiagnosticLogging) {
+        WI.diagnosticController = new WI.DiagnosticController;
+        WI.diagnosticController.addRecorder(new WI.TabActivityDiagnosticEventRecorder(WI.diagnosticController));
+    }
 };
 
 WI.performOneTimeFrontendInitializationsUsingTarget = function(target)
@@ -627,12 +592,12 @@ WI.initializeTarget = function(target)
 
 WI.targetsAvailable = function()
 {
-    return WI._targetsAvailablePromise.settled;
+    return WI._pageTargetAvailablePromise.settled;
 };
 
 WI.whenTargetsAvailable = function()
 {
-    return WI._targetsAvailablePromise.promise;
+    return WI._pageTargetAvailablePromise.promise;
 };
 
 WI.isTabTypeAllowed = function(tabType)
@@ -977,9 +942,14 @@ WI.close = function()
     InspectorFrontendHost.closeWindow();
 };
 
+WI.isContentAreaFocused = function()
+{
+    return WI._contentElement.contains(document.activeElement);
+}
+
 WI.isConsoleFocused = function()
 {
-    return WI.quickConsole.prompt.focused;
+    return !WI._didAutofocusConsolePrompt && WI.quickConsole.prompt.focused;
 };
 
 WI.isShowingSplitConsole = function()
@@ -1119,6 +1089,16 @@ WI.showTimelineTab = function()
         tabContentView = new WI.TimelineTabContentView;
     WI.tabBrowser.showTabForContentView(tabContentView);
 };
+
+WI.isShowingTimelineTab = function()
+{
+    return WI.tabBrowser.selectedTabContentView instanceof WI.TimelineTabContentView;
+};
+
+WI.isShowingAuditTab = function()
+{
+    return WI.tabBrowser.selectedTabContentView instanceof WI.AuditTabContentView;
+}
 
 WI.showLayersTab = function(options = {})
 {
@@ -1418,6 +1398,8 @@ WI._focusSearchField = function(event)
 
 WI._focusChanged = function(event)
 {
+    WI._didAutofocusConsolePrompt = false;
+
     // Make a caret selection inside the focused element if there isn't a range selection and there isn't already
     // a caret selection inside. This is needed (at least) to remove caret from console when focus is moved.
     // The selection change should not apply to text fields and text areas either.
@@ -1591,6 +1573,17 @@ WI._restoreCookieForOpenTabs = function(restorationType)
         if (!(tabContentView instanceof WI.TabContentView))
             continue;
         tabContentView.restoreStateFromCookie(restorationType);
+    }
+
+    // Only attempt to autofocus when Web Inspector is first opened.
+    if (WI._didAutofocusConsolePrompt === undefined) {
+        window.requestAnimationFrame(() => {
+            if (WI.isContentAreaFocused() || WI.isShowingTimelineTab() || WI.isShowingAuditTab())
+                return;
+
+            WI.quickConsole.prompt.focus();
+            WI._didAutofocusConsolePrompt = true;
+        });
     }
 };
 
@@ -3235,6 +3228,7 @@ WI.reset = async function()
 };
 
 WI.isEngineeringBuild = false;
+WI.isExperimentalBuild = InspectorFrontendHost.isExperimentalBuild();
 
 // OpenResourceDialog delegate
 

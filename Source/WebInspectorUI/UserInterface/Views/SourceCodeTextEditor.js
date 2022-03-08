@@ -252,6 +252,8 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
             return false;
         if (this._sourceCode instanceof WI.LocalResource)
             return false;
+        if (this._sourceCode instanceof WI.LocalScript)
+            return false;
 
         let caseSensitive = WI.SearchUtilities.defaultSettings.caseSensitive.value;
         let isRegex = WI.SearchUtilities.defaultSettings.regularExpression.value;
@@ -1906,6 +1908,11 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
                 this._showPopover(content);
                 codeMirror.setValue(formattedText || data.description);
                 this._popover.update();
+
+                // CodeMirror needs a refresh after the popover displays, to layout, otherwise it may appear with the wrong size.
+                setTimeout(() => {
+                    codeMirror.refresh();
+                });
             });
         }
 
@@ -1958,8 +1965,10 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
 
     _showPopoverWithFormattedValue(remoteObject)
     {
-        var content = WI.FormattedValue.createElementForRemoteObject(remoteObject);
-        this._showPopover(content);
+        let wrapper = document.createElement("div");
+        wrapper.className = "formatted";
+        wrapper.appendChild(WI.FormattedValue.createElementForRemoteObject(remoteObject));
+        this._showPopover(wrapper);
     }
 
     willDismissPopover(popover)
@@ -2172,7 +2181,7 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
     _createTypeTokenAnnotator()
     {
         // COMPATIBILITY (iOS 8): Runtime.getRuntimeTypesForVariablesAtOffsets did not exist yet.
-        if (!this.target.RuntimeAgent.getRuntimeTypesForVariablesAtOffsets)
+        if (!this.target || !this.target.hasCommand("Runtime.getRuntimeTypesForVariablesAtOffsets"))
             return;
 
         var script = this._getAssociatedScript();
@@ -2185,7 +2194,7 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
     _createBasicBlockAnnotator()
     {
         // COMPATIBILITY (iOS 8): Runtime.getBasicBlocks did not exist yet.
-        if (!this.target.RuntimeAgent.getBasicBlocks)
+        if (!this.target || !this.target.hasCommand("Runtime.getBasicBlocks"))
             return;
 
         var script = this._getAssociatedScript();

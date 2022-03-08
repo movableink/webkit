@@ -477,7 +477,7 @@ sub jscPath($)
         $jscName .= ".exe";
     }
     return "$productDir/$jscName" if -e "$productDir/$jscName";
-    return "$productDir/JavaScriptCore.framework/Resources/$jscName";
+    return "$productDir/JavaScriptCore.framework/Helpers/$jscName";
 }
 
 sub argumentsForConfiguration()
@@ -496,7 +496,6 @@ sub argumentsForConfiguration()
     push(@args, '--maccatalyst') if (defined $xcodeSDK && $xcodeSDK =~ /^maccatalyst/);
     push(@args, '--32-bit') if ($architecture eq "x86" and !isWin64());
     push(@args, '--64-bit') if (isWin64());
-    push(@args, '--64-bit') if (isFTW());
     push(@args, '--ftw') if isFTW();
     push(@args, '--gtk') if isGtk();
     push(@args, '--qt') if isQt();
@@ -1344,7 +1343,7 @@ sub isWin64()
 sub determineIsWin64()
 {
     return if defined($isWin64);
-    $isWin64 = checkForArgumentAndRemoveFromARGV("--64-bit") || ((isFTW() || isWinCairo() || isJSCOnly()) && !shouldBuild32Bit());
+    $isWin64 = checkForArgumentAndRemoveFromARGV("--64-bit") || ((isAnyWindows() || isJSCOnly()) && !shouldBuild32Bit());
 }
 
 sub determineIsWin64FromArchitecture($)
@@ -1615,10 +1614,10 @@ sub splitVersionString
     my $versionString = shift;
     my @splitVersion = split(/\./, $versionString);
     @splitVersion >= 2 or die "Invalid version $versionString";
-    $osXVersion = {
-            "major" => $splitVersion[0],
-            "minor" => $splitVersion[1],
-            "subminor" => (defined($splitVersion[2]) ? $splitVersion[2] : 0),
+    return {
+        "major" => $splitVersion[0],
+        "minor" => $splitVersion[1],
+        "subminor" => (defined($splitVersion[2]) ? $splitVersion[2] : 0),
     };
 }
 
@@ -1631,7 +1630,7 @@ sub determineOSXVersion()
         return;
     }
 
-    my $versionString = `sw_vers -productVersion`;
+    chomp(my $versionString = `sw_vers -productVersion`);
     $osXVersion = splitVersionString($versionString);
 }
 
@@ -2551,8 +2550,6 @@ sub argumentsForRunAndDebugMacWebKitApp()
     my @args = ();
     if (checkForArgumentAndRemoveFromARGV("--no-saved-state")) {
         push @args, ("-ApplePersistenceIgnoreStateQuietly", "YES");
-        # FIXME: Don't set ApplePersistenceIgnoreState once all supported OS versions respect ApplePersistenceIgnoreStateQuietly (rdar://15032886).
-        push @args, ("-ApplePersistenceIgnoreState", "YES");
     }
 
     my $lang;

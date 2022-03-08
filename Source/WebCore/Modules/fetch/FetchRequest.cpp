@@ -222,9 +222,12 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
     } else
         m_signal->follow(input.m_signal.get());
 
-    auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
-    if (fillResult.hasException())
-        return fillResult;
+    if (init.hasMembers()) {
+        auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
+        if (fillResult.hasException())
+            return fillResult;
+    } else
+        m_headers->setInternalHeaders(HTTPHeaderMap { input.headers().internalHeaders() });
 
     auto setBodyResult = init.body ? setBody(WTFMove(*init.body)) : setBody(input);
     if (setBodyResult.hasException())
@@ -308,7 +311,7 @@ ResourceRequest FetchRequest::resourceRequest() const
     request.setHTTPHeaderFields(m_headers->internalHeaders());
 
     if (!isBodyNull())
-        request.setHTTPBody(body().bodyAsFormData(*scriptExecutionContext()));
+        request.setHTTPBody(body().bodyAsFormData());
 
     return request;
 }
@@ -327,12 +330,6 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::clone(ScriptExecutionContext& conte
 const char* FetchRequest::activeDOMObjectName() const
 {
     return "Request";
-}
-
-bool FetchRequest::shouldPreventEnteringBackForwardCache_DEPRECATED() const
-{
-    // FIXME: This should never prevent entering the back/forward cache.
-    return isActive();
 }
 
 } // namespace WebCore

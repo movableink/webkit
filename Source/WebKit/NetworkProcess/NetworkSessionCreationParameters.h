@@ -85,7 +85,7 @@ struct NetworkSessionCreationParameters {
     bool enableResourceLoadStatisticsLogTestingEvent { false };
     bool shouldIncludeLocalhostInResourceLoadStatistics { true };
     bool enableResourceLoadStatisticsDebugMode { false };
-    bool enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction { false };
+    bool enableThirdPartyCookieBlocking { false };
     bool deviceManagementRestrictionsEnabled { false };
     bool allLoadsBlockedByDeviceManagementRestrictionsForTesting { false };
     WebCore::RegistrableDomain resourceLoadStatisticsManualPrevalentResource { };
@@ -96,6 +96,7 @@ struct NetworkSessionCreationParameters {
     bool fastServerTrustEvaluationEnabled { false };
     bool networkCacheSpeculativeValidationEnabled { false };
     bool shouldUseTestingNetworkSession { false };
+    bool staleWhileRevalidateEnabled { false };
     unsigned testSpeedMultiplier { 1 };
     bool suppressesConnectionTerminationOnSystemChange { false };
 };

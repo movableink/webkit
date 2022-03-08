@@ -304,7 +304,7 @@ AnimationUpdate CompositeAnimation::animate(Element& element, const RenderStyle*
         }
 
         if (animatedStyle && checkForStackingContext) {
-            // Note that this is similar to code in StyleResolver::adjustRenderStyle() but only needs to consult
+            // Note that this is similar to code in Style::Adjuster::adjust() but only needs to consult
             // animatable properties that can trigger stacking context.
             if (animatedStyle->opacity() < 1.0f
                 || animatedStyle->hasTransformRelatedProperty()
@@ -337,8 +337,8 @@ AnimationUpdate CompositeAnimation::animate(Element& element, const RenderStyle*
     // the user agent must act as if the will-change property ([css-will-change-1]) on the element additionally
     // includes all the properties animated by the animation.
     if (forceStackingContext && animatedStyle) {
-        if (animatedStyle->hasAutoZIndex())
-            animatedStyle->setZIndex(0);
+        if (animatedStyle->hasAutoUsedZIndex())
+            animatedStyle->setUsedZIndex(0);
     }
 
     return { WTFMove(animatedStyle), animationChangeRequiresRecomposite };

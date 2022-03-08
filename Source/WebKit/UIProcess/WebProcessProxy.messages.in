@@ -37,8 +37,6 @@ messages -> WebProcessProxy LegacyReceiver {
     GetPluginProcessConnection(uint64_t pluginProcessToken) -> (IPC::Attachment connectionHandle, bool supportsAsynchronousInitialization) Synchronous
 #endif
     GetNetworkProcessConnection() -> (struct WebKit::NetworkProcessConnectionInfo connectionInfo) Synchronous
-    ProcessReadyToSuspend()
-    DidCancelProcessSuspension()
 
     SetIsHoldingLockedFiles(bool isHoldingLockedFiles)
 
@@ -71,7 +69,7 @@ messages -> WebProcessProxy LegacyReceiver {
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    ProcessWasUnexpectedlyUnsuspended()
+    ProcessWasResumed() -> () Async
 #endif
 
     # Plug-in messages.

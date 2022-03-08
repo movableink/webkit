@@ -346,8 +346,11 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
 
         let initialValues = new Map;
 
-        if (InspectorBackend.hasDomain("LayerTree")) {
-            experimentalSettingsView.addSetting(WI.UIString("Layers:"), WI.settings.experimentalEnableLayersTab, WI.UIString("Enable Layers Tab"));
+        // WebKit may by default enable certain features in a Technology Preview that are not enabled in trunk.
+        // Provide a switch that will make non-preview builds behave like an experimental build, for those preview features.
+        let hasPreviewFeatures = WI.previewFeatures.length > 0;
+        if (hasPreviewFeatures && (WI.isTechnologyPreviewBuild() || WI.isEngineeringBuild)) {
+            experimentalSettingsView.addSetting(WI.UIString("Staging:"), WI.settings.experimentalEnablePreviewFeatures, WI.UIString("Enable Preview Features"));
             experimentalSettingsView.addSeparator();
         }
 
@@ -356,7 +359,6 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
 
         if (InspectorBackend.hasDomain("CSS")) {
             let stylesGroup = experimentalSettingsView.addGroup(WI.UIString("Styles:"));
-            stylesGroup.addSetting(WI.settings.experimentalEnableStylesIcons, WI.UIString("Show Icons"));
             stylesGroup.addSetting(WI.settings.experimentalEnableStylesJumpToEffective, WI.UIString("Show Jump to Effective Property Button"));
             experimentalSettingsView.addSeparator();
         }
@@ -364,10 +366,6 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
         let reloadInspectorButton = document.createElement("button");
         reloadInspectorButton.textContent = WI.UIString("Reload Web Inspector");
         reloadInspectorButton.addEventListener("click", (event) => {
-            if (!initialValues.get(WI.settings.experimentalEnableLayersTab) && InspectorBackend.hasDomain("LayerTree") && WI.settings.experimentalEnableLayersTab.value)
-                WI._openTabsSetting.value.push(WI.LayersTabContentView.Type);
-            WI._openTabsSetting.save();
-
             InspectorFrontendHost.reopen();
         });
 
@@ -381,13 +379,11 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
             });
         }
 
-        listenForChange(WI.settings.experimentalEnableLayersTab);
+        listenForChange(WI.settings.experimentalEnablePreviewFeatures);
         listenForChange(WI.settings.experimentalEnableNewTabBar);
 
-        if (InspectorBackend.hasDomain("CSS")) {
-            listenForChange(WI.settings.experimentalEnableStylesIcons);
+        if (InspectorBackend.hasDomain("CSS"))
             listenForChange(WI.settings.experimentalEnableStylesJumpToEffective);
-        }
 
         this.addSettingsView(experimentalSettingsView);
     }
@@ -397,6 +393,9 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
         // These settings are only ever shown in engineering builds, so the strings are unlocalized.
 
         let engineeringSettingsView = new WI.SettingsView("engineering", WI.unlocalizedString("Engineering"));
+
+        let elementsGroup = engineeringSettingsView.addGroup(WI.unlocalizedString("Elements:"));
+        elementsGroup.addSetting(WI.settings.engineeringAllowEditingUserAgentShadowTrees, WI.unlocalizedString("Allow editing UserAgent shadow trees"));
 
         let debuggingGroup = engineeringSettingsView.addGroup(WI.unlocalizedString("Debugging:"));
         debuggingGroup.addSetting(WI.settings.engineeringShowInternalScripts, WI.unlocalizedString("Show WebKit-internal scripts"));
@@ -444,8 +443,10 @@ WI.SettingsTabContentView = class SettingsTabContentView extends WI.TabContentVi
 
         this._debugSettingsView.addSeparator();
 
-
-        this._debugSettingsView.addSetting(WI.unlocalizedString("Uncaught Exception Reporter:"), WI.settings.debugEnableUncaughtExceptionReporter, WI.unlocalizedString("Enabled"));
+        let diagnosticsGroup = this._debugSettingsView.addGroup(WI.unlocalizedString("Diagnostics:"));
+        diagnosticsGroup.addSetting(WI.settings.debugEnableUncaughtExceptionReporter, WI.unlocalizedString("Report Uncaught Exceptions"));
+        diagnosticsGroup.addSetting(WI.settings.debugEnableDiagnosticLogging, WI.unlocalizedString("Enable Diagnostic Logging"));
+        diagnosticsGroup.addSetting(WI.settings.debugAutoLogDiagnosticEvents, WI.unlocalizedString("Show Diagnostic Events in Console"));
 
         this._debugSettingsView.addSeparator();
 

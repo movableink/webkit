@@ -29,7 +29,6 @@
 #include "ActiveDOMObject.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "EventTarget.h"
-#include "GenericEventQueue.h"
 #include "MessagePort.h"
 #include "WorkerScriptLoaderClient.h"
 #include <JavaScriptCore/RuntimeFlags.h>
@@ -41,7 +40,6 @@ namespace JSC {
 class CallFrame;
 class JSObject;
 class JSValue;
-using ExecState = CallFrame;
 }
 
 namespace WebCore {
@@ -59,7 +57,7 @@ public:
     static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, const String& url, const Options&);
     virtual ~Worker();
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
 
     void terminate();
 
@@ -69,12 +67,10 @@ public:
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    void enqueueEvent(Ref<Event>&&);
+    void dispatchEvent(Event&) final;
 
 private:
     explicit Worker(ScriptExecutionContext&, JSC::RuntimeFlags, const Options&);
-
-    void dispatchEvent(Event&) final;
 
     EventTargetInterface eventTargetInterface() const final { return WorkerEventTargetInterfaceType; }
 
@@ -84,6 +80,8 @@ private:
     void notifyFinished() final;
 
     void stop() final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
     const char* activeDOMObjectName() const final;
 
     static void networkStateChanged(bool isOnLine);
@@ -95,8 +93,10 @@ private:
     Optional<ContentSecurityPolicyResponseHeaders> m_contentSecurityPolicyResponseHeaders;
     MonotonicTime m_workerCreationTime;
     bool m_shouldBypassMainWorldContentSecurityPolicy { false };
+    bool m_isSuspendedForBackForwardCache { false };
     JSC::RuntimeFlags m_runtimeFlags;
-    UniqueRef<GenericEventQueue> m_eventQueue;
+    Deque<RefPtr<Event>> m_pendingEvents;
+    bool m_wasTerminated { false };
 };
 
 } // namespace WebCore

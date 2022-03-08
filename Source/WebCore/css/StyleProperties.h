@@ -50,7 +50,7 @@ class StylePropertiesBase : public RefCounted<StylePropertiesBase> {
 public:
     // Override RefCounted's deref() to ensure operator delete is called on
     // the appropriate subclass type.
-    void deref();
+    void deref() const;
     
     StylePropertiesType type() const { return static_cast<StylePropertiesType>(m_type); }
 
@@ -209,7 +209,7 @@ inline const StylePropertyMetadata* ImmutableStyleProperties::metadataArray() co
 class MutableStyleProperties final : public StyleProperties {
 public:
     WEBCORE_EXPORT static Ref<MutableStyleProperties> create(CSSParserMode = HTMLQuirksMode);
-    static Ref<MutableStyleProperties> create(const CSSProperty* properties, unsigned count);
+    static Ref<MutableStyleProperties> create(Vector<CSSProperty>&&);
 
     WEBCORE_EXPORT ~MutableStyleProperties();
 
@@ -256,7 +256,7 @@ public:
 private:
     explicit MutableStyleProperties(CSSParserMode);
     explicit MutableStyleProperties(const StyleProperties&);
-    MutableStyleProperties(const CSSProperty* properties, unsigned count);
+    MutableStyleProperties(Vector<CSSProperty>&&);
 
     bool removeShorthandProperty(CSSPropertyID);
     CSSProperty* findCSSPropertyWithID(CSSPropertyID);
@@ -305,7 +305,7 @@ inline unsigned StyleProperties::propertyCount() const
     return downcast<ImmutableStyleProperties>(*this).propertyCount();
 }
 
-inline void StylePropertiesBase::deref()
+inline void StylePropertiesBase::deref() const
 {
     if (!derefBase())
         return;

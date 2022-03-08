@@ -91,6 +91,7 @@
     boolean fastDataArrival = false;
     boolean continueAfterErrorData = false;
     boolean canDowngrade = false;
+    boolean expectCancel = false;
 };
 
 [
@@ -99,4 +100,5 @@
     MockNfcError error = "success";
     sequence<DOMString> payloadBase64;
     boolean multipleTags = false;
+    boolean multiplePhysicalTags = false;
 };

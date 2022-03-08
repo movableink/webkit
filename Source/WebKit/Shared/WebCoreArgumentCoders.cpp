@@ -32,6 +32,7 @@
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/BlobPart.h>
 #include <WebCore/CacheQueryOptions.h>
+#include <WebCore/CacheStorageConnection.h>
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/CompositionUnderline.h>
 #include <WebCore/Credential.h>
@@ -2683,6 +2684,7 @@ void ArgumentCoder<ResourceLoadStatistics>::encode(Encoder& encoder, const WebCo
     // Top frame stats
     encoder << statistics.topFrameUniqueRedirectsTo;
     encoder << statistics.topFrameUniqueRedirectsFrom;
+    encoder << statistics.topFrameLoadedThirdPartyScripts;
 
     // Subframe stats
     encoder << statistics.subframeUnderTopFrameDomains;
@@ -2754,6 +2756,12 @@ Optional<ResourceLoadStatistics> ArgumentCoder<ResourceLoadStatistics>::decode(D
     if (!topFrameUniqueRedirectsFrom)
         return WTF::nullopt;
     statistics.topFrameUniqueRedirectsFrom = WTFMove(*topFrameUniqueRedirectsFrom);
+
+    Optional<HashSet<RegistrableDomain>> topFrameLoadedThirdPartyScripts;
+    decoder >> topFrameLoadedThirdPartyScripts;
+    if (!topFrameLoadedThirdPartyScripts)
+        return WTF::nullopt;
+    statistics.topFrameLoadedThirdPartyScripts = WTFMove(*topFrameLoadedThirdPartyScripts);
 
     // Subframe stats
     Optional<HashSet<RegistrableDomain>> subframeUnderTopFrameDomains;

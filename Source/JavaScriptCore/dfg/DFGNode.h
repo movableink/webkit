@@ -1554,9 +1554,21 @@ public:
         return m_opInfo.as<EntrySwitchData*>();
     }
 
+    bool hasIntrinsic()
+    {
+        switch (op()) {
+        case CPUIntrinsic:
+        case DateGetTime:
+        case DateGetInt32OrNaN:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     Intrinsic intrinsic()
     {
-        RELEASE_ASSERT(op() == CPUIntrinsic);
+        ASSERT(hasIntrinsic());
         return m_opInfo.as<Intrinsic>();
     }
     
@@ -1726,6 +1738,7 @@ public:
         case StringReplace:
         case StringReplaceRegExp:
         case ToNumber:
+        case ToNumeric:
         case ToObject:
         case ValueBitAnd:
         case ValueBitOr:
@@ -1753,6 +1766,7 @@ public:
         case ToThis:
         case DataViewGetInt:
         case DataViewGetFloat:
+        case DateGetInt32OrNaN:
             return true;
         default:
             return false;
@@ -1859,7 +1873,7 @@ public:
 
     bool hasUidOperand()
     {
-        return op() == CheckStringIdent;
+        return op() == CheckIdent;
     }
 
     UniquedStringImpl* uidOperand()
@@ -2902,15 +2916,15 @@ public:
         return m_opInfo.as<CallLinkStatus*>();
     }
     
-    bool hasGetByIdStatus()
+    bool hasGetByStatus()
     {
-        return op() == FilterGetByIdStatus;
+        return op() == FilterGetByStatus;
     }
     
-    GetByIdStatus* getByIdStatus()
+    GetByStatus* getByStatus()
     {
-        ASSERT(hasGetByIdStatus());
-        return m_opInfo.as<GetByIdStatus*>();
+        ASSERT(hasGetByStatus());
+        return m_opInfo.as<GetByStatus*>();
     }
     
     bool hasInByIdStatus()

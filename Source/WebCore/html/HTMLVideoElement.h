@@ -82,7 +82,7 @@ public:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    enum class VideoPresentationMode { Fullscreen, PictureInPicture, Inline };
+    enum class VideoPresentationMode { Inline, Fullscreen, PictureInPicture};
     WEBCORE_EXPORT bool webkitSupportsPresentationMode(VideoPresentationMode) const;
     void webkitSetPresentationMode(VideoPresentationMode);
     VideoPresentationMode webkitPresentationMode() const;
@@ -90,8 +90,14 @@ public:
     void fullscreenModeChanged(VideoFullscreenMode) final;
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
+    WEBCORE_EXPORT void didBecomeFullscreenElement() final;
     void setPictureInPictureObserver(PictureInPictureObserver*);
+    WEBCORE_EXPORT void setPictureInPictureAPITestEnabled(bool);
 #endif
+#endif
+
+#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+    void setVideoFullscreenFrame(FloatRect) final;
 #endif
 
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
@@ -131,7 +137,11 @@ private:
     unsigned m_lastReportedVideoHeight { 0 };
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
+    bool m_waitingForPictureInPictureWindowFrame { false };
+    bool m_isFullscreen { false };
     PictureInPictureObserver* m_pictureInPictureObserver { nullptr };
+
+    bool m_pictureInPictureAPITestEnabled { false };
 #endif
 };
 

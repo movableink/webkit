@@ -119,7 +119,7 @@ private:
     void dispatchDidFailLoad(const WebCore::ResourceError&) final;
     void dispatchDidFinishDocumentLoad() final;
     void dispatchDidFinishLoad() final;
-    void dispatchDidExplicitOpen(const URL&) final;
+    void dispatchDidExplicitOpen(const URL&, const String& mimeType) final;
 
     void dispatchDidReachLayoutMilestone(OptionSet<WebCore::LayoutMilestone>) final;
     void dispatchDidLayout() final;
@@ -256,7 +256,7 @@ private:
     void forcePageTransitionIfNeeded() final;
 
 #if USE(QUICK_LOOK)
-    RefPtr<WebCore::PreviewLoaderClient> createPreviewLoaderClient(const String& fileName, const String& uti) final;
+    RefPtr<WebCore::LegacyPreviewLoaderClient> createPreviewLoaderClient(const String& fileName, const String& uti) final;
 #endif
 
 #if ENABLE(CONTENT_FILTERING)

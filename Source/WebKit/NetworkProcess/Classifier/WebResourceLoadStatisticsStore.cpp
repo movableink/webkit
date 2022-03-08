@@ -31,6 +31,7 @@
 #include "APIDictionary.h"
 #include "Logging.h"
 #include "NetworkProcess.h"
+#include "NetworkProcessProxyMessages.h"
 #include "NetworkSession.h"
 #include "ResourceLoadStatisticsDatabaseStore.h"
 #include "ResourceLoadStatisticsMemoryStore.h"
@@ -161,8 +162,6 @@ WebResourceLoadStatisticsStore::WebResourceLoadStatisticsStore(NetworkSession& n
             m_statisticsStore = makeUnique<ResourceLoadStatisticsDatabaseStore>(*this, m_statisticsQueue, shouldIncludeLocalhost, resourceLoadStatisticsDirectory, sessionID);
 
             auto memoryStore = makeUnique<ResourceLoadStatisticsMemoryStore>(*this, m_statisticsQueue, shouldIncludeLocalhost);
-            auto persistentStore = makeUnique<ResourceLoadStatisticsPersistentStorage>(*memoryStore, m_statisticsQueue, resourceLoadStatisticsDirectory);
-
             downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore.get()).populateFromMemoryStore(*memoryStore);
         } else {
             m_statisticsStore = makeUnique<ResourceLoadStatisticsMemoryStore>(*this, m_statisticsQueue, shouldIncludeLocalhost);
@@ -222,6 +221,20 @@ void WebResourceLoadStatisticsStore::flushAndDestroyPersistentStore()
     semaphore.wait();
 }
 
+void WebResourceLoadStatisticsStore::populateMemoryStoreFromDisk(CompletionHandler<void()>&& completionHandler)
+{
+    ASSERT(RunLoop::isMain());
+    
+    postTask([this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)]() mutable {
+        if (m_persistentStorage)
+            m_persistentStorage->populateMemoryStoreFromDisk([protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)]() mutable {
+                postTaskReply(WTFMove(completionHandler));
+            });
+        else
+            postTaskReply(WTFMove(completionHandler));
+    });
+}
+
 void WebResourceLoadStatisticsStore::setResourceLoadStatisticsDebugMode(bool value, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
@@ -262,7 +275,7 @@ void WebResourceLoadStatisticsStore::resourceLoadStatisticsUpdated(Vector<Resour
     // It is safe to move the origins to the background queue without isolated copy here because this is an r-value
     // coming from IPC. ResourceLoadStatistics only contains strings which are safe to move to other threads as long
     // as nobody on this thread holds a reference to those strings.
-    postTask([this, statistics = WTFMove(statistics)]() mutable {
+    postTask([this, protectedThis = makeRef(*this), statistics = WTFMove(statistics)]() mutable {
         if (!m_statisticsStore)
             return;
 
@@ -272,7 +285,11 @@ void WebResourceLoadStatisticsStore::resourceLoadStatisticsUpdated(Vector<Resour
         m_statisticsStore->cancelPendingStatisticsProcessingRequest();
 
         // Fire before processing statistics to propagate user interaction as fast as possible to the network process.
-        m_statisticsStore->updateCookieBlocking([]() { });
+        m_statisticsStore->updateCookieBlocking([this, protectedThis = protectedThis.copyRef()]() {
+            postTaskReply([this, protectedThis = protectedThis.copyRef()]() {
+                logTestingEvent("Statistics Updated"_s);
+            });
+        });
         m_statisticsStore->processStatisticsAndDataRecords();
     });
 }
@@ -445,6 +462,25 @@ void WebResourceLoadStatisticsStore::hasCookies(const RegistrableDomain& domain,
     completionHandler(false);
 }
 
+void WebResourceLoadStatisticsStore::setIsThirdPartyCookieBlockingEnabled(bool enabled)
+{
+    ASSERT(RunLoop::isMain());
+
+    if (m_networkSession) {
+        if (auto* storageSession = m_networkSession->networkStorageSession())
+            storageSession->setIsThirdPartyCookieBlockingEnabled(enabled);
+        else
+            ASSERT_NOT_REACHED();
+    }
+
+    postTask([this, enabled]() {
+        if (!m_statisticsStore)
+            return;
+
+        m_statisticsStore->setIsThirdPartyCookieBlockingEnabled(enabled);
+    });
+}
+
 void WebResourceLoadStatisticsStore::didCreateNetworkProcess()
 {
     ASSERT(RunLoop::isMain());
@@ -547,9 +583,14 @@ void WebResourceLoadStatisticsStore::logUserInteraction(const RegistrableDomain&
     ASSERT(RunLoop::isMain());
 
     postTask([this, domain = domain.isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
-        if (m_statisticsStore)
-            m_statisticsStore->logUserInteraction(domain);
-        postTaskReply(WTFMove(completionHandler));
+        auto innerCompletionHandler = [completionHandler = WTFMove(completionHandler)]() mutable {
+            postTaskReply(WTFMove(completionHandler));
+        };
+        if (m_statisticsStore) {
+            m_statisticsStore->logUserInteraction(domain, WTFMove(innerCompletionHandler));
+            return;
+        }
+        innerCompletionHandler();
     });
 }
 

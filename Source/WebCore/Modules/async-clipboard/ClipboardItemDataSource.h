@@ -32,8 +32,10 @@
 
 namespace WebCore {
 
-class DeferredPromise;
+class Clipboard;
 class ClipboardItem;
+class DeferredPromise;
+class PasteboardCustomData;
 
 class ClipboardItemDataSource {
 public:
@@ -46,6 +48,7 @@ public:
 
     virtual Vector<String> types() const = 0;
     virtual void getType(const String&, Ref<DeferredPromise>&&) = 0;
+    virtual void collectDataForWriting(Clipboard& destination, CompletionHandler<void(Optional<PasteboardCustomData>)>&&) = 0;
 
 protected:
     ClipboardItem& m_item;

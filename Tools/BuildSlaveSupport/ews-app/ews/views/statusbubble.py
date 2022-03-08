@@ -40,9 +40,9 @@ class StatusBubble(View):
     # These queue names are from shortname in https://trac.webkit.org/browser/webkit/trunk/Tools/BuildSlaveSupport/ews-build/config.json
     # FIXME: Auto-generate this list https://bugs.webkit.org/show_bug.cgi?id=195640
     ALL_QUEUES = ['style', 'ios', 'ios-sim', 'mac', 'mac-debug', 'gtk', 'wpe', 'wincairo',
-                  'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-debug-wk1', 'api-ios', 'api-mac', 'bindings', 'jsc', 'webkitperl', 'webkitpy', 'win', 'services']
+                  'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-debug-wk1', 'api-ios', 'api-mac', 'bindings', 'jsc', 'jsc-armv7', 'jsc-mips', 'webkitperl', 'webkitpy', 'win', 'services']
     ENABLED_QUEUES = ['style', 'ios', 'ios-sim', 'mac', 'mac-debug', 'gtk', 'wpe', 'wincairo',
-                      'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-debug-wk1', 'api-ios', 'api-mac', 'bindings', 'webkitperl', 'webkitpy', 'services']
+                      'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-debug-wk1', 'api-ios', 'api-mac', 'bindings', 'jsc', 'jsc-armv7', 'jsc-mips', 'webkitperl', 'webkitpy', 'services']
     # FIXME: Auto-generate the queue's trigger relationship
     QUEUE_TRIGGERS = {
         'api-ios': 'ios-sim',
@@ -98,6 +98,9 @@ class StatusBubble(View):
             else:
                 bubble['state'] = 'started'
             bubble['details_message'] = 'Build is in-progress. Recent messages:' + self._steps_messages_from_multiple_builds(builds)
+        elif build.retried:
+            bubble['state'] = 'started'
+            bubble['details_message'] = 'Waiting for available bot to retry the build.\n\nRecent messages:' + self._steps_messages_from_multiple_builds(builds)
         elif build.result == Buildbot.SUCCESS:
             if is_parent_build:
                 if patch.modified < (timezone.now() - datetime.timedelta(days=StatusBubble.DAYS_TO_CHECK)):
@@ -126,6 +129,10 @@ class StatusBubble(View):
             elif re.search(r'Patch .* is obsolete', build.state_string):
                 bubble['details_message'] += ' Patch was obsolete when EWS attempted to process it.'
 
+            if len(builds) > 1:
+                bubble['details_message'] += '\nSome messages were logged while the patch was still eligible:'
+                bubble['details_message'] += self._steps_messages_from_multiple_builds(builds)
+
         elif build.result == Buildbot.EXCEPTION:
             bubble['state'] = 'error'
             bubble['details_message'] = 'An unexpected error occured. Recent messages:' + self._steps_messages_from_multiple_builds(builds)
@@ -133,7 +140,7 @@ class StatusBubble(View):
             bubble['state'] = 'provisional-fail'
             bubble['details_message'] = 'Build is being retried. Recent messages:' + self._steps_messages_from_multiple_builds(builds)
         elif build.result == Buildbot.CANCELLED:
-            bubble['state'] = 'fail'
+            bubble['state'] = 'none'
             bubble['details_message'] = 'Build was cancelled. Recent messages:' + self._steps_messages_from_multiple_builds(builds)
         else:
             bubble['state'] = 'error'
@@ -276,10 +283,11 @@ class StatusBubble(View):
     def _build_bubbles_for_patch(self, patch, hide_icons=False):
         show_submit_to_ews = True
         failed_to_apply = False  # TODO: https://bugs.webkit.org/show_bug.cgi?id=194598
+        show_retry = False
         bubbles = []
 
         if not (patch and patch.sent_to_buildbot):
-            return (None, show_submit_to_ews, failed_to_apply)
+            return (None, show_submit_to_ews, failed_to_apply, show_retry)
 
         for queue in StatusBubble.ALL_QUEUES:
             if not self._should_show_bubble_for_queue(queue):
@@ -289,20 +297,23 @@ class StatusBubble(View):
             if bubble:
                 show_submit_to_ews = False
                 bubbles.append(bubble)
+                if bubble['state'] in ('fail', 'error'):
+                    show_retry = True
 
-        return (bubbles, show_submit_to_ews, failed_to_apply)
+        return (bubbles, show_submit_to_ews, failed_to_apply, show_retry)
 
     @xframe_options_exempt
     def get(self, request, patch_id):
         hide_icons = request.GET.get('hide_icons', False)
         patch_id = int(patch_id)
         patch = Patch.get_patch(patch_id)
-        bubbles, show_submit_to_ews, show_failure_to_apply = self._build_bubbles_for_patch(patch, hide_icons)
+        bubbles, show_submit_to_ews, show_failure_to_apply, show_retry = self._build_bubbles_for_patch(patch, hide_icons)
 
         template_values = {
             'bubbles': bubbles,
             'patch_id': patch_id,
             'show_submit_to_ews': show_submit_to_ews,
             'show_failure_to_apply': show_failure_to_apply,
+            'show_retry_button': show_retry,
         }
         return render(request, 'statusbubble.html', template_values)

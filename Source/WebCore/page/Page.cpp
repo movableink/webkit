@@ -62,6 +62,8 @@
 #include "FullscreenManager.h"
 #include "HTMLElement.h"
 #include "HTMLMediaElement.h"
+#include "HTMLTextAreaElement.h"
+#include "HTMLTextFormControlElement.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "InspectorClient.h"
@@ -111,6 +113,7 @@
 #include "StorageArea.h"
 #include "StorageNamespace.h"
 #include "StorageNamespaceProvider.h"
+#include "StyleAdjuster.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "SubframeLoader.h"
@@ -124,6 +127,7 @@
 #include "VoidCallback.h"
 #include "WheelEventDeltaFilter.h"
 #include "Widget.h"
+#include <wtf/Deque.h>
 #include <wtf/FileSystem.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
@@ -565,19 +569,13 @@ void Page::initGroup()
 
 void Page::updateStyleAfterChangeInEnvironment()
 {
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        // If a change in the global environment has occurred, we need to
-        // make sure all the properties a recomputed, therefore we invalidate
-        // the properties cache.
-        auto* document = frame->document();
-        if (!document)
-            continue;
-
-        if (StyleResolver* styleResolver = document->styleScope().resolverIfExists())
-            styleResolver->invalidateMatchedPropertiesCache();
-        document->scheduleFullStyleRebuild();
-        document->styleScope().didChangeStyleSheetEnvironment();
-    }
+    forEachDocument([](Document& document) {
+        if (auto* styleResolver = document.styleScope().resolverIfExists())
+            styleResolver->invalidateMatchedDeclarationsCache();
+        document.scheduleFullStyleRebuild();
+        document.styleScope().didChangeStyleSheetEnvironment();
+        document.scheduleTimedRenderingUpdate();
+    });
 }
 
 void Page::updateStyleForAllPagesAfterGlobalChangeInEnvironment()
@@ -916,6 +914,45 @@ void Page::unmarkAllTextMatches()
         frame->document()->markers().removeMarkers(DocumentMarker::TextMatch);
         frame = incrementFrame(frame, true, CanWrap::No);
     } while (frame);
+}
+
+static bool isEditableTextInputElement(const Element& element)
+{
+    if (is<HTMLTextFormControlElement>(element)) {
+        if (!element.isTextField() && !is<HTMLTextAreaElement>(element))
+            return false;
+        return downcast<HTMLTextFormControlElement>(element).isInnerTextElementEditable();
+    }
+    return element.isRootEditableElement();
+}
+
+Vector<Ref<Element>> Page::editableElementsInRect(const FloatRect& searchRectInRootViewCoordinates) const
+{
+    Vector<Ref<Element>> result;
+    for (auto* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* document = frame->document();
+        if (!document)
+            continue;
+
+        Deque<Node*> nodesToSearch;
+        nodesToSearch.append(document);
+        while (!nodesToSearch.isEmpty()) {
+            auto* node = nodesToSearch.takeFirst();
+
+            // It is possible to have nested text input contexts (e.g. <input type='text'> inside contenteditable) but
+            // in this case we just take the outermost context and skip the rest.
+            if (!is<Element>(node) || !isEditableTextInputElement(downcast<Element>(*node))) {
+                for (auto* child = node->firstChild(); child; child = child->nextSibling())
+                    nodesToSearch.append(child);
+                continue;
+            }
+
+            auto& element = downcast<Element>(*node);
+            if (searchRectInRootViewCoordinates.intersects(element.clientRect()))
+                result.append(element);
+        }
+    }
+    return result;
 }
 
 const VisibleSelection& Page::selection() const
@@ -1296,12 +1333,19 @@ void Page::updateRendering()
 
     layoutIfNeeded();
 
-    for (auto& document : collectDocuments())
-        document->runResizeSteps();
+    // Flush autofocus candidates
 
-    // FIXME: Run the scroll steps
+    forEachDocument([&](Document& document) {
+        document.runResizeSteps();
+    });
 
-    // FIXME: Evaluate media queries and report changes.
+    forEachDocument([&](Document& document) {
+        document.runScrollSteps();
+    });
+
+    forEachDocument([&](Document& document) {
+        document.evaluateMediaQueriesAndReportChanges();        
+    });
 
     Vector<Ref<Document>> documents = collectDocuments(); // The requestAnimationFrame callbacks may change the frame hierarchy of the page
     for (auto& document : documents) {
@@ -1321,9 +1365,6 @@ void Page::updateRendering()
     for (auto& document : documents)
         document->updateResizeObservations(*this);
 #endif
-
-    // FIXME: Flush autofocus candidates
-    // https://github.com/whatwg/html/issues/4992
 
     layoutIfNeeded();
 }
@@ -2561,6 +2602,11 @@ void Page::setMockMediaPlaybackTargetPickerState(const String& name, MediaPlayba
     chrome().client().setMockMediaPlaybackTargetPickerState(name, state);
 }
 
+void Page::mockMediaPlaybackTargetPickerDismissPopup()
+{
+    chrome().client().mockMediaPlaybackTargetPickerDismissPopup();
+}
+
 void Page::setPlaybackTarget(uint64_t contextId, Ref<MediaPlaybackTarget>&& target)
 {
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
@@ -2585,6 +2631,15 @@ void Page::setShouldPlayToPlaybackTarget(uint64_t clientId, bool shouldPlay)
         if (!frame->document())
             continue;
         frame->document()->setShouldPlayToPlaybackTarget(clientId, shouldPlay);
+    }
+}
+
+void Page::playbackTargetPickerWasDismissed(uint64_t clientId)
+{
+    for (auto* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (!frame->document())
+            continue;
+        frame->document()->playbackTargetPickerWasDismissed(clientId);
     }
 }
 #endif
@@ -2672,25 +2727,21 @@ void Page::setCaptionUserPreferencesStyleSheet(const String& styleSheet)
 
 void Page::accessibilitySettingsDidChange()
 {
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (auto* document = frame->document()) {
-            document->styleScope().evaluateMediaQueriesForAccessibilitySettingsChange();
-            document->evaluateMediaQueryList();
-        }
-    }
+    forEachDocument([](auto& document) {
+        document.styleScope().evaluateMediaQueriesForAccessibilitySettingsChange();
+        document.updateElementsAffectedByMediaQueries();
+        document.scheduleTimedRenderingUpdate();
+    });
 }
 
 void Page::appearanceDidChange()
 {
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        auto* document = frame->document();
-        if (!document)
-            continue;
-
-        document->styleScope().didChangeStyleSheetEnvironment();
-        document->styleScope().evaluateMediaQueriesForAppearanceChange();
-        document->evaluateMediaQueryList();
-    }
+    forEachDocument([](auto& document) {
+        document.styleScope().didChangeStyleSheetEnvironment();
+        document.styleScope().evaluateMediaQueriesForAppearanceChange();
+        document.updateElementsAffectedByMediaQueries();
+        document.scheduleTimedRenderingUpdate();
+    });
 }
 
 void Page::setUnobscuredSafeAreaInsets(const FloatBoxExtent& insets)
@@ -2874,12 +2925,8 @@ RenderingUpdateScheduler& Page::renderingUpdateScheduler()
 
 void Page::forEachDocument(const Function<void(Document&)>& functor)
 {
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->document())
-            continue;
-
-        functor(*frame->document());
-    }
+    for (auto& document : collectDocuments())
+        functor(document);
 }
 
 Vector<Ref<Document>> Page::collectDocuments()
@@ -3027,13 +3074,12 @@ void Page::recomputeTextAutoSizingInAllFrames()
         if (!frame->document())
             continue;
         auto& document = *frame->document();
-        if (!document.renderView() || !document.styleScope().resolverIfExists())
+        if (!document.renderView())
             continue;
 
-        auto& styleResolver = document.styleScope().resolver();
         for (auto& renderer : descendantsOfType<RenderElement>(*document.renderView())) {
             if (auto* element = renderer.element()) {
-                auto needsLayout = styleResolver.adjustRenderStyleForTextAutosizing(renderer.mutableStyle(), *element);
+                auto needsLayout = Style::Adjuster::adjustForTextAutosizing(renderer.mutableStyle(), *element);
                 if (needsLayout)
                     renderer.setNeedsLayout();
             }

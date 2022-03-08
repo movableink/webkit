@@ -3,6 +3,9 @@
 <script src="../../http/tests/inspector/resources/protocol-test.js"></script>
 <script src="resources/property-descriptor-utilities.js"></script>
 <script>
+if (window.internals)
+    window.internals.settings.setUnhandledPromiseRejectionToConsoleEnabled(false);
+
 function test()
 {
     let suite = ProtocolTest.createAsyncSuite("Runtime.getProperties");
@@ -40,7 +43,7 @@ function test()
 
                 let properties = getPropertiesResponse.properties;
                 if (properties) {
-                    ProtocolTest.assert(!fetchCount || properties.length <= fetchCount, `Should only get ${fetchCount} properties.`);
+                    ProtocolTest.assert(!fetchCount || properties.length <= fetchCount + (fetchStart ? 0 : 1), `Should only get ${fetchCount} properties.`);
 
                     ProtocolTest.log("Properties:");
                     properties.forEach(ProtocolTest.PropertyDescriptorUtilities.logForEach);

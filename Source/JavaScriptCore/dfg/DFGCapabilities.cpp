@@ -240,6 +240,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_jneq_ptr:
     case op_typeof:
     case op_to_number:
+    case op_to_numeric:
     case op_to_string:
     case op_to_object:
     case op_switch_imm:
@@ -314,6 +315,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_get_by_val_return_location:
     case op_put_by_id_return_location:
     case op_put_by_val_return_location:
+    case wasm_function_prologue:
+    case wasm_function_prologue_no_tls:
         return CannotCompile;
     }
     return CannotCompile;

@@ -137,12 +137,12 @@ public:
     // When this fails (returns GaveUp), this will leave the old stub intact but you should not try
     // to call this method again for that PolymorphicAccess instance.
     AccessGenerationResult addCases(
-        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, const Identifier&, Vector<std::unique_ptr<AccessCase>, 2>);
+        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, Vector<std::unique_ptr<AccessCase>, 2>);
 
     AccessGenerationResult addCase(
-        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, const Identifier&, std::unique_ptr<AccessCase>);
+        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, std::unique_ptr<AccessCase>);
     
-    AccessGenerationResult regenerate(const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, const Identifier&);
+    AccessGenerationResult regenerate(const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&);
     
     bool isEmpty() const { return m_list.isEmpty(); }
     unsigned size() const { return m_list.size(); }
@@ -177,7 +177,7 @@ private:
     
     void commit(
         const GCSafeConcurrentJSLocker&, VM&, std::unique_ptr<WatchpointsOnStructureStubInfo>&, CodeBlock*, StructureStubInfo&,
-        const Identifier&, AccessCase&);
+        AccessCase&);
 
     ListType m_list;
     RefPtr<JITStubRoutine> m_stubRoutine;
@@ -193,6 +193,7 @@ struct AccessGenerationState {
         , m_needsToRestoreRegistersIfException(false)
         , m_calculatedCallSiteIndex(false)
     {
+        u.thisGPR = InvalidGPRReg;
     }
     VM& m_vm;
     JSGlobalObject* m_globalObject;
@@ -205,10 +206,14 @@ struct AccessGenerationState {
     MacroAssembler::JumpList failAndRepatch;
     MacroAssembler::JumpList failAndIgnore;
     GPRReg baseGPR { InvalidGPRReg };
-    GPRReg thisGPR { InvalidGPRReg };
+    union {
+        GPRReg thisGPR;
+        GPRReg prototypeGPR;
+        GPRReg propertyGPR;
+    } u;
     JSValueRegs valueRegs;
     GPRReg scratchGPR { InvalidGPRReg };
-    const Identifier* ident;
+    FPRReg scratchFPR { InvalidFPRReg };
     std::unique_ptr<WatchpointsOnStructureStubInfo> watchpoints;
     Vector<WriteBarrier<JSCell>> weakReferences;
 

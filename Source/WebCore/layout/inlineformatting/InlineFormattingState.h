@@ -38,9 +38,9 @@ namespace WebCore {
 namespace Layout {
 
 // Temp
-using InlineItems = Vector<std::unique_ptr<InlineItem>>;
-using InlineRuns = Vector<std::unique_ptr<Display::Run>>;
-using LineBoxes = Vector<std::unique_ptr<LineBox>>;
+using InlineItems = Vector<std::unique_ptr<InlineItem>, 30>;
+using InlineRuns = Vector<std::unique_ptr<Display::Run>, 10>;
+using LineBoxes = Vector<std::unique_ptr<LineBox>, 5>;
 // InlineFormattingState holds the state for a particular inline formatting context tree.
 class InlineFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingState);
@@ -54,7 +54,8 @@ public:
 
     const InlineRuns& inlineRuns() const { return m_inlineRuns; }
     InlineRuns& inlineRuns() { return m_inlineRuns; }
-    void addInlineRun(const Display::Run&, const LineBox&);
+    void addInlineRun(std::unique_ptr<Display::Run>&&, const LineBox&);
+    void resetInlineRuns();
 
     const LineBoxes& lineBoxes() const { return m_lineBoxes; }
     LineBoxes& lineBoxes() { return m_lineBoxes; }
@@ -70,11 +71,19 @@ private:
     HashMap<const Display::Run*, const LineBox*> m_inlineRunToLineMap;
 };
 
-inline void InlineFormattingState::addInlineRun(const Display::Run& inlineRun, const LineBox& line)
+inline void InlineFormattingState::addInlineRun(std::unique_ptr<Display::Run>&& displayRun, const LineBox& line)
 {
-    auto run = makeUnique<Display::Run>(inlineRun);
-    m_inlineRunToLineMap.set(run.get(), &line);
-    m_inlineRuns.append(WTFMove(run));
+    m_inlineRunToLineMap.set(displayRun.get(), &line);
+    m_inlineRuns.append(WTFMove(displayRun));
+}
+
+inline void InlineFormattingState::resetInlineRuns()
+{
+    m_inlineRuns.clear();
+    // Resetting the runs means no more line boxes either.
+    m_lineBoxes.clear();
+    m_inlineRunToLineMap.clear();
+
 }
 
 }

@@ -5,6 +5,7 @@ list(APPEND PAL_PUBLIC_HEADERS
 
     cocoa/AppSSOSoftLink.h
     cocoa/AVFoundationSoftLink.h
+    cocoa/MediaToolboxSoftLink.h
     cocoa/PassKitSoftLink.h
 
     mac/LookupSoftLink.h
@@ -34,6 +35,7 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/cocoa/IOSurfaceSPI.h
     spi/cocoa/IOTypesSPI.h
     spi/cocoa/LaunchServicesSPI.h
+    spi/cocoa/MetalSPI.h
     spi/cocoa/NEFilterSourceSPI.h
     spi/cocoa/NSAttributedStringSPI.h
     spi/cocoa/NSButtonCellSPI.h
@@ -72,6 +74,7 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/mac/NSAppearanceSPI.h
     spi/mac/NSApplicationSPI.h
     spi/mac/NSCellSPI.h
+    spi/mac/NSColorWellSPI.h
     spi/mac/NSEventSPI.h
     spi/mac/NSFontSPI.h
     spi/mac/NSGraphicsSPI.h
@@ -79,6 +82,7 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/mac/NSImmediateActionGestureRecognizerSPI.h
     spi/mac/NSMenuSPI.h
     spi/mac/NSPasteboardSPI.h
+    spi/mac/NSPopoverColorWellSPI.h
     spi/mac/NSPopoverSPI.h
     spi/mac/NSResponderSPI.h
     spi/mac/NSScrollViewSPI.h
@@ -114,6 +118,8 @@ list(APPEND PAL_SOURCES
     cocoa/AppSSOSoftLink.mm
     cocoa/AVFoundationSoftLink.mm
     cocoa/FileSizeFormatterCocoa.mm
+    cocoa/Gunzip.cpp
+    cocoa/MediaToolboxSoftLink.cpp
     cocoa/PassKitSoftLink.mm
 
     crypto/commoncrypto/CryptoDigestCommonCrypto.cpp

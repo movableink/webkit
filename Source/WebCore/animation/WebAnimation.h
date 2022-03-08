@@ -134,13 +134,15 @@ public:
 
     bool hasPendingActivity() const final;
 
+    // ContextDestructionObserver.
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    void contextDestroyed() final;
+
     using RefCounted::ref;
     using RefCounted::deref;
 
 protected:
     explicit WebAnimation(Document&);
-
-    void stop() override;
 
 private:
     enum class DidSeek : uint8_t { Yes, No };
@@ -185,7 +187,6 @@ private:
 
     int m_suspendCount { 0 };
 
-    bool m_isStopped { false };
     bool m_isSuspended { false };
     bool m_finishNotificationStepsMicrotaskPending;
     bool m_isRelevant;
@@ -197,13 +198,14 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool shouldPreventEnteringBackForwardCache_DEPRECATED() const final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
+    void stop() final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return WebAnimationEventTargetInterfaceType; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 };
 
 } // namespace WebCore

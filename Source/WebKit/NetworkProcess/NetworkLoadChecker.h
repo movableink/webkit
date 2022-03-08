@@ -50,13 +50,14 @@ namespace WebKit {
 
 class NetworkCORSPreflightChecker;
 class NetworkProcess;
+class NetworkSchemeRegistry;
 
 class NetworkLoadChecker : public CanMakeWeakPtr<NetworkLoadChecker> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class LoadType : bool { MainFrame, Other };
 
-    NetworkLoadChecker(NetworkProcess&, WebCore::FetchOptions&&, PAL::SessionID, WebPageProxyIdentifier, WebCore::HTTPHeaderMap&&, URL&&, RefPtr<WebCore::SecurityOrigin>&&, RefPtr<WebCore::SecurityOrigin>&& topOrigin, WebCore::PreflightPolicy, String&& referrer, bool isHTTPSUpgradeEnabled = false, bool shouldCaptureExtraNetworkLoadMetrics = false, LoadType requestLoadType = LoadType::Other);
+    NetworkLoadChecker(NetworkProcess&, NetworkSchemeRegistry*, WebCore::FetchOptions&&, PAL::SessionID, WebPageProxyIdentifier, WebCore::HTTPHeaderMap&&, URL&&, RefPtr<WebCore::SecurityOrigin>&&, RefPtr<WebCore::SecurityOrigin>&& topOrigin, WebCore::PreflightPolicy, String&& referrer, bool isHTTPSUpgradeEnabled = false, bool shouldCaptureExtraNetworkLoadMetrics = false, LoadType requestLoadType = LoadType::Other);
     ~NetworkLoadChecker();
 
     struct RedirectionTriplet {
@@ -73,7 +74,7 @@ public:
     using RedirectionValidationHandler = CompletionHandler<void(RedirectionRequestOrError&&)>;
     void checkRedirection(WebCore::ResourceRequest&& request, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&& redirectResponse, WebCore::ContentSecurityPolicyClient*, RedirectionValidationHandler&&);
 
-    WebCore::ResourceError validateResponse(WebCore::ResourceResponse&);
+    WebCore::ResourceError validateResponse(const WebCore::ResourceRequest&, WebCore::ResourceResponse&);
 
     void setCSPResponseHeaders(WebCore::ContentSecurityPolicyResponseHeaders&& headers) { m_cspResponseHeaders = WTFMove(headers); }
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -155,6 +156,7 @@ private:
     WebCore::NetworkLoadInformation m_loadInformation;
 
     LoadType m_requestLoadType;
+    RefPtr<NetworkSchemeRegistry> m_schemeRegistry;
 };
 
 }

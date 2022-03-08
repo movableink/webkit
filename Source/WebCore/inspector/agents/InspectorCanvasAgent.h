@@ -34,6 +34,7 @@
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <initializer_list>
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
 
 namespace Inspector {
 class InjectedScriptManager;
@@ -56,7 +57,7 @@ class WebGPUSwapChain;
 
 typedef String ErrorString;
 
-class InspectorCanvasAgent final : public InspectorAgentBase, public Inspector::CanvasBackendDispatcherHandler, public CanvasObserver {
+class InspectorCanvasAgent final : public InspectorAgentBase, public Inspector::CanvasBackendDispatcherHandler, public CanvasObserver, public CanMakeWeakPtr<InspectorCanvasAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorCanvasAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -95,7 +96,7 @@ public:
     void didChangeCanvasMemory(CanvasRenderingContext&);
     void recordCanvasAction(CanvasRenderingContext&, const String&, std::initializer_list<RecordCanvasActionVariant>&& = { });
     void didFinishRecordingCanvasFrame(CanvasRenderingContext&, bool forceDispatch = false);
-    void consoleStartRecordingCanvas(CanvasRenderingContext&, JSC::ExecState&, JSC::JSObject* options);
+    void consoleStartRecordingCanvas(CanvasRenderingContext&, JSC::JSGlobalObject&, JSC::JSObject* options);
 #if ENABLE(WEBGL)
     void didEnableExtension(WebGLRenderingContextBase&, const String&);
     void didCreateWebGLProgram(WebGLRenderingContextBase&, WebGLProgram&);
@@ -156,6 +157,8 @@ private:
     HashMap<String, RefPtr<InspectorShaderProgram>> m_identifierToInspectorProgram;
     Vector<String> m_removedProgramIdentifiers;
     Timer m_programDestroyedTimer;
+
+    HashSet<String> m_recordingCanvasIdentifiers;
 
     Optional<size_t> m_recordingAutoCaptureFrameCount;
 };

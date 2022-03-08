@@ -39,7 +39,6 @@
 #include "WebPageProxy.h"
 
 WebKitWebViewBase* webkitWebViewBaseCreate(const API::PageConfiguration&);
-GtkIMContext* webkitWebViewBaseGetIMContext(WebKitWebViewBase*);
 WebKit::WebPageProxy* webkitWebViewBaseGetPage(WebKitWebViewBase*);
 void webkitWebViewBaseCreateWebPage(WebKitWebViewBase*, Ref<API::PageConfiguration>&&);
 void webkitWebViewBaseSetTooltipText(WebKitWebViewBase*, const char*);
@@ -102,3 +101,6 @@ void webkitWebViewBaseShowEmojiChooser(WebKitWebViewBase*, const WebCore::IntRec
 #if USE(WPE_RENDERER)
 int webkitWebViewBaseRenderHostFileDescriptor(WebKitWebViewBase*);
 #endif
+
+void webkitWebViewBaseRequestPointerLock(WebKitWebViewBase*);
+void webkitWebViewBaseDidLosePointerLock(WebKitWebViewBase*);

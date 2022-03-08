@@ -13,6 +13,7 @@ list(APPEND WTF_PUBLIC_HEADERS
     cf/CFURLExtras.h
     cf/TypeCastsCF.h
 
+    cocoa/CrashReporter.h
     cocoa/Entitlements.h
     cocoa/NSURLExtras.h
     cocoa/SoftLinking.h
@@ -23,6 +24,7 @@ list(APPEND WTF_PUBLIC_HEADERS
     spi/cf/CFStringSPI.h
 
     spi/cocoa/CFXPCBridgeSPI.h
+    spi/cocoa/CrashReporterClientSPI.h
     spi/cocoa/MachVMSPI.h
     spi/cocoa/SecuritySPI.h
     spi/cocoa/objcSPI.h
@@ -51,6 +53,7 @@ list(APPEND WTF_SOURCES
 
     cocoa/AutodrainedPool.cpp
     cocoa/CPUTimeCocoa.cpp
+    cocoa/CrashReporter.cpp
     cocoa/Entitlements.mm
     cocoa/FileSystemCocoa.mm
     cocoa/MachSendRight.cpp
@@ -64,7 +67,6 @@ list(APPEND WTF_SOURCES
 
     mac/DeprecatedSymbolsUsedBySafari.mm
     mac/FileSystemMac.mm
-    mac/RunLoopMac.mm
     mac/SchedulePairMac.mm
 
     posix/FileSystemPOSIX.cpp

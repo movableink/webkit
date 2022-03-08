@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ScriptDebugServer.h"
+#include <wtf/RunLoop.h>
 
 namespace Inspector {
 
@@ -38,7 +39,7 @@ public:
 
     JSC::JSGlobalObject& globalObject() const { return m_globalObject; }
 
-    static String runLoopMode();
+    static RunLoopMode runLoopMode();
 
 private:
     void attachDebugger() override;
@@ -47,12 +48,12 @@ private:
     void didPause(JSC::JSGlobalObject*) override { }
     void didContinue(JSC::JSGlobalObject*) override { }
     void runEventLoopWhilePaused() override;
-    bool isContentScript(JSC::ExecState*) const override { return false; }
+    bool isContentScript(JSC::JSGlobalObject*) const override { return false; }
 
     // NOTE: Currently all exceptions are reported at the API boundary through reportAPIException.
     // Until a time comes where an exception can be caused outside of the API (e.g. setTimeout
     // or some other async operation in a pure JSContext) we can ignore exceptions reported here.
-    void reportException(JSC::ExecState*, JSC::Exception*) const override { }
+    void reportException(JSC::JSGlobalObject*, JSC::Exception*) const override { }
 
     JSC::JSGlobalObject& m_globalObject;
 };

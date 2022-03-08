@@ -26,46 +26,31 @@
 #pragma once
 
 #include "DocumentIdentifier.h"
-#include <memory>
+#include "EventLoop.h"
+#include "RegistrableDomain.h"
+#include "Timer.h"
 #include <wtf/HashSet.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
 class Document;
 
-enum class TaskSource : uint8_t {
-    IdleTask,
-};
-
 // https://html.spec.whatwg.org/multipage/webappapis.html#window-event-loop
-class WindowEventLoop : public RefCounted<WindowEventLoop> {
-    WTF_MAKE_FAST_ALLOCATED;
+class WindowEventLoop final : public EventLoop {
 public:
-    static Ref<WindowEventLoop> create();
+    static Ref<WindowEventLoop> ensureForRegistrableDomain(const RegistrableDomain&);
 
-    typedef WTF::Function<void ()> TaskFunction;
-
-    void queueTask(TaskSource, Document&, TaskFunction&&);
-
-    void suspend(Document&);
-    void resume(Document&);
+    virtual ~WindowEventLoop();
 
 private:
-    WindowEventLoop();
+    WindowEventLoop(const RegistrableDomain&);
 
-    void run();
+    void scheduleToRun() final;
+    bool isContextThread() const final;
+    MicrotaskQueue& microtaskQueue() final;
 
-    struct Task {
-        TaskSource source;
-        TaskFunction task;
-        DocumentIdentifier documentIdentifier;
-    };
-
-    // Use a global queue instead of multiple task queues since HTML5 spec allows UA to pick arbitrary queue.
-    Vector<Task> m_tasks;
-    size_t m_activeTaskCount { 0 };
-    HashSet<DocumentIdentifier> m_documentIdentifiersForSuspendedTasks;
+    RegistrableDomain m_domain;
+    Timer m_timer;
 };
 
 } // namespace WebCore

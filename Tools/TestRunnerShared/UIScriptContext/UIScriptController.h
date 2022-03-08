@@ -156,6 +156,7 @@ public:
 
     virtual void keyDown(JSStringRef character, JSValueRef modifierArray) { notImplemented(); }
     virtual void toggleCapsLock(JSValueRef callback) { notImplemented(); }
+    virtual void setContinuousSpellCheckingEnabled(bool) { notImplemented(); }
 
     virtual void rawKeyDown(JSStringRef) { notImplemented(); }
     virtual void rawKeyUp(JSStringRef) { notImplemented(); }
@@ -201,6 +202,7 @@ public:
     virtual JSObjectRef calendarType() const { notImplemented(); return nullptr; }
     virtual void setDefaultCalendarType(JSStringRef calendarIdentifier) { notImplemented(); }
     virtual JSObjectRef inputViewBounds() const { notImplemented(); return nullptr; }
+    virtual void activateDataListSuggestion(unsigned, JSValueRef) { notImplemented(); }
 
     // Share Sheet
 
@@ -270,11 +272,11 @@ public:
     virtual void setDidEndFormControlInteractionCallback(JSValueRef);
     JSValueRef didEndFormControlInteractionCallback() const;
     
-    virtual void setDidShowForcePressPreviewCallback(JSValueRef);
-    JSValueRef didShowForcePressPreviewCallback() const;
+    virtual void setDidShowContextMenuCallback(JSValueRef);
+    JSValueRef didShowContextMenuCallback() const;
     
-    virtual void setDidDismissForcePressPreviewCallback(JSValueRef);
-    JSValueRef didDismissForcePressPreviewCallback() const;
+    virtual void setDidDismissContextMenuCallback(JSValueRef);
+    JSValueRef didDismissContextMenuCallback() const;
 
     virtual void setWillBeginZoomingCallback(JSValueRef);
     JSValueRef willBeginZoomingCallback() const;

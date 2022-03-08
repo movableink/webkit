@@ -372,13 +372,13 @@ void Heap::dumpHeapStatisticsAtVMDestruction()
     unsigned counter = 0;
     m_objectSpace.forEachBlock([&] (MarkedBlock::Handle* block) {
         unsigned live = 0;
-        block->forEachCell([&] (HeapCell* cell, HeapCell::Kind) {
+        block->forEachCell([&] (size_t, HeapCell* cell, HeapCell::Kind) {
             if (cell->isLive())
                 live++;
             return IterationStatus::Continue;
         });
         dataLogLn("[", counter++, "] ", block->cellSize(), ", ", live, " / ", block->cellsPerBlock(), " ", static_cast<double>(live) / block->cellsPerBlock() * 100, "% ", block->attributes(), " ", block->subspace()->name());
-        block->forEachCell([&] (HeapCell* heapCell, HeapCell::Kind kind) {
+        block->forEachCell([&] (size_t, HeapCell* heapCell, HeapCell::Kind kind) {
             if (heapCell->isLive() && kind == HeapCell::Kind::JSCell) {
                 auto* cell = static_cast<JSCell*>(heapCell);
                 if (cell->isObject())
@@ -1054,7 +1054,7 @@ void Heap::sweepSynchronously()
         dataLog("Full sweep: ", capacity() / 1024, "kb ");
         before = MonotonicTime::now();
     }
-    m_objectSpace.sweep();
+    m_objectSpace.sweepBlocks();
     m_objectSpace.shrink();
     if (Options::logGC()) {
         MonotonicTime after = MonotonicTime::now();
@@ -2153,8 +2153,12 @@ void Heap::waitForCollection(Ticket ticket)
 
 void Heap::sweepInFinalize()
 {
-    m_objectSpace.sweepLargeAllocations();
-    vm().eagerlySweptDestructibleObjectSpace.sweep();
+    m_objectSpace.sweepPreciseAllocations();
+#if ENABLE(WEBASSEMBLY)
+    // We hold onto a lot of memory, so it makes a lot of sense to be swept eagerly.
+    if (vm().m_webAssemblyMemorySpace)
+        vm().m_webAssemblyMemorySpace->sweep();
+#endif
 }
 
 void Heap::suspendCompilerThreads()
@@ -2774,8 +2778,8 @@ void Heap::addCoreConstraints()
 
 #if ENABLE(SAMPLING_PROFILER)
             if (SamplingProfiler* samplingProfiler = m_vm.samplingProfiler()) {
-                LockHolder locker(samplingProfiler->getLock());
-                samplingProfiler->processUnverifiedStackTraces();
+                auto locker = holdLock(samplingProfiler->getLock());
+                samplingProfiler->processUnverifiedStackTraces(locker);
                 samplingProfiler->visit(slotVisitor);
                 if (Options::logGC() == GCLogging::Verbose)
                     dataLog("Sampling Profiler data:\n", slotVisitor);

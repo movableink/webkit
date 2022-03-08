@@ -28,9 +28,9 @@
 #if PLATFORM(IOS_FAMILY)
 
 #include "ArgumentCoders.h"
-#include "ElementContext.h"
 #include "InteractionInformationRequest.h"
 #include "ShareableBitmap.h"
+#include <WebCore/ElementContext.h>
 #include <WebCore/IntPoint.h>
 #include <WebCore/ScrollTypes.h>
 #include <WebCore/SelectionRect.h>
@@ -51,7 +51,6 @@ struct InteractionInformationAtPosition {
     InteractionInformationRequest request;
 
     bool canBeValid { true };
-    bool nodeAtPositionIsFocusedElement { false };
     bool nodeAtPositionHasDoubleClickHandler { false };
 #if ENABLE(DATA_INTERACTION)
     bool hasSelectionAtPosition { false };
@@ -90,7 +89,7 @@ struct InteractionInformationAtPosition {
     RetainPtr<NSArray> dataDetectorResults;
 #endif
 
-    Optional<ElementContext> elementContext;
+    Optional<WebCore::ElementContext> elementContext;
 
     // Copy compatible optional bits forward (for example, if we have a InteractionInformationAtPosition
     // with snapshots in it, and perform another request for the same point without requesting the snapshots,

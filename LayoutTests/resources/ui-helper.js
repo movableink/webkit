@@ -333,6 +333,19 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static longPressAndGetContextMenuContentAt(x, y)
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+            (function() {
+                uiController.didShowContextMenuCallback = function() {
+                    uiController.uiScriptComplete(JSON.stringify(uiController.contentsOfUserInterfaceItem('contextMenu')));
+                };
+                uiController.longPressAtPoint(${x}, ${y}, function() { });
+            })();`, resolve);
+        });
+    }
+
     static activateAndWaitForInputSessionAt(x, y)
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -341,10 +354,30 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => {
             testRunner.runUIScript(`
                 (function() {
-                    uiController.didShowKeyboardCallback = function() {
+                    function clearCallbacksAndScriptComplete() {
+                        uiController.didShowKeyboardCallback = null;
+                        uiController.willPresentPopoverCallback = null;
                         uiController.uiScriptComplete();
-                    };
+                    }
+                    uiController.didShowKeyboardCallback = clearCallbacksAndScriptComplete;
+                    uiController.willPresentPopoverCallback = clearCallbacksAndScriptComplete;
                     uiController.singleTapAtPoint(${x}, ${y}, function() { });
+                })()`, resolve);
+        });
+    }
+
+    static waitForInputSessionToDismiss()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    function clearCallbacksAndScriptComplete() {
+                        uiController.didHideKeyboardCallback = null;
+                        uiController.didDismissPopoverCallback = null;
+                        uiController.uiScriptComplete();
+                    }
+                    uiController.didHideKeyboardCallback = clearCallbacksAndScriptComplete;
+                    uiController.didDismissPopoverCallback = clearCallbacksAndScriptComplete;
                 })()`, resolve);
         });
     }
@@ -651,6 +684,13 @@ window.UIHelper = class UIHelper {
                 uiController.uiScriptComplete(uiController.formInputLabel);
             })()`, resolve);
         });
+    }
+
+    static activateDataListSuggestion(index) {
+        const script = `uiController.activateDataListSuggestion(${index}, () => {
+            uiController.uiScriptComplete("");
+        });`;
+        return new Promise(resolve => testRunner.runUIScript(script, resolve));
     }
 
     static isShowingDataListSuggestions()
@@ -1035,5 +1075,33 @@ window.UIHelper = class UIHelper {
             if (!(await this.getUISelectionViewRects()).length)
                 break;
         }
+    }
+
+    static async copyText(text) {
+        const copyTextScript = `uiController.copyText(\`${text.replace(/`/g, "\\`")}\`)()`;
+        return new Promise(resolve => testRunner.runUIScript(copyTextScript, resolve));
+    }
+
+    static async setContinuousSpellCheckingEnabled(enabled) {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`uiController.setContinuousSpellCheckingEnabled(${enabled})`, resolve);
+        });
+    }
+
+    static async longPressElement(element)
+    {
+        return this.longPressAtPoint(element.offsetLeft + element.offsetWidth / 2, element.offsetTop + element.offsetHeight / 2);
+    }
+
+    static async longPressAtPoint(x, y)
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    uiController.longPressAtPoint(${x}, ${y}, function() {
+                        uiController.uiScriptComplete();
+                    });
+                })();`, resolve);
+        });
     }
 }

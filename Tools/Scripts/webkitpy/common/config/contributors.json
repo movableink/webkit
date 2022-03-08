@@ -514,6 +514,16 @@
          "agomez"
       ]
    },
+   "Andres Gonzalez" : {
+      "emails" : [
+         "andresg_22@apple.com"
+      ],
+      "expertise" : "Accessibility",
+      "nicks" : [
+         "andresg"
+      ],
+      "status" : "committer"
+   },
    "Andrew Lo" : {
       "emails" : [
          "anlo@rim.com",
@@ -1126,10 +1136,11 @@
       "emails" : [
          "changseok@webkit.org"
       ],
-      "expertise" : "The WebKitGTK port, H/W acceleration, Layout and Rendering",
+      "expertise" : "WebKitGTK, Layout, Rendering, Security",
       "nicks" : [
          "changseok"
-      ]
+      ],
+      "status" : "committer"
    },
    "Charles Reis" : {
       "emails" : [
@@ -1672,7 +1683,7 @@
       "nicks" : [
          "krit"
       ],
-      "status" : "contributor"
+      "status" : "committer"
    },
    "Dmitry Gorbik" : {
       "emails" : [
@@ -3162,6 +3173,15 @@
          "kareng"
       ]
    },
+   "Katherine Cheney" : {
+      "emails" : [
+         "katherine_cheney@apple.com"
+      ],
+      "nicks" : [
+         "kate"
+      ],
+      "status" : "committer"
+   },
    "Katie Madonna" : {
       "emails" : [
          "madonnk@gmail.com"
@@ -3766,7 +3786,7 @@
    },
    "Matt Baker" : {
       "emails" : [
-         "mattbaker@apple.com"
+         "mattbaker01@gmail.com"
       ],
       "expertise" : "Web Inspector",
       "nicks" : [

@@ -68,7 +68,7 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << shouldIncludeLocalhostInResourceLoadStatistics;
     encoder << enableResourceLoadStatisticsDebugMode;
     encoder << resourceLoadStatisticsManualPrevalentResource;
-    encoder << enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction;
+    encoder << enableThirdPartyCookieBlocking;
 
     encoder << networkCacheDirectory << networkCacheDirectoryExtensionHandle;
 
@@ -78,6 +78,7 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << fastServerTrustEvaluationEnabled;
     encoder << networkCacheSpeculativeValidationEnabled;
     encoder << shouldUseTestingNetworkSession;
+    encoder << staleWhileRevalidateEnabled;
     encoder << testSpeedMultiplier;
     encoder << suppressesConnectionTerminationOnSystemChange;
 }
@@ -199,9 +200,9 @@ Optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters::dec
     if (!resourceLoadStatisticsManualPrevalentResource)
         return WTF::nullopt;
 
-    Optional<bool> enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction;
-    decoder >> enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction;
-    if (!enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction)
+    Optional<bool> enableThirdPartyCookieBlocking;
+    decoder >> enableThirdPartyCookieBlocking;
+    if (!enableThirdPartyCookieBlocking)
         return WTF::nullopt;
 
     Optional<String> networkCacheDirectory;
@@ -243,7 +244,12 @@ Optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters::dec
     decoder >> shouldUseTestingNetworkSession;
     if (!shouldUseTestingNetworkSession)
         return WTF::nullopt;
-    
+
+    Optional<bool> staleWhileRevalidateEnabled;
+    decoder >> staleWhileRevalidateEnabled;
+    if (!staleWhileRevalidateEnabled)
+        return WTF::nullopt;
+
     Optional<unsigned> testSpeedMultiplier;
     decoder >> testSpeedMultiplier;
     if (!testSpeedMultiplier)
@@ -282,7 +288,7 @@ Optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters::dec
         , WTFMove(*enableResourceLoadStatisticsLogTestingEvent)
         , WTFMove(*shouldIncludeLocalhostInResourceLoadStatistics)
         , WTFMove(*enableResourceLoadStatisticsDebugMode)
-        , WTFMove(*enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction)
+        , WTFMove(*enableThirdPartyCookieBlocking)
         , WTFMove(*deviceManagementRestrictionsEnabled)
         , WTFMove(*allLoadsBlockedByDeviceManagementRestrictionsForTesting)
         , WTFMove(*resourceLoadStatisticsManualPrevalentResource)
@@ -292,6 +298,7 @@ Optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters::dec
         , WTFMove(*fastServerTrustEvaluationEnabled)
         , WTFMove(*networkCacheSpeculativeValidationEnabled)
         , WTFMove(*shouldUseTestingNetworkSession)
+        , WTFMove(*staleWhileRevalidateEnabled)
         , WTFMove(*testSpeedMultiplier)
         , WTFMove(*suppressesConnectionTerminationOnSystemChange)
     }};

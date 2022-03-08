@@ -39,6 +39,7 @@
 #include "HTMLParserIdioms.h"
 #include "Logging.h"
 #include "Page.h"
+#include "PictureInPictureSupport.h"
 #include "RenderImage.h"
 #include "RenderVideo.h"
 #include "ScriptController.h"
@@ -47,8 +48,12 @@
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-#include "PictureInPictureObserver.h"
 #include "VideoFullscreenModel.h"
+#endif
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+#include "HTMLVideoElementPictureInPicture.h"
+#include "PictureInPictureObserver.h"
 #endif
 
 namespace WebCore {
@@ -68,6 +73,11 @@ inline HTMLVideoElement::HTMLVideoElement(const QualifiedName& tagName, Document
 Ref<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
     auto videoElement = adoptRef(*new HTMLVideoElement(tagName, document, createdByParser));
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    HTMLVideoElementPictureInPicture::providePictureInPictureTo(videoElement);
+#endif
+
     videoElement->finishInitialization();
     videoElement->suspendIfNeeded();
     return videoElement;
@@ -414,10 +424,8 @@ bool HTMLVideoElement::webkitSupportsPresentationMode(VideoPresentationMode mode
         return supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
 
     if (mode == VideoPresentationMode::PictureInPicture) {
-#if PLATFORM(COCOA)
         if (!supportsPictureInPicture())
             return false;
-#endif
 
         return supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
     }
@@ -444,14 +452,33 @@ static inline HTMLMediaElementEnums::VideoFullscreenMode toFullscreenMode(HTMLVi
 
 void HTMLVideoElement::webkitSetPresentationMode(VideoPresentationMode mode)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, mode);
+    INFO_LOG(LOGIDENTIFIER, ", mode = ",  mode);
     setFullscreenMode(toFullscreenMode(mode));
 }
 
 void HTMLVideoElement::setFullscreenMode(HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
-    if (mode == VideoFullscreenModeNone && isFullscreen()) {
-        exitFullscreen();
+    INFO_LOG(LOGIDENTIFIER, ", mode = ", mode);
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    if (m_pictureInPictureAPITestEnabled) {
+        if (mode == VideoFullscreenModePictureInPicture) {
+            fullscreenModeChanged(mode);
+            didBecomeFullscreenElement();
+            setVideoFullscreenFrame({0, 0, 100, 100});
+            return;
+        }
+
+        if (mode == VideoFullscreenModeNone) {
+            fullscreenModeChanged(mode);
+            return;
+        }
+    }
+#endif
+
+    if (mode == VideoFullscreenModeNone) {
+        if (isFullscreen())
+            exitFullscreen();
+
         return;
     }
 
@@ -484,7 +511,7 @@ auto HTMLVideoElement::webkitPresentationMode() const -> VideoPresentationMode
 void HTMLVideoElement::fullscreenModeChanged(VideoFullscreenMode mode)
 {
     if (mode != fullscreenMode()) {
-        ALWAYS_LOG(LOGIDENTIFIER, "changed from ", fullscreenMode(), ", to ", mode);
+        INFO_LOG(LOGIDENTIFIER, "changed from ", fullscreenMode(), ", to ", mode);
         scheduleEvent(eventNames().webkitpresentationmodechangedEvent);
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
@@ -492,10 +519,10 @@ void HTMLVideoElement::fullscreenModeChanged(VideoFullscreenMode mode)
             HTMLVideoElement::VideoPresentationMode targetVideoPresentationMode = toPresentationMode(mode);
             HTMLVideoElement::VideoPresentationMode sourceVideoPresentationMode = toPresentationMode(fullscreenMode());
 
-            if (targetVideoPresentationMode == HTMLVideoElement::VideoPresentationMode::PictureInPicture && sourceVideoPresentationMode != HTMLVideoElement::VideoPresentationMode::PictureInPicture)
-                m_pictureInPictureObserver->didEnterPictureInPicture();
-            else if (targetVideoPresentationMode != HTMLVideoElement::VideoPresentationMode::PictureInPicture && sourceVideoPresentationMode == HTMLVideoElement::VideoPresentationMode::PictureInPicture)
+            if (targetVideoPresentationMode != HTMLVideoElement::VideoPresentationMode::PictureInPicture && sourceVideoPresentationMode == HTMLVideoElement::VideoPresentationMode::PictureInPicture) {
                 m_pictureInPictureObserver->didExitPictureInPicture();
+                m_isFullscreen = false;
+            }
         }
 #endif
     }
@@ -507,12 +534,52 @@ void HTMLVideoElement::fullscreenModeChanged(VideoFullscreenMode mode)
 }
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
+void HTMLVideoElement::didBecomeFullscreenElement()
+{
+    m_isFullscreen = true;
+    m_waitingForPictureInPictureWindowFrame = true;
+    HTMLMediaElement::didBecomeFullscreenElement();
+}
+
 void HTMLVideoElement::setPictureInPictureObserver(PictureInPictureObserver* observer)
 {
     m_pictureInPictureObserver = observer;
 }
+
+void HTMLVideoElement::setPictureInPictureAPITestEnabled(bool enabled)
+{
+    m_pictureInPictureAPITestEnabled = enabled;
+}
 #endif
 
+#endif
+
+#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+void HTMLVideoElement::setVideoFullscreenFrame(FloatRect frame)
+{
+    HTMLMediaElement::setVideoFullscreenFrame(frame);
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    // fullscreenMode() does not always provide the correct fullscreen mode
+    // when mode changing is happening (webkit.org/b/203443)
+    if (!m_isFullscreen)
+        return;
+
+    if (toPresentationMode(fullscreenMode()) != VideoPresentationMode::PictureInPicture)
+        return;
+
+    if (m_waitingForPictureInPictureWindowFrame) {
+        m_waitingForPictureInPictureWindowFrame = false;
+        if (m_pictureInPictureObserver)
+            m_pictureInPictureObserver->didEnterPictureInPicture(IntSize(frame.size()));
+
+        return;
+    }
+
+    if (m_pictureInPictureObserver)
+        m_pictureInPictureObserver->pictureInPictureWindowResized(IntSize(frame.size()));
+#endif
+}
 #endif
 
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)

@@ -721,11 +721,11 @@ WI.DebuggerManager = class DebuggerManager extends WI.Object
         breakpoint.resolved = true;
     }
 
-    globalObjectCleared()
+    globalObjectCleared(target)
     {
         let wasPaused = this.paused;
 
-        WI.Script.resetUniqueDisplayNameNumbers();
+        WI.Script.resetUniqueDisplayNameNumbers(target);
 
         this._internalWebKitScripts = [];
         this._targetDebuggerDataMap.clear();
@@ -828,7 +828,7 @@ WI.DebuggerManager = class DebuggerManager extends WI.Object
         // 50ms, and treat it as a real resume if we haven't paused in that time frame.
         // This delay ensures the user interface does not flash between brief steps
         // or successive breakpoints.
-        if (!target.DebuggerAgent.setPauseOnAssertions) {
+        if (!target.hasCommand("Debugger.setPauseOnAssertions")) {
             this._delayedResumeTimeout = setTimeout(this._didResumeInternal.bind(this, target), 50);
             return;
         }
@@ -900,8 +900,9 @@ WI.DebuggerManager = class DebuggerManager extends WI.Object
 
     scriptDidFail(target, url, scriptSource)
     {
+        const sourceURL = null;
         const sourceType = WI.Script.SourceType.Program;
-        let script = new WI.LocalScript(target, url, sourceType, scriptSource);
+        let script = new WI.LocalScript(target, url, sourceURL, sourceType, scriptSource);
 
         // If there is already a resource we don't need to have the script anymore,
         // we only need a script to use for parser error location links.

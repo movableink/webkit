@@ -1,3 +1,4 @@
+<input type="text" id="input">
 <script>
     const testAssertionMessageBase64 =
         "AKMBomJpZFhAKAitzuj+Tslzelf3/vZwIGtDQNgoKeFd5oEieYzhyzA65saf0tK2" +
@@ -5,8 +6,10 @@
         "Z51VstuQkuHI2eXh0Ct1gPC0gSx3CWLh5I9a2AEAAABQA1hHMEUCIQCSFTuuBWgB" +
         "4/F0VB7DlUVM09IHPmxe1MzHUwRoCRZbCAIgGKov6xoAx2MEf6/6qNs8OutzhP2C" +
         "QoJ1L7Fe64G9uBc=";
-    if (window.internals)
-        internals.setMockWebAuthenticationConfiguration({ hid: { stage: "request", subStage: "msg", error: "success", payloadBase64: [testAssertionMessageBase64] } });
+    if (window.internals) {
+        internals.setMockWebAuthenticationConfiguration({ silentFailure: true, hid: { payloadBase64: [testAssertionMessageBase64] } });
+        internals.withUserGesture(() => { input.focus(); });
+    }
 
     const options = {
         publicKey: {

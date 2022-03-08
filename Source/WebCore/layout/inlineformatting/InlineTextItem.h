@@ -37,22 +37,32 @@ class InlineTextItem : public InlineItem {
 public:
     static void createAndAppendTextItems(InlineItems&, const Box&);
 
-    InlineTextItem(const Box&, unsigned start, unsigned length, bool isWhitespace, bool isCollapsed);
+    static std::unique_ptr<InlineTextItem> createWhitespaceItem(const Box&, unsigned start, unsigned length, Optional<LayoutUnit> width);
+    static std::unique_ptr<InlineTextItem> createNonWhitespaceItem(const Box&, unsigned start, unsigned length, Optional<LayoutUnit> width);
+    static std::unique_ptr<InlineTextItem> createSegmentBreakItem(const Box&, unsigned position);
+    static std::unique_ptr<InlineTextItem> createEmptyItem(const Box&);
 
     unsigned start() const { return m_start; }
     unsigned end() const { return start() + length(); }
     unsigned length() const { return m_length; }
 
-    bool isWhitespace() const { return m_isWhitespace; }
-    bool isCollapsed() const { return m_isCollapsed; }
+    bool isWhitespace() const { return m_textItemType == TextItemType::Whitespace || isSegmentBreak(); }
+    bool isCollapsible() const { return isWhitespace() && style().collapseWhiteSpace(); }
+    bool isSegmentBreak() const { return m_textItemType == TextItemType::SegmentBreak; }
+    Optional<LayoutUnit> width() const { return m_width; }
 
-    std::unique_ptr<InlineTextItem> split(unsigned splitPosition, unsigned length) const;
+    std::unique_ptr<InlineTextItem> left(unsigned length) const;
+    std::unique_ptr<InlineTextItem> right(unsigned length) const;
+
+    enum class TextItemType { Undefined, Whitespace, NonWhitespace, SegmentBreak };
+    InlineTextItem(const Box&, unsigned start, unsigned length, Optional<LayoutUnit> width, TextItemType);
+    InlineTextItem(const Box&);
 
 private:
     unsigned m_start { 0 };
     unsigned m_length { 0 };
-    bool m_isWhitespace { false };
-    bool m_isCollapsed { false };
+    Optional<LayoutUnit> m_width;
+    TextItemType m_textItemType { TextItemType::Undefined };
 };
 
 }

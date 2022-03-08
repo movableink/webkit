@@ -49,23 +49,16 @@ namespace WebCore {
 
 class AudioSampleBufferList;
 class AudioSampleDataSource;
+class BaseAudioSharedUnit;
 class CaptureDeviceInfo;
 class WebAudioSourceProviderAVFObjC;
 
 class CoreAudioCaptureSource : public RealtimeMediaSource {
 public:
-
     static CaptureSourceOrError create(String&& deviceID, String&& hashSalt, const MediaConstraints*);
+    static CaptureSourceOrError createForTesting(String&& deviceID, String&& label, String&& hashSalt, const MediaConstraints*, BaseAudioSharedUnit& overrideUnit);
 
     WEBCORE_EXPORT static AudioCaptureFactory& factory();
-
-    void addEchoCancellationSource(AudioSampleDataSource&);
-    void removeEchoCancellationSource(AudioSampleDataSource&);
-
-    using MicrophoneDataCallback = WTF::Function<void(const MediaTime& sampleTime, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t sampleCount)>;
-
-    uint64_t addMicrophoneDataConsumer(MicrophoneDataCallback&&);
-    void removeMicrophoneDataConsumer(uint64_t);
 
     CMClockRef timebaseClock();
 
@@ -76,14 +69,19 @@ public:
 protected:
     CoreAudioCaptureSource(String&& deviceID, String&& label, String&& hashSalt, uint32_t persistentID);
     virtual ~CoreAudioCaptureSource();
+    BaseAudioSharedUnit& unit();
+    const BaseAudioSharedUnit& unit() const;
 
 private:
+    friend class BaseAudioSharedUnit;
     friend class CoreAudioSharedUnit;
     friend class CoreAudioCaptureSourceFactory;
 
     bool isCaptureSource() const final { return true; }
     void startProducingData() final;
     void stopProducingData() final;
+
+    void delaySamples(Seconds) final;
 
     Optional<Vector<int>> discreteSampleRates() const final { return { { 8000, 16000, 32000, 44100, 48000, 96000 } }; }
 
@@ -115,6 +113,8 @@ private:
     bool m_suspendPending { false };
     bool m_resumePending { false };
     bool m_isReadyToStart { false };
+    
+    BaseAudioSharedUnit* m_overrideUnit { nullptr };
 };
 
 class CoreAudioCaptureSourceFactory : public AudioCaptureFactory {
@@ -131,6 +131,8 @@ public:
     void setCoreAudioActiveSource(CoreAudioCaptureSource& source) { setActiveSource(source); }
     void unsetCoreAudioActiveSource(CoreAudioCaptureSource& source) { unsetActiveSource(source); }
     CoreAudioCaptureSource* coreAudioActiveSource() { return static_cast<CoreAudioCaptureSource*>(activeSource()); }
+
+    void setAudioCapturePageState(bool interrupted, bool pageMuted) final;
 #else
     CoreAudioCaptureSource* coreAudioActiveSource() { return nullptr; }
 #endif
@@ -142,9 +144,6 @@ private:
     }
 
     CaptureDeviceManager& audioCaptureDeviceManager() final;
-#if PLATFORM(IOS_FAMILY)
-    void setAudioCapturePageState(bool interrupted, bool pageMuted) final;
-#endif
 };
 
 } // namespace WebCore

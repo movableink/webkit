@@ -76,7 +76,7 @@ void UniqueIDBDatabaseConnection::abortTransactionWithoutCallback(UniqueIDBDatab
     if (!m_database)
         return;
     
-    m_database->abortTransaction(transaction, UniqueIDBDatabase::WaitForPendingTasks::No, [this, protectedThis, transactionIdentifier](const IDBError&) {
+    m_database->abortTransaction(transaction, [this, protectedThis, transactionIdentifier](const IDBError&) {
         ASSERT(m_transactionMap.contains(transactionIdentifier));
         m_transactionMap.remove(transactionIdentifier);
     });
@@ -107,13 +107,13 @@ void UniqueIDBDatabaseConnection::confirmDidCloseFromServer()
         m_database->confirmDidCloseFromServer(*this);
 }
 
-void UniqueIDBDatabaseConnection::didFireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier)
+void UniqueIDBDatabaseConnection::didFireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosed)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseConnection::didFireVersionChangeEvent - %s - %" PRIu64, m_openRequestIdentifier.loggingString().utf8().data(), identifier());
 
     ASSERT(m_database);
     if (m_database)
-        m_database->didFireVersionChangeEvent(*this, requestIdentifier);
+        m_database->didFireVersionChangeEvent(*this, requestIdentifier, connectionClosed);
 }
 
 void UniqueIDBDatabaseConnection::didFinishHandlingVersionChange(const IDBResourceIdentifier& transactionIdentifier)

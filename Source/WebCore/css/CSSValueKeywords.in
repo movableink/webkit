@@ -1013,6 +1013,7 @@ visibleStroke
 painted
 fill
 stroke
+bounding-box
 //all
 //none
 
@@ -1440,3 +1441,7 @@ browser
 
 // text-decoration-thickness, text-underline-offset
 from-font
+
+// dynamic-range
+standard
+high

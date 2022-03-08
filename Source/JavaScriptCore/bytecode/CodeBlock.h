@@ -83,6 +83,8 @@ struct OSRExitState;
 } // namespace DFG
 #endif
 
+class UnaryArithProfile;
+class BinaryArithProfile;
 class BytecodeLivenessAnalysis;
 class CodeBlockSet;
 class ExecutableToCodeBlockEdge;
@@ -96,7 +98,6 @@ class StructureStubInfo;
 
 enum class AccessType : int8_t;
 
-struct ArithProfile;
 struct OpCatch;
 
 enum ReoptimizationMode { DontCountReoptimization, CountReoptimization };
@@ -116,6 +117,8 @@ public:
 
     template<typename, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM&) { return nullptr; }
+    // GC strongly assumes CodeBlock is not a PreciseAllocation for now.
+    static constexpr uint8_t numberOfLowerTierCells = 0;
 
     DECLARE_INFO;
 
@@ -239,15 +242,15 @@ public:
         return index >= m_numVars;
     }
 
-    HandlerInfo* handlerForBytecodeOffset(unsigned bytecodeOffset, RequiredHandler = RequiredHandler::AnyHandler);
+    HandlerInfo* handlerForBytecodeIndex(BytecodeIndex, RequiredHandler = RequiredHandler::AnyHandler);
     HandlerInfo* handlerForIndex(unsigned, RequiredHandler = RequiredHandler::AnyHandler);
     void removeExceptionHandlerForCallSite(DisposableCallSiteIndex);
-    unsigned lineNumberForBytecodeOffset(unsigned bytecodeOffset);
-    unsigned columnNumberForBytecodeOffset(unsigned bytecodeOffset);
-    void expressionRangeForBytecodeOffset(unsigned bytecodeOffset, int& divot,
+    unsigned lineNumberForBytecodeIndex(BytecodeIndex);
+    unsigned columnNumberForBytecodeIndex(BytecodeIndex);
+    void expressionRangeForBytecodeIndex(BytecodeIndex, int& divot,
         int& startOffset, int& endOffset, unsigned& line, unsigned& column) const;
 
-    Optional<unsigned> bytecodeOffsetFromCallSiteIndex(CallSiteIndex);
+    Optional<BytecodeIndex> bytecodeIndexFromCallSiteIndex(CallSiteIndex);
 
     void getICStatusMap(const ConcurrentJSLocker&, ICStatusMap& result);
     void getICStatusMap(ICStatusMap& result);
@@ -279,22 +282,22 @@ public:
     }
     JITData& ensureJITDataSlow(const ConcurrentJSLocker&);
 
-    JITAddIC* addJITAddIC(ArithProfile*);
-    JITMulIC* addJITMulIC(ArithProfile*);
-    JITNegIC* addJITNegIC(ArithProfile*);
-    JITSubIC* addJITSubIC(ArithProfile*);
+    JITAddIC* addJITAddIC(BinaryArithProfile*);
+    JITMulIC* addJITMulIC(BinaryArithProfile*);
+    JITNegIC* addJITNegIC(UnaryArithProfile*);
+    JITSubIC* addJITSubIC(BinaryArithProfile*);
 
     template <typename Generator, typename = typename std::enable_if<std::is_same<Generator, JITAddGenerator>::value>::type>
-    JITAddIC* addMathIC(ArithProfile* profile) { return addJITAddIC(profile); }
+    JITAddIC* addMathIC(BinaryArithProfile* profile) { return addJITAddIC(profile); }
 
     template <typename Generator, typename = typename std::enable_if<std::is_same<Generator, JITMulGenerator>::value>::type>
-    JITMulIC* addMathIC(ArithProfile* profile) { return addJITMulIC(profile); }
+    JITMulIC* addMathIC(BinaryArithProfile* profile) { return addJITMulIC(profile); }
 
     template <typename Generator, typename = typename std::enable_if<std::is_same<Generator, JITNegGenerator>::value>::type>
-    JITNegIC* addMathIC(ArithProfile* profile) { return addJITNegIC(profile); }
+    JITNegIC* addMathIC(UnaryArithProfile* profile) { return addJITNegIC(profile); }
 
     template <typename Generator, typename = typename std::enable_if<std::is_same<Generator, JITSubGenerator>::value>::type>
-    JITSubIC* addMathIC(ArithProfile* profile) { return addJITSubIC(profile); }
+    JITSubIC* addMathIC(BinaryArithProfile* profile) { return addJITSubIC(profile); }
 
     StructureStubInfo* addStubInfo(AccessType);
 
@@ -309,7 +312,7 @@ public:
     // This is a slow function call used primarily for compiling OSR exits in the case
     // that there had been inlining. Chances are if you want to use this, you're really
     // looking for a CallLinkInfoMap to amortize the cost of calling this.
-    CallLinkInfo* getCallLinkInfoForBytecodeIndex(unsigned bytecodeIndex);
+    CallLinkInfo* getCallLinkInfoForBytecodeIndex(BytecodeIndex);
     
     void setJITCodeMap(JITCodeMap&& jitCodeMap)
     {
@@ -328,25 +331,25 @@ public:
     void setCalleeSaveRegisters(RegisterSet);
     void setCalleeSaveRegisters(std::unique_ptr<RegisterAtOffsetList>);
 
-    RareCaseProfile* addRareCaseProfile(int bytecodeOffset);
-    RareCaseProfile* rareCaseProfileForBytecodeOffset(const ConcurrentJSLocker&, int bytecodeOffset);
-    unsigned rareCaseProfileCountForBytecodeOffset(const ConcurrentJSLocker&, int bytecodeOffset);
+    RareCaseProfile* addRareCaseProfile(BytecodeIndex);
+    RareCaseProfile* rareCaseProfileForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
+    unsigned rareCaseProfileCountForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
 
-    bool likelyToTakeSlowCase(int bytecodeOffset)
+    bool likelyToTakeSlowCase(BytecodeIndex bytecodeIndex)
     {
         if (!hasBaselineJITProfiling())
             return false;
         ConcurrentJSLocker locker(m_lock);
-        unsigned value = rareCaseProfileCountForBytecodeOffset(locker, bytecodeOffset);
+        unsigned value = rareCaseProfileCountForBytecodeIndex(locker, bytecodeIndex);
         return value >= Options::likelyToTakeSlowCaseMinimumCount();
     }
 
-    bool couldTakeSlowCase(int bytecodeOffset)
+    bool couldTakeSlowCase(BytecodeIndex bytecodeIndex)
     {
         if (!hasBaselineJITProfiling())
             return false;
         ConcurrentJSLocker locker(m_lock);
-        unsigned value = rareCaseProfileCountForBytecodeOffset(locker, bytecodeOffset);
+        unsigned value = rareCaseProfileCountForBytecodeIndex(locker, bytecodeIndex);
         return value >= Options::couldTakeSlowCaseMinimumCount();
     }
 
@@ -361,11 +364,11 @@ public:
     void unlinkIncomingCalls();
 
 #if ENABLE(JIT)
-    void linkIncomingCall(ExecState* callerFrame, CallLinkInfo*);
-    void linkIncomingPolymorphicCall(ExecState* callerFrame, PolymorphicCallNode*);
+    void linkIncomingCall(CallFrame* callerFrame, CallLinkInfo*);
+    void linkIncomingPolymorphicCall(CallFrame* callerFrame, PolymorphicCallNode*);
 #endif // ENABLE(JIT)
 
-    void linkIncomingCall(ExecState* callerFrame, LLIntCallLinkInfo*);
+    void linkIncomingCall(CallFrame* callerFrame, LLIntCallLinkInfo*);
 
     const Instruction* outOfLineJumpTarget(const Instruction* pc);
     int outOfLineJumpOffset(const Instruction* pc);
@@ -380,6 +383,11 @@ public:
         const auto* instructionsEnd = reinterpret_cast<const Instruction*>(reinterpret_cast<uintptr_t>(instructionsBegin) + instructions().size());
         RELEASE_ASSERT(returnAddress >= instructionsBegin && returnAddress < instructionsEnd);
         return returnAddress - instructionsBegin;
+    }
+
+    inline BytecodeIndex bytecodeIndex(const Instruction* returnAddress)
+    {
+        return BytecodeIndex(bytecodeOffset(returnAddress));
     }
 
     const InstructionStream& instructions() const { return m_unlinkedCode->instructions(); }
@@ -483,8 +491,8 @@ public:
         return result;
     }
 
-    ValueProfile& valueProfileForBytecodeOffset(int bytecodeOffset);
-    SpeculatedType valueProfilePredictionForBytecodeOffset(const ConcurrentJSLocker&, int bytecodeOffset);
+    ValueProfile& valueProfileForBytecodeIndex(BytecodeIndex);
+    SpeculatedType valueProfilePredictionForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
 
     template<typename Functor> void forEachValueProfile(const Functor&);
     template<typename Functor> void forEachArrayProfile(const Functor&);
@@ -492,13 +500,15 @@ public:
     template<typename Functor> void forEachObjectAllocationProfile(const Functor&);
     template<typename Functor> void forEachLLIntCallLinkInfo(const Functor&);
 
-    ArithProfile* arithProfileForBytecodeOffset(InstructionStream::Offset bytecodeOffset);
-    ArithProfile* arithProfileForPC(const Instruction*);
+    BinaryArithProfile* binaryArithProfileForBytecodeIndex(BytecodeIndex);
+    UnaryArithProfile* unaryArithProfileForBytecodeIndex(BytecodeIndex);
+    BinaryArithProfile* binaryArithProfileForPC(const Instruction*);
+    UnaryArithProfile* unaryArithProfileForPC(const Instruction*);
 
-    bool couldTakeSpecialFastCase(InstructionStream::Offset bytecodeOffset);
+    bool couldTakeSpecialArithFastCase(BytecodeIndex bytecodeOffset);
 
-    ArrayProfile* getArrayProfile(const ConcurrentJSLocker&, unsigned bytecodeOffset);
-    ArrayProfile* getArrayProfile(unsigned bytecodeOffset);
+    ArrayProfile* getArrayProfile(const ConcurrentJSLocker&, BytecodeIndex);
+    ArrayProfile* getArrayProfile(BytecodeIndex);
 
     // Exception handling support
 
@@ -876,7 +886,7 @@ public:
 
     DisposableCallSiteIndex newExceptionHandlingCallSiteIndex(CallSiteIndex originalCallSite);
 
-    void ensureCatchLivenessIsComputedForBytecodeOffset(InstructionStream::Offset bytecodeOffset);
+    void ensureCatchLivenessIsComputedForBytecodeIndex(BytecodeIndex);
 
     bool hasTailCalls() const { return m_unlinkedCode->hasTailCalls(); }
 
@@ -914,7 +924,7 @@ private:
     
     CodeBlock* specialOSREntryBlockOrNull();
     
-    void noticeIncomingCall(ExecState* callerFrame);
+    void noticeIncomingCall(CallFrame* callerFrame);
     
     double optimizationThresholdScalingFactor();
 
@@ -943,7 +953,7 @@ private:
 
     unsigned numberOfNonArgumentValueProfiles() { return m_numberOfNonArgumentValueProfiles; }
     unsigned totalNumberOfValueProfiles() { return numberOfArgumentValueProfiles() + numberOfNonArgumentValueProfiles(); }
-    ValueProfile* tryGetValueProfileForBytecodeOffset(int bytecodeOffset);
+    ValueProfile* tryGetValueProfileForBytecodeIndex(BytecodeIndex);
 
     Seconds timeSinceCreation()
     {
@@ -960,7 +970,7 @@ private:
     }
 
     void insertBasicBlockBoundariesForControlFlowProfiler();
-    void ensureCatchLivenessIsComputedForBytecodeOffsetSlow(const OpCatch&, InstructionStream::Offset);
+    void ensureCatchLivenessIsComputedForBytecodeIndexSlow(const OpCatch&, BytecodeIndex);
 
     int m_numCalleeLocals;
     int m_numVars;
@@ -1026,30 +1036,6 @@ private:
 
     std::unique_ptr<RareData> m_rareData;
 };
-
-inline Register& ExecState::r(int index)
-{
-    CodeBlock* codeBlock = this->codeBlock();
-    if (codeBlock->isConstantRegisterIndex(index))
-        return *reinterpret_cast<Register*>(&codeBlock->constantRegister(index));
-    return this[index];
-}
-
-inline Register& ExecState::r(VirtualRegister reg)
-{
-    return r(reg.offset());
-}
-
-inline Register& ExecState::uncheckedR(int index)
-{
-    RELEASE_ASSERT(index < FirstConstantRegisterIndex);
-    return this[index];
-}
-
-inline Register& ExecState::uncheckedR(VirtualRegister reg)
-{
-    return uncheckedR(reg.offset());
-}
 
 template <typename ExecutableType>
 Exception* ScriptExecutable::prepareForExecution(VM& vm, JSFunction* function, JSScope* scope, CodeSpecializationKind kind, CodeBlock*& resultCodeBlock)

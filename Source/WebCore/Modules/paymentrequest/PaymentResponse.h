@@ -46,7 +46,7 @@ template<typename IDLType> class DOMPromiseDeferred;
 class PaymentResponse final : public ActiveDOMObject, public EventTargetWithInlineData, public RefCounted<PaymentResponse> {
     WTF_MAKE_ISO_ALLOCATED(PaymentResponse);
 public:
-    using DetailsFunction = Function<JSC::Strong<JSC::JSObject>(JSC::ExecState&)>;
+    using DetailsFunction = Function<JSC::Strong<JSC::JSObject>(JSC::JSGlobalObject&)>;
 
     static Ref<PaymentResponse> create(ScriptExecutionContext* context, PaymentRequest& request)
     {
@@ -98,8 +98,8 @@ private:
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final { return "PaymentResponse"; }
-    bool shouldPreventEnteringBackForwardCache_DEPRECATED() const final;
     void stop() final;
+    void suspend(ReasonForSuspension) final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return PaymentResponseEventTargetInterfaceType; }

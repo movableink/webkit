@@ -120,7 +120,7 @@ public:
         ParserError&, SourceParseMode);
 
     static UnlinkedFunctionExecutable* fromGlobalCode(
-        const Identifier&, ExecState&, const SourceCode&, JSObject*& exception, 
+        const Identifier&, JSGlobalObject*, const SourceCode&, JSObject*& exception, 
         int overrideLineNumber, Optional<int> functionConstructorParametersEndPosition);
 
     SourceCode linkedSourceCode(const SourceCode&) const;
@@ -146,7 +146,6 @@ public:
     static void destroy(JSCell*);
 
     bool isBuiltinFunction() const { return m_isBuiltinFunction; }
-    bool isAnonymousBuiltinFunction() const { return isBuiltinFunction() && name().isPrivateName(); }
     ConstructAbility constructAbility() const { return static_cast<ConstructAbility>(m_constructAbility); }
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
     bool isClassConstructorFunction() const

@@ -183,6 +183,23 @@ SOFT_LINK_CLASS(UIKit, UIWindow)
     return [NSString stringWithFormat:@"%@", [self objectByEvaluatingJavaScript:script]];
 }
 
+- (unsigned)waitUntilClientWidthIs:(unsigned)expectedClientWidth
+{
+    int timeout = 10;
+    unsigned clientWidth = 0;
+    do {
+        if (timeout != 10)
+            TestWebKitAPI::Util::sleep(0.1);
+
+        id result = [self objectByEvaluatingJavaScript:@"function ___forceLayoutAndGetClientWidth___() { document.body.offsetTop; return document.body.clientWidth; }; ___forceLayoutAndGetClientWidth___();"];
+        clientWidth = [result integerValue];
+
+        --timeout;
+    } while (clientWidth != expectedClientWidth && timeout >= 0);
+
+    return clientWidth;
+}
+
 @end
 
 @implementation TestMessageHandler {
@@ -457,6 +474,24 @@ static UICalloutBar *suppressUICalloutBar()
 - (void)collapseToEnd
 {
     [self evaluateJavaScript:@"getSelection().collapseToEnd()" completionHandler:nil];
+}
+
+- (BOOL)selectionRangeHasStartOffset:(int)start endOffset:(int)end
+{
+    __block bool isDone = false;
+    __block bool matches = true;
+    [self evaluateJavaScript:@"window.getSelection().getRangeAt(0).startOffset" completionHandler:^(id result, NSError *error) {
+        if ([(NSNumber *)result intValue] != start)
+            matches = false;
+    }];
+    [self evaluateJavaScript:@"window.getSelection().getRangeAt(0).endOffset" completionHandler:^(id result, NSError *error) {
+        if ([(NSNumber *)result intValue] != end)
+            matches = false;
+        isDone = true;
+    }];
+    TestWebKitAPI::Util::run(&isDone);
+
+    return matches;
 }
 
 #if PLATFORM(IOS_FAMILY)

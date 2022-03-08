@@ -31,6 +31,7 @@
 #include "ElementIterator.h"
 #include "ElementRuleCollector.h"
 #include "HTMLSlotElement.h"
+#include "RuleSet.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SelectorFilter.h"
 #include "ShadowRoot.h"
@@ -115,10 +116,10 @@ Invalidator::CheckDescendants Invalidator::invalidateIfNeeded(Element& element, 
     case Style::Validity::Valid: {
         ElementRuleCollector ruleCollector(element, m_ruleSet, filter);
         ruleCollector.setMode(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
-        ruleCollector.matchAuthorRules(false);
 
-        if (ruleCollector.hasMatchedRules())
+        if (ruleCollector.matchesAnyAuthorRules())
             element.invalidateStyleInternal();
+
         return CheckDescendants::Yes;
     }
     case Style::Validity::ElementInvalid:

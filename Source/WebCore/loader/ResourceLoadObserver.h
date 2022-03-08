@@ -38,13 +38,16 @@ class ResourceResponse;
 class ResourceLoadObserver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    // https://fetch.spec.whatwg.org/#request-destination-script-like
+    enum class FetchDestinationIsScriptLike : bool { Yes, No };
+
     WEBCORE_EXPORT static ResourceLoadObserver& shared();
     WEBCORE_EXPORT static ResourceLoadObserver* sharedIfExists();
     WEBCORE_EXPORT static void setShared(ResourceLoadObserver&);
     
     virtual ~ResourceLoadObserver() { }
 
-    virtual void logSubresourceLoading(const Frame*, const ResourceRequest& /* newRequest */, const ResourceResponse& /* redirectResponse */) { }
+    virtual void logSubresourceLoading(const Frame*, const ResourceRequest& /* newRequest */, const ResourceResponse& /* redirectResponse */, FetchDestinationIsScriptLike) { }
     virtual void logWebSocketLoading(const URL& /* targetURL */, const URL& /* mainFrameURL */) { }
     virtual void logUserInteractionWithReducedTimeResolution(const Document&) { }
     virtual void logFontLoad(const Document&, const String& /* familyName */, bool /* loadStatus */) { }
@@ -52,6 +55,7 @@ public:
     virtual void logCanvasWriteOrMeasure(const Document&, const String& /* textWritten */) { }
     virtual void logNavigatorAPIAccessed(const Document&, const ResourceLoadStatistics::NavigatorAPI) { }
     virtual void logScreenAPIAccessed(const Document&, const ResourceLoadStatistics::ScreenAPI) { }
+    virtual void logSubresourceLoadingForTesting(const RegistrableDomain& /* firstPartyDomain */, const RegistrableDomain& /* thirdPartyDomain */, bool /* shouldScheduleNotification */) { }
 
     virtual String statisticsForURL(const URL&) { return { }; }
     virtual void updateCentralStatisticsStore() { }

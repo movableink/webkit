@@ -84,8 +84,9 @@ class DarwinPort(ApplePort):
         # We don't use self._run_script() because we don't want to wait for the script
         # to exit and we want the output to show up on stdout in case there are errors
         # launching the browser.
-        self._executive.popen([self.path_to_script('run-safari')] + self._arguments_for_configuration() + ['--no-saved-state', '-NSOpen', results_filename],
-            cwd=self.webkit_base(), stdout=file(os.devnull), stderr=file(os.devnull))
+        with open(os.devnull) as devnull:
+            self._executive.popen([self.path_to_script('run-safari')] + self._arguments_for_configuration() + ['--no-saved-state', '-NSOpen', results_filename],
+                cwd=self.webkit_base(), stdout=devnull, stderr=devnull)
 
     @memoized
     def path_to_crash_logs(self):
@@ -185,7 +186,7 @@ class DarwinPort(ApplePort):
                     host.executive.run_command(spindump_command)
                 host.filesystem.move_to_base_host(DarwinPort.tailspin_file_path(host, name, pid, str(tempdir)),
                                                   DarwinPort.tailspin_file_path(self.host, name, pid, self.results_directory()))
-            except IOError as e:
+            except (IOError, ScriptError) as e:
                 _log.warning('Unable to symbolicate tailspin log of process:' + str(e))
         else:  # Tailspin failed, run sample instead
             try:
@@ -268,3 +269,10 @@ class DarwinPort(ApplePort):
 
     def app_executable_from_bundle(self, app_bundle):
         return self._plist_data_from_bundle(app_bundle, 'CFBundleExecutable')
+
+    def environment_for_api_tests(self):
+        environment = super(DarwinPort, self).environment_for_api_tests()
+        build_root_path = str(self._build_path())
+        for name in ['DYLD_LIBRARY_PATH', '__XPC_DYLD_LIBRARY_PATH', 'DYLD_FRAMEWORK_PATH', '__XPC_DYLD_FRAMEWORK_PATH']:
+            self._append_value_colon_separated(environment, name, build_root_path)
+        return environment

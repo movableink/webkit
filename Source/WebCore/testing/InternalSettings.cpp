@@ -207,7 +207,6 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setForcedDisplayIsMonochromeAccessibilityValue(m_forcedDisplayIsMonochromeAccessibilityValue);
     settings.setForcedPrefersReducedMotionAccessibilityValue(m_forcedPrefersReducedMotionAccessibilityValue);
     settings.setFontLoadTimingOverride(m_fontLoadTimingOverride);
-    DeprecatedGlobalSettings::setAllowsAnySSLCertificate(false);
     RenderTheme::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
     FontCache::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
     settings.setFrameFlattening(m_frameFlattening);
@@ -1019,6 +1018,16 @@ InternalSettings::ForcedAccessibilityValue InternalSettings::forcedPrefersReduce
 void InternalSettings::setForcedPrefersReducedMotionAccessibilityValue(InternalSettings::ForcedAccessibilityValue value)
 {
     settings().setForcedPrefersReducedMotionAccessibilityValue(internalSettingsToSettingsValue(value));
+}
+
+InternalSettings::ForcedAccessibilityValue InternalSettings::forcedSupportsHighDynamicRangeValue() const
+{
+    return settingsToInternalSettingsValue(settings().forcedSupportsHighDynamicRangeValue());
+}
+
+void InternalSettings::setForcedSupportsHighDynamicRangeValue(InternalSettings::ForcedAccessibilityValue value)
+{
+    settings().setForcedSupportsHighDynamicRangeValue(internalSettingsToSettingsValue(value));
 }
 
 bool InternalSettings::webAnimationsCSSIntegrationEnabled()

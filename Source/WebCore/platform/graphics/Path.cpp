@@ -53,7 +53,7 @@ float Path::length() const
 }
 #endif
 
-PathTraversalState Path::traversalStateAtLength(float length, bool& success) const
+PathTraversalState Path::traversalStateAtLength(float length) const
 {
     PathTraversalState traversalState(PathTraversalState::Action::VectorAtLength, length);
 
@@ -61,19 +61,13 @@ PathTraversalState Path::traversalStateAtLength(float length, bool& success) con
         traversalState.processPathElement(element);
     });
 
-    success = traversalState.success();
     return traversalState;
 }
 
 #if !PLATFORM(QT)
-FloatPoint Path::pointAtLength(float length, bool& success) const
+FloatPoint Path::pointAtLength(float length) const
 {
-    return traversalStateAtLength(length, success).current();
-}
-
-float Path::normalAngleAtLength(float length, bool& success) const
-{
-    return traversalStateAtLength(length, success).normalAngle();
+    return traversalStateAtLength(length).current();
 }
 #endif
 

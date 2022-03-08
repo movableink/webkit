@@ -27,14 +27,19 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
+#include "TaskSource.h"
 #include <wtf/Assertions.h>
 #include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
 
 class Document;
+class Event;
+class EventLoopTaskGroup;
+class EventTarget;
 
 enum class ReasonForSuspension {
     JavaScriptDebuggerPaused,
@@ -109,6 +114,21 @@ public:
     }
 
     bool isContextStopped() const;
+    bool isAllowedToRunScript() const;
+
+    template<typename T>
+    static void queueTaskKeepingObjectAlive(T& object, TaskSource source, Function<void ()>&& task)
+    {
+        object.queueTaskInEventLoop(source, [protectedObject = makeRef(object), activity = object.ActiveDOMObject::makePendingActivity(object), task = WTFMove(task)] () {
+            task();
+        });
+    }
+
+    template<typename EventTargetType, typename EventType>
+    static void queueTaskToDispatchEvent(EventTargetType& target, TaskSource source, Ref<EventType>&& event)
+    {
+        target.queueTaskToDispatchEventInternal(target, source, WTFMove(event));
+    }
 
 protected:
     explicit ActiveDOMObject(ScriptExecutionContext*);
@@ -120,11 +140,16 @@ private:
     enum CheckedScriptExecutionContextType { CheckedScriptExecutionContext };
     ActiveDOMObject(ScriptExecutionContext*, CheckedScriptExecutionContextType);
 
+    void queueTaskInEventLoop(TaskSource, Function<void ()>&&);
+    void queueTaskToDispatchEventInternal(EventTarget&, TaskSource, Ref<Event>&&);
+
     unsigned m_pendingActivityCount { 0 };
 #if !ASSERT_DISABLED
     bool m_suspendIfNeededWasCalled { false };
     Ref<Thread> m_creationThread { Thread::current() };
 #endif
+
+    friend class ActiveDOMObjectEventDispatchTask;
 };
 
 #if ASSERT_DISABLED

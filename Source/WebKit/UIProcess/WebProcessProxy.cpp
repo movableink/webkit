@@ -29,6 +29,7 @@
 #include "APIFrameHandle.h"
 #include "APIPageGroupHandle.h"
 #include "APIPageHandle.h"
+#include "AuthenticatorManager.h"
 #include "DataReference.h"
 #include "DownloadProxyMap.h"
 #include "LoadParameters.h"
@@ -39,6 +40,7 @@
 #include "TextChecker.h"
 #include "TextCheckerState.h"
 #include "UserData.h"
+#include "WebBackForwardCache.h"
 #include "WebBackForwardListItem.h"
 #include "WebInspectorUtilities.h"
 #include "WebNavigationDataStore.h"
@@ -137,14 +139,16 @@ Ref<WebProcessProxy> WebProcessProxy::create(WebProcessPool& processPool, Websit
     return proxy;
 }
 
+#if ENABLE(SERVICE_WORKER)
 Ref<WebProcessProxy> WebProcessProxy::createForServiceWorkers(WebProcessPool& processPool, RegistrableDomain&& registrableDomain, WebsiteDataStore& websiteDataStore)
 {
     auto proxy = adoptRef(*new WebProcessProxy(processPool, &websiteDataStore, IsPrewarmed::No));
     proxy->m_registrableDomain = WTFMove(registrableDomain);
-    proxy->enableServiceWorkers();
+    proxy->enableServiceWorkers(processPool.userContentControllerIdentifierForServiceWorkers());
     proxy->connect();
     return proxy;
 }
+#endif
 
 WebProcessProxy::WebProcessProxy(WebProcessPool& processPool, WebsiteDataStore* websiteDataStore, IsPrewarmed isPrewarmed)
     : AuxiliaryProcessProxy(processPool.alwaysRunsAtBackgroundPriority())
@@ -310,16 +314,17 @@ void WebProcessProxy::platformGetLaunchOptions(ProcessLauncher::LaunchOptions& l
 bool WebProcessProxy::shouldSendPendingMessage(const PendingMessage& message)
 {
 #if HAVE(SANDBOX_ISSUE_READ_EXTENSION_TO_PROCESS_BY_AUDIT_TOKEN)
-    if (message.encoder->messageName() == "LoadRequestWaitingForPID") {
+    if (message.encoder->messageName() == "LoadRequestWaitingForProcessLaunch") {
         auto buffer = message.encoder->buffer();
         auto bufferSize = message.encoder->bufferSize();
         std::unique_ptr<IPC::Decoder> decoder = makeUnique<IPC::Decoder>(buffer, bufferSize, nullptr, Vector<IPC::Attachment> { });
         LoadParameters loadParameters;
         URL resourceDirectoryURL;
         WebPageProxyIdentifier pageID;
-        if (decoder->decode(loadParameters) && decoder->decode(resourceDirectoryURL) && decoder->decode(pageID)) {
+        bool checkAssumedReadAccessToResourceURL;
+        if (decoder->decode(loadParameters) && decoder->decode(resourceDirectoryURL) && decoder->decode(pageID) && decoder->decode(checkAssumedReadAccessToResourceURL)) {
             if (auto* page = WebProcessProxy::webPage(pageID)) {
-                page->maybeInitializeSandboxExtensionHandle(static_cast<WebProcessProxy&>(*this), loadParameters.request.url(), resourceDirectoryURL, loadParameters.sandboxExtensionHandle);
+                page->maybeInitializeSandboxExtensionHandle(static_cast<WebProcessProxy&>(*this), loadParameters.request.url(), resourceDirectoryURL, loadParameters.sandboxExtensionHandle, checkAssumedReadAccessToResourceURL);
                 send(Messages::WebPage::LoadRequest(loadParameters), decoder->destinationID());
             }
         } else
@@ -370,15 +375,11 @@ void WebProcessProxy::shutDown()
 
     m_responsivenessTimer.invalidate();
     m_backgroundResponsivenessTimer.invalidate();
-    m_tokenForHoldingLockedFiles = nullptr;
+    m_activityForHoldingLockedFiles = nullptr;
 
     for (auto& frame : copyToVector(m_frameMap.values()))
         frame->webProcessWillShutDown();
     m_frameMap.clear();
-
-    for (auto* visitedLinkStore : m_visitedLinkStoresWithUsers.keys())
-        visitedLinkStore->removeProcess(*this);
-    m_visitedLinkStoresWithUsers.clear();
 
     for (auto* webUserContentControllerProxy : m_webUserContentControllerProxies)
         webUserContentControllerProxy->removeProcess(*this);
@@ -484,7 +485,7 @@ void WebProcessProxy::addVisitedLinkStoreUser(VisitedLinkStore& visitedLinkStore
     ASSERT(!users.contains(pageID));
     users.add(pageID);
 
-    if (users.size() == 1 && state() == State::Running)
+    if (users.size() == 1)
         visitedLinkStore.addProcess(*this);
 }
 
@@ -853,9 +854,6 @@ void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
     m_processPool->processDidFinishLaunching(this);
     m_backgroundResponsivenessTimer.updateState();
 
-    for (auto* visitedLinkStore : m_visitedLinkStoresWithUsers.keys())
-        visitedLinkStore->addProcess(*this);
-
 #if PLATFORM(IOS_FAMILY)
     if (connection()) {
         if (xpc_connection_t xpcConnection = connection()->xpcConnection())
@@ -890,6 +888,12 @@ void WebProcessProxy::didDestroyFrame(FrameIdentifier frameID)
     // back to the UIProcess, then the frameDestroyed message will still be received because it
     // gets sent directly to the WebProcessProxy.
     ASSERT(WebFrameProxyMap::isValidKey(frameID));
+#if ENABLE(WEB_AUTHN)
+    if (auto* frame = webFrame(frameID)) {
+        if (auto* page = frame->page())
+            page->websiteDataStore().authenticatorManager().cancelRequest(page->webPageID(), frameID);
+    }
+#endif
     m_frameMap.remove(frameID);
 }
 
@@ -1005,10 +1009,10 @@ void WebProcessProxy::fetchWebsiteData(PAL::SessionID sessionID, OptionSet<Websi
     ASSERT(canSendMessage());
     ASSERT_UNUSED(sessionID, sessionID == this->sessionID());
 
-    auto token = throttler().backgroundActivityToken();
+    auto activity = throttler().backgroundActivity("WebProcessProxy::fetchWebsiteData"_s);
     RELEASE_LOG_IF(isReleaseLoggingAllowed(), ProcessSuspension, "%p - WebProcessProxy is taking a background assertion because the Web process is fetching Website data", this);
 
-    connection()->sendWithAsyncReply(Messages::WebProcess::FetchWebsiteData(dataTypes), [this, protectedThis = makeRef(*this), token, completionHandler = WTFMove(completionHandler)] (auto reply) mutable {
+    connection()->sendWithAsyncReply(Messages::WebProcess::FetchWebsiteData(dataTypes), [this, protectedThis = makeRef(*this), activity = WTFMove(activity), completionHandler = WTFMove(completionHandler)] (auto reply) mutable {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(this);
 #endif
@@ -1022,10 +1026,10 @@ void WebProcessProxy::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<Webs
     ASSERT(canSendMessage());
     ASSERT_UNUSED(sessionID, sessionID == this->sessionID());
 
-    auto token = throttler().backgroundActivityToken();
+    auto activity = throttler().backgroundActivity("WebProcessProxy::deleteWebsiteData"_s);
     RELEASE_LOG_IF(isReleaseLoggingAllowed(), ProcessSuspension, "%p - WebProcessProxy is taking a background assertion because the Web process is deleting Website data", this);
 
-    connection()->sendWithAsyncReply(Messages::WebProcess::DeleteWebsiteData(dataTypes, modifiedSince), [this, protectedThis = makeRef(*this), token, completionHandler = WTFMove(completionHandler)] () mutable {
+    connection()->sendWithAsyncReply(Messages::WebProcess::DeleteWebsiteData(dataTypes, modifiedSince), [this, protectedThis = makeRef(*this), activity = WTFMove(activity), completionHandler = WTFMove(completionHandler)] () mutable {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(this);
 #endif
@@ -1039,10 +1043,10 @@ void WebProcessProxy::deleteWebsiteDataForOrigins(PAL::SessionID sessionID, Opti
     ASSERT(canSendMessage());
     ASSERT_UNUSED(sessionID, sessionID == this->sessionID());
 
-    auto token = throttler().backgroundActivityToken();
+    auto activity = throttler().backgroundActivity("WebProcessProxy::deleteWebsiteDataForOrigins"_s);
     RELEASE_LOG_IF(isReleaseLoggingAllowed(), ProcessSuspension, "%p - WebProcessProxy is taking a background assertion because the Web process is deleting Website data for several origins", this);
 
-    connection()->sendWithAsyncReply(Messages::WebProcess::DeleteWebsiteDataForOrigins(dataTypes, origins), [this, protectedThis = makeRef(*this), token, completionHandler = WTFMove(completionHandler)] () mutable {
+    connection()->sendWithAsyncReply(Messages::WebProcess::DeleteWebsiteDataForOrigins(dataTypes, origins), [this, protectedThis = makeRef(*this), activity = WTFMove(activity), completionHandler = WTFMove(completionHandler)] () mutable {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(this);
 #endif
@@ -1209,22 +1213,9 @@ RefPtr<API::Object> WebProcessProxy::transformObjectsToHandles(API::Object* obje
     return UserData::transform(object, Transformer());
 }
 
-void WebProcessProxy::sendProcessWillSuspendImminently()
+void WebProcessProxy::sendPrepareToSuspend(IsSuspensionImminent isSuspensionImminent, CompletionHandler<void()>&& completionHandler)
 {
-    if (canSendMessage())
-        send(Messages::WebProcess::ProcessWillSuspendImminently(), 0);
-}
-
-void WebProcessProxy::sendPrepareToSuspend()
-{
-    if (canSendMessage())
-        send(Messages::WebProcess::PrepareToSuspend(), 0);
-}
-
-void WebProcessProxy::sendCancelPrepareToSuspend()
-{
-    if (canSendMessage())
-        send(Messages::WebProcess::CancelPrepareToSuspend(), 0);
+    sendWithAsyncReply(Messages::WebProcess::PrepareToSuspend(isSuspensionImminent == IsSuspensionImminent::Yes), WTFMove(completionHandler));
 }
 
 void WebProcessProxy::sendProcessDidResume()
@@ -1233,21 +1224,16 @@ void WebProcessProxy::sendProcessDidResume()
         send(Messages::WebProcess::ProcessDidResume(), 0);
 }
 
-void WebProcessProxy::processReadyToSuspend()
-{
-    m_throttler.processReadyToSuspend();
-}
-
-void WebProcessProxy::didCancelProcessSuspension()
-{
-    m_throttler.didCancelProcessSuspension();
-}
-
 void WebProcessProxy::didSetAssertionState(AssertionState state)
 {
-#if PLATFORM(IOS_FAMILY)
-    if (isRunningServiceWorkers())
+    RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::didSetAssertionState(%u)", this, state);
+
+    if (isStandaloneServiceWorkerProcess()) {
+        RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::didSetAssertionState() release all assertions for network process because this is a service worker process without page", this);
+        m_foregroundToken = nullptr;
+        m_backgroundToken = nullptr;
         return;
+    }
 
     ASSERT(!m_backgroundToken || !m_foregroundToken);
 
@@ -1256,8 +1242,10 @@ void WebProcessProxy::didSetAssertionState(AssertionState state)
         RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::didSetAssertionState(Suspended) release all assertions for network process", this);
         m_foregroundToken = nullptr;
         m_backgroundToken = nullptr;
+#if PLATFORM(IOS_FAMILY)
         for (auto& page : m_pageMap.values())
             page->processWillBecomeSuspended();
+#endif
         break;
 
     case AssertionState::Background:
@@ -1270,8 +1258,10 @@ void WebProcessProxy::didSetAssertionState(AssertionState state)
         RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::didSetAssertionState(Foreground) taking foreground assertion for network process", this);
         m_foregroundToken = processPool().foregroundWebProcessToken();
         m_backgroundToken = nullptr;
+#if PLATFORM(IOS_FAMILY)
         for (auto& page : m_pageMap.values())
             page->processWillBecomeForeground();
+#endif
         break;
     
     case AssertionState::UnboundedNetworking:
@@ -1279,9 +1269,6 @@ void WebProcessProxy::didSetAssertionState(AssertionState state)
     }
 
     ASSERT(!m_backgroundToken || !m_foregroundToken);
-#else
-    UNUSED_PARAM(state);
-#endif
 }
 
 void WebProcessProxy::webPageMediaStateDidChange(WebPageProxy&)
@@ -1301,12 +1288,12 @@ void WebProcessProxy::setIsHoldingLockedFiles(bool isHoldingLockedFiles)
 {
     if (!isHoldingLockedFiles) {
         RELEASE_LOG(ProcessSuspension, "UIProcess is releasing a background assertion because the WebContent process is no longer holding locked files");
-        m_tokenForHoldingLockedFiles = nullptr;
+        m_activityForHoldingLockedFiles = nullptr;
         return;
     }
-    if (!m_tokenForHoldingLockedFiles) {
+    if (!m_activityForHoldingLockedFiles) {
         RELEASE_LOG(ProcessSuspension, "UIProcess is taking a background assertion because the WebContent process is holding locked files");
-        m_tokenForHoldingLockedFiles = m_throttler.backgroundActivityToken();
+        m_activityForHoldingLockedFiles = m_throttler.backgroundActivity("Holding locked files"_s).moveToUniquePtr();
     }
 }
 
@@ -1527,21 +1514,21 @@ void WebProcessProxy::plugInDidReceiveUserInteraction(uint32_t hash)
 
 #if PLATFORM(WATCHOS)
 
-void WebProcessProxy::takeBackgroundActivityTokenForFullscreenInput()
+void WebProcessProxy::startBackgroundActivityForFullscreenInput()
 {
-    if (m_backgroundActivityTokenForFullscreenFormControls)
+    if (m_backgroundActivityForFullscreenFormControls)
         return;
 
-    m_backgroundActivityTokenForFullscreenFormControls = m_throttler.backgroundActivityToken();
+    m_backgroundActivityForFullscreenFormControls = m_throttler.backgroundActivity("Fullscreen input"_s).moveToUniquePtr();
     RELEASE_LOG(ProcessSuspension, "UIProcess is taking a background assertion because it is presenting fullscreen UI for form controls.");
 }
 
-void WebProcessProxy::releaseBackgroundActivityTokenForFullscreenInput()
+void WebProcessProxy::endBackgroundActivityForFullscreenInput()
 {
-    if (!m_backgroundActivityTokenForFullscreenFormControls)
+    if (!m_backgroundActivityForFullscreenFormControls)
         return;
 
-    m_backgroundActivityTokenForFullscreenFormControls = nullptr;
+    m_backgroundActivityForFullscreenFormControls = nullptr;
     RELEASE_LOG(ProcessSuspension, "UIProcess is releasing a background assertion because it has dismissed fullscreen UI for form controls.");
 }
 
@@ -1550,7 +1537,7 @@ void WebProcessProxy::releaseBackgroundActivityTokenForFullscreenInput()
 #if ENABLE(SERVICE_WORKER)
 void WebProcessProxy::establishServiceWorkerContext(const WebPreferencesStore& store)
 {
-    send(Messages::WebProcess::EstablishWorkerContextConnectionToNetworkProcess { processPool().defaultPageGroup().pageGroupID(), m_serviceWorkerInformation->serviceWorkerPageProxyID, m_serviceWorkerInformation->serviceWorkerPageID, store, *m_registrableDomain }, 0);
+    send(Messages::WebProcess::EstablishWorkerContextConnectionToNetworkProcess { processPool().defaultPageGroup().pageGroupID(), m_serviceWorkerInformation->serviceWorkerPageProxyID, m_serviceWorkerInformation->serviceWorkerPageID, store, *m_registrableDomain, m_serviceWorkerInformation->initializationData }, 0);
 }
 
 void WebProcessProxy::setServiceWorkerUserAgent(const String& userAgent)
@@ -1564,7 +1551,62 @@ void WebProcessProxy::updateServiceWorkerPreferencesStore(const WebPreferencesSt
     ASSERT(m_serviceWorkerInformation);
     send(Messages::WebSWContextManagerConnection::UpdatePreferencesStore { store }, 0);
 }
-#endif
+
+void WebProcessProxy::updateServiceWorkerProcessAssertion()
+{
+    RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::updateServiceWorkerProcessAssertion() PID: %d", this, processIdentifier());
+    ASSERT(m_serviceWorkerInformation);
+    if (!m_serviceWorkerInformation)
+        return;
+
+    bool shouldTakeForegroundActivity = WTF::anyOf(m_serviceWorkerInformation->clientProcesses, [](auto& process) {
+        return !!process.m_foregroundToken;
+    });
+    if (shouldTakeForegroundActivity) {
+        if (!ProcessThrottler::isValidForegroundActivity(m_serviceWorkerInformation->activity))
+            m_serviceWorkerInformation->activity = m_throttler.foregroundActivity("Service Worker for foreground view(s)"_s);
+        return;
+    }
+
+    bool shouldTakeBackgroundActivity = WTF::anyOf(m_serviceWorkerInformation->clientProcesses, [](auto& process) {
+        return !!process.m_backgroundToken;
+    });
+    if (shouldTakeBackgroundActivity) {
+        if (!ProcessThrottler::isValidBackgroundActivity(m_serviceWorkerInformation->activity))
+            m_serviceWorkerInformation->activity = m_throttler.backgroundActivity("Service Worker for background view(s)"_s);
+        return;
+    }
+    m_serviceWorkerInformation->activity = nullptr;
+}
+
+void WebProcessProxy::registerServiceWorkerClientProcess(WebProcessProxy& proxy)
+{
+    if (!m_serviceWorkerInformation)
+        return;
+
+    m_serviceWorkerInformation->clientProcesses.add(proxy);
+    updateServiceWorkerProcessAssertion();
+}
+
+void WebProcessProxy::unregisterServiceWorkerClientProcess(WebProcessProxy& proxy)
+{
+    if (!m_serviceWorkerInformation)
+        return;
+
+    m_serviceWorkerInformation->clientProcesses.remove(proxy);
+    updateServiceWorkerProcessAssertion();
+}
+
+bool WebProcessProxy::hasServiceWorkerForegroundActivityForTesting() const
+{
+    return m_serviceWorkerInformation ? ProcessThrottler::isValidForegroundActivity(m_serviceWorkerInformation->activity) : false;
+}
+
+bool WebProcessProxy::hasServiceWorkerBackgroundActivityForTesting() const
+{
+    return m_serviceWorkerInformation ? ProcessThrottler::isValidBackgroundActivity(m_serviceWorkerInformation->activity) : false;
+}
+#endif // ENABLE(SERVICE_WORKER)
 
 void WebProcessProxy::disableServiceWorkers()
 {
@@ -1581,11 +1623,43 @@ void WebProcessProxy::disableServiceWorkers()
     maybeShutDown();
 }
 
-void WebProcessProxy::enableServiceWorkers()
+#if ENABLE(CONTENT_EXTENSIONS)
+static Vector<std::pair<String, WebCompiledContentRuleListData>> contentRuleListsFromIdentifier(const Optional<UserContentControllerIdentifier>& userContentControllerIdentifier)
+{
+    if (!userContentControllerIdentifier) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    auto* userContentController = WebUserContentControllerProxy::get(*userContentControllerIdentifier);
+    if (!userContentController) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    return userContentController->contentRuleListData();
+}
+#endif
+
+void WebProcessProxy::enableServiceWorkers(const Optional<UserContentControllerIdentifier>& userContentControllerIdentifier)
 {
     ASSERT(m_registrableDomain && !m_registrableDomain->isEmpty());
     ASSERT(!m_serviceWorkerInformation);
-    m_serviceWorkerInformation = ServiceWorkerInformation { WebPageProxyIdentifier::generate(), PageIdentifier::generate() };
+    m_serviceWorkerInformation = ServiceWorkerInformation {
+        WebPageProxyIdentifier::generate(),
+        PageIdentifier::generate(),
+        ServiceWorkerInitializationData {
+            userContentControllerIdentifier,
+#if ENABLE(CONTENT_EXTENSIONS)
+            contentRuleListsFromIdentifier(userContentControllerIdentifier),
+#endif
+        },
+        nullptr,
+        { }
+    };
+#if ENABLE(SERVICE_WORKER)
+    updateServiceWorkerProcessAssertion();
+#endif
 }
 
 } // namespace WebKit

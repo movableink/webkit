@@ -79,7 +79,6 @@ messages -> NetworkConnectionToWebProcess LegacyReceiver {
 #endif
 
 #if ENABLE(SERVICE_WORKER)
-    EstablishSWServerConnection()
     EstablishSWContextConnection(WebCore::RegistrableDomain domain)
     CloseSWContextConnection()
 #endif
@@ -92,4 +91,5 @@ messages -> NetworkConnectionToWebProcess LegacyReceiver {
     PostMessageToRemote(struct WebCore::MessageWithMessagePorts message, struct WebCore::MessagePortIdentifier remote)
     CheckRemotePortForActivity(struct WebCore::MessagePortIdentifier port) -> (bool hasActivity) Async
     DidDeliverMessagePortMessages(uint64_t messageBatchIdentifier)
+    RegisterURLSchemesAsCORSEnabled(Vector<String> schemes);
 }

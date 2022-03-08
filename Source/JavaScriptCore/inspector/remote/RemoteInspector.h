@@ -47,10 +47,9 @@ typedef RetainPtr<NSDictionary> TargetListing;
 
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/SocketConnection.h>
 typedef GRefPtr<GVariant> TargetListing;
 typedef struct _GCancellable GCancellable;
-typedef struct _GDBusConnection GDBusConnection;
-typedef struct _GDBusInterfaceVTable GDBusInterfaceVTable;
 #endif
 
 #if USE(INSPECTOR_SOCKET_SERVER)
@@ -92,6 +91,15 @@ public:
             bool acceptInsecureCertificates { false };
 #if USE(GLIB)
             Vector<std::pair<String, String>> certificates;
+            struct Proxy {
+                String type;
+                Optional<String> ftpURL;
+                Optional<String> httpURL;
+                Optional<String> httpsURL;
+                Optional<String> socksURL;
+                Vector<String> ignoreAddressList;
+            };
+            Optional<Proxy> proxy;
 #endif
 #if PLATFORM(COCOA)
             Optional<bool> allowInsecureMediaCapture;
@@ -149,7 +157,7 @@ public:
     void sendMessageToTarget(TargetID, const char* message);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
-    void requestAutomationSession(String&& sessionID, const Client::SessionCapabilities&);
+    void requestAutomationSession(const String& sessionID, const Client::SessionCapabilities&);
 
     bool isConnected() const { return !!m_clientConnection; }
     void connect(ConnectionID);
@@ -169,8 +177,8 @@ private:
     void setupXPCConnectionIfNeeded();
 #endif
 #if USE(GLIB)
-    void setupConnection(GRefPtr<GDBusConnection>&&);
-    static const GDBusInterfaceVTable s_interfaceVTable;
+    void setupConnection(Ref<SocketConnection>&&);
+    static const SocketConnection::MessageHandlers s_messageHandlers;
 
     void receivedGetTargetListMessage();
     void receivedSetupMessage(TargetID);
@@ -221,6 +229,9 @@ private:
     void setupTarget(const Event&);
     void frontendDidClose(const Event&);
     void sendMessageToBackend(const Event&);
+    void startAutomationSession(const Event&);
+
+    void receivedAutomationSessionRequestMessage(const Event&);
 
     String backendCommands() const;
 #endif
@@ -240,7 +251,7 @@ private:
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
 #endif
 #if USE(GLIB)
-    GRefPtr<GDBusConnection> m_dbusConnection;
+    RefPtr<SocketConnection> m_socketConnection;
     GRefPtr<GCancellable> m_cancellable;
 #endif
 

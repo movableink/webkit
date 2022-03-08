@@ -457,22 +457,6 @@ bool Quirks::needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommand() const
 #endif
 }
 
-bool Quirks::shouldLightenJapaneseBoldSansSerif() const
-{
-#if USE(HIRAGINO_SANS_WORKAROUND)
-    if (!needsQuirks())
-        return false;
-
-    // lang="ja" style="font: bold sans-serif;" content would naturally get HiraginoSans-W8 here, but that's visually
-    // too bold. Instead, we should pick HiraginoSans-W6 instead.
-    // FIXME: webkit.org/b/200047 Remove this quirk.
-    auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "m.yahoo.co.jp");
-#else
-    return false;
-#endif
-}
-
 // FIXME(<rdar://problem/50394969>): Remove after desmos.com adopts inputmode="none".
 bool Quirks::needsInputModeNoneImplicitly(const HTMLElement& element) const
 {
@@ -608,6 +592,41 @@ bool Quirks::needsPreloadAutoQuirk() const
 #else
     return false;
 #endif
+}
+
+bool Quirks::needsFullWidthHeightFullscreenStyleQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (m_needsFullWidthHeightFullscreenStyleQuirk)
+        return m_needsFullWidthHeightFullscreenStyleQuirk.value();
+
+    auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
+
+    m_needsFullWidthHeightFullscreenStyleQuirk = domain == "reddit.com" || domain.endsWith(".reddit.com");
+
+    return m_needsFullWidthHeightFullscreenStyleQuirk.value();
+}
+
+bool Quirks::shouldBypassBackForwardCache() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto topURL = m_document->topDocument().url();
+    auto host = topURL.host();
+
+    // Vimeo.com used to bypass the back/forward cache by serving "Cache-Control: no-store" over HTTPS.
+    // We started caching such content in r250437 but the vimeo.com content unfortunately is not currently compatible
+    // because it changes the opacity of its body to 0 when navigating away and fails to restore the original opacity
+    // when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/56996057>.
+    if (topURL.protocolIs("https") && equalLettersIgnoringASCIICase(host, "vimeo.com")) {
+        if (auto* documentLoader = m_document->frame() ? m_document->frame()->loader().documentLoader() : nullptr)
+            return documentLoader->response().cacheControlContainsNoStore();
+    }
+
+    return false;
 }
 
 }

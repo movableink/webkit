@@ -40,7 +40,7 @@
 #include "JSWebAssemblyRuntimeError.h"
 #include "LLIntThunks.h"
 #include "LinkBuffer.h"
-#include "ProtoCallFrame.h"
+#include "ProtoCallFrameInlines.h"
 #include "VM.h"
 #include "WasmCallee.h"
 #include "WasmCallingConvention.h"
@@ -81,11 +81,11 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(JSGlobalObject* glob
         JSValue arg = callFrame->argument(argIndex);
         switch (signature.argument(argIndex)) {
         case Wasm::I32:
-            arg = JSValue::decode(arg.toInt32(callFrame));
+            arg = JSValue::decode(arg.toInt32(globalObject));
             break;
         case Wasm::Funcref: {
             if (!isWebAssemblyHostFunction(vm, arg) && !arg.isNull())
-                return JSValue::encode(throwException(callFrame, scope, createJSWebAssemblyRuntimeError(callFrame, vm, "Funcref must be an exported wasm function")));
+                return JSValue::encode(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function")));
             break;
         }
         case Wasm::Anyref:
@@ -94,10 +94,10 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(JSGlobalObject* glob
             arg = JSValue();
             break;
         case Wasm::F32:
-            arg = JSValue::decode(bitwise_cast<uint32_t>(arg.toFloat(callFrame)));
+            arg = JSValue::decode(bitwise_cast<uint32_t>(arg.toFloat(globalObject)));
             break;
         case Wasm::F64:
-            arg = JSValue::decode(bitwise_cast<uint64_t>(arg.toNumber(callFrame)));
+            arg = JSValue::decode(bitwise_cast<uint64_t>(arg.toNumber(globalObject)));
             break;
         case Wasm::Void:
         case Wasm::Func:
@@ -128,7 +128,7 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(JSGlobalObject* glob
         const intptr_t frameSize = (boxedArgs.size() + CallFrame::headerSizeInRegisters) * sizeof(Register);
         const intptr_t stackSpaceUsed = 2 * frameSize; // We're making two calls. One to the wrapper, and one to the actual wasm code.
         if (UNLIKELY((sp < stackSpaceUsed) || ((sp - stackSpaceUsed) < bitwise_cast<intptr_t>(vm.softStackLimit()))))
-            return JSValue::encode(throwException(callFrame, scope, createStackOverflowError(callFrame)));
+            return JSValue::encode(throwException(globalObject, scope, createStackOverflowError(globalObject)));
     }
     vm.wasmContext.store(wasmInstance, vm.softStackLimit());
     ASSERT(wasmFunction->instance());
@@ -161,17 +161,7 @@ bool WebAssemblyFunction::useTagRegisters() const
 
 RegisterSet WebAssemblyFunction::calleeSaves() const
 {
-    RegisterSet toSave = Wasm::PinnedRegisterInfo::get().toSave(instance()->memoryMode());
-    if (useTagRegisters()) {
-        RegisterSet tagRegisters = RegisterSet::runtimeTagRegisters();
-        // We rely on these being disjoint sets.
-#if !ASSERT_DISABLED
-        for (Reg reg : tagRegisters)
-            ASSERT(!toSave.contains(reg));
-#endif
-        toSave.merge(tagRegisters);
-    }
-    return toSave;
+    return Wasm::PinnedRegisterInfo::get().toSave(instance()->memoryMode());
 }
 
 RegisterAtOffsetList WebAssemblyFunction::usedCalleeSaveRegisters() const
@@ -443,7 +433,6 @@ WebAssemblyFunction* WebAssemblyFunction::create(VM& vm, JSGlobalObject* globalO
     NativeExecutable* executable = vm.getHostFunction(callWebAssemblyFunction, NoIntrinsic, callHostFunctionAsConstructor, nullptr, name);
     WebAssemblyFunction* function = new (NotNull, allocateCell<WebAssemblyFunction>(vm.heap)) WebAssemblyFunction(vm, globalObject, structure, jsEntrypoint, wasmToWasmEntrypointLoadLocation, signatureIndex);
     function->finishCreation(vm, executable, length, name, instance);
-    ASSERT_WITH_MESSAGE(!function->isLargeAllocation(), "WebAssemblyFunction should be allocated not in large allocation since it is JSCallee.");
     return function;
 }
 

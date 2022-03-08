@@ -26,6 +26,10 @@
 #include "config.h"
 #include "ClipboardItemPasteboardDataSource.h"
 
+#include "Clipboard.h"
+#include "ClipboardItem.h"
+#include "JSDOMPromiseDeferred.h"
+#include "PasteboardCustomData.h"
 #include "PasteboardItemInfo.h"
 
 namespace WebCore {
@@ -49,6 +53,13 @@ void ClipboardItemPasteboardDataSource::getType(const String& type, Ref<Deferred
         clipboard->getType(m_item, type, WTFMove(promise));
     else
         promise->reject(NotAllowedError);
+}
+
+void ClipboardItemPasteboardDataSource::collectDataForWriting(Clipboard&, CompletionHandler<void(Optional<PasteboardCustomData>)>&& completion)
+{
+    // FIXME: Not implemented. This is needed to support writing platform-backed ClipboardItems
+    // back to the pasteboard using Clipboard.write().
+    completion(WTF::nullopt);
 }
 
 } // namespace WebCore

@@ -566,7 +566,7 @@ static bool canCreateStackingContext(const RenderLayer& layer)
         || renderer.isPositioned() // Note that this only creates stacking context in conjunction with explicit z-index.
         || renderer.hasReflection()
         || renderer.style().hasIsolation()
-        || !renderer.style().hasAutoZIndex()
+        || !renderer.style().hasAutoUsedZIndex()
         || (renderer.style().willChange() && renderer.style().willChange()->canCreateStackingContext());
 }
 
@@ -587,7 +587,7 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
 
 bool RenderLayer::shouldBeCSSStackingContext() const
 {
-    return !renderer().style().hasAutoZIndex() || isRenderViewLayer();
+    return !renderer().style().hasAutoUsedZIndex() || isRenderViewLayer();
 }
 
 bool RenderLayer::setIsNormalFlowOnly(bool isNormalFlowOnly)
@@ -715,7 +715,9 @@ void RenderLayer::rebuildZOrderLists()
 {
     ASSERT(layerListMutationAllowed());
     ASSERT(isDirtyStackingContext());
-    rebuildZOrderLists(m_posZOrderList, m_negZOrderList);
+    
+    OptionSet<Compositing> childDirtyFlags;
+    rebuildZOrderLists(m_posZOrderList, m_negZOrderList, childDirtyFlags);
     m_zOrderListsDirty = false;
     
     bool hasNegativeZOrderList = m_negZOrderList && m_negZOrderList->size();
@@ -727,14 +729,24 @@ void RenderLayer::rebuildZOrderLists()
         if (isComposited())
             setNeedsCompositingConfigurationUpdate();
     }
+
+    // Building lists may have added layers with dirty flags, so make sure we propagate dirty bits up the tree.
+    if (m_compositingDirtyBits.containsAll({ Compositing::DescendantsNeedRequirementsTraversal, Compositing::DescendantsNeedBackingAndHierarchyTraversal }))
+        return;
+
+    if (childDirtyFlags.containsAny(computeCompositingRequirementsFlags()))
+        setDescendantsNeedCompositingRequirementsTraversal();
+
+    if (childDirtyFlags.containsAny(updateBackingOrHierarchyFlags()))
+        setDescendantsNeedUpdateBackingAndHierarchyTraversal();
 }
 
-void RenderLayer::rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>& posZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negZOrderList)
+void RenderLayer::rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>& posZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negZOrderList, OptionSet<Compositing>& accumulatedDirtyFlags)
 {
     bool includeHiddenLayers = compositor().usesCompositing();
     for (RenderLayer* child = firstChild(); child; child = child->nextSibling()) {
         if (!isReflectionLayer(*child))
-            child->collectLayers(includeHiddenLayers, posZOrderList, negZOrderList);
+            child->collectLayers(includeHiddenLayers, posZOrderList, negZOrderList, accumulatedDirtyFlags);
     }
 
     auto compareZIndex = [] (const RenderLayer* first, const RenderLayer* second) -> bool {
@@ -749,7 +761,7 @@ void RenderLayer::rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>& posZ
         std::stable_sort(negZOrderList->begin(), negZOrderList->end(), compareZIndex);
 }
 
-void RenderLayer::collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>& positiveZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negativeZOrderList)
+void RenderLayer::collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>& positiveZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negativeZOrderList, OptionSet<Compositing>& accumulatedDirtyFlags)
 {
     updateDescendantDependentFlags();
 
@@ -761,6 +773,7 @@ void RenderLayer::collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector
         if (!layerList)
             layerList = makeUnique<Vector<RenderLayer*>>();
         layerList->append(this);
+        accumulatedDirtyFlags.add(m_compositingDirtyBits);
     }
 
     // Recur into our children to collect more layers, but only if we don't establish
@@ -769,7 +782,7 @@ void RenderLayer::collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector
         for (RenderLayer* child = firstChild(); child; child = child->nextSibling()) {
             // Ignore reflections.
             if (!isReflectionLayer(*child))
-                child->collectLayers(includeHiddenLayers, positiveZOrderList, negativeZOrderList);
+                child->collectLayers(includeHiddenLayers, positiveZOrderList, negativeZOrderList, accumulatedDirtyFlags);
         }
     }
 }
@@ -2673,7 +2686,7 @@ void RenderLayer::scrollTo(const ScrollPosition& position)
 
     // Schedule the scroll and scroll-related DOM events.
     if (Element* element = renderer().element())
-        element->document().eventQueue().enqueueOrDispatchScrollEvent(*element);
+        element->document().addPendingScrollEventTarget(*element);
 
     if (scrollsOverflow())
         view.frameView().didChangeScrollOffset();
@@ -3004,23 +3017,23 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
     if (resize != Resize::Vertical && difference.width()) {
         if (is<HTMLFormControlElement>(*element)) {
             // Make implicit margins from the theme explicit (see <http://bugs.webkit.org/show_bug.cgi?id=9547>).
-            styledElement->setInlineStyleProperty(CSSPropertyMarginLeft, renderer->marginLeft() / zoomFactor, CSSPrimitiveValue::CSS_PX);
-            styledElement->setInlineStyleProperty(CSSPropertyMarginRight, renderer->marginRight() / zoomFactor, CSSPrimitiveValue::CSS_PX);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginLeft, renderer->marginLeft() / zoomFactor, CSSUnitType::CSS_PX);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginRight, renderer->marginRight() / zoomFactor, CSSUnitType::CSS_PX);
         }
         LayoutUnit baseWidth = renderer->width() - (isBoxSizingBorder ? 0_lu : renderer->horizontalBorderAndPaddingExtent());
         baseWidth = baseWidth / zoomFactor;
-        styledElement->setInlineStyleProperty(CSSPropertyWidth, roundToInt(baseWidth + difference.width()), CSSPrimitiveValue::CSS_PX);
+        styledElement->setInlineStyleProperty(CSSPropertyWidth, roundToInt(baseWidth + difference.width()), CSSUnitType::CSS_PX);
     }
 
     if (resize != Resize::Horizontal && difference.height()) {
         if (is<HTMLFormControlElement>(*element)) {
             // Make implicit margins from the theme explicit (see <http://bugs.webkit.org/show_bug.cgi?id=9547>).
-            styledElement->setInlineStyleProperty(CSSPropertyMarginTop, renderer->marginTop() / zoomFactor, CSSPrimitiveValue::CSS_PX);
-            styledElement->setInlineStyleProperty(CSSPropertyMarginBottom, renderer->marginBottom() / zoomFactor, CSSPrimitiveValue::CSS_PX);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginTop, renderer->marginTop() / zoomFactor, CSSUnitType::CSS_PX);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginBottom, renderer->marginBottom() / zoomFactor, CSSUnitType::CSS_PX);
         }
         LayoutUnit baseHeight = renderer->height() - (isBoxSizingBorder ? 0_lu : renderer->verticalBorderAndPaddingExtent());
         baseHeight = baseHeight / zoomFactor;
-        styledElement->setInlineStyleProperty(CSSPropertyHeight, roundToInt(baseHeight + difference.height()), CSSPrimitiveValue::CSS_PX);
+        styledElement->setInlineStyleProperty(CSSPropertyHeight, roundToInt(baseHeight + difference.height()), CSSUnitType::CSS_PX);
     }
 
     document.updateLayout();
@@ -3364,12 +3377,7 @@ void RenderLayer::invalidateScrollCornerRect(const IntRect& rect)
 
 static bool scrollbarHiddenByStyle(Scrollbar* scrollbar)
 {
-    if (!scrollbar || !scrollbar->isCustomScrollbar())
-        return false;
-
-    std::unique_ptr<RenderStyle> scrollbarStyle = static_cast<RenderScrollbar*>(scrollbar)->getScrollbarPseudoStyle(ScrollbarBGPart, PseudoId::Scrollbar);
-
-    return scrollbarStyle && scrollbarStyle->display() == DisplayType::None;
+    return scrollbar && scrollbar->isHiddenByStyle();
 }
 
 bool RenderLayer::horizontalScrollbarHiddenByStyle() const
@@ -6590,10 +6598,10 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
 #endif
     }
 
-    // FIXME: RenderLayer already handles visibility changes through our visiblity dirty bits. This logic could
+    // FIXME: RenderLayer already handles visibility changes through our visibility dirty bits. This logic could
     // likely be folded along with the rest.
     if (oldStyle) {
-        if (oldStyle->zIndex() != renderer().style().zIndex() || oldStyle->visibility() != renderer().style().visibility()) {
+        if (oldStyle->usedZIndex() != renderer().style().usedZIndex() || oldStyle->visibility() != renderer().style().visibility()) {
             dirtyStackingContextZOrderLists();
             if (isStackingContext())
                 dirtyZOrderLists();
@@ -6690,7 +6698,7 @@ void RenderLayer::updateScrollableAreaSet(bool hasOverflow)
 void RenderLayer::updateScrollCornerStyle()
 {
     RenderElement* actualRenderer = rendererForScrollbar(renderer());
-    auto corner = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(PseudoId::ScrollbarCorner), &actualRenderer->style()) : nullptr;
+    auto corner = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &actualRenderer->style()) : nullptr;
 
     if (!corner) {
         clearScrollCorner();
@@ -6717,7 +6725,7 @@ void RenderLayer::clearScrollCorner()
 void RenderLayer::updateResizerStyle()
 {
     RenderElement* actualRenderer = rendererForScrollbar(renderer());
-    auto resizer = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(PseudoId::Resizer), &actualRenderer->style()) : nullptr;
+    auto resizer = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle({ PseudoId::Resizer }, &actualRenderer->style()) : nullptr;
 
     if (!resizer) {
         clearResizer();
@@ -6802,9 +6810,9 @@ RenderStyle RenderLayer::createReflectionStyle()
 
     // Map in our mask.
     newStyle.setMaskBoxImage(renderer().style().boxReflect()->mask());
-    
+
     // Style has transform and mask, so needs to be stacking context.
-    newStyle.setZIndex(0);
+    newStyle.setUsedZIndex(0);
 
     return newStyle;
 }

@@ -48,7 +48,7 @@ public:
 
     void setHorizontalSpacing(LayoutUnit horizontalSpacing) { m_horizontalSpacing = horizontalSpacing; }
     LayoutUnit horizontalSpacing() const { return m_horizontalSpacing; }
-    LayoutUnit totalHorizontalSpacing() const { return columnsContext().columns().size() * horizontalSpacing(); }
+    LayoutUnit totalHorizontalSpacing() const { return (columnsContext().columns().size() + 1) * horizontalSpacing(); }
 
     void setVerticalSpacing(LayoutUnit verticalSpacing) { m_verticalSpacing = verticalSpacing; }
     LayoutUnit verticalSpacing() const { return m_verticalSpacing; }
@@ -150,7 +150,8 @@ public:
     };
     SlotInfo* slot(SlotPosition);
 
-    FormattingContext::IntrinsicWidthConstraints widthConstraints() const;
+    bool hasComputedWidthConstraints() const { return m_intrinsicWidthConstraints.hasValue(); }
+    FormattingContext::IntrinsicWidthConstraints widthConstraints();
 
 private:
     using SlotMap = WTF::HashMap<SlotPosition, std::unique_ptr<SlotInfo>>;
@@ -161,6 +162,7 @@ private:
     RowList m_rows;
     LayoutUnit m_horizontalSpacing;
     LayoutUnit m_verticalSpacing;
+    Optional<FormattingContext::IntrinsicWidthConstraints> m_intrinsicWidthConstraints;
 };
 
 }

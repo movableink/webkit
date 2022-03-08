@@ -776,6 +776,7 @@ public:
 
     template<typename U> void append(const U*, size_t);
     template<typename U, size_t otherCapacity> void appendVector(const Vector<U, otherCapacity>&);
+    template<typename U, size_t otherCapacity> void appendVector(Vector<U, otherCapacity>&&);
     template<typename U> bool tryAppend(const U*, size_t);
 
     template<typename U> void insert(size_t position, const U*, size_t);
@@ -1409,6 +1410,17 @@ inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity>::appendVecto
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
+template<typename U, size_t otherCapacity>
+inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity>::appendVector(Vector<U, otherCapacity>&& val)
+{
+    size_t newSize = m_size + val.size();
+    if (newSize > capacity())
+        expandCapacity(newSize);
+    for (auto& item : val)
+        uncheckedAppend(WTFMove(item));
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
 template<typename U>
 void Vector<T, inlineCapacity, OverflowHandler, minCapacity>::insert(size_t position, const U* data, size_t dataSize)
 {
@@ -1591,8 +1603,8 @@ inline void swap(Vector<T, inlineCapacity, OverflowHandler, minCapacity>& a, Vec
     a.swap(b);
 }
 
-template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
-bool operator==(const Vector<T, inlineCapacity, OverflowHandler, minCapacity>& a, const Vector<T, inlineCapacity, OverflowHandler, minCapacity>& b)
+template<typename T, size_t inlineCapacityA, typename OverflowHandlerA, size_t minCapacityA, size_t inlineCapacityB, typename OverflowHandlerB, size_t minCapacityB>
+bool operator==(const Vector<T, inlineCapacityA, OverflowHandlerA, minCapacityA>& a, const Vector<T, inlineCapacityB, OverflowHandlerB, minCapacityB>& b)
 {
     if (a.size() != b.size())
         return false;
@@ -1600,8 +1612,8 @@ bool operator==(const Vector<T, inlineCapacity, OverflowHandler, minCapacity>& a
     return VectorTypeOperations<T>::compare(a.data(), b.data(), a.size());
 }
 
-template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
-inline bool operator!=(const Vector<T, inlineCapacity, OverflowHandler, minCapacity>& a, const Vector<T, inlineCapacity, OverflowHandler, minCapacity>& b)
+template<typename T, size_t inlineCapacityA, typename OverflowHandlerA, size_t minCapacityA, size_t inlineCapacityB, typename OverflowHandlerB, size_t minCapacityB>
+inline bool operator!=(const Vector<T, inlineCapacityA, OverflowHandlerA, minCapacityA>& a, const Vector<T, inlineCapacityB, OverflowHandlerB, minCapacityB>& b)
 {
     return !(a == b);
 }

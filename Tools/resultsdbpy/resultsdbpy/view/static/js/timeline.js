@@ -34,6 +34,7 @@ import {DOM, EventStream, REF, FP} from '/library/js/Ref.js';
 const DEFAULT_LIMIT = 100;
 
 let willFilterExpected = false;
+let showTestTimes = false;
 
 function minimumUuidForResults(results, limit) {
     const now = Math.floor(Date.now() / 10);
@@ -154,7 +155,7 @@ function repositoriesForCommits(commits) {
     return repositories;
 }
 
-function xAxisFromScale(scale, repository, updatesArray, isTop=false)
+function xAxisFromScale(scale, repository, updatesArray, isTop=false, viewport=null)
 {
     function scaleForRepository(scale) {
         return scale.map(node => {
@@ -196,6 +197,7 @@ function xAxisFromScale(scale, repository, updatesArray, isTop=false)
                     return {x: canvas.x + point.x, y: canvas.y + scrollDelta + point.y};
                 }),
                 (event) => {return onScaleClick(node);},
+                viewport,
             );
         },
         onScaleLeave: (event, canvas) => {
@@ -250,6 +252,15 @@ function inPlaceCombine(out, obj)
                     obj[worstKey] ? obj[worstKey] : obj[key],
                 );
                 out[key] += obj[key];
+                return;
+            }
+
+            // Some special combination logic
+            if (key === 'time') {
+                out[key] = Math.max(
+                    out[key] ? out[key] : 0,
+                    obj[key] ? obj[key] : 0,
+                );
                 return;
             }
 
@@ -332,7 +343,7 @@ function combineResults() {
 }
 
 class TimelineFromEndpoint {
-    constructor(endpoint, suite = null) {
+    constructor(endpoint, suite = null, viewport = null) {
         this.endpoint = endpoint;
         this.displayAllCommits = true;
 
@@ -345,6 +356,7 @@ class TimelineFromEndpoint {
         this.timelineUpdate = null;
         this.notifyRerender = () => {};
         this.repositories = [];
+        this.viewport = viewport;
 
         const self = this;
 
@@ -388,7 +400,7 @@ class TimelineFromEndpoint {
             let components = [];
 
             newRepositories.forEach(repository => {
-                components.push(xAxisFromScale(scale, repository, this.xaxisUpdates, top));
+                components.push(xAxisFromScale(scale, repository, this.xaxisUpdates, top, this.viewport));
                 top = false;
             });
 
@@ -534,6 +546,9 @@ class TimelineFromEndpoint {
                         }
                     });
                 }
+                const time = data.time ? Math.round(data.time / 1000) : 0;
+                if (time && showTestTimes)
+                    tag = time;
 
                 return drawDot(context, x, y, false, tag ? tag : null, symbol, false, color);
             },
@@ -578,6 +593,7 @@ class TimelineFromEndpoint {
                     agregateData[key] = data[key];
                 });
                 agregateData['configuration'] = new Configuration(partialConfiguration);
+                ToolTip.unset();
                 InvestigateDrawer.expand(self.suite, agregateData, allData);
             }
         }
@@ -645,6 +661,7 @@ class TimelineFromEndpoint {
                         return {x: canvas.x + point.x, y: canvas.y + scrollDelta + point.y};
                     }),
                     (event) => {onDotClickFactory(configuration)(data);},
+                    self.viewport,
                 );
             }
         }
@@ -765,7 +782,7 @@ class TimelineFromEndpoint {
         self.xaxisUpdates = [];
         this.repositories = repositoriesForCommits(commits);
         this.repositories.forEach(repository => {
-            const xAxisComponent = xAxisFromScale(scale, repository, self.xaxisUpdates, top);
+            const xAxisComponent = xAxisFromScale(scale, repository, self.xaxisUpdates, top, self.viewport);
             if (top)
                 children.unshift(xAxisComponent);
             else
@@ -816,6 +833,10 @@ function Legend(callback=null, plural=false) {
             expected: plural ? 'No unexpected results' : 'Result expected',
             unexpected: plural ? 'All tests passed' : 'Test passed',
         },
+        warning: {
+            expected: plural ? 'Some tests unexpectedly reported warnings' : 'Unexpected warning',
+            unexpected: plural ? 'Some tests reported warnings' : 'Test warning',
+        },
         failed: {
             expected: plural ? 'Some tests unexpectedly failed' : 'Unexpectedly failed',
             unexpected: plural ? 'Some tests failed' : 'Test failed',
@@ -858,7 +879,7 @@ function Legend(callback=null, plural=false) {
         </div>`;
 
     if (callback) {
-        const swtch = REF.createRef({
+        const filterSwitch = REF.createRef({
             onElementMount: (element) => {
                 element.onchange = () => {
                     if (element.checked)
@@ -872,14 +893,33 @@ function Legend(callback=null, plural=false) {
                 };
             },
         });
+        const showTimesSwitch = REF.createRef({
+            onElementMount: (element) => {
+                element.onchange = () => {
+                    if (element.checked)
+                        showTestTimes = true;
+                    else
+                        showTestTimes = false;
+                    callback();
+                };
+            },
+        });
 
         result += `<div class="input">
             <label>Filter expected results</label>
             <label class="switch">
-                <input type="checkbox"${willFilterExpected ? ' checked': ''} ref="${swtch}">
+                <input type="checkbox"${willFilterExpected ? ' checked': ''} ref="${filterSwitch}">
                 <span class="slider"></span>
             </label>
-        </div>`;
+        </div>`
+        if (!plural)
+            result += `<div class="input">
+                <label>Show test times</label>
+                <label class="switch">
+                    <input type="checkbox"${showTestTimes ? ' checked': ''} ref="${showTimesSwitch}">
+                    <span class="slider"></span>
+                </label>
+            </div>`;
     }
 
     return `${result}`;

@@ -554,11 +554,16 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings, BegingTestingMode te
 
     m_testRunner->setEncryptedMediaAPIEnabled(true);
     m_testRunner->setPictureInPictureAPIEnabled(true);
+    m_testRunner->setGenericCueAPIEnabled(false);
 
     m_testRunner->setCloseRemainingWindowsWhenComplete(false);
     m_testRunner->setAcceptsEditing(true);
     m_testRunner->setTabKeyCyclesThroughElements(true);
     m_testRunner->clearTestRunnerCallbacks();
+
+#if PLATFORM(WPE) || PLATFORM(GTK)
+    m_testRunner->setOffscreenCanvasEnabled(true);
+#endif
 
     if (m_timeout > 0_s)
         m_testRunner->setCustomTimeout(m_timeout);
@@ -920,7 +925,7 @@ void InjectedBundle::setCacheModel(int model)
 {
     WKRetainPtr<WKStringRef> messageName = adoptWK(WKStringCreateWithUTF8CString("SetCacheModel"));
     WKRetainPtr<WKUInt64Ref> messageBody = adoptWK(WKUInt64Create(model));
-    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
+    WKBundlePagePostSynchronousMessageForTesting(page()->page(), messageName.get(), messageBody.get(), nullptr);
 }
 
 bool InjectedBundle::shouldProcessWorkQueue() const

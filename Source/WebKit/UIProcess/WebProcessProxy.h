@@ -35,10 +35,12 @@
 #include "ProcessThrottler.h"
 #include "ProcessThrottlerClient.h"
 #include "ResponsivenessTimer.h"
+#include "ServiceWorkerInitializationData.h"
+#include "UserContentControllerIdentifier.h"
 #include "VisibleWebPageCounter.h"
 #include "WebConnectionToWebProcess.h"
 #include "WebPageProxyIdentifier.h"
-#include "WebProcessProxyMessages.h"
+#include "WebProcessProxyMessagesReplies.h"
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/ProcessIdentifier.h>
@@ -51,6 +53,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakHashSet.h>
 
 namespace API {
 class Navigation;
@@ -61,6 +64,7 @@ namespace WebCore {
 class DeferrableOneShotTimer;
 class ResourceRequest;
 struct PluginInfo;
+struct PrewarmInformation;
 struct SecurityOriginData;
 }
 
@@ -73,6 +77,7 @@ class ProvisionalPageProxy;
 class UserMediaCaptureManagerProxy;
 class VisitedLinkStore;
 class WebBackForwardListItem;
+class WebCompiledContentRuleListData;
 class WebFrameProxy;
 class WebPageGroup;
 class WebPageProxy;
@@ -80,20 +85,19 @@ class WebProcessPool;
 class WebUserContentControllerProxy;
 class WebsiteDataStore;
 enum class WebsiteDataType;
+struct BackForwardListItemState;
 struct UserMessage;
 struct WebNavigationDataStore;
 struct WebPageCreationParameters;
 struct WebPreferencesStore;
 struct WebsiteData;
 
-#if PLATFORM(IOS_FAMILY)
 enum ForegroundWebProcessCounterType { };
 typedef RefCounter<ForegroundWebProcessCounterType> ForegroundWebProcessCounter;
 typedef ForegroundWebProcessCounter::Token ForegroundWebProcessToken;
 enum BackgroundWebProcessCounterType { };
 typedef RefCounter<BackgroundWebProcessCounterType> BackgroundWebProcessCounter;
 typedef BackgroundWebProcessCounter::Token BackgroundWebProcessToken;
-#endif
 
 class WebProcessProxy : public AuxiliaryProcessProxy, public ResponsivenessTimer::Client, public ThreadSafeRefCounted<WebProcessProxy>, public CanMakeWeakPtr<WebProcessProxy>, private ProcessThrottlerClient {
 public:
@@ -129,7 +133,7 @@ public:
     void setIsInProcessCache(bool);
     bool isInProcessCache() const { return m_isInProcessCache; }
 
-    void enableServiceWorkers();
+    void enableServiceWorkers(const Optional<UserContentControllerIdentifier>&);
     void disableServiceWorkers();
 
     WebsiteDataStore& websiteDataStore() const { ASSERT(m_websiteDataStore); return *m_websiteDataStore; }
@@ -158,6 +162,7 @@ public:
     void activePagesDomainsForTesting(CompletionHandler<void(Vector<String>&&)>&&); // This is what is reported to ActivityMonitor.
 
     bool isRunningServiceWorkers() const { return !!m_serviceWorkerInformation; }
+    bool isStandaloneServiceWorkerProcess() const { return isRunningServiceWorkers() && !pageCount(); }
 
     void didCreateWebPageInProcess(WebCore::PageIdentifier);
 
@@ -221,9 +226,6 @@ public:
 
     void windowServerConnectionStateChanged();
 
-    void processReadyToSuspend();
-    void didCancelProcessSuspension();
-
     void setIsHoldingLockedFiles(bool);
 
     ProcessThrottler& throttler() { return m_throttler; }
@@ -247,8 +249,8 @@ public:
     bool hasCommittedAnyProvisionalLoads() const { return m_hasCommittedAnyProvisionalLoads; }
 
 #if PLATFORM(WATCHOS)
-    void takeBackgroundActivityTokenForFullscreenInput();
-    void releaseBackgroundActivityTokenForFullscreenInput();
+    void startBackgroundActivityForFullscreenInput();
+    void endBackgroundActivityForFullscreenInput();
 #endif
 
     bool isPrewarmed() const { return m_isPrewarmed; }
@@ -297,11 +299,9 @@ public:
     void didStartProvisionalLoadForMainFrame(const URL&);
 
     // ProcessThrottlerClient
-    void sendProcessWillSuspendImminently() override;
-    void sendPrepareToSuspend() override;
-    void sendCancelPrepareToSuspend() override;
-    void sendProcessDidResume() override;
-    void didSetAssertionState(AssertionState) override;
+    void sendPrepareToSuspend(IsSuspensionImminent, CompletionHandler<void()>&&) final;
+    void sendProcessDidResume() final;
+    void didSetAssertionState(AssertionState) final;
 
 #if PLATFORM(COCOA)
     enum SandboxExtensionType : uint32_t {
@@ -326,7 +326,7 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void processWasUnexpectedlyUnsuspended();
+    void processWasResumed(CompletionHandler<void()>&&);
 #endif
 
     void webPageMediaStateDidChange(WebPageProxy&);
@@ -339,7 +339,13 @@ public:
     void setServiceWorkerUserAgent(const String&);
     void updateServiceWorkerPreferencesStore(const WebPreferencesStore&);
     bool hasServiceWorkerPageProxy(WebPageProxyIdentifier pageProxyID) { return m_serviceWorkerInformation && m_serviceWorkerInformation->serviceWorkerPageProxyID == pageProxyID; }
+    void updateServiceWorkerProcessAssertion();
+    void registerServiceWorkerClientProcess(WebProcessProxy&);
+    void unregisterServiceWorkerClientProcess(WebProcessProxy&);
+    bool hasServiceWorkerForegroundActivityForTesting() const;
+    bool hasServiceWorkerBackgroundActivityForTesting() const;
 #endif
+    void setAssertionStateForTesting(AssertionState state) { didSetAssertionState(state); }
 
 protected:
     WebProcessProxy(WebProcessPool&, WebsiteDataStore*, IsPrewarmed);
@@ -380,12 +386,12 @@ private:
     void getPlugins(bool refresh, CompletionHandler<void(Vector<WebCore::PluginInfo>&& plugins, Vector<WebCore::PluginInfo>&& applicationPlugins, Optional<Vector<WebCore::SupportedPluginIdentifier>>&&)>&&);
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
 #if ENABLE(NETSCAPE_PLUGIN_API)
-    void getPluginProcessConnection(uint64_t pluginProcessToken, Messages::WebProcessProxy::GetPluginProcessConnection::DelayedReply&&);
+    void getPluginProcessConnection(uint64_t pluginProcessToken, Messages::WebProcessProxy::GetPluginProcessConnectionDelayedReply&&);
 #endif
     void addPlugInAutoStartOriginHash(String&& pageOrigin, uint32_t hash);
     void plugInDidReceiveUserInteraction(uint32_t hash);
     
-    void getNetworkProcessConnection(Messages::WebProcessProxy::GetNetworkProcessConnection::DelayedReply&&);
+    void getNetworkProcessConnection(Messages::WebProcessProxy::GetNetworkProcessConnectionDelayedReply&&);
 
     bool platformIsBeingDebugged() const;
     bool shouldAllowNonValidInjectedCode() const;
@@ -482,10 +488,10 @@ private:
 
     int m_numberOfTimesSuddenTerminationWasDisabled;
     ProcessThrottler m_throttler;
-    ProcessThrottler::BackgroundActivityToken m_tokenForHoldingLockedFiles;
-#if PLATFORM(IOS_FAMILY)
+    std::unique_ptr<ProcessThrottler::BackgroundActivity> m_activityForHoldingLockedFiles;
     ForegroundWebProcessToken m_foregroundToken;
     BackgroundWebProcessToken m_backgroundToken;
+#if PLATFORM(IOS_FAMILY)
     bool m_hasSentMessageToUnblockAccessibilityServer { false };
     std::unique_ptr<WebCore::DeferrableOneShotTimer> m_unexpectedActivityTimer;
 #endif
@@ -515,7 +521,7 @@ private:
     bool m_hasAudibleWebPage { false };
 
 #if PLATFORM(WATCHOS)
-    ProcessThrottler::BackgroundActivityToken m_backgroundActivityTokenForFullscreenFormControls;
+    std::unique_ptr<ProcessThrottler::BackgroundActivity> m_backgroundActivityForFullscreenFormControls;
 #endif
 
 #if PLATFORM(COCOA)
@@ -525,6 +531,9 @@ private:
     struct ServiceWorkerInformation {
         WebPageProxyIdentifier serviceWorkerPageProxyID;
         WebCore::PageIdentifier serviceWorkerPageID;
+        ServiceWorkerInitializationData initializationData;
+        ProcessThrottler::ActivityVariant activity;
+        WeakHashSet<WebProcessProxy> clientProcesses;
     };
     Optional<ServiceWorkerInformation> m_serviceWorkerInformation;
 };

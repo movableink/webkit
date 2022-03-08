@@ -28,7 +28,6 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "InlineLine.h"
-#include "InlineLineBreaker.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
@@ -37,39 +36,40 @@ namespace Layout {
 class LineLayout {
 public:
     struct LineInput;
-    LineLayout(const InlineFormattingContext&, const LineInput&);
+    LineLayout(const InlineFormattingContext&, Line::SkipAlignment, const LineInput&);
 
     struct LineContent;
     LineContent layout();
 
-    struct IndexAndRange {
-        unsigned index { 0 };
-        struct Range {
-            unsigned start { 0 };
-            unsigned length { 0 };
-        };
-        Optional<Range> partialContext;
+    struct PartialContent {
+        // This will potentially gain some more members. 
+        unsigned length;
     };
-
     struct LineInput {
-        LineInput(const Line::InitialConstraints&, TextAlignMode, IndexAndRange firstToProcess, const InlineItems&);
-        LineInput(const Line::InitialConstraints&, IndexAndRange firstToProcess, const InlineItems&);
+        LineInput(const Line::InitialConstraints&, TextAlignMode horizontalAlignment, const InlineItems&, unsigned leadingInlineItemIndex, Optional<PartialContent> leadingPartialContent);
 
         Line::InitialConstraints initialConstraints;
         TextAlignMode horizontalAlignment;
-        // FIXME Alternatively we could just have a second pass with vertical positioning (preferred width computation opts out) 
-        Line::SkipAlignment skipAlignment { Line::SkipAlignment::No };
-        IndexAndRange firstInlineItem;
         const InlineItems& inlineItems;
+        unsigned leadingInlineItemIndex { 0 };
+        Optional<PartialContent> leadingPartialContent;
         Optional<LayoutUnit> floatMinimumLogicalBottom;
     };
 
     struct LineContent {
-        Optional<IndexAndRange> lastCommitted;
+        Optional<unsigned> trailingInlineItemIndex;
+        Optional<PartialContent> trailingPartialContent;
         Vector<WeakPtr<InlineItem>> floats;
         const Line::RunList runList;
         const LineBox lineBox;
     };
+
+    struct Run {
+        const InlineItem& inlineItem;
+        LayoutUnit logicalWidth;
+    };
+
+    using RunList = Vector<Run, 30>;
 
 private:
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
@@ -77,35 +77,35 @@ private:
     IsEndOfLine placeInlineItem(const InlineItem&);
     void commitPendingContent();
     LineContent close();
+    bool shouldProcessUncommittedContent(const InlineItem&) const;
+    IsEndOfLine processUncommittedContent();
     
     struct UncommittedContent {
-        struct Run {
-            const InlineItem& inlineItem;
-            LayoutUnit logicalWidth;
-        };
         void add(const InlineItem&, LayoutUnit logicalWidth);
         void reset();
+        void trim(unsigned newSize);
 
-        Vector<Run> runs() { return m_uncommittedRuns; }
+        RunList& runs() { return m_uncommittedRuns; }
+        const RunList& runs() const { return m_uncommittedRuns; }
         bool isEmpty() const { return m_uncommittedRuns.isEmpty(); }
         unsigned size() const { return m_uncommittedRuns.size(); }
         LayoutUnit width() const { return m_width; }
 
     private:
-        Vector<Run> m_uncommittedRuns;
+        RunList m_uncommittedRuns;
         LayoutUnit m_width;
     };
 
     const InlineFormattingContext& m_inlineFormattingContext;
     const LineInput& m_lineInput;
     Line m_line;
-    LineBreaker m_lineBreaker;
     bool m_lineHasIntrusiveFloat { false };
     UncommittedContent m_uncommittedContent;
     unsigned m_committedInlineItemCount { 0 };
     Vector<WeakPtr<InlineItem>> m_floats;
-    std::unique_ptr<InlineTextItem> m_leadingPartialInlineTextItem;
-    std::unique_ptr<InlineTextItem> m_trailingPartialInlineTextItem;
+    std::unique_ptr<InlineTextItem> m_leadingPartialTextItem;
+    std::unique_ptr<InlineTextItem> m_trailingPartialTextItem;
+    Optional<unsigned> m_overflowTextLength;
 };
 
 }

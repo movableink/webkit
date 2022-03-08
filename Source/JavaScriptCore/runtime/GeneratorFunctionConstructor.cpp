@@ -39,13 +39,13 @@ const ClassInfo GeneratorFunctionConstructor::s_info = { "GeneratorFunction", &B
 static EncodedJSValue JSC_HOST_CALL callGeneratorFunctionConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     ArgList args(callFrame);
-    return JSValue::encode(constructFunction(callFrame, globalObject, args, FunctionConstructionMode::Generator));
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::Generator));
 }
 
 static EncodedJSValue JSC_HOST_CALL constructGeneratorFunctionConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     ArgList args(callFrame);
-    return JSValue::encode(constructFunction(callFrame, globalObject, args, FunctionConstructionMode::Generator, callFrame->newTarget()));
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::Generator, callFrame->newTarget()));
 }
 
 GeneratorFunctionConstructor::GeneratorFunctionConstructor(VM& vm, Structure* structure)
@@ -55,7 +55,7 @@ GeneratorFunctionConstructor::GeneratorFunctionConstructor(VM& vm, Structure* st
 
 void GeneratorFunctionConstructor::finishCreation(VM& vm, GeneratorFunctionPrototype* generatorFunctionPrototype)
 {
-    Base::finishCreation(vm, "GeneratorFunction"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, "GeneratorFunction"_s, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, generatorFunctionPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }

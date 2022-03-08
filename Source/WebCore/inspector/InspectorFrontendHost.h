@@ -111,11 +111,18 @@ public:
     void dispatchEventAsContextMenuEvent(Event&);
 
     bool isUnderTest();
+    bool isExperimentalBuild();
     void unbufferedLog(const String& message);
 
     void beep();
     void inspectInspector();
     bool isBeingInspected();
+
+    bool supportsDiagnosticLogging();
+#if ENABLE(INSPECTOR_TELEMETRY)
+    bool diagnosticLoggingAvailable();
+    void logDiagnosticEvent(const String& eventName, const String& payload);
+#endif
 
 private:
 #if ENABLE(CONTEXT_MENUS)

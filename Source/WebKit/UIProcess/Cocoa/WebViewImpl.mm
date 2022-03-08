@@ -106,10 +106,10 @@
 #import <WebCore/WebPlaybackControlsManager.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
+#import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/NSTouchBarSPI.h>
 #import <pal/spi/mac/DataDetectorsSPI.h>
 #import <pal/spi/mac/LookupSPI.h>
-#import <pal/spi/mac/NSAccessibilitySPI.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <pal/spi/mac/NSImmediateActionGestureRecognizerSPI.h>
 #import <pal/spi/mac/NSScrollerImpSPI.h>
@@ -263,6 +263,8 @@ static void* keyValueObservingContext = &keyValueObservingContext;
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeLayerHosting:) name:@"_NSWindowDidChangeContentsHostedInLayerSurfaceNotification" object:window];
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeOcclusionState:) name:NSWindowDidChangeOcclusionStateNotification object:window];
 
+    [defaultNotificationCenter addObserver:self selector:@selector(_screenDidChangeColorSpace:) name:NSScreenColorSpaceDidChangeNotification object:nil];
+
     [window addObserver:self forKeyPath:@"contentLayoutRect" options:NSKeyValueObservingOptionInitial context:keyValueObservingContext];
     [window addObserver:self forKeyPath:@"titlebarAppearsTransparent" options:NSKeyValueObservingOptionInitial context:keyValueObservingContext];
 }
@@ -287,6 +289,8 @@ static void* keyValueObservingContext = &keyValueObservingContext;
     [defaultNotificationCenter removeObserver:self name:NSWindowDidChangeScreenNotification object:window];
     [defaultNotificationCenter removeObserver:self name:@"_NSWindowDidChangeContentsHostedInLayerSurfaceNotification" object:window];
     [defaultNotificationCenter removeObserver:self name:NSWindowDidChangeOcclusionStateNotification object:window];
+
+    [defaultNotificationCenter removeObserver:self name:NSScreenColorSpaceDidChangeNotification object:nil];
 
     if (_impl->isEditable())
         [[NSFontPanel sharedFontPanel] removeObserver:self forKeyPath:@"visible" context:keyValueObservingContext];
@@ -370,6 +374,11 @@ static void* keyValueObservingContext = &keyValueObservingContext;
 - (void)_windowDidChangeOcclusionState:(NSNotification *)notification
 {
     _impl->windowDidChangeOcclusionState();
+}
+
+- (void)_screenDidChangeColorSpace:(NSNotification *)notification
+{
+    _impl->screenDidChangeColorSpace();
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
@@ -2117,6 +2126,11 @@ void WebViewImpl::windowDidChangeOcclusionState()
     m_page->activityStateDidChange(WebCore::ActivityState::IsVisible);
 }
 
+void WebViewImpl::screenDidChangeColorSpace()
+{
+    m_page->process().processPool().screenPropertiesStateChanged();
+}
+
 bool WebViewImpl::mightBeginDragWhileInactive()
 {
     if ([m_view window].isKeyWindow)
@@ -3115,6 +3129,15 @@ void WebViewImpl::changeSpelling(id sender)
     NSString *word = [[sender selectedCell] stringValue];
 
     m_page->changeSpellingToWord(word);
+}
+
+void WebViewImpl::setContinuousSpellCheckingEnabled(bool enabled)
+{
+    if (TextChecker::state().isContinuousSpellCheckingEnabled == enabled)
+        return;
+
+    TextChecker::setContinuousSpellCheckingEnabled(enabled);
+    m_page->process().updateTextCheckerState();
 }
 
 void WebViewImpl::toggleContinuousSpellChecking()
@@ -4218,8 +4241,11 @@ void WebViewImpl::setPromisedDataForImage(WebCore::Image* image, NSString *filen
     [pasteboard declareTypes:types.get() owner:m_view.getAutoreleased()];
     setFileAndURLTypes(filename, extension, title, url, visibleURL, pasteboard);
 
-    if (archiveBuffer)
-        [pasteboard setData:archiveBuffer->createNSData().get() forType:PasteboardTypes::WebArchivePboardType];
+    if (archiveBuffer) {
+        auto nsData = archiveBuffer->createNSData();
+        [pasteboard setData:nsData.get() forType:(__bridge NSString *)kUTTypeWebArchive];
+        [pasteboard setData:nsData.get() forType:PasteboardTypes::WebArchivePboardType];
+    }
 
     m_promisedImage = image;
 }

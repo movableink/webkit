@@ -77,6 +77,7 @@ public:
     const Signature& signature() const { return m_signature; }
 
     Vector<ControlEntry>& controlStack() { return m_controlStack; }
+    Stack& expressionStack() { return m_expressionStack; }
 
 private:
     static constexpr bool verbose = false;
@@ -89,6 +90,7 @@ private:
 #define WASM_TRY_POP_EXPRESSION_STACK_INTO(result, what) do {                               \
         WASM_PARSER_FAIL_IF(m_expressionStack.isEmpty(), "can't pop empty stack in " what); \
         result = m_expressionStack.takeLast();                                              \
+        m_context.didPopValueFromStack();                                                   \
     } while (0)
 
     template<OpType>
@@ -146,6 +148,8 @@ auto FunctionParser<Context>::parse() -> Result
         WASM_TRY_ADD_TO_CONTEXT(addLocal(typeOfLocal, numberOfLocals));
     }
 
+    m_context.didFinishParsingLocals();
+
     WASM_FAIL_IF_HELPER_FAILS(parseBody());
 
     return { };
@@ -174,6 +178,7 @@ auto FunctionParser<Context>::parseBody() -> PartialResult
             WASM_FAIL_IF_HELPER_FAILS(parseExpression());
         }
     }
+    WASM_FAIL_IF_HELPER_FAILS(m_context.endTopLevel(&m_signature, m_expressionStack));
 
     ASSERT(op == OpType::End);
     return { };
@@ -436,8 +441,10 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         size_t firstArgumentIndex = m_expressionStack.size() - calleeSignature.argumentCount();
         Vector<ExpressionType> args;
         WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(calleeSignature.argumentCount()), "can't allocate enough memory for call's ", calleeSignature.argumentCount(), " arguments");
-        for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i)
+        for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i) {
             args.uncheckedAppend(m_expressionStack.at(i));
+            m_context.didPopValueFromStack();
+        }
         m_expressionStack.shrink(firstArgumentIndex);
 
         ResultList results;
@@ -465,8 +472,10 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         Vector<ExpressionType> args;
         WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(argumentCount), "can't allocate enough memory for ", argumentCount, " call_indirect arguments");
         size_t firstArgumentIndex = m_expressionStack.size() - argumentCount;
-        for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i)
+        for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i) {
             args.uncheckedAppend(m_expressionStack.at(i));
+            m_context.didPopValueFromStack();
+        }
         m_expressionStack.shrink(firstArgumentIndex);
 
         ResultList results;
@@ -585,7 +594,7 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
 
     case End: {
         ControlEntry data = m_controlStack.takeLast();
-        if (data.controlData.blockType() == BlockType::If) {
+        if (m_context.isControlTypeIf(data.controlData)) {
             WASM_TRY_ADD_TO_CONTEXT(addElse(data.controlData, m_expressionStack));
             m_expressionStack = WTFMove(data.elseBlockStack);
         }
@@ -606,6 +615,7 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
     case Drop: {
         WASM_PARSER_FAIL_IF(!m_expressionStack.size(), "can't drop on empty stack");
         m_expressionStack.takeLast();
+        m_context.didPopValueFromStack();
         return { };
     }
 
@@ -670,7 +680,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     case End: {
         if (m_unreachableBlocks == 1) {
             ControlEntry data = m_controlStack.takeLast();
-            if (data.controlData.blockType() == BlockType::If) {
+            if (m_context.isControlTypeIf(data.controlData)) {
                 WASM_TRY_ADD_TO_CONTEXT(addElseToUnreachable(data.controlData));
                 m_expressionStack = WTFMove(data.elseBlockStack);
                 WASM_TRY_ADD_TO_CONTEXT(endBlock(data, m_expressionStack));

@@ -55,7 +55,7 @@ public:
         return executable;
     }
     static FunctionExecutable* fromGlobalCode(
-        const Identifier& name, ExecState&, const SourceCode&, 
+        const Identifier& name, JSGlobalObject*, const SourceCode&, 
         JSObject*& exception, int overrideLineNumber, Optional<int> functionConstructorParametersEndPosition);
 
     static void destroy(JSCell*);
@@ -131,7 +131,6 @@ public:
         
     FunctionMode functionMode() { return m_unlinkedExecutable->functionMode(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
-    bool isAnonymousBuiltinFunction() const { return m_unlinkedExecutable->isAnonymousBuiltinFunction(); }
     ConstructAbility constructAbility() const { return m_unlinkedExecutable->constructAbility(); }
     bool isClass() const { return m_unlinkedExecutable->isClass(); }
     bool isArrowFunction() const { return parseMode() == SourceParseMode::ArrowFunctionMode; }

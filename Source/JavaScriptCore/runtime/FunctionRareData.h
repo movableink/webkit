@@ -50,9 +50,16 @@ public:
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static FunctionRareData* create(VM&, JSFunction*);
+    static FunctionRareData* create(VM&);
 
     static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.functionRareDataSpace<mode>();
+    }
+
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
@@ -89,10 +96,10 @@ public:
     bool isObjectAllocationProfileInitialized() { return !m_objectAllocationProfile.isNull(); }
 
     Structure* internalFunctionAllocationStructure() { return m_internalFunctionAllocationProfile.structure(); }
-    Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* globalObject, JSObject* prototype, Structure* baseStructure)
+    Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* baseGlobalObject, JSObject* prototype, Structure* baseStructure)
     {
         initializeAllocationProfileWatchpointSet();
-        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, globalObject, this, prototype, baseStructure);
+        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure);
     }
     void clearInternalFunctionAllocationProfile(const char* reason)
     {
@@ -119,7 +126,7 @@ public:
     class AllocationProfileClearingWatchpoint;
 
 protected:
-    FunctionRareData(VM&, JSFunction*);
+    explicit FunctionRareData(VM&);
     ~FunctionRareData();
 
 private:

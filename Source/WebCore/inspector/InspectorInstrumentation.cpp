@@ -33,12 +33,14 @@
 #include "InspectorInstrumentation.h"
 
 #include "CachedResource.h"
+#include "ComputedEffectTiming.h"
 #include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "DOMWrapperWorld.h"
 #include "DocumentLoader.h"
 #include "Event.h"
 #include "Frame.h"
+#include "InspectorAnimationAgent.h"
 #include "InspectorApplicationCacheAgent.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorCanvasAgent.h"
@@ -54,6 +56,7 @@
 #include "InspectorTimelineAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
+#include "KeyframeEffect.h"
 #include "LoaderStrategy.h"
 #include "PageDOMDebuggerAgent.h"
 #include "PageDebuggerAgent.h"
@@ -118,15 +121,17 @@ static Frame* frameForScriptExecutionContext(ScriptExecutionContext& context)
 
 void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, DOMWrapperWorld& world)
 {
-    if (auto* pageDebuggerAgent = instrumentingAgents.pageDebuggerAgent()) {
-        if (&world == &mainThreadNormalWorld() && frame.isMainFrame())
-            pageDebuggerAgent->didClearMainFrameWindowObject();
-    }
+    if (&world != &mainThreadNormalWorld())
+        return;
 
-    if (PageRuntimeAgent* pageRuntimeAgent = instrumentingAgents.pageRuntimeAgent()) {
-        if (&world == &mainThreadNormalWorld())
-            pageRuntimeAgent->didCreateMainWorldContext(frame);
-    }
+    if (auto* pageDebuggerAgent = instrumentingAgents.pageDebuggerAgent())
+        pageDebuggerAgent->didClearWindowObjectInWorld(frame);
+
+    if (auto* pageRuntimeAgent = instrumentingAgents.pageRuntimeAgent())
+        pageRuntimeAgent->didClearWindowObjectInWorld(frame);
+
+    if (auto* pageAgent = instrumentingAgents.inspectorPageAgent())
+        pageAgent->didClearWindowObjectInWorld(frame);
 }
 
 bool InspectorInstrumentation::isDebuggerPausedImpl(InstrumentingAgents& instrumentingAgents)
@@ -359,7 +364,7 @@ bool InspectorInstrumentation::isEventListenerDisabledImpl(InstrumentingAgents& 
     return false;
 }
 
-void InspectorInstrumentation::didPostMessageImpl(InstrumentingAgents& instrumentingAgents, const TimerBase& timer, JSC::ExecState& state)
+void InspectorInstrumentation::didPostMessageImpl(InstrumentingAgents& instrumentingAgents, const TimerBase& timer, JSC::JSGlobalObject& state)
 {
     if (auto* webDebuggerAgent = instrumentingAgents.webDebuggerAgent())
         webDebuggerAgent->didPostMessage(timer, state);
@@ -839,13 +844,13 @@ void InspectorInstrumentation::addMessageToConsoleImpl(InstrumentingAgents& inst
     }
 }
 
-void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* state, const String& label)
+void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* state, const String& label)
 {
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
         consoleAgent->count(state, label);
 }
 
-void InspectorInstrumentation::consoleCountResetImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* state, const String& label)
+void InspectorInstrumentation::consoleCountResetImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* state, const String& label)
 {
     if (auto* consoleAgent = instrumentingAgents.webConsoleAgent())
         consoleAgent->countReset(state, label);
@@ -857,7 +862,7 @@ void InspectorInstrumentation::takeHeapSnapshotImpl(InstrumentingAgents& instrum
         consoleAgent->takeHeapSnapshot(title);
 }
 
-void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, JSC::ExecState* exec, const String& label)
+void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, JSC::JSGlobalObject* exec, const String& label)
 {
     if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled())
         return;
@@ -868,7 +873,7 @@ void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instr
         consoleAgent->startTiming(exec, label);
 }
 
-void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* exec, const String& label)
+void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label)
 {
     if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled())
         return;
@@ -877,7 +882,7 @@ void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents& instr
         consoleAgent->startTiming(exec, label);
 }
 
-void InspectorInstrumentation::logConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* exec, const String& label, Ref<Inspector::ScriptArguments>&& arguments)
+void InspectorInstrumentation::logConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label, Ref<Inspector::ScriptArguments>&& arguments)
 {
     if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled())
         return;
@@ -886,7 +891,7 @@ void InspectorInstrumentation::logConsoleTimingImpl(InstrumentingAgents& instrum
         consoleAgent->logTiming(exec, label, WTFMove(arguments));
 }
 
-void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, JSC::ExecState* exec, const String& label)
+void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, Frame& frame, JSC::JSGlobalObject* exec, const String& label)
 {
     if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled())
         return;
@@ -897,7 +902,7 @@ void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instru
         timelineAgent->timeEnd(frame, label);
 }
 
-void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* exec, const String& label)
+void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& label)
 {
     if (!instrumentingAgents.inspectorEnvironment().developerExtrasEnabled())
         return;
@@ -915,19 +920,19 @@ void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents& instrum
      }
 }
 
-void InspectorInstrumentation::startProfilingImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* exec, const String& title)
+void InspectorInstrumentation::startProfilingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& title)
 {
     if (InspectorTimelineAgent* timelineAgent = instrumentingAgents.inspectorTimelineAgent())
         timelineAgent->startFromConsole(exec, title);
 }
 
-void InspectorInstrumentation::stopProfilingImpl(InstrumentingAgents& instrumentingAgents, JSC::ExecState* exec, const String& title)
+void InspectorInstrumentation::stopProfilingImpl(InstrumentingAgents& instrumentingAgents, JSC::JSGlobalObject* exec, const String& title)
 {
     if (InspectorTimelineAgent* timelineAgent = instrumentingAgents.inspectorTimelineAgent())
         timelineAgent->stopFromConsole(exec, title);
 }
 
-void InspectorInstrumentation::consoleStartRecordingCanvasImpl(InstrumentingAgents& instrumentingAgents, CanvasRenderingContext& context, JSC::ExecState& exec, JSC::JSObject* options)
+void InspectorInstrumentation::consoleStartRecordingCanvasImpl(InstrumentingAgents& instrumentingAgents, CanvasRenderingContext& context, JSC::JSGlobalObject& exec, JSC::JSObject* options)
 {
     if (InspectorCanvasAgent* canvasAgent = instrumentingAgents.inspectorCanvasAgent())
         canvasAgent->consoleStartRecordingCanvas(context, exec, options);
@@ -1106,6 +1111,24 @@ InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForWebGPUDevic
     return instrumentingAgentsForContext(device.scriptExecutionContext());
 }
 #endif
+
+void InspectorInstrumentation::willApplyKeyframeEffectImpl(InstrumentingAgents& instrumentingAgents, Element& target, KeyframeEffect& effect, ComputedEffectTiming computedTiming)
+{
+    if (auto* animationAgent = instrumentingAgents.trackingInspectorAnimationAgent())
+        animationAgent->willApplyKeyframeEffect(target, effect, computedTiming);
+}
+
+void InspectorInstrumentation::didChangeWebAnimationEffectImpl(InstrumentingAgents& instrumentingAgents, WebAnimation& animation)
+{
+    if (auto* animationAgent = instrumentingAgents.trackingInspectorAnimationAgent())
+        animationAgent->didChangeWebAnimationEffect(animation);
+}
+
+void InspectorInstrumentation::willDestroyWebAnimationImpl(InstrumentingAgents& instrumentingAgents, WebAnimation& animation)
+{
+    if (auto* animationAgent = instrumentingAgents.trackingInspectorAnimationAgent())
+        animationAgent->willDestroyWebAnimation(animation);
+}
 
 #if ENABLE(RESOURCE_USAGE)
 void InspectorInstrumentation::didHandleMemoryPressureImpl(InstrumentingAgents& instrumentingAgents, Critical critical)

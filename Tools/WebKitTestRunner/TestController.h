@@ -207,6 +207,7 @@ public:
     void setShouldDownloadUndisplayableMIMETypes(bool value) { m_shouldDownloadUndisplayableMIMETypes = value; }
     void setShouldAllowDeviceOrientationAndMotionAccess(bool value) { m_shouldAllowDeviceOrientationAndMotionAccess = value; }
 
+    void setStatisticsEnabled(bool value);
     void setStatisticsDebugMode(bool value);
     void setStatisticsPrevalentResourceForDebugMode(WKStringRef hostName);
     void setStatisticsLastSeen(WKStringRef hostName, double seconds);
@@ -267,6 +268,8 @@ public:
 
     void terminateNetworkProcess();
     void terminateServiceWorkerProcess();
+
+    void resetQuota();
 
     void removeAllSessionCredentials();
 
@@ -496,6 +499,7 @@ private:
     bool m_usingServerMode { false };
     bool m_gcBetweenTests { false };
     bool m_shouldDumpPixelsForAllTests { false };
+    bool m_createdOtherPage { false };
     std::vector<std::string> m_paths;
     std::set<std::string> m_allowedHosts;
     WKRetainPtr<WKStringRef> m_injectedBundlePath;

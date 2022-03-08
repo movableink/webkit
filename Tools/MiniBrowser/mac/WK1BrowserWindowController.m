@@ -130,11 +130,16 @@ static BOOL areEssentiallyEqual(double a, double b)
     return (fabs(a - b) <= tolerance);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-implementations"
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
+#pragma GCC diagnostic pop
 {
     SEL action = [menuItem action];
 
     if (action == @selector(saveAsPDF:))
+        return NO;
+    if (action == @selector(saveAsWebArchive:))
         return NO;
 
     if (action == @selector(zoomIn:))

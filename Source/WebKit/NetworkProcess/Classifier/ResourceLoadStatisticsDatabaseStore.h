@@ -109,6 +109,7 @@ public:
     void setGrandfathered(const RegistrableDomain&, bool value) override;
     bool isGrandfathered(const RegistrableDomain&) const override;
 
+    void setIsScheduledForAllButCookieDataRemoval(const RegistrableDomain&, bool value);
     void setSubframeUnderTopFrameDomain(const SubFrameDomain&, const TopFrameDomain&) override;
     void setSubresourceUnderTopFrameDomain(const SubResourceDomain&, const TopFrameDomain&) override;
     void setSubresourceUniqueRedirectTo(const SubResourceDomain&, const RedirectDomain&) override;
@@ -123,7 +124,7 @@ public:
     void grantStorageAccess(SubFrameDomain&&, TopFrameDomain&&, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebCore::StorageAccessPromptWasShown, CompletionHandler<void(WebCore::StorageAccessWasGranted)>&&) override;
 
     void logFrameNavigation(const NavigatedToDomain&, const TopFrameDomain&, const NavigatedFromDomain&, bool isRedirect, bool isMainFrame) override;
-    void logUserInteraction(const TopFrameDomain&) override;
+    void logUserInteraction(const TopFrameDomain&, CompletionHandler<void()>&&) override;
     void logCrossSiteLoadWithLinkDecoration(const NavigatedFromDomain&, const NavigatedToDomain&) override;
 
     void clearUserInteraction(const RegistrableDomain&) override;
@@ -131,8 +132,15 @@ public:
 
     void setLastSeen(const RegistrableDomain&, Seconds) override;
     bool isCorrectSubStatisticsCount(const RegistrableDomain&, const TopFrameDomain&);
+    void resourceToString(StringBuilder&, const String&) const;
 
 private:
+    void openITPDatabase();
+    bool isCorrectTableSchema();
+    void openAndDropOldDatabaseIfNecessary();
+    String getDomainStringFromDomainID(unsigned) const;
+    String getSubStatisticStatement(const String&) const;
+    void appendSubStatisticList(StringBuilder&, const String& tableName, const String& domain) const;
     void mergeStatistic(const ResourceLoadStatistics&);
     void merge(WebCore::SQLiteStatement&, const ResourceLoadStatistics&);
     void clearDatabaseContents();
@@ -157,15 +165,16 @@ private:
     Vector<RegistrableDomain> domainsToBlockButKeepCookiesFor() const;
     Vector<RegistrableDomain> domainsWithUserInteractionAsFirstParty() const;
 
-    struct PrevalentDomainData {
+    struct DomainData {
         unsigned domainID;
         RegistrableDomain registrableDomain;
         WallTime mostRecentUserInteractionTime;
         bool hadUserInteraction;
         bool grandfathered;
+        bool isScheduledForAllButCookieDataRemoval;
     };
-    Vector<PrevalentDomainData> prevalentDomains() const;
-    bool hasHadUnexpiredRecentUserInteraction(const PrevalentDomainData&, OperatingDatesWindow);
+    Vector<DomainData> domains() const;
+    bool hasHadUnexpiredRecentUserInteraction(const DomainData&, OperatingDatesWindow);
     Vector<unsigned> findExpiredUserInteractions() const;
     void clearExpiredUserInteractions();
     void clearGrandfathering(Vector<unsigned>&&);
@@ -185,8 +194,7 @@ private:
 
     bool predicateValueForDomain(WebCore::SQLiteStatement&, const RegistrableDomain&) const;
 
-    enum class CookieTreatmentResult { Allow, BlockAndKeep, BlockAndPurge };
-    CookieTreatmentResult cookieTreatmentForOrigin(const RegistrableDomain&) const;
+    CookieAccess cookieAccess(const RegistrableDomain&) const;
     
     void setPrevalentResource(const RegistrableDomain&, ResourceLoadPrevalence);
     unsigned recursivelyFindNonPrevalentDomainsThatRedirectedToThisDomain(unsigned primaryDomainID, StdSet<unsigned>& nonPrevalentRedirectionSources, unsigned numberOfRecursiveCalls);
@@ -198,8 +206,8 @@ private:
     void pruneStatisticsIfNeeded() override;
     enum class AddedRecord { No, Yes };
     std::pair<AddedRecord, unsigned> ensureResourceStatisticsForRegistrableDomain(const RegistrableDomain&);
-    bool shouldRemoveAllWebsiteDataFor(const PrevalentDomainData&, bool shouldCheckForGrandfathering);
-    bool shouldRemoveAllButCookiesFor(const PrevalentDomainData&, bool shouldCheckForGrandfathering) const;
+    bool shouldRemoveAllWebsiteDataFor(const DomainData&, bool shouldCheckForGrandfathering);
+    bool shouldRemoveAllButCookiesFor(const DomainData&, bool shouldCheckForGrandfathering);
     Vector<std::pair<RegistrableDomain, WebsiteDataToRemove>> registrableDomainsToRemoveWebsiteDataFor() override;
     bool isDatabaseStore() const final { return true; }
 
@@ -216,6 +224,7 @@ private:
     WebCore::SQLiteStatement m_insertTopLevelDomainStatement;
     mutable WebCore::SQLiteStatement m_domainIDFromStringStatement;
     mutable WebCore::SQLiteStatement m_topFrameLinkDecorationsFromExists;
+    mutable WebCore::SQLiteStatement m_topFrameLoadedThirdPartyScriptsExists;
     mutable WebCore::SQLiteStatement m_subframeUnderTopFrameDomainExists;
     mutable WebCore::SQLiteStatement m_subresourceUnderTopFrameDomainExists;
     mutable WebCore::SQLiteStatement m_subresourceUniqueRedirectsToExists;
@@ -229,11 +238,15 @@ private:
     WebCore::SQLiteStatement m_clearPrevalentResourceStatement;
     mutable WebCore::SQLiteStatement m_hadUserInteractionStatement;
     WebCore::SQLiteStatement m_updateGrandfatheredStatement;
+    mutable WebCore::SQLiteStatement m_updateIsScheduledForAllButCookieDataRemovalStatement;
     mutable WebCore::SQLiteStatement m_isGrandfatheredStatement;
     mutable WebCore::SQLiteStatement m_findExpiredUserInteractionStatement;
     mutable WebCore::SQLiteStatement m_countPrevalentResourcesStatement;
     mutable WebCore::SQLiteStatement m_countPrevalentResourcesWithUserInteractionStatement;
     mutable WebCore::SQLiteStatement m_countPrevalentResourcesWithoutUserInteractionStatement;
+    mutable WebCore::SQLiteStatement m_getResourceDataByDomainNameStatement;
+    mutable WebCore::SQLiteStatement m_getAllDomainsStatement;
+    mutable WebCore::SQLiteStatement m_domainStringFromDomainIDStatement;
     PAL::SessionID m_sessionID;
 };
 

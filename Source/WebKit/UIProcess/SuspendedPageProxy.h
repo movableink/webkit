@@ -28,10 +28,14 @@
 #include "Connection.h"
 #include "ProcessThrottler.h"
 #include "WebBackForwardListItem.h"
-#include "WebPageProxyMessages.h"
+#include "WebPageProxyMessagesReplies.h"
 #include <WebCore/FrameIdentifier.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class RegistrableDomain;
+}
 
 namespace WebKit {
 
@@ -93,7 +97,7 @@ private:
     CompletionHandler<void(SuspendedPageProxy*)> m_readyToUnsuspendHandler;
     RunLoop::Timer<SuspendedPageProxy> m_suspensionTimeoutTimer;
 #if PLATFORM(IOS_FAMILY)
-    ProcessThrottler::BackgroundActivityToken m_suspensionToken;
+    std::unique_ptr<ProcessThrottler::BackgroundActivity> m_suspensionActivity;
 #endif
 };
 

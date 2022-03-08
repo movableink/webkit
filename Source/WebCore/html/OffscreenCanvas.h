@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(OFFSCREEN_CANVAS)
+
 #include "AffineTransform.h"
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
@@ -39,6 +41,7 @@
 
 namespace WebCore {
 
+class CanvasRenderingContext;
 class ImageBitmap;
 class WebGLRenderingContext;
 
@@ -63,27 +66,19 @@ public:
     static Ref<OffscreenCanvas> create(ScriptExecutionContext&, unsigned width, unsigned height);
     virtual ~OffscreenCanvas();
 
-    unsigned width() const final;
     void setWidth(unsigned);
-    unsigned height() const final;
     void setHeight(unsigned);
 
-    const IntSize& size() const final;
-    void setSize(const IntSize&) final;
+    CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
 #if ENABLE(WEBGL)
-    ExceptionOr<OffscreenRenderingContext> getContext(JSC::ExecState&, RenderingContextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<OffscreenRenderingContext> getContext(JSC::JSGlobalObject&, RenderingContextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
 #endif
     RefPtr<ImageBitmap> transferToImageBitmap();
     // void convertToBlob(ImageEncodeOptions options);
 
-    GraphicsContext* drawingContext() const final { return nullptr; }
-    GraphicsContext* existingDrawingContext() const final { return nullptr; }
-
-    void makeRenderingResultsAvailable() final { }
     void didDraw(const FloatRect&) final { }
 
-    AffineTransform baseTransform() const final { return { }; }
     Image* copiedImage() const final { return nullptr; }
 
     using RefCounted::ref;
@@ -105,9 +100,13 @@ private:
     void refCanvasBase() final { ref(); }
     void derefCanvasBase() final { deref(); }
 
-    IntSize m_size;
+    void createImageBuffer() const final;
+
+    std::unique_ptr<CanvasRenderingContext> m_context;
 };
 
 }
 
 SPECIALIZE_TYPE_TRAITS_CANVAS(WebCore::OffscreenCanvas, isOffscreenCanvas())
+
+#endif

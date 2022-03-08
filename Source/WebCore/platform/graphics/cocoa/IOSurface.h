@@ -29,10 +29,9 @@
 
 #include <objc/objc.h>
 #include <pal/spi/cocoa/IOSurfaceSPI.h>
-#include "GraphicsContext.h"
 #include "IntSize.h"
 
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST) && !PLATFORM(IOS_FAMILY_SIMULATOR)
 #define HAVE_IOSURFACE_RGB10 1
 #endif
 
@@ -43,6 +42,7 @@ class TextStream;
 
 namespace WebCore {
 
+class GraphicsContext;
 class HostWindow;
     
 #if USE(IOSURFACE_CANVAS_BACKING_STORE)
@@ -103,6 +103,8 @@ public:
 #if USE(IOSURFACE_CANVAS_BACKING_STORE)
     static std::unique_ptr<IOSurface> createFromImageBuffer(std::unique_ptr<ImageBuffer>);
 #endif
+
+    WEBCORE_EXPORT ~IOSurface();
 
     WEBCORE_EXPORT static void moveToPool(std::unique_ptr<IOSurface>&&);
 

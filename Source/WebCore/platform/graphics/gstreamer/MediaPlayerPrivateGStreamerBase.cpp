@@ -560,7 +560,6 @@ bool MediaPlayerPrivateGStreamerBase::ensureGstGLContext()
 // Returns the size of the video
 FloatSize MediaPlayerPrivateGStreamerBase::naturalSize() const
 {
-    ASSERT(isMainThread());
 #if USE(GSTREAMER_HOLEPUNCH)
     // When using the holepuch we may not be able to get the video frames size, so we can't use
     // it. But we need to report some non empty naturalSize for the player's GraphicsLayer
@@ -575,7 +574,6 @@ FloatSize MediaPlayerPrivateGStreamerBase::naturalSize() const
         return m_videoSize;
 
     auto sampleLocker = holdLock(m_sampleMutex);
-
     if (!GST_IS_SAMPLE(m_sample.get()))
         return FloatSize();
 
@@ -583,14 +581,6 @@ FloatSize MediaPlayerPrivateGStreamerBase::naturalSize() const
     if (!caps)
         return FloatSize();
 
-    m_videoSize = naturalSizeFromCaps(caps);
-    GST_DEBUG_OBJECT(pipeline(), "Natural size: %.0fx%.0f", m_videoSize.width(), m_videoSize.height());
-    return m_videoSize;
-}
-
-FloatSize MediaPlayerPrivateGStreamerBase::naturalSizeFromCaps(GstCaps* caps) const
-{
-    ASSERT(caps);
 
     // TODO: handle possible clean aperture data. See
     // https://bugzilla.gnome.org/show_bug.cgi?id=596571
@@ -641,7 +631,9 @@ FloatSize MediaPlayerPrivateGStreamerBase::naturalSizeFromCaps(GstCaps* caps) co
         height = static_cast<guint64>(originalSize.height());
     }
 
-    return FloatSize(static_cast<int>(width), static_cast<int>(height));
+    GST_DEBUG_OBJECT(pipeline(), "Natural size: %" G_GUINT64_FORMAT "x%" G_GUINT64_FORMAT, width, height);
+    m_videoSize = FloatSize(static_cast<int>(width), static_cast<int>(height));
+    return m_videoSize;
 }
 
 void MediaPlayerPrivateGStreamerBase::setVolume(float volume)
@@ -693,6 +685,11 @@ MediaPlayer::NetworkState MediaPlayerPrivateGStreamerBase::networkState() const
 MediaPlayer::ReadyState MediaPlayerPrivateGStreamerBase::readyState() const
 {
     return m_readyState;
+}
+
+void MediaPlayerPrivateGStreamerBase::sizeChanged()
+{
+    notImplemented();
 }
 
 void MediaPlayerPrivateGStreamerBase::setMuted(bool mute)
@@ -827,28 +824,12 @@ void MediaPlayerPrivateGStreamerBase::repaint()
     m_drawCondition.notifyOne();
 }
 
-bool MediaPlayerPrivateGStreamerBase::doSamplesHaveDifferentNaturalSizes(GstSample* sampleA, GstSample* sampleB) const
-{
-    ASSERT(sampleA);
-    ASSERT(sampleB);
-
-    GstCaps* capsA = gst_sample_get_caps(sampleA);
-    GstCaps* capsB = gst_sample_get_caps(sampleB);
-
-    if (LIKELY(capsA == capsB))
-        return false;
-
-    return naturalSizeFromCaps(capsA) != naturalSizeFromCaps(capsB);
-}
-
 void MediaPlayerPrivateGStreamerBase::triggerRepaint(GstSample* sample)
 {
     bool triggerResize;
     {
         auto sampleLocker = holdLock(m_sampleMutex);
-        triggerResize = !m_sample || doSamplesHaveDifferentNaturalSizes(m_sample.get(), sample);
-        if (triggerResize)
-            m_videoSize = FloatSize(); // Force re-calculation in next call to naturalSize().
+        triggerResize = !m_sample;
         m_sample = sample;
     }
 
@@ -1219,7 +1200,26 @@ GstElement* MediaPlayerPrivateGStreamerBase::createVideoSinkGL()
 
     gst_bin_add_many(GST_BIN(videoSink), upload, colorconvert, appsink, nullptr);
 
-    GRefPtr<GstCaps> caps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) " GST_GL_CAPS_FORMAT));
+    // Workaround until we can depend on GStreamer 1.16.2.
+    // https://gitlab.freedesktop.org/gstreamer/gst-plugins-base/commit/8d32de090554cf29fe359f83aa46000ba658a693
+    // Forcing a color conversion to RGBA here allows glupload to internally use
+    // an uploader that adds a VideoMeta, through the TextureUploadMeta caps
+    // feature, without needing the patch above. However this specific caps
+    // feature is going to be removed from GStreamer so it is considered a
+    // short-term workaround. This code path most likely will have a negative
+    // performance impact on embedded platforms as well. Downstream embedders
+    // are highly encouraged to cherry-pick the patch linked above in their BSP
+    // and set the WEBKIT_GST_NO_RGBA_CONVERSION environment variable until
+    // GStreamer 1.16.2 is released.
+    // See also https://bugs.webkit.org/show_bug.cgi?id=201422
+    GRefPtr<GstCaps> caps;
+    if (webkitGstCheckVersion(1, 16, 2) || getenv("WEBKIT_GST_NO_RGBA_CONVERSION"))
+        caps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) " GST_GL_CAPS_FORMAT));
+    else {
+        GST_INFO_OBJECT(pipeline(), "Forcing RGBA as GStreamer is not new enough.");
+        caps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) RGBA"));
+    }
+
     gst_caps_set_features(caps.get(), 0, gst_caps_features_new(GST_CAPS_FEATURE_MEMORY_GL_MEMORY, nullptr));
     g_object_set(appsink, "caps", caps.get(), nullptr);
 

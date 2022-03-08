@@ -117,7 +117,7 @@ public:
     void setShouldConfigureJSCForTesting(bool value) { m_shouldConfigureJSCForTesting = value; }
     bool isJITEnabled() const { return m_isJITEnabled; }
     void setJITEnabled(bool enabled) { m_isJITEnabled = enabled; }
-    
+
 #if PLATFORM(IOS_FAMILY)
     const WTF::String& ctDataConnectionServiceType() const { return m_ctDataConnectionServiceType; }
     void setCTDataConnectionServiceType(const WTF::String& ctDataConnectionServiceType) { m_ctDataConnectionServiceType = ctDataConnectionServiceType; }
@@ -141,7 +141,7 @@ public:
 
     const WTF::String& customWebContentServiceBundleIdentifier() const { return m_customWebContentServiceBundleIdentifier; }
     void setCustomWebContentServiceBundleIdentifier(const WTF::String& customWebContentServiceBundleIdentifier) { m_customWebContentServiceBundleIdentifier = customWebContentServiceBundleIdentifier; }
-    
+
 #if PLATFORM(COCOA)
     bool suppressesConnectionTerminationOnSystemChange() const { return m_suppressesConnectionTerminationOnSystemChange; }
     void setSuppressesConnectionTerminationOnSystemChange(bool suppressesConnectionTerminationOnSystemChange) { m_suppressesConnectionTerminationOnSystemChange = suppressesConnectionTerminationOnSystemChange; }
@@ -179,7 +179,6 @@ private:
 #if PLATFORM(IOS_FAMILY)
     WTF::String m_ctDataConnectionServiceType;
 #endif
-
 #if PLATFORM(COCOA)
     bool m_suppressesConnectionTerminationOnSystemChange { false };
 #endif

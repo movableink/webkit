@@ -29,6 +29,7 @@
 
 #include <WebCore/FetchIdentifier.h>
 #include <WebCore/ResourceRequest.h>
+#include <WebCore/ServiceWorkerClientIdentifier.h>
 #include <WebCore/ServiceWorkerTypes.h>
 #include <WebCore/Timer.h>
 #include <pal/SessionID.h>
@@ -52,13 +53,10 @@ namespace WebKit {
 class NetworkResourceLoader;
 class WebSWServerToContextConnection;
 
-class NetworkResourceLoader;
-class WebSWServerToContextConnection;
-
 class ServiceWorkerFetchTask : public CanMakeWeakPtr<ServiceWorkerFetchTask> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ServiceWorkerFetchTask(PAL::SessionID, NetworkResourceLoader&, WebCore::SWServerConnectionIdentifier, WebCore::ServiceWorkerIdentifier);
+    ServiceWorkerFetchTask(NetworkResourceLoader&, WebCore::ResourceRequest&&, WebCore::SWServerConnectionIdentifier, WebCore::ServiceWorkerIdentifier, WebCore::ServiceWorkerRegistrationIdentifier);
     ~ServiceWorkerFetchTask();
 
     void start(WebSWServerToContextConnection&);
@@ -74,7 +72,10 @@ public:
 
     void didNotHandle();
 
+    WebCore::ResourceRequest takeRequest() { return WTFMove(m_currentRequest); }
     bool wasHandled() const { return m_wasHandled; }
+
+    void contextClosed();
 
 private:
     void didReceiveRedirectResponse(WebCore::ResourceResponse&&);
@@ -84,14 +85,13 @@ private:
     void didFinish();
     void didFail(const WebCore::ResourceError&);
 
-    void startFetch(WebCore::ResourceRequest&&, WebSWServerToContextConnection&);
+    void startFetch();
 
     void timeoutTimerFired();
 
     template<typename Message> bool sendToServiceWorker(Message&&);
     template<typename Message> bool sendToClient(Message&&);
 
-    PAL::SessionID m_sessionID;
     NetworkResourceLoader& m_loader;
     WeakPtr<WebSWServerToContextConnection> m_serviceWorkerConnection;
     WebCore::FetchIdentifier m_fetchIdentifier;

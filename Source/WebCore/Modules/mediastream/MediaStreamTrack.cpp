@@ -62,7 +62,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamTrack);
 
 Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, Ref<MediaStreamTrackPrivate>&& privateTrack)
 {
-    return adoptRef(*new MediaStreamTrack(context, WTFMove(privateTrack)));
+    auto track = adoptRef(*new MediaStreamTrack(context, WTFMove(privateTrack)));
+    track->suspendIfNeeded();
+    return track;
 }
 
 MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStreamTrackPrivate>&& privateTrack)
@@ -73,7 +75,6 @@ MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStr
     , m_mediaSession(PlatformMediaSession::create(*this))
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    suspendIfNeeded();
 
     m_private->addObserver(*this);
 
@@ -318,7 +319,7 @@ static LongRange capabilityIntRange(const CapabilityValueOrRange& value)
 static Vector<String> capabilityStringVector(const Vector<RealtimeMediaSourceSettings::VideoFacingMode>& modes)
 {
     Vector<String> result;
-    result.reserveCapacity(modes.size());
+    result.reserveInitialCapacity(modes.size());
     for (auto& mode : modes)
         result.uncheckedAppend(RealtimeMediaSourceSettings::facingMode(mode));
     return result;
@@ -327,9 +328,10 @@ static Vector<String> capabilityStringVector(const Vector<RealtimeMediaSourceSet
 static Vector<bool> capabilityBooleanVector(RealtimeMediaSourceCapabilities::EchoCancellation cancellation)
 {
     Vector<bool> result;
-    result.reserveCapacity(2);
+    result.reserveInitialCapacity(2);
     result.uncheckedAppend(true);
-    result.uncheckedAppend(cancellation == RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
+    if (cancellation == RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite)
+        result.uncheckedAppend(false);
     return result;
 }
 
@@ -556,15 +558,23 @@ const char* MediaStreamTrack::activeDOMObjectName() const
     return "MediaStreamTrack";
 }
 
-// FIXME: This should never prevent entering the back/forward cache.
-bool MediaStreamTrack::shouldPreventEnteringBackForwardCache_DEPRECATED() const
+void MediaStreamTrack::suspend(ReasonForSuspension reason)
 {
-    return hasPendingActivity();
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    // We only end capture tracks, other tracks (capture canvas, remote tracks) can still continue working.
+    if (m_ended || !isCaptureTrack())
+        return;
+
+    stopTrack();
+
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 bool MediaStreamTrack::hasPendingActivity() const
 {
-    return !m_ended;
+    return !m_ended || ActiveDOMObject::hasPendingActivity();
 }
 
 AudioSourceProvider* MediaStreamTrack::audioSourceProvider()

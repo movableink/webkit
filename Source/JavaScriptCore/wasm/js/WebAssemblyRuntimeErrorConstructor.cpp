@@ -49,18 +49,18 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyRuntimeError(JSGlobalO
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue message = callFrame->argument(0);
-    String messageString = message.isUndefined() ? String() : message.toWTFString(callFrame);
+    String messageString = message.isUndefined() ? String() : message.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    auto* structure = InternalFunction::createSubclassStructure(callFrame, callFrame->newTarget(), globalObject->webAssemblyRuntimeErrorStructure());
+    auto* structure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), globalObject->webAssemblyRuntimeErrorStructure());
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    return JSValue::encode(JSWebAssemblyRuntimeError::create(callFrame, vm, structure, WTFMove(messageString)));
+    return JSValue::encode(JSWebAssemblyRuntimeError::create(globalObject, vm, structure, WTFMove(messageString)));
 }
 
 static EncodedJSValue JSC_HOST_CALL callJSWebAssemblyRuntimeError(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     JSValue message = callFrame->argument(0);
     Structure* errorStructure = globalObject->webAssemblyRuntimeErrorStructure();
-    return JSValue::encode(ErrorInstance::create(callFrame, errorStructure, message, nullptr, TypeNothing, false));
+    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 WebAssemblyRuntimeErrorConstructor* WebAssemblyRuntimeErrorConstructor::create(VM& vm, Structure* structure, WebAssemblyRuntimeErrorPrototype* thisPrototype)
@@ -77,7 +77,7 @@ Structure* WebAssemblyRuntimeErrorConstructor::createStructure(VM& vm, JSGlobalO
 
 void WebAssemblyRuntimeErrorConstructor::finishCreation(VM& vm, WebAssemblyRuntimeErrorPrototype* prototype)
 {
-    Base::finishCreation(vm, "RuntimeError"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, "RuntimeError"_s, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }

@@ -69,12 +69,14 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     bool shouldLogCookieInformation = false;
     bool enableResourceLoadStatisticsDebugMode = false;
-    bool enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction = false;
-    bool enableLegacyTLS = [defaults boolForKey:@"WebKitEnableLegacyTLS"];
+    bool enableThirdPartyCookieBlocking = false;
+    bool enableLegacyTLS = true;
+    if (id value = [defaults objectForKey:@"WebKitEnableLegacyTLS"])
+        enableLegacyTLS = [value boolValue];
     WebCore::RegistrableDomain resourceLoadStatisticsManualPrevalentResource { };
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     enableResourceLoadStatisticsDebugMode = [defaults boolForKey:@"ITPDebugMode"];
-    enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction = [defaults boolForKey:[NSString stringWithFormat:@"InternalDebug%@", WebPreferencesKey::isThirdPartyCookieBlockingOnSitesWithoutUserInteractionEnabledKey().createCFString().get()]];
+    enableThirdPartyCookieBlocking = [defaults boolForKey:[NSString stringWithFormat:@"Experimental%@", WebPreferencesKey::isThirdPartyCookieBlockingEnabledKey().createCFString().get()]];
     auto* manualPrevalentResource = [defaults stringForKey:@"ITPManualPrevalentResource"];
     if (manualPrevalentResource) {
         URL url { URL(), manualPrevalentResource };
@@ -138,7 +140,7 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
         hasStatisticsTestingCallback(),
         shouldIncludeLocalhostInResourceLoadStatistics,
         enableResourceLoadStatisticsDebugMode,
-        enableThirdPartyCookieBlockingOnSitesWithoutUserInteraction,
+        enableThirdPartyCookieBlocking,
         m_configuration->deviceManagementRestrictionsEnabled(),
         m_configuration->allLoadsBlockedByDeviceManagementRestrictionsForTesting(),
         WTFMove(resourceLoadStatisticsManualPrevalentResource),
@@ -148,6 +150,7 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
         m_configuration->fastServerTrustEvaluationEnabled(),
         m_configuration->networkCacheSpeculativeValidationEnabled(),
         m_configuration->testingSessionEnabled(),
+        m_configuration->staleWhileRevalidateEnabled(),
         m_configuration->testSpeedMultiplier(),
         m_configuration->suppressesConnectionTerminationOnSystemChange(),
     };
@@ -182,12 +185,15 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     if (!parameters.serviceWorkerRegistrationDirectory.isEmpty())
         SandboxExtension::createHandleForReadWriteDirectory(parameters.serviceWorkerRegistrationDirectory, parameters.serviceWorkerRegistrationDirectoryExtensionHandle);
     parameters.serviceWorkerProcessTerminationDelayEnabled = m_configuration->serviceWorkerProcessTerminationDelayEnabled();
-    parameters.serviceWorkerRegisteredSchemes = m_configuration->serviceWorkerRegisteredSchemes();
 #endif
 
     parameters.localStorageDirectory = resolvedLocalStorageDirectory();
     if (!parameters.localStorageDirectory.isEmpty())
         SandboxExtension::createHandleForReadWriteDirectory(parameters.localStorageDirectory, parameters.localStorageDirectoryExtensionHandle);
+
+    parameters.cacheStorageDirectory = cacheStorageDirectory();
+    if (!parameters.cacheStorageDirectory.isEmpty())
+        SandboxExtension::createHandleForReadWriteDirectory(parameters.cacheStorageDirectory, parameters.cacheStorageDirectoryExtensionHandle);
 
     parameters.perOriginStorageQuota = perOriginStorageQuota();
     parameters.perThirdPartyOriginStorageQuota = perThirdPartyOriginStorageQuota();

@@ -613,6 +613,10 @@ public:
         @NO, WebKitPictureInPictureAPIEnabledKey,
 #endif
 
+#if ENABLE(VIDEO_TRACK)
+        @NO, WebKitGenericCueAPIEnabledKey,
+#endif
+
 #if ENABLE(MEDIA_STREAM)
         @NO, WebKitMockCaptureDevicesEnabledPreferenceKey,
         @YES, WebKitMockCaptureDevicesPromptEnabledPreferenceKey,
@@ -3344,6 +3348,16 @@ static NSString *classIBCreatorID = nil;
     [self _setBoolValue:flag forKey:WebKitPictureInPictureAPIEnabledKey];
 }
 
+- (BOOL)genericCueAPIEnabled
+{
+    return [self _boolValueForKey:WebKitGenericCueAPIEnabledKey];
+}
+
+- (void)setGenericCueAPIEnabled:(BOOL)flag
+{
+    [self _setBoolValue:flag forKey:WebKitGenericCueAPIEnabledKey];
+}
+
 - (BOOL)viewportFitEnabled
 {
     return [self _boolValueForKey:WebKitViewportFitEnabledPreferenceKey];
@@ -3554,6 +3568,15 @@ static NSString *classIBCreatorID = nil;
     [self _setBoolValue:flag forKey:WebKitCSSShadowPartsEnabledPreferenceKey];
 }
 
+- (BOOL)remotePlaybackEnabled
+{
+    return [self _boolValueForKey:WebKitRemotePlaybackEnabledPreferenceKey];
+}
+
+- (void)setRemotePlaybackEnabled:(BOOL)remotePlaybackEnabled
+{
+    [self _setBoolValue:remotePlaybackEnabled forKey:WebKitRemotePlaybackEnabledPreferenceKey];
+}
 @end
 
 @implementation WebPreferences (WebInternal)

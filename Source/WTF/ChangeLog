@@ -1,3 +1,677 @@
+2019-11-22  Brent Fulgham  <bfulgham@apple.com>
+
+        Unreviewed FTW build fix after r252687.
+
+        * wtf/PlatformFTW.cmake:
+
+2019-11-22  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK][WPE] RemoteInspector: use sockets instead of DBus
+        https://bugs.webkit.org/show_bug.cgi?id=204503
+
+        Reviewed by Žan Doberšek.
+
+        Add SocketConnection class.
+
+        * wtf/PlatformGTK.cmake:
+        * wtf/PlatformWPE.cmake:
+        * wtf/glib/GSocketMonitor.cpp: Renamed from Source/WebKit/Platform/IPC/glib/GSocketMonitor.cpp.
+        (WTF::GSocketMonitor::start):
+        * wtf/glib/GSocketMonitor.h: Renamed from Source/WebKit/Platform/IPC/glib/GSocketMonitor.h.
+        (WTF::GSocketMonitor::isActive const):
+        * wtf/glib/GTypedefs.h:
+        * wtf/glib/GUniquePtr.h:
+        * wtf/glib/SocketConnection.cpp: Added.
+        (WTF::SocketConnection::SocketConnection):
+        (WTF::SocketConnection::~SocketConnection):
+        (WTF::SocketConnection::read):
+        (WTF::SocketConnection::readMessage):
+        (WTF::SocketConnection::sendMessage):
+        (WTF::SocketConnection::write):
+        (WTF::SocketConnection::waitForSocketWritability):
+        (WTF::SocketConnection::close):
+        (WTF::SocketConnection::didClose):
+        * wtf/glib/SocketConnection.h: Added.
+        (WTF::SocketConnection::create):
+        (WTF::SocketConnection::isClosed const):
+
+2019-11-21  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Unreviewed, rolling in again, regression is not caused by it
+        https://bugs.webkit.org/show_bug.cgi?id=202471
+
+        * wtf/text/StringCommon.h:
+        (WTF::findCommon):
+
+2019-11-21  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r252683 and r252721.
+        https://bugs.webkit.org/show_bug.cgi?id=204475
+
+        13% regression in JetStream2/prepack-wtb (Requested by
+        yusukesuzuki on #webkit).
+
+        Reverted changesets:
+
+        "Implement String.prototype.replaceAll"
+        https://bugs.webkit.org/show_bug.cgi?id=202471
+        https://trac.webkit.org/changeset/252683
+
+        "Unreviewed, address Darin's feedback on r252683."
+        https://trac.webkit.org/changeset/252721
+
+2019-11-21  Tuomas Karkkainen  <tuomas.webkit@apple.com>
+
+        add ASSERT_NOT_REACHED_WITH_MESSAGE and RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE
+        https://bugs.webkit.org/show_bug.cgi?id=204445
+
+        Reviewed by Antti Koivisto.
+
+        Add assertions that combine ASSERT_NOT_REACHED and ASSERT_WITH_MESSAGE.
+
+        * wtf/Assertions.h:
+
+2019-11-20  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Unreviewed, address Darin's feedback on r252683.
+
+        * wtf/text/StringCommon.h:
+        (WTF::findCommon):
+
+2019-11-20  ChangSeok Oh  <changseok@webkit.org>
+
+        [GTK] Add ANGLE backend to GTK port
+        https://bugs.webkit.org/show_bug.cgi?id=199060
+
+        Reviewed by Žan Doberšek.
+
+        The GTK port uses TEXTURE_MAPPER that has a gl context for accelerated rendering,
+        and ANGLE has an egl context for WebGL. We want to make both live together
+        so an exception is made where TEXTURE_MAPPER is enabled.
+
+        * wtf/Platform.h:
+
+2019-11-20  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Win] Implement WTF::ThreadSpecific in WTF::Thread
+        https://bugs.webkit.org/show_bug.cgi?id=204341
+
+        Reviewed by Brent Fulgham and Yusuke Suzuki.
+
+        Thread::destructTLS had a tricky code to defer destroying
+        WTF::Thread in TLS in order to ensure WTF::Thread is destructed
+        after other ThreadSpecific are destructed, which is a part of
+        cause of nasty hanging issue in the process termination (Bug 204192).
+
+        This change implements WTF::ThreadSpecific in WTF::Thread by
+        adding a new class Thread::SpecificStorage to manage TLS. Simplify
+        Thread::destructTLS. Remove threadMapMutex in ThreadingWin.cpp
+
+        * wtf/PlatformWin.cmake:
+        * wtf/ThreadSpecific.h:
+        (WTF::canBeGCThread>::ThreadSpecific):
+        (WTF::canBeGCThread>::get):
+        (WTF::canBeGCThread>::setInTLS):
+        (WTF::canBeGCThread>::destroy):
+        (WTF::canBeGCThread>::~ThreadSpecific): Deleted.
+        * wtf/Threading.h:
+        (WTF::Thread::specificStorage):
+        (WTF::Thread::current):
+        * wtf/win/ThreadSpecificWin.cpp: Removed.
+        * wtf/win/ThreadingWin.cpp:
+        (WTF::Thread::initializeTLSKey):
+        (WTF::Thread::initializeTLS):
+        (WTF::Thread::destructTLS):
+        (WTF::Thread::SpecificStorage::allocateKey):
+        (WTF::Thread::SpecificStorage::get):
+        (WTF::Thread::SpecificStorage::set):
+        (WTF::Thread::SpecificStorage::destroySlots):
+        (): Deleted.
+        (WTF::Thread::currentDying): Deleted.
+        (WTF::Thread::get): Deleted.
+
+2019-11-19  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Implement String.prototype.replaceAll
+        https://bugs.webkit.org/show_bug.cgi?id=202471
+
+        Reviewed by Yusuke Suzuki.
+
+        * wtf/text/StringCommon.h:
+        (WTF::findCommon):
+        Fix logic: "start > length" early out should come before "empty search string" early out.
+
+2019-11-19  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [IndexedDB] IndexedDB's threading assertion should respect Web thread
+        https://bugs.webkit.org/show_bug.cgi?id=204346
+
+        Reviewed by Daniel Bates.
+
+        * wtf/MainThread.cpp:
+        (WTF::canCurrentThreadAccessThreadLocalData):
+        (WTF::canAccessThreadLocalDataForThread): Deleted.
+        * wtf/MainThread.h:
+        * wtf/cocoa/MainThreadCocoa.mm:
+        (WTF::canCurrentThreadAccessThreadLocalData):
+        (WTF::canAccessThreadLocalDataForThread): Deleted.
+
+2019-11-18  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Remove self-defined C++14 features in StdLibExtras.h
+        https://bugs.webkit.org/show_bug.cgi?id=204220
+
+        Reviewed by Ross Kirsling.
+
+        Remove std::conjunction, std::in_place_t and std::make_unique definitions.
+        Remove unsued std::clz.
+
+        * wtf/StdLibExtras.h:
+        (std::make_unique): Deleted.
+        (std::exchange): Deleted.
+        (std::clz): Deleted.
+
+2019-11-18  Alex Christensen  <achristensen@webkit.org>
+
+        Use SecTrustEvaluateWithError instead of SecTrustEvaluate where available
+        https://bugs.webkit.org/show_bug.cgi?id=204159
+        <rdar://problem/45894288>
+
+        Reviewed by Darin Adler.
+
+        * wtf/Platform.h:
+
+2019-11-15  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Remove index-masking on ScopedArguments and put it in IsoSubspace
+        https://bugs.webkit.org/show_bug.cgi?id=204269
+
+        Reviewed by Saam Barati.
+
+        * wtf/MathExtras.h:
+        (WTF::computeIndexingMask): Deleted.
+        (WTF::preciseIndexMaskShiftForSize): Deleted.
+        (WTF::preciseIndexMaskShift): Deleted.
+        (WTF::opaque): Deleted.
+        (WTF::preciseIndexMaskPtr): Deleted.
+
+2019-11-14  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] BlockDirectory's bits should be compact
+        https://bugs.webkit.org/show_bug.cgi?id=204149
+
+        Reviewed by Robin Morisset.
+
+        * wtf/FastBitVector.h:
+        (WTF::fastBitVectorArrayLength):
+        (WTF::FastBitVectorImpl::unsafeWords):
+        (WTF::FastBitVectorImpl::unsafeWords const):
+        (WTF::FastBitReference::FastBitReference):
+        (WTF::FastBitReference::operator bool const):
+        (WTF::FastBitReference::operator=):
+        (WTF::FastBitVector::at):
+        (WTF::FastBitVector::operator[]):
+        (WTF::FastBitVector::BitReference::BitReference): Deleted.
+        (WTF::FastBitVector::BitReference::operator bool const): Deleted.
+        (WTF::FastBitVector::BitReference::operator=): Deleted.
+
+2019-11-11  Ross Kirsling  <ross.kirsling@sony.com>
+
+        UTC offset for Samoa is miscalculated when !HAVE(TIMEGM)
+        https://bugs.webkit.org/show_bug.cgi?id=204032
+
+        Reviewed by Yusuke Suzuki.
+
+        We have code assuming that the world's time zones haven't changed in the past decade,
+        but Samoa changed from UTC-11 to UTC+13 at the beginning of 2012.
+
+        (Note: "Samoa" here means the Independent State of Samoa (Pacific/Apia) and not American Samoa (Pacific/Samoa).
+               See https://en.wikipedia.org/wiki/Time_in_Samoa for more information.)
+
+        * wtf/DateMath.cpp:
+        (WTF::calculateUTCOffset):
+        Update "canned date" from 2009 to 2019.
+
+2019-11-07  Mark Lam  <mark.lam@apple.com>
+
+        Add a stack overflow check in Yarr::ByteCompiler::emitDisjunction().
+        https://bugs.webkit.org/show_bug.cgi?id=203936
+        <rdar://problem/56624724>
+
+        Reviewed by Saam Barati.
+
+        1. Add a StackCheck utility class so that we don't have to keep reinventing this
+           every time we need to add stack checking somewhere.
+        2. Rename some arguments and constants in StackBounds to be more descriptive of
+           what they actually are.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CMakeLists.txt:
+        * wtf/StackBounds.h:
+        (WTF::StackBounds::recursionLimit const):
+        * wtf/StackCheck.h: Added.
+        (WTF::StackCheck::StackCheck):
+        (WTF::StackCheck::isSafeToRecurse):
+
+2019-11-06  Mark Lam  <mark.lam@apple.com>
+
+        Remove remnants of support code for an upwards growing stack.
+        https://bugs.webkit.org/show_bug.cgi?id=203942
+
+        Reviewed by Yusuke Suzuki.
+
+        We haven't supported an upwards growing stack in years, and a lot of code has
+        since been written specifically with only a downwards growing stack in mind (e.g.
+        the LLInt, the JITs).  Also, all our currently supported platforms use a downward
+        growing stack.
+
+        We should remove the remnants of support code for an upwards growing stack.  The
+        presence of that code is deceptive in that it conveys support for an upwards
+        growing stack where this hasn't been the case in years.
+
+        * wtf/StackBounds.cpp:
+        (WTF::StackBounds::newThreadStackBounds):
+        (WTF::StackBounds::currentThreadStackBoundsInternal):
+        (WTF::StackBounds::stackDirection): Deleted.
+        (WTF::testStackDirection2): Deleted.
+        (WTF::testStackDirection): Deleted.
+        * wtf/StackBounds.h:
+        (WTF::StackBounds::size const):
+        (WTF::StackBounds::contains const):
+        (WTF::StackBounds::recursionLimit const):
+        (WTF::StackBounds::StackBounds):
+        (WTF::StackBounds::isGrowingDownwards const):
+        (WTF::StackBounds::checkConsistency const):
+        (WTF::StackBounds::isGrowingDownward const): Deleted.
+        * wtf/StackStats.cpp:
+        (WTF::StackStats::CheckPoint::CheckPoint):
+        (WTF::StackStats::CheckPoint::~CheckPoint):
+        (WTF::StackStats::probe):
+        (WTF::StackStats::LayoutCheckPoint::LayoutCheckPoint):
+
+2019-11-05  Mark Lam  <mark.lam@apple.com>
+
+        WTF::RunLoop should not depend on isMainThread() idiom.
+        https://bugs.webkit.org/show_bug.cgi?id=203873
+        <rdar://problem/56524251>
+
+        Reviewed by Saam Barati, Ryosuke Niwa, and Devin Rousso.
+
+        The isMainThread() idiom is only meaningful for WebCore.  It is less meaningful
+        for JSC since a VM instance can be entered from multiple threads, as long as only
+        one thread enters it at any time.  Hence, the concept of a main thread doesn't
+        make sense at the JSC level.
+
+        Since r251036, we started using a WTF::String to represent the RunLoop mode.
+        This caused problems for JSC clients when USE(CF) since it necessitated the use of
+        StringWrapperCFAllocator to track the life cycle of the CFStringRef generated from
+        the WTF::String.
+
+        To fix this problem, we should restore the original behavior of using CFStringRefs
+        as the RunLoop mode token.
+
+        * wtf/RunLoop.h:
+        (WTF::RunLoop::cycle): Deleted.
+        * wtf/cf/RunLoopCF.cpp:
+        (WTF::RunLoop::cycle):
+        * wtf/generic/RunLoopGeneric.cpp:
+        (WTF::RunLoop::cycle):
+        * wtf/glib/RunLoopGLib.cpp:
+        (WTF::RunLoop::cycle):
+        * wtf/win/RunLoopWin.cpp:
+        (WTF::RunLoop::cycle):
+
+2019-11-05  Tuomas Karkkainen  <tuomas.webkit@apple.com>
+
+        Add definitions of ANSI colors for colorful log output
+        https://bugs.webkit.org/show_bug.cgi?id=203805
+
+        Reviewed by Saam Barati.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/AnsiColors.h: Added.
+        * wtf/CMakeLists.txt:
+
+2019-11-05  Tuomas Karkkainen  <tuomas.webkit@apple.com>
+
+        move CrashReporterClientSPI.h and parts of WKCrashReporter to WTF so it can be used in JavaScriptCore
+        https://bugs.webkit.org/show_bug.cgi?id=203803
+
+        Reviewed by Saam Barati.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/PlatformMac.cmake:
+        * wtf/cocoa/CrashReporter.cpp: Added.
+        (WTF::setCrashLogMessage):
+        * wtf/cocoa/CrashReporter.h: Added.
+        * wtf/spi/cocoa/CrashReporterClientSPI.h: Renamed from Source/WebKit/Platform/spi/Cocoa/CrashReporterClientSPI.h.
+
+2019-11-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Add diagnostic logging for frontend feature usage
+        https://bugs.webkit.org/show_bug.cgi?id=203579
+        <rdar://problem/56717410>
+
+        Reviewed by Brian Burg.
+
+        Original patch by Matt Baker <mattbaker@apple.com>.
+
+        * wtf/FeatureDefines.h:
+        Add `ENABLE_INSPECTOR_TELEMETRY`, which is only enabled for macOS.
+
+2019-11-01  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Timelines: add a timeline that shows information about any recorded CSS animation/transition
+        https://bugs.webkit.org/show_bug.cgi?id=203651
+        <rdar://problem/56128726>
+
+        Reviewed by Brian Burg.
+
+        * wtf/Markable.h:
+        (WTF::operator==):
+        (WTF::operator!=):
+        Add extra utility operators.
+
+2019-10-31  Tim Horton  <timothy_horton@apple.com>
+
+        Turn on IOSurface support in the iOS Simulator
+        https://bugs.webkit.org/show_bug.cgi?id=203026
+        <rdar://problem/56320993>
+
+        Reviewed by Simon Fraser.
+
+        * wtf/Platform.h:
+        Turn on HAVE(IOSURFACE) and USE(IOSURFACE_CANVAS_BACKING_STORE) in the simulator.
+        Add HAVE(IOSURFACE_COREIMAGE_SUPPORT).
+
+2019-10-31  Jer Noble  <jer.noble@apple.com>
+
+        [EME] Batch multiple key requests into one request and response
+        https://bugs.webkit.org/show_bug.cgi?id=203580
+        <rdar://problem/54853345>
+
+        Reviewed by Eric Carlson.
+
+        Support appending an r-value reference Vector to another.
+
+        * wtf/Vector.h:
+        (WTF::minCapacity>::appendVector):
+
+2019-10-31  Alex Christensen  <achristensen@webkit.org>
+
+        Remove unneeded HAVE_TIMINGDATAOPTIONS
+        https://bugs.webkit.org/show_bug.cgi?id=202990
+
+        Reviewed by Brady Eidson.
+
+        * wtf/Platform.h:
+
+2019-10-31  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] DateMath should have TimeClipped version
+        https://bugs.webkit.org/show_bug.cgi?id=203550
+
+        Reviewed by Saam Barati.
+
+        We found that our Date constructor is slow because GregorianDateTime calculation takes so long.
+        We are doing many `fmod`, floating division, `floor` etc. These operations, in particular `fmod`, takes
+        very long time. As a result, 30% of JetStream2/date-format-xparb is taken by `fmod` function.
+
+        But since we are performance timeClip operation, double value in DateInstance is always Int52. We should
+        have integer version of GregorianDateTime calculation which avoids many unnecessary fmod etc.
+
+        While integer division is truncate-to-zero, many Date calculation requires `floor(value / xxx)`. For now,
+        we use integer fast path only when the value is Int52 and positive.
+
+        We see 10~ % improvement in JetStream2/date-format-xparb-SP (from 201 to 239).
+
+        * wtf/DateMath.cpp:
+        (WTF::isLeapYear): Deleted.
+        (WTF::daysInYear): Deleted.
+        (WTF::daysFrom1970ToYear): Deleted.
+        (WTF::msToDays): Deleted.
+        (WTF::msToYear): Deleted.
+        (WTF::dayInYear): Deleted.
+        (WTF::msToMinutes): Deleted.
+        (WTF::msToHours): Deleted.
+        (WTF::monthFromDayInYear): Deleted.
+        (WTF::checkMonth): Deleted.
+        (WTF::dayInMonthFromDayInYear): Deleted.
+        (WTF::dateToDaysFrom1970): Deleted.
+        (WTF::timeClip): Deleted.
+        * wtf/DateMath.h:
+        (WTF::TimeClippedPositiveMilliseconds::TimeClippedPositiveMilliseconds):
+        (WTF::TimeClippedPositiveMilliseconds::value const):
+        (WTF::TimeClippedPositiveMilliseconds::asDouble const):
+        (WTF::timeClip):
+        (WTF::daysFrom1970ToYear):
+        (WTF::daysFrom1970ToYearTimeClippedPositive):
+        (WTF::isLeapYear):
+        (WTF::daysInYear):
+        (WTF::msToDays):
+        (WTF::dayInYear):
+        (WTF::dateToDaysFrom1970):
+        (WTF::msToYear):
+        (WTF::msToMinutes):
+        (WTF::msToHours):
+        (WTF::msToSeconds):
+        (WTF::msToWeekDay):
+        (WTF::monthFromDayInYear):
+        (WTF::dayInMonthFromDayInYear):
+        * wtf/GregorianDateTime.cpp:
+        (WTF::GregorianDateTime::GregorianDateTime):
+        * wtf/GregorianDateTime.h:
+
+2019-10-30  Alex Christensen  <achristensen@webkit.org>
+
+        Prevent Mac CMake build from bit rotting
+        https://bugs.webkit.org/show_bug.cgi?id=203647
+
+        Reviewed by Tim Horton.
+
+        * wtf/PlatformMac.cmake:
+
+2019-10-30  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Date functions should have intrinsic
+        https://bugs.webkit.org/show_bug.cgi?id=202187
+
+        Reviewed by Keith Miller.
+
+        * wtf/DateMath.h:
+        * wtf/GregorianDateTime.cpp:
+        (WTF::GregorianDateTime::setToCurrentLocalTime):
+        * wtf/GregorianDateTime.h:
+
+2019-10-30  Per Arne Vollan  <pvollan@apple.com>
+
+        It should be possible to create a mach sandbox extension for the WebContent process before the audit token is known
+        https://bugs.webkit.org/show_bug.cgi?id=203618
+
+        Reviewed by Brent Fulgham.
+
+        Added SPI to create mach extension without PID or audit token.
+
+        * wtf/spi/darwin/SandboxSPI.h:
+
+2019-10-30  Daniel Bates  <dabates@apple.com>
+
+        Add pretty printer for CompactPointerTuple
+        https://bugs.webkit.org/show_bug.cgi?id=203495
+
+        Reviewed by Jer Noble.
+
+        #include <wtf/FastMalloc.h> for the definition of WTF_MAKE_FAST_ALLOCATED.
+
+        * wtf/CompactPointerTuple.h:
+
+2019-10-29  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Add fast path for String#localeCompare
+        https://bugs.webkit.org/show_bug.cgi?id=202676
+
+        Reviewed by Mark Lam.
+
+        * wtf/text/StringView.h:
+        (WTF::StringView::isAllASCII const):
+
+2019-10-26  Chris Lord  <clord@igalia.com>
+
+        Put OffscreenCanvas behind a build flag
+        https://bugs.webkit.org/show_bug.cgi?id=203146
+
+        Reviewed by Ryosuke Niwa.
+
+        * wtf/FeatureDefines.h:
+
+2019-10-25  Andy Estes  <aestes@apple.com>
+
+        [Quick Look] Move the QLPreviewConverter delegate into PreviewConverter and vend a C++ client interface
+        https://bugs.webkit.org/show_bug.cgi?id=203396
+
+        Reviewed by Alex Christensen.
+
+        * wtf/FeatureDefines.h: Defined ENABLE_PREVIEW_CONVERTER.
+
+2019-10-23  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Figure out missing prepareCallOperation
+        https://bugs.webkit.org/show_bug.cgi?id=203285
+
+        Reviewed by Mark Lam.
+
+        Enable USE(BUILTIN_FRAME_ADDRESS) regardless of platform is the compilers and architectures match.
+
+        * wtf/Platform.h:
+
+2019-10-23  Tim Horton  <timothy_horton@apple.com>
+
+        macCatalyst: Should dispatch contextmenu event on right click
+        https://bugs.webkit.org/show_bug.cgi?id=203316
+        <rdar://problem/54617376>
+
+        Reviewed by Wenson Hsieh.
+
+        * wtf/FeatureDefines.h:
+
+2019-10-23  Truitt Savell  <tsavell@apple.com>
+
+        Unreviewed, rolling out r251261.
+
+        This broke multiple tests
+
+        Reverted changeset:
+
+        "Using version 1 CFRunloopSource for faster task dispatch"
+        https://bugs.webkit.org/show_bug.cgi?id=202874
+        https://trac.webkit.org/changeset/251261
+
+2019-10-23  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [iOS] Remove Hiragino Sans site-specific quirk for Yahoo Japan
+        https://bugs.webkit.org/show_bug.cgi?id=203345
+
+        Reviewed by Simon Fraser.
+
+        * wtf/Platform.h:
+
+2019-10-22  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Make `JSGlobalObject*` threading change more stabilized by adding tests and assertions
+        https://bugs.webkit.org/show_bug.cgi?id=203274
+
+        Reviewed by Saam Barati.
+
+        * wtf/Platform.h:
+
+2019-10-22  Antti Koivisto  <antti@apple.com>
+
+        operator==(Vector, Vector) should work with different inline capacities
+        https://bugs.webkit.org/show_bug.cgi?id=203245
+
+        Reviewed by Alex Christensen.
+
+        Also allow different overflow behavior and minimum capacity.
+
+        * wtf/Vector.h:
+        (WTF::operator==):
+        (WTF::operator!=):
+
+2019-10-22  Rob Buis  <rbuis@igalia.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=169667
+        URL: protocol setter needs to be more restrictive around file
+
+        Reviewed by Alex Christensen.
+
+        Restrict setting protocol to "file" as indictaed in the spec [1].
+
+        Test: imported/w3c/web-platform-tests/url/url-setters.html
+
+        [1] https://url.spec.whatwg.org/#scheme-state steps 2.1.3 and 2.1.4.
+
+        * wtf/URL.cpp:
+        (WTF::URL::setProtocol):
+
+2019-10-21  Tim Horton  <timothy_horton@apple.com>
+
+        macCatalyst: Swipe navigation gestures do not work
+        https://bugs.webkit.org/show_bug.cgi?id=203205
+        <rdar://problem/54617473>
+
+        Reviewed by Wenson Hsieh.
+
+        * wtf/Platform.h:
+        Add a new HAVE.
+
+2019-10-20  Mark Lam  <mark.lam@apple.com>
+
+        Remove all uses of untagCodePtr in debugging code.
+        https://bugs.webkit.org/show_bug.cgi?id=203188
+        <rdar://problem/56453043> 
+
+        Reviewed by Yusuke Suzuki.
+
+        We want the ability to always assert on failure to authenticate in untagCodePtr
+        (though we don't currently do that yet).
+
+        * wtf/PtrTag.cpp:
+        (WTF::tagForPtr):
+        * wtf/PtrTag.h:
+        (WTF::retagCodePtrImpl):
+        (WTF::tagCFunctionPtrImpl):
+        (WTF::untagCFunctionPtrImpl):
+        (WTF::assertIsCFunctionPtr):
+        (WTF::isTaggedWith):
+
+2019-10-19  Simon Fraser  <simon.fraser@apple.com>
+
+        Add support to TextStream for dumping HashMap<> and HashSet<>
+        https://bugs.webkit.org/show_bug.cgi?id=202969
+
+        Reviewed by Dean Jackson.
+        
+        Make it possible to output HashMap<> and HashSet<> to TextStream,
+        so long as key and value types are streamable. Also implement operator<<(char)
+        so that chars show as ASCII, rather than numbers.
+
+        * wtf/text/TextStream.cpp:
+        (WTF::TextStream::operator<<):
+        * wtf/text/TextStream.h:
+        (WTF::operator<<):
+
+2019-10-18  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Make ConcurrentJSLock Lock even if ENABLE_CONCURRENT_JS=OFF
+        https://bugs.webkit.org/show_bug.cgi?id=202892
+
+        Reviewed by Mark Lam.
+
+        BaselineJIT also has concurrent compiler. ENABLE(CONCURRENT_JS) should not rely on ENABLE(DFG_JIT).
+        It should rely on ENABLE(JIT) instead.
+
+        * wtf/Platform.h:
+
 2019-10-17  Mark Lam  <mark.lam@apple.com>
 
         Use constexpr in more places and remove some unnecessary external linkage.

@@ -53,6 +53,7 @@
 #include "WebFrameNetworkingContext.h"
 #include "WebGamepadProvider.h"
 #include "WebGeolocationManager.h"
+#include "WebIDBConnectionToServer.h"
 #include "WebLoaderStrategy.h"
 #include "WebMediaKeyStorageManager.h"
 #include "WebMemorySampler.h"
@@ -193,7 +194,6 @@ WebProcess::WebProcess()
     , m_nonVisibleProcessCleanupTimer(*this, &WebProcess::nonVisibleProcessCleanupTimerFired)
 #if PLATFORM(IOS_FAMILY)
     , m_webSQLiteDatabaseTracker([this](bool isHoldingLockedFiles) { parentProcessConnection()->send(Messages::WebProcessProxy::SetIsHoldingLockedFiles(isHoldingLockedFiles), 0); })
-    , m_taskStateObserver(ProcessTaskStateObserver::create(*this))
 #endif
 {
     // Initialize our platform strategies.
@@ -221,9 +221,7 @@ WebProcess::WebProcess()
 
 WebProcess::~WebProcess()
 {
-#if PLATFORM(IOS_FAMILY)
-    m_taskStateObserver->invalidate();
-#endif
+    ASSERT_NOT_REACHED();
 }
 
 void WebProcess::initializeProcess(const AuxiliaryProcessInitializationParameters& parameters)
@@ -266,6 +264,12 @@ void WebProcess::initializeConnection(IPC::Connection* connection)
         supplement->initializeConnection(connection);
 
     m_webConnection = WebConnectionToUIProcess::create(this);
+
+#if PLATFORM(IOS_FAMILY)
+    // Make sure we have an IPC::Connection before creating the ProcessTaskStateObserver since it may call
+    // WebProcess::processTaskStateDidChange() on a background thread and deference the IPC connection.
+    m_taskStateObserver = ProcessTaskStateObserver::create(*this);
+#endif
 }
 
 void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters)
@@ -370,7 +374,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters)
         registerURLSchemeAsDisplayIsolated(scheme);
 
     for (auto& scheme : parameters.urlSchemesRegisteredAsCORSEnabled)
-        registerURLSchemeAsCORSEnabled(scheme);
+        LegacySchemeRegistry::registerURLSchemeAsCORSEnabled(scheme);
 
     for (auto& scheme : parameters.urlSchemesRegisteredAsAlwaysRevalidated)
         registerURLSchemeAsAlwaysRevalidated(scheme);
@@ -457,7 +461,7 @@ void WebProcess::setWebsiteDataStoreParameters(WebProcessDataStoreParameters&& p
     setResourceLoadStatisticsEnabled(parameters.resourceLoadStatisticsEnabled);
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
-    if (parameters.resourceLoadStatisticsEnabled && !parameters.sessionID.isEphemeral())
+    if (parameters.resourceLoadStatisticsEnabled && !parameters.sessionID.isEphemeral() && !ResourceLoadObserver::sharedIfExists())
         ResourceLoadObserver::setShared(*new WebResourceLoadObserver);
 #endif
 
@@ -558,9 +562,10 @@ void WebProcess::registerURLSchemeAsDisplayIsolated(const String& urlScheme) con
     LegacySchemeRegistry::registerURLSchemeAsDisplayIsolated(urlScheme);
 }
 
-void WebProcess::registerURLSchemeAsCORSEnabled(const String& urlScheme) const
+void WebProcess::registerURLSchemeAsCORSEnabled(const String& urlScheme)
 {
     LegacySchemeRegistry::registerURLSchemeAsCORSEnabled(urlScheme);
+    ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::RegisterURLSchemesAsCORSEnabled({ urlScheme }), 0);
 }
 
 void WebProcess::registerURLSchemeAsAlwaysRevalidated(const String& urlScheme) const
@@ -668,6 +673,8 @@ void WebProcess::createWebPage(PageIdentifier pageID, WebPageCreationParameters&
 void WebProcess::removeWebPage(PageIdentifier pageID)
 {
     ASSERT(m_pageMap.contains(pageID));
+
+    flushResourceLoadStatistics();
 
     pageWillLeaveWindow(pageID);
     m_pageMap.remove(pageID);
@@ -1171,6 +1178,7 @@ NetworkProcessConnection& WebProcess::ensureNetworkProcessConnection()
 #if HAVE(AUDIT_TOKEN)
         m_networkProcessConnection->setNetworkProcessAuditToken(WTFMove(connectionInfo.auditToken));
 #endif
+        m_networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::RegisterURLSchemesAsCORSEnabled(WebCore::LegacySchemeRegistry::allURLSchemesRegisteredAsCORSEnabled()), 0);
     }
     
     return *m_networkProcessConnection;
@@ -1211,7 +1219,7 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
             continue;
         
         if (auto* existingIDBConnectionToServer = connection->existingIDBConnectionToServer()) {
-            ASSERT(idbConnection == &existingIDBConnectionToServer->coreConnectionToServer());
+            ASSERT_UNUSED(existingIDBConnectionToServer, idbConnection == &existingIDBConnectionToServer->coreConnectionToServer());
             page->corePage()->clearIDBConnection();
         }
     }
@@ -1374,18 +1382,18 @@ void WebProcess::resetAllGeolocationPermissions()
 }
 #endif
 
-void WebProcess::actualPrepareToSuspend(ShouldAcknowledgeWhenReadyToSuspend shouldAcknowledgeWhenReadyToSuspend)
+void WebProcess::prepareToSuspend(bool isSuspensionImminent, CompletionHandler<void()>&& completionHandler)
 {
+    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::prepareToSuspend() isSuspensionImminent: %d", this, isSuspensionImminent);
     SetForScope<bool> suspensionScope(m_isSuspending, true);
     m_processIsSuspended = true;
 
+    flushResourceLoadStatistics();
+
 #if PLATFORM(COCOA)
     if (m_processType == ProcessType::PrewarmedWebContent) {
-        if (shouldAcknowledgeWhenReadyToSuspend == ShouldAcknowledgeWhenReadyToSuspend::Yes) {
-            RELEASE_LOG(ProcessSuspension, "%p - WebProcess::actualPrepareToSuspend() Sending ProcessReadyToSuspend IPC message", this);
-            parentProcessConnection()->send(Messages::WebProcessProxy::ProcessReadyToSuspend(), 0);
-        }
-        return;
+        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::prepareToSuspend() Process is ready to suspend", this);
+        return completionHandler();
     }
 #endif
 
@@ -1399,7 +1407,7 @@ void WebProcess::actualPrepareToSuspend(ShouldAcknowledgeWhenReadyToSuspend shou
         MemoryPressureHandler::singleton().releaseMemory(Critical::Yes, Synchronous::Yes);
 
     freezeAllLayerTrees();
-    
+
 #if PLATFORM(COCOA)
     destroyRenderingResources();
 #endif
@@ -1413,66 +1421,15 @@ void WebProcess::actualPrepareToSuspend(ShouldAcknowledgeWhenReadyToSuspend shou
     updateFreezerStatus();
 #endif
 
-    markAllLayersVolatile([this, shouldAcknowledgeWhenReadyToSuspend](bool success) {
+    markAllLayersVolatile([this, completionHandler = WTFMove(completionHandler)](bool success) mutable {
         if (success)
             RELEASE_LOG(ProcessSuspension, "%p - WebProcess::markAllLayersVolatile() Successfuly marked all layers as volatile", this);
         else
             RELEASE_LOG(ProcessSuspension, "%p - WebProcess::markAllLayersVolatile() Failed to mark all layers as volatile", this);
 
-        if (shouldAcknowledgeWhenReadyToSuspend == ShouldAcknowledgeWhenReadyToSuspend::Yes) {
-            RELEASE_LOG(ProcessSuspension, "%p - WebProcess::actualPrepareToSuspend() Sending ProcessReadyToSuspend IPC message", this);
-            parentProcessConnection()->send(Messages::WebProcessProxy::ProcessReadyToSuspend(), 0);
-        }
+        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::prepareToSuspend() Process is ready to suspend", this);
+        completionHandler();
     });
-}
-
-void WebProcess::processWillSuspendImminently()
-{
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processWillSuspendImminently() BEGIN", this);
-    actualPrepareToSuspend(ShouldAcknowledgeWhenReadyToSuspend::No);
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processWillSuspendImminently() END", this);
-}
-
-void WebProcess::prepareToSuspend()
-{
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::prepareToSuspend()", this);
-    actualPrepareToSuspend(ShouldAcknowledgeWhenReadyToSuspend::Yes);
-}
-
-void WebProcess::cancelPrepareToSuspend()
-{
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::cancelPrepareToSuspend()", this);
-
-    m_processIsSuspended = false;
-
-#if PLATFORM(COCOA)
-    if (m_processType == ProcessType::PrewarmedWebContent)
-        return;
-#endif
-
-    unfreezeAllLayerTrees();
-
-#if PLATFORM(IOS_FAMILY)
-    m_webSQLiteDatabaseTracker.setIsSuspended(false);
-    SQLiteDatabase::setIsDatabaseOpeningForbidden(false);
-    accessibilityProcessSuspendedNotification(false);
-#endif
-
-#if ENABLE(VIDEO)
-    if (auto* platformMediaSessionManager = PlatformMediaSessionManager::sharedManagerIfExists())
-        platformMediaSessionManager->processDidResume();
-    resumeAllMediaBuffering();
-#endif
-
-    // If we've already finished cleaning up and sent ProcessReadyToSuspend, we
-    // shouldn't send DidCancelProcessSuspension; the UI process strictly expects one or the other.
-    if (!m_pageMarkingLayersAsVolatileCounter)
-        return;
-
-    cancelMarkAllLayersVolatile();
-
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::cancelPrepareToSuspend() Sending DidCancelProcessSuspension IPC message", this);
-    parentProcessConnection()->send(Messages::WebProcessProxy::DidCancelProcessSuspension(), 0);
 }
 
 void WebProcess::markAllLayersVolatile(WTF::Function<void(bool)>&& completionHandler)
@@ -1602,7 +1559,13 @@ StorageAreaMap* WebProcess::storageAreaMap(StorageAreaIdentifier identifier) con
 
 void WebProcess::setResourceLoadStatisticsEnabled(bool enabled)
 {
+    if (WebCore::DeprecatedGlobalSettings::resourceLoadStatisticsEnabled() == enabled || m_sessionID->isEphemeral())
+        return;
     WebCore::DeprecatedGlobalSettings::setResourceLoadStatisticsEnabled(enabled);
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    if (enabled && !ResourceLoadObserver::sharedIfExists())
+        WebCore::ResourceLoadObserver::setShared(*new WebResourceLoadObserver);
+#endif
 }
 
 void WebProcess::clearResourceLoadStatistics()
@@ -1611,6 +1574,23 @@ void WebProcess::clearResourceLoadStatistics()
     if (auto* observer = ResourceLoadObserver::sharedIfExists())
         observer->clearState();
 #endif
+}
+
+void WebProcess::flushResourceLoadStatistics()
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    if (auto* observer = ResourceLoadObserver::sharedIfExists())
+        observer->updateCentralStatisticsStore();
+#endif
+}
+
+void WebProcess::seedResourceLoadStatisticsForTesting(const RegistrableDomain& firstPartyDomain, const RegistrableDomain& thirdPartyDomain, bool shouldScheduleNotification, CompletionHandler<void()>&& completionHandler)
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    if (auto* observer = ResourceLoadObserver::sharedIfExists())
+        observer->logSubresourceLoadingForTesting(firstPartyDomain, thirdPartyDomain, shouldScheduleNotification);
+#endif
+    completionHandler();
 }
 
 RefPtr<API::Object> WebProcess::transformHandlesToObjects(API::Object* object)
@@ -1788,13 +1768,13 @@ LibWebRTCNetwork& WebProcess::libWebRTCNetwork()
 }
 
 #if ENABLE(SERVICE_WORKER)
-void WebProcess::establishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebPageProxyIdentifier webPageProxyID, PageIdentifier pageID, const WebPreferencesStore& store, RegistrableDomain&& registrableDomain)
+void WebProcess::establishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebPageProxyIdentifier webPageProxyID, PageIdentifier pageID, const WebPreferencesStore& store, RegistrableDomain&& registrableDomain, ServiceWorkerInitializationData&& initializationData)
 {
     // We are in the Service Worker context process and the call below establishes our connection to the Network Process
     // by calling ensureNetworkProcessConnection. SWContextManager needs to use the same underlying IPC::Connection as the
     // NetworkProcessConnection for synchronization purposes.
     auto& ipcConnection = ensureNetworkProcessConnection().connection();
-    SWContextManager::singleton().setConnection(makeUnique<WebSWContextManagerConnection>(ipcConnection, WTFMove(registrableDomain), pageGroupID, webPageProxyID, pageID, store));
+    SWContextManager::singleton().setConnection(makeUnique<WebSWContextManagerConnection>(ipcConnection, WTFMove(registrableDomain), pageGroupID, webPageProxyID, pageID, store, WTFMove(initializationData)));
 }
 
 void WebProcess::registerServiceWorkerClients()
@@ -1802,12 +1782,24 @@ void WebProcess::registerServiceWorkerClients()
     ServiceWorkerProvider::singleton().registerServiceWorkerClients();
 }
 
+void WebProcess::addServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier identifier)
+{
+    m_swRegistrationCounts.add(identifier);
+}
+
+bool WebProcess::removeServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier identifier)
+{
+    ASSERT(m_swRegistrationCounts.contains(identifier));
+    return m_swRegistrationCounts.remove(identifier);
+}
 #endif
 
 #if PLATFORM(MAC)
 void WebProcess::setScreenProperties(const WebCore::ScreenProperties& properties)
 {
     WebCore::setScreenProperties(properties);
+    for (auto& page : m_pageMap.values())
+        page->screenPropertiesDidChange();
 }
 #endif
 

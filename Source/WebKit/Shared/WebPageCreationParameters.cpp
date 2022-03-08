@@ -117,9 +117,6 @@ void WebPageCreationParameters::encode(IPC::Encoder& encoder) const
 #if ENABLE(APPLICATION_MANIFEST)
     encoder << applicationManifest;
 #endif
-#if ENABLE(SERVICE_WORKER)
-    encoder << hasRegisteredServiceWorkers;
-#endif
     encoder << needsFontAttributes;
     encoder << iceCandidateFilteringEnabled;
     encoder << enumeratingAllNetworkInterfacesEnabled;
@@ -132,6 +129,7 @@ void WebPageCreationParameters::encode(IPC::Encoder& encoder) const
 #endif
     encoder << backgroundColor;
     encoder << oldPageID;
+    encoder << overriddenMediaType;
 }
 
 Optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::Decoder& decoder)
@@ -343,11 +341,6 @@ Optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::Decod
         return WTF::nullopt;
     parameters.applicationManifest = WTFMove(*applicationManifest);
 #endif
-#if ENABLE(SERVICE_WORKER)
-    if (!decoder.decode(parameters.hasRegisteredServiceWorkers))
-        return WTF::nullopt;
-#endif
-
     if (!decoder.decode(parameters.needsFontAttributes))
         return WTF::nullopt;
 
@@ -400,6 +393,9 @@ Optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::Decod
     if (!oldPageID)
         return WTF::nullopt;
     parameters.oldPageID = WTFMove(*oldPageID);
+
+    if (!decoder.decode(parameters.overriddenMediaType))
+        return WTF::nullopt;
 
     return parameters;
 }

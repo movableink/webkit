@@ -48,9 +48,10 @@
 #include "ShareSheetCallbackID.h"
 #include "SharedMemory.h"
 #include "StorageNamespaceIdentifier.h"
+#include "TransactionID.h"
 #include "UserData.h"
 #include "WebBackForwardListProxy.h"
-#include "WebPageMessages.h"
+#include "WebPageMessagesReplies.h"
 #include "WebURLSchemeHandler.h"
 #include "WebUndoStepID.h"
 #include "WebUserContentController.h"
@@ -72,6 +73,7 @@
 #include <WebCore/PointerID.h>
 #include <WebCore/SecurityPolicyViolationEvent.h>
 #include <WebCore/ShareData.h>
+#include <WebCore/TextManipulationController.h>
 #include <WebCore/UserActivity.h>
 #include <WebCore/UserContentTypes.h>
 #include <WebCore/UserInterfaceLayoutDirection.h>
@@ -105,7 +107,6 @@ typedef struct _AtkObject AtkObject;
 
 #if PLATFORM(IOS_FAMILY)
 #include "GestureTypes.h"
-#include "WebPageMessages.h"
 #include <WebCore/IntPointHash.h>
 #include <WebCore/ViewportConfiguration.h>
 #include <WebCore/WKContentObservation.h>
@@ -180,7 +181,6 @@ class ResourceResponse;
 class SelectionRect;
 class SharedBuffer;
 class SubstituteData;
-class SyntheticEditingCommandType;
 class TextCheckingRequest;
 class VisiblePosition;
 
@@ -196,6 +196,7 @@ enum class WritingDirection : uint8_t;
 struct BackForwardItemIdentifier;
 struct CompositionUnderline;
 struct DictationAlternative;
+struct ElementContext;
 struct GlobalFrameIdentifier;
 struct GlobalWindowIdentifier;
 struct Highlight;
@@ -217,6 +218,7 @@ class DownloadID;
 class FindController;
 class GamepadData;
 class GeolocationPermissionRequestManager;
+class LayerHostingContext;
 class MediaDeviceSandboxExtensions;
 class NotificationPermissionRequestManager;
 class PDFPlugin;
@@ -261,12 +263,14 @@ class RemoteLayerTreeTransaction;
 
 enum FindOptions : uint16_t;
 enum class DragControllerAction : uint8_t;
+enum class SyntheticEditingCommandType : uint8_t;
 
 struct AttributedString;
 struct BackForwardListItemState;
 struct DataDetectionResult;
+struct DocumentEditingContext;
+struct DocumentEditingContextRequest;
 struct EditorState;
-struct ElementContext;
 struct FontInfo;
 struct InsertTextOptions;
 struct InteractionInformationAtPosition;
@@ -499,6 +503,7 @@ public:
     void clearHistory();
 
     void accessibilitySettingsDidChange();
+    void screenPropertiesDidChange();
 
     void scalePage(double scale, const WebCore::IntPoint& origin);
     void scalePageInViewCoordinates(double scale, WebCore::IntPoint centerInViewCoordinates);
@@ -626,8 +631,8 @@ public:
     void executeEditCommandWithCallback(const String&, const String& argument, CallbackID);
     void selectAll();
 
-    void textInputContextsInRect(WebCore::FloatRect, CompletionHandler<void(const Vector<WebKit::ElementContext>&)>&&);
-    void focusTextInputContext(const ElementContext&, CompletionHandler<void(bool)>&&);
+    void textInputContextsInRect(WebCore::FloatRect, CompletionHandler<void(const Vector<WebCore::ElementContext>&)>&&);
+    void focusTextInputContext(const WebCore::ElementContext&, CompletionHandler<void(bool)>&&);
 
 #if PLATFORM(IOS_FAMILY)
     WebCore::FloatSize screenSize() const;
@@ -683,7 +688,7 @@ public:
     void requestAutocorrectionContext();
     void getPositionInformation(const InteractionInformationRequest&, CompletionHandler<void(InteractionInformationAtPosition&&)>&&);
     void requestPositionInformation(const InteractionInformationRequest&);
-    void startInteractionWithElementContextOrPosition(Optional<ElementContext>&&, WebCore::IntPoint&&);
+    void startInteractionWithElementContextOrPosition(Optional<WebCore::ElementContext>&&, WebCore::IntPoint&&);
     void stopInteraction();
     void performActionOnElement(uint32_t action);
     void focusNextFocusedElement(bool isForward, CallbackID);
@@ -782,9 +787,8 @@ public:
     SandboxExtensionTracker& sandboxExtensionTracker() { return m_sandboxExtensionTracker; }
 
 #if PLATFORM(QT) || PLATFORM(GTK)
-    void setComposition(const String& text, const Vector<WebCore::CompositionUnderline>& underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeLength);
-    void confirmComposition(const String& text, int64_t selectionStart, int64_t selectionLength);
-    void cancelComposition();
+    void setComposition(const String&, const Vector<WebCore::CompositionUnderline>&, const EditingRange& selectionRange);
+    void confirmComposition(const String& text);
 
     void collapseSelectionInFrame(WebCore::FrameIdentifier);
     void showEmojiPicker(WebCore::Frame&);
@@ -891,7 +895,7 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void computePagesForPrintingAndDrawToPDF(WebCore::FrameIdentifier, const PrintInfo&, CallbackID, Messages::WebPage::ComputePagesForPrintingAndDrawToPDF::DelayedReply&&);
+    void computePagesForPrintingAndDrawToPDF(WebCore::FrameIdentifier, const PrintInfo&, CallbackID, Messages::WebPage::ComputePagesForPrintingAndDrawToPDFDelayedReply&&);
 #endif
 
     void drawToPDF(WebCore::FrameIdentifier, const Optional<WebCore::FloatRect>&, CallbackID);
@@ -1206,8 +1210,13 @@ public:
 
     void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel);
 
-    WebCore::Element* elementForContext(const ElementContext&) const;
-    Optional<ElementContext> contextForElement(WebCore::Element&) const;
+    WebCore::Element* elementForContext(const WebCore::ElementContext&) const;
+    Optional<WebCore::ElementContext> contextForElement(WebCore::Element&) const;
+
+    void startTextManipulations(Vector<WebCore::TextManipulationController::ExclusionRule>&&, CompletionHandler<void()>&&);
+    void completeTextManipulation(WebCore::TextManipulationController::ItemIdentifier,
+        const Vector<WebCore::TextManipulationController::ManipulationToken>&,
+        CompletionHandler<void(WebCore::TextManipulationController::ManipulationResult)>&&);
 
 #if ENABLE(APPLE_PAY)
     WebPaymentCoordinator* paymentCoordinator();
@@ -1242,6 +1251,15 @@ public:
     static WebCore::IntRect rootViewInteractionBoundsForElement(const WebCore::Element&);
 #endif // PLATFORM(IOS_FAMILY)
 
+#if USE(QUICK_LOOK)
+    void didStartLoadForQuickLookDocumentInMainFrame(const String& fileName, const String& uti);
+    void didFinishLoadForQuickLookDocumentInMainFrame(const WebCore::SharedBuffer&);
+    void requestPasswordForQuickLookDocumentInMainFrame(const String& fileName, CompletionHandler<void(const String&)>&&);
+#endif
+
+    const String& overriddenMediaType() const { return m_overriddenMediaType; }
+    void setOverriddenMediaType(const String&);
+    
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 
@@ -1322,7 +1340,7 @@ private:
     bool executeKeypressCommandsInternal(const Vector<WebCore::KeypressCommand>&, WebCore::KeyboardEvent*);
 #endif
 
-    void testProcessIncomingSyncMessagesWhenWaitingForSyncReply(Messages::WebPage::TestProcessIncomingSyncMessagesWhenWaitingForSyncReply::DelayedReply&&);
+    void testProcessIncomingSyncMessagesWhenWaitingForSyncReply(Messages::WebPage::TestProcessIncomingSyncMessagesWhenWaitingForSyncReplyDelayedReply&&);
 
     void updateDrawingAreaLayerTreeFreezeState();
     bool markLayersVolatileImmediatelyIfPossible();
@@ -1337,7 +1355,7 @@ private:
     void tryClose();
     void platformDidReceiveLoadParameters(const LoadParameters&);
     void loadRequest(LoadParameters&&);
-    NO_RETURN void loadRequestWaitingForPID(LoadParameters&&, URL&&, WebPageProxyIdentifier);
+    NO_RETURN void loadRequestWaitingForProcessLaunch(LoadParameters&&, URL&&, WebPageProxyIdentifier, bool);
     void loadData(LoadParameters&&);
     void loadAlternateHTML(LoadParameters&&);
     void navigateToPDFLinkWithSimulatedClick(const String& url, WebCore::IntPoint documentPoint, WebCore::IntPoint screenPoint);
@@ -1384,6 +1402,8 @@ private:
 
 #if ENABLE(CONTEXT_MENUS)
     void contextMenuHidden() { m_isShowingContextMenu = false; }
+#endif
+#if ENABLE(CONTEXT_MENU_EVENT)
     void contextMenuForKeyEvent();
 #endif
 
@@ -1476,7 +1496,7 @@ private:
     void reapplyEditCommand(WebUndoStepID commandID);
     void didRemoveEditCommand(WebUndoStepID commandID);
 
-    void findString(const String&, uint32_t findOptions, uint32_t maxMatchCount);
+    void findString(const String&, uint32_t findOptions, uint32_t maxMatchCount, Optional<CallbackID>);
     void findStringMatches(const String&, uint32_t findOptions, uint32_t maxMatchCount);
     void getImageForFindMatch(uint32_t matchIndex);
     void selectFindMatch(uint32_t matchIndex);
@@ -1592,6 +1612,7 @@ private:
     void playbackTargetSelected(uint64_t, const WebCore::MediaPlaybackTargetContext& outputDevice) const;
     void playbackTargetAvailabilityDidChange(uint64_t, bool);
     void setShouldPlayToPlaybackTarget(uint64_t, bool);
+    void playbackTargetPickerWasDismissed(uint64_t);
 #endif
 
     void clearWheelEventTestMonitor();
@@ -1607,10 +1628,6 @@ private:
     void setUserInterfaceLayoutDirection(uint32_t);
 
     bool canPluginHandleResponse(const WebCore::ResourceResponse&);
-
-#if USE(QUICK_LOOK)
-    void didReceivePasswordForQuickLookDocument(const String&);
-#endif
 
     void simulateDeviceOrientationChange(double alpha, double beta, double gamma);
 
@@ -2012,6 +2029,8 @@ private:
 #if ENABLE(TEXT_AUTOSIZING)
     WebCore::Timer m_textAutoSizingAdjustmentTimer;
 #endif
+
+    String m_overriddenMediaType;
 };
 
 #if !PLATFORM(IOS_FAMILY)

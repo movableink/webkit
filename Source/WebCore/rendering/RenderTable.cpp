@@ -433,7 +433,7 @@ void RenderTable::layout()
 
         LayoutUnit oldLogicalWidth = logicalWidth();
         LayoutUnit oldLogicalHeight = logicalHeight();
-        setLogicalHeight(0);
+        resetLogicalHeightBeforeLayoutIfNeeded();
         updateLogicalWidth();
 
         if (logicalWidth() != oldLogicalWidth) {
@@ -770,9 +770,9 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
     
     BackgroundBleedAvoidance bleedAvoidance = determineBackgroundBleedAvoidance(paintInfo.context());
     if (!boxShadowShouldBeAppliedToBackground(rect.location(), bleedAvoidance))
-        paintBoxShadow(paintInfo, rect, style(), Normal);
+        paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Normal);
     paintBackground(paintInfo, rect, bleedAvoidance);
-    paintBoxShadow(paintInfo, rect, style(), Inset);
+    paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Inset);
 
     if (style().hasVisibleBorderDecoration() && !collapseBorders())
         paintBorder(paintInfo, rect, style());

@@ -49,6 +49,7 @@
 #import "WebFrameProxy.h"
 #import "WebKit2Initialize.h"
 #import "WebPageGroup.h"
+#import "WebPageProxyMessages.h"
 #import "WebProcessPool.h"
 #import "_WKFrameHandleInternal.h"
 #import "_WKWebViewPrintFormatterInternal.h"
@@ -62,9 +63,11 @@
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/VelocityData.h>
 #import <objc/message.h>
+#import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/TextStream.h>
+#import "AppKitSoftLink.h"
 
 
 @interface WKInspectorIndicationView : UIView
@@ -361,7 +364,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_needsDeferredEndScrollingSelectionUpdate)
         return;
 
-    [_textSelectionAssistant deactivateSelection];
+    [_textInteractionAssistant deactivateSelection];
 }
 
 static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
@@ -515,6 +518,25 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
     objc_setAssociatedObject(element, (void*)[@"ax-machport" hash], @(sendPort), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
+
+- (void)_updateRemoteAccessibilityRegistration:(BOOL)registerProcess
+{
+#if PLATFORM(MACCATALYST)
+    pid_t pid = 0;
+    if (registerProcess)
+        pid = _page->process().processIdentifier();
+    else
+        pid = [objc_getAssociatedObject(self, (void*)[@"ax-pid" hash]) intValue];
+    if (!pid)
+        return;
+
+    if (registerProcess)
+        [WebKit::getNSAccessibilityRemoteUIElementClass() registerRemoteUIProcessIdentifier:pid];
+    else
+        [WebKit::getNSAccessibilityRemoteUIElementClass() unregisterRemoteUIProcessIdentifier:pid];
+#endif
+}
+
 - (void)_accessibilityRegisterUIProcessTokens
 {
     auto uuid = [NSUUID UUID];
@@ -522,6 +544,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
     // Store information about the WebProcess that can later be retrieved by the iOS Accessibility runtime.
     if (_page->process().state() == WebKit::WebProcessProxy::State::Running) {
+        [self _updateRemoteAccessibilityRegistration:YES];
         IPC::Connection* connection = _page->process().connection();
         storeAccessibilityRemoteConnectionInformation(self, _page->process().processIdentifier(), connection->identifier().port, uuid);
 
@@ -544,6 +567,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
 - (void)_processDidExit
 {
+    [self _updateRemoteAccessibilityRegistration:NO];
     [self cleanupInteraction];
 
     [self setShowingInspectorIndication:NO];

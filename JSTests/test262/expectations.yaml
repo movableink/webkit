@@ -633,15 +633,6 @@ test/built-ins/Array/proto-from-ctor-realm-zero.js:
 test/built-ins/Array/prototype/filter/target-array-with-non-writable-property.js:
   default: 'TypeError: Attempted to assign to readonly property.'
   strict mode: 'TypeError: Attempted to assign to readonly property.'
-test/built-ins/Array/prototype/flatMap/array-like-objects-nested.js:
-  default: 'Exception: should not even consider the length property'
-  strict mode: 'Exception: should not even consider the length property'
-test/built-ins/Array/prototype/indexOf/calls-only-has-on-prototype-after-length-zeroed.js:
-  default: 'Test262Error: [[GetPrototypeOf]] trap called'
-  strict mode: 'Test262Error: [[GetPrototypeOf]] trap called'
-test/built-ins/Array/prototype/lastIndexOf/calls-only-has-on-prototype-after-length-zeroed.js:
-  default: 'Test262Error: [[GetPrototypeOf]] trap called'
-  strict mode: 'Test262Error: [[GetPrototypeOf]] trap called'
 test/built-ins/Array/prototype/map/target-array-with-non-writable-property.js:
   default: 'TypeError: Attempted to assign to readonly property.'
   strict mode: 'TypeError: Attempted to assign to readonly property.'
@@ -667,14 +658,14 @@ test/built-ins/Array/prototype/push/throws-if-integer-limit-exceeded.js:
   default: 'Test262Error: Length is 2**53 - 1 Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Length is 2**53 - 1 Expected a TypeError to be thrown but no exception was thrown at all'
 test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js:
-  default: 'Test262Error: Expected a StopReverse but got a Test262Error'
-  strict mode: 'Test262Error: Expected a StopReverse but got a Test262Error'
+  default: 'Test262Error: Expected [Get:length, Has:0, Get:0, Has:4294967294, Delete:0, Set:4294967294, GetOwnPropertyDescriptor:4294967294, DefineProperty:4294967294, Has:1, Has:4294967293, Delete:1, Delete:4294967293, Has:2, Get:2, Has:4294967292, Delete:2, Set:4294967292, GetOwnPropertyDescriptor:4294967292, DefineProperty:4294967292, Has:3, Has:4294967291, Delete:3, Delete:4294967291, Has:4, Get:4] and [Get:length, Has:0, Get:0, Has:9007199254740990, Get:9007199254740990, Set:0, GetOwnPropertyDescriptor:0, DefineProperty:0, Set:9007199254740990, GetOwnPropertyDescriptor:9007199254740990, DefineProperty:9007199254740990, Has:1, Has:9007199254740989, Has:2, Get:2, Has:9007199254740988, Delete:2, Set:9007199254740988, GetOwnPropertyDescriptor:9007199254740988, DefineProperty:9007199254740988, Has:3, Has:9007199254740987, Get:9007199254740987, Set:3, GetOwnPropertyDescriptor:3, DefineProperty:3, Delete:9007199254740987, Has:4, Get:4] to have the same contents. '
+  strict mode: 'Test262Error: Expected [Get:length, Has:0, Get:0, Has:4294967294, Delete:0, Set:4294967294, GetOwnPropertyDescriptor:4294967294, DefineProperty:4294967294, Has:1, Has:4294967293, Delete:1, Delete:4294967293, Has:2, Get:2, Has:4294967292, Delete:2, Set:4294967292, GetOwnPropertyDescriptor:4294967292, DefineProperty:4294967292, Has:3, Has:4294967291, Delete:3, Delete:4294967291, Has:4, Get:4] and [Get:length, Has:0, Get:0, Has:9007199254740990, Get:9007199254740990, Set:0, GetOwnPropertyDescriptor:0, DefineProperty:0, Set:9007199254740990, GetOwnPropertyDescriptor:9007199254740990, DefineProperty:9007199254740990, Has:1, Has:9007199254740989, Has:2, Get:2, Has:9007199254740988, Delete:2, Set:9007199254740988, GetOwnPropertyDescriptor:9007199254740988, DefineProperty:9007199254740988, Has:3, Has:9007199254740987, Get:9007199254740987, Set:3, GetOwnPropertyDescriptor:3, DefineProperty:3, Delete:9007199254740987, Has:4, Get:4] to have the same contents. '
 test/built-ins/Array/prototype/slice/length-exceeding-integer-limit-proxied-array.js:
-  default: 'Test262Error: Expected [] and ["9007199254740989", "9007199254740990"] to have the same contents. slice(9007199254740989)'
-  strict mode: 'Test262Error: Expected [] and ["9007199254740989", "9007199254740990"] to have the same contents. slice(9007199254740989)'
+  default: 'Test262Error: Expected [] and [9007199254740989, 9007199254740990] to have the same contents. slice(9007199254740989)'
+  strict mode: 'Test262Error: Expected [] and [9007199254740989, 9007199254740990] to have the same contents. slice(9007199254740989)'
 test/built-ins/Array/prototype/slice/length-exceeding-integer-limit.js:
-  default: 'Test262Error: Expected [] and ["9007199254740989", "9007199254740990"] to have the same contents. slice(9007199254740989)'
-  strict mode: 'Test262Error: Expected [] and ["9007199254740989", "9007199254740990"] to have the same contents. slice(9007199254740989)'
+  default: 'Test262Error: Expected [] and [9007199254740989, 9007199254740990] to have the same contents. slice(9007199254740989)'
+  strict mode: 'Test262Error: Expected [] and [9007199254740989, 9007199254740990] to have the same contents. slice(9007199254740989)'
 test/built-ins/Array/prototype/slice/target-array-with-non-writable-property.js:
   default: 'TypeError: Attempted to assign to readonly property.'
   strict mode: 'TypeError: Attempted to assign to readonly property.'
@@ -688,17 +679,17 @@ test/built-ins/Array/prototype/splice/create-proxy.js:
   default: 'TypeError: Attempted to assign to readonly property.'
   strict mode: 'TypeError: Attempted to assign to readonly property.'
 test/built-ins/Array/prototype/splice/create-species-length-exceeding-integer-limit.js:
-  default: 'Test262Error: Expected a StopSplice but got a Test262Error'
-  strict mode: 'Test262Error: Expected a StopSplice but got a Test262Error'
+  default: 'Test262Error: length and deleteCount were correctly clamped to 2^53-1 Expected SameValue(Â«4294967295Â», Â«9007199254740991Â») to be true'
+  strict mode: 'Test262Error: length and deleteCount were correctly clamped to 2^53-1 Expected SameValue(Â«4294967295Â», Â«9007199254740991Â») to be true'
 test/built-ins/Array/prototype/splice/length-and-deleteCount-exceeding-integer-limit.js:
-  default: "Test262Error: Expected [] and [\"9007199254740989\", \"9007199254740990\"] to have the same contents. arrayLike['9007199254740989'] and arrayLike['9007199254740990'] are removed"
-  strict mode: "Test262Error: Expected [] and [\"9007199254740989\", \"9007199254740990\"] to have the same contents. arrayLike['9007199254740989'] and arrayLike['9007199254740990'] are removed"
+  default: "Test262Error: Expected [] and [9007199254740989, 9007199254740990] to have the same contents. arrayLike['9007199254740989'] and arrayLike['9007199254740990'] are removed"
+  strict mode: "Test262Error: Expected [] and [9007199254740989, 9007199254740990] to have the same contents. arrayLike['9007199254740989'] and arrayLike['9007199254740990'] are removed"
 test/built-ins/Array/prototype/splice/length-exceeding-integer-limit-shrink-array.js:
-  default: "Test262Error: Expected [] and [\"9007199254740987\"] to have the same contents. arrayLike['9007199254740987'] is removed"
-  strict mode: "Test262Error: Expected [] and [\"9007199254740987\"] to have the same contents. arrayLike['9007199254740987'] is removed"
+  default: "Test262Error: Expected [] and [9007199254740987] to have the same contents. arrayLike['9007199254740987'] is removed"
+  strict mode: "Test262Error: Expected [] and [9007199254740987] to have the same contents. arrayLike['9007199254740987'] is removed"
 test/built-ins/Array/prototype/splice/property-traps-order-with-species.js:
-  default: 'Test262Error: Expected ["defineProperty", "defineProperty", "set", "getOwnPropertyDescriptor", "defineProperty"] and ["defineProperty", "defineProperty"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["defineProperty", "defineProperty", "set", "getOwnPropertyDescriptor", "defineProperty"] and ["defineProperty", "defineProperty"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [defineProperty, defineProperty, set, getOwnPropertyDescriptor, defineProperty] and [defineProperty, defineProperty] to have the same contents. '
+  strict mode: 'Test262Error: Expected [defineProperty, defineProperty, set, getOwnPropertyDescriptor, defineProperty] and [defineProperty, defineProperty] to have the same contents. '
 test/built-ins/Array/prototype/splice/target-array-with-non-writable-property.js:
   default: 'TypeError: Attempted to assign to readonly property.'
   strict mode: 'TypeError: Attempted to assign to readonly property.'
@@ -744,6 +735,12 @@ test/built-ins/ArrayIteratorPrototype/next/detach-typedarray-in-progress.js:
 test/built-ins/AsyncFunction/proto-from-ctor-realm.js:
   default: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object AsyncFunction]Â», Â«[object AsyncFunction]Â») to be true'
   strict mode: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object AsyncFunction]Â», Â«[object AsyncFunction]Â») to be true'
+test/built-ins/AsyncGeneratorFunction/proto-from-ctor-realm.js:
+  default: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object AsyncGeneratorFunction]Â», Â«[object AsyncGeneratorFunction]Â») to be true'
+  strict mode: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object AsyncGeneratorFunction]Â», Â«[object AsyncGeneratorFunction]Â») to be true'
+test/built-ins/BigInt/constructor-integer.js:
+  default: 'RangeError: Not safe integer'
+  strict mode: 'RangeError: Not safe integer'
 test/built-ins/Boolean/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«falseÂ», Â«falseÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«falseÂ», Â«falseÂ») to be true'
@@ -873,198 +870,6 @@ test/built-ins/Date/proto-from-ctor-realm-zero.js:
 test/built-ins/Error/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«ErrorÂ», Â«ErrorÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«ErrorÂ», Â«ErrorÂ») to be true'
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/Symbol.toStringTag.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/next-job-not-active-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/next-length.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/next-missing-internal-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/next-name.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/next-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/next-prop-desc.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/FinalizationGroupCleanupIteratorPrototype/proto.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/constructor.js:
-  default: 'Test262Error: typeof FinalizationGroup is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-  strict mode: 'Test262Error: typeof FinalizationGroup is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-test/built-ins/FinalizationGroup/gc-has-one-chance-to-call-cleanupCallback.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/instance-extensible.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/length.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/name.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/newtarget-prototype-is-not-object.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prop-desc.js:
-  default: 'Test262Error: obj should have an own property FinalizationGroup'
-  strict mode: 'Test262Error: obj should have an own property FinalizationGroup'
-test/built-ins/FinalizationGroup/proto-from-ctor-realm.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/proto.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype-from-newtarget-abrupt.js:
-  default: 'Test262Error: Expected a Test262Error but got a ReferenceError'
-  strict mode: 'Test262Error: Expected a Test262Error but got a ReferenceError'
-test/built-ins/FinalizationGroup/prototype-from-newtarget-custom.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype-from-newtarget.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/Symbol.toStringTag.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/callback-iterator-proto.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/callback-not-callable-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/cleanup-prevented-with-reference.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/cleanup-prevented-with-unregister.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/cleanupcallback-iterator-proto.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/custom-this.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/iterator-dynamic.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/iterator-holdings-multiple-values.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/length.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/name.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/prop-desc.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/this-does-not-have-internal-cells-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/cleanupSome/this-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/constructor.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/prop-desc.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/proto.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/custom-this.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/holdings-any-value-type.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/holdings-same-as-target.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/length.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/name.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/prop-desc.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/return-undefined-register-itself.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/return-undefined.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/target-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/this-does-not-have-internal-target-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/this-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/unregisterToken-not-object-or-undefined-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/unregisterToken-same-as-holdings-and-target.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/unregisterToken-same-as-holdings.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/register/unregisterToken-same-as-target.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/custom-this.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/length.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/name.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/prop-desc.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/this-does-not-have-internal-cells-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/this-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/unregister.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/prototype/unregister/unregisterToken-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/returns-new-object-from-constructor.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
-test/built-ins/FinalizationGroup/target-not-callable-throws.js:
-  default: 'Test262Error: typeof FinalizationGroup is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-  strict mode: 'Test262Error: typeof FinalizationGroup is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-test/built-ins/FinalizationGroup/undefined-newtarget-throws.js:
-  default: 'Test262Error: typeof FinalizationGroup is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-  strict mode: 'Test262Error: typeof FinalizationGroup is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-test/built-ins/FinalizationGroup/unnaffected-by-poisoned-cleanupCallback.js:
-  default: "ReferenceError: Can't find variable: FinalizationGroup"
-  strict mode: "ReferenceError: Can't find variable: FinalizationGroup"
 test/built-ins/Function/call-bind-this-realm-undef.js:
   default: 'Test262Error: implicit undefined Expected SameValue(Â«[object global]Â», Â«[object Undefined]Â») to be true'
   strict mode: 'Test262Error: implicit undefined Expected SameValue(Â«[object global]Â», Â«[object Undefined]Â») to be true'
@@ -1095,6 +900,9 @@ test/built-ins/Function/prototype/bind/proto-from-ctor-realm.js:
 test/built-ins/Function/prototype/toString/AsyncFunction.js:
   default: "SyntaxError: Unexpected token ';'. Expected a ')' or a ',' after a parameter declaration."
   strict mode: "SyntaxError: Unexpected token ';'. Expected a ')' or a ',' after a parameter declaration."
+test/built-ins/Function/prototype/toString/AsyncGenerator.js:
+  default: "SyntaxError: Unexpected token ';'. Expected a ')' or a ',' after a parameter declaration."
+  strict mode: "SyntaxError: Unexpected token ';'. Expected a ')' or a ',' after a parameter declaration."
 test/built-ins/Function/prototype/toString/Function.js:
   default: "SyntaxError: Unexpected token ';'. Expected a ')' or a ',' after a parameter declaration."
   strict mode: "SyntaxError: Unexpected token ';'. Expected a ')' or a ',' after a parameter declaration."
@@ -1110,6 +918,27 @@ test/built-ins/Function/prototype/toString/async-function-declaration.js:
 test/built-ins/Function/prototype/toString/async-function-expression.js:
   default: "Test262Error: Conforms to NativeFunction Syntax: 'async function F( /* c */ x /* d */ , /* e */ y /* f */ ) /* g */ { /* h */ ; /* i */ ; /* j */ }'.(async function /* a */ F /* b */ ( /* c */ x /* d */ , /* e */ y /* f */ ) /* g */ { /* h */ ; /* i */ ; /* j */ })"
   strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function F( /* c */ x /* d */ , /* e */ y /* f */ ) /* g */ { /* h */ ; /* i */ ; /* j */ }'.(async function /* a */ F /* b */ ( /* c */ x /* d */ , /* e */ y /* f */ ) /* g */ { /* h */ ; /* i */ ; /* j */ })"
+test/built-ins/Function/prototype/toString/async-generator-declaration.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ }'.(async /* a */ function /* b */ * /* c */ f /* d */ ( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ }'.(async /* a */ function /* b */ * /* c */ f /* d */ ( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ })"
+test/built-ins/Function/prototype/toString/async-generator-expression.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* F( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ }'.(async /* a */ function /* b */ * /* c */ F /* d */ ( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* F( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ }'.(async /* a */ function /* b */ * /* c */ F /* d */ ( /* e */ x /* f */ , /* g */ y /* h */ ) /* i */ { /* j */ ; /* k */ ; /* l */ })"
+test/built-ins/Function/prototype/toString/async-generator-method-class-expression-static.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+test/built-ins/Function/prototype/toString/async-generator-method-class-expression.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+test/built-ins/Function/prototype/toString/async-generator-method-class-statement-static.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+test/built-ins/Function/prototype/toString/async-generator-method-class-statement.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+test/built-ins/Function/prototype/toString/async-generator-method-object.js:
+  default: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
+  strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function* f( /* d */ ) /* e */ { /* f */ }'.(async /* a */ * /* b */ f /* c */ ( /* d */ ) /* e */ { /* f */ })"
 test/built-ins/Function/prototype/toString/async-method-class-expression-static.js:
   default: "Test262Error: Conforms to NativeFunction Syntax: 'async function f( /* b */ ) /* c */ { /* d */ }'.(async f /* a */ ( /* b */ ) /* c */ { /* d */ })"
   strict mode: "Test262Error: Conforms to NativeFunction Syntax: 'async function f( /* b */ ) /* c */ { /* d */ }'.(async f /* a */ ( /* b */ ) /* c */ { /* d */ })"
@@ -1227,6 +1056,9 @@ test/built-ins/NativeErrors/TypeError/proto-from-ctor-realm.js:
 test/built-ins/NativeErrors/URIError/proto-from-ctor-realm.js:
   default: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«URIErrorÂ», Â«URIErrorÂ») to be true'
   strict mode: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«URIErrorÂ», Â«URIErrorÂ») to be true'
+test/built-ins/Number/bigint-conversion.js:
+  default: "TypeError: Conversion from 'BigInt' to 'number' is not allowed."
+  strict mode: "TypeError: Conversion from 'BigInt' to 'number' is not allowed."
 test/built-ins/Number/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«0Â», Â«0Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«0Â», Â«0Â») to be true'
@@ -1238,8 +1070,14 @@ test/built-ins/Object/internals/DefineOwnProperty/consistent-value-regexp-dollar
   default: 'Test262Error: Expected SameValue(Â«Â», Â«xÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«Â», Â«xÂ») to be true'
 test/built-ins/Object/keys/property-traps-order-with-proxied-array.js:
-  default: 'Test262Error: Expected ["ownKeys", "getOwnPropertyDescriptor"] and ["ownKeys"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["ownKeys", "getOwnPropertyDescriptor"] and ["ownKeys"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [ownKeys, getOwnPropertyDescriptor] and [ownKeys] to have the same contents. '
+  strict mode: 'Test262Error: Expected [ownKeys, getOwnPropertyDescriptor] and [ownKeys] to have the same contents. '
+test/built-ins/Object/keys/proxy-non-enumerable-prop-invariant-1.js:
+  default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
+  strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
+test/built-ins/Object/keys/proxy-non-enumerable-prop-invariant-2.js:
+  default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
+  strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
 test/built-ins/Object/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«[object Object]Â», Â«[object Object]Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«[object Object]Â», Â«[object Object]Â») to be true'
@@ -1255,45 +1093,30 @@ test/built-ins/Object/prototype/toString/symbol-tag-non-str-proxy-function.js:
 test/built-ins/Promise/all/invoke-resolve-get-error-close.js:
   default: 'Test262Error: Expected SameValue(Â«0Â», Â«1Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«0Â», Â«1Â») to be true'
-test/built-ins/Promise/all/resolve-element-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
 test/built-ins/Promise/all/resolve-element-function-nonconstructor.js:
   default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
 test/built-ins/Promise/allSettled/invoke-resolve-get-error-close.js:
   default: 'Test262Error: Expected SameValue(Â«0Â», Â«1Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«0Â», Â«1Â») to be true'
-test/built-ins/Promise/allSettled/reject-element-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
 test/built-ins/Promise/allSettled/reject-element-function-nonconstructor.js:
   default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-test/built-ins/Promise/allSettled/resolve-element-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
 test/built-ins/Promise/allSettled/resolve-element-function-nonconstructor.js:
   default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-test/built-ins/Promise/executor-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
+test/built-ins/Promise/executor-function-nonconstructor.js:
+  default: 'Test262Error: Expected SameValue(Â«trueÂ», Â«falseÂ») to be true'
+  strict mode: 'Test262Error: Expected SameValue(Â«trueÂ», Â«falseÂ») to be true'
 test/built-ins/Promise/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«[object Promise]Â», Â«[object Promise]Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«[object Promise]Â», Â«[object Promise]Â») to be true'
 test/built-ins/Promise/race/invoke-resolve-get-error-close.js:
   default: 'Test262Error: Expected SameValue(Â«0Â», Â«1Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«0Â», Â«1Â») to be true'
-test/built-ins/Promise/reject-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
 test/built-ins/Promise/reject-function-nonconstructor.js:
   default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-test/built-ins/Promise/resolve-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
 test/built-ins/Promise/resolve-function-nonconstructor.js:
   default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
@@ -1333,60 +1156,12 @@ test/built-ins/Proxy/construct/return-not-object-throws-undefined-realm.js:
 test/built-ins/Proxy/construct/trap-is-not-callable-realm.js:
   default: 'Test262Error: Expected a TypeError but got a TypeError'
   strict mode: 'Test262Error: Expected a TypeError but got a TypeError'
-test/built-ins/Proxy/revocable/revocation-function-name.js:
-  default: 'Test262Error: obj should have an own property name'
-  strict mode: 'Test262Error: obj should have an own property name'
-test/built-ins/RegExp/match-indices/indices-array-element.js:
-  default: "TypeError: undefined is not an object (evaluating 'indices[0]')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'indices[0]')"
-test/built-ins/RegExp/match-indices/indices-array-matched.js:
-  default: "TypeError: undefined is not an object (evaluating 'indices.length')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'indices.length')"
-test/built-ins/RegExp/match-indices/indices-array-non-unicode-match.js:
-  default: 'Test262Error: Expected [[1, 2], [1, 2]] to be structurally equal to undefined. '
-  strict mode: 'Test262Error: Expected [[1, 2], [1, 2]] to be structurally equal to undefined. '
-test/built-ins/RegExp/match-indices/indices-array-properties.js:
-  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(obj, name)')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(obj, name)')"
-test/built-ins/RegExp/match-indices/indices-array-unicode-match.js:
-  default: 'Test262Error: Expected [[1, 2], [1, 2]] to be structurally equal to undefined. '
-  strict mode: 'Test262Error: Expected [[1, 2], [1, 2]] to be structurally equal to undefined. '
-test/built-ins/RegExp/match-indices/indices-array-unicode-property-names.js:
-  default: 'SyntaxError: Invalid regular expression: invalid group specifier name'
-  strict mode: 'SyntaxError: Invalid regular expression: invalid group specifier name'
-test/built-ins/RegExp/match-indices/indices-array-unmatched.js:
-  default: "TypeError: undefined is not an object (evaluating 'indices.length')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'indices.length')"
-test/built-ins/RegExp/match-indices/indices-array.js:
-  default: "TypeError: undefined is not an object (evaluating 'Object.getPrototypeOf(indices)')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getPrototypeOf(indices)')"
-test/built-ins/RegExp/match-indices/indices-groups-object-undefined.js:
-  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(obj, name)')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(obj, name)')"
-test/built-ins/RegExp/match-indices/indices-groups-object-unmatched.js:
-  default: "TypeError: undefined is not an object (evaluating 'result.groups')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'result.groups')"
-test/built-ins/RegExp/match-indices/indices-groups-object.js:
-  default: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(obj, name)')"
-  strict mode: "TypeError: undefined is not an object (evaluating 'Object.getOwnPropertyDescriptor(obj, name)')"
-test/built-ins/RegExp/match-indices/indices-groups-properties.js:
-  default: "TypeError: undefined is not an object (evaluating '/(?<fst>.)|(?<snd>.)/u.exec(\"abcd\").indices.groups')"
-  strict mode: "TypeError: undefined is not an object (evaluating '/(?<fst>.)|(?<snd>.)/u.exec(\"abcd\").indices.groups')"
-test/built-ins/RegExp/match-indices/indices-property.js:
-  default: 'Test262Error: obj should have an own property indices'
-  strict mode: 'Test262Error: obj should have an own property indices'
 test/built-ins/RegExp/named-groups/groups-object-subclass-sans.js:
   default: 'Test262Error: Expected SameValue(Â«bÂ», Â«$<a>Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«bÂ», Â«$<a>Â») to be true'
 test/built-ins/RegExp/named-groups/groups-object-subclass.js:
   default: 'Test262Error: Expected SameValue(Â«bÂ», Â«$<a>Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«bÂ», Â«$<a>Â») to be true'
-test/built-ins/RegExp/named-groups/groups-object-undefined.js:
-  default: 'Test262Error: Expected true but got false'
-  strict mode: 'Test262Error: Expected true but got false'
-test/built-ins/RegExp/named-groups/groups-object.js:
-  default: 'Test262Error: Expected SameValue(Â«nullÂ», Â«[object Object]Â») to be true'
-  strict mode: 'Test262Error: Expected SameValue(Â«nullÂ», Â«[object Object]Â») to be true'
 test/built-ins/RegExp/named-groups/string-replace-nocaptures.js:
   default: 'Test262Error: Expected SameValue(Â«$<snd>$<fst>cdÂ», Â«$<$<fst>cdÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«$<snd>$<fst>cdÂ», Â«$<$<fst>cdÂ») to be true'
@@ -1795,12 +1570,6 @@ test/built-ins/Set/proto-from-ctor-realm.js:
 test/built-ins/String/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«Â», Â«Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«Â», Â«Â») to be true'
-test/built-ins/String/prototype/matchAll/flags-nonglobal-throws.js:
-  default: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-  strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
-test/built-ins/String/prototype/matchAll/flags-undefined-throws.js:
-  default: 'Test262Error: Expected a TypeError but got a SyntaxError'
-  strict mode: 'Test262Error: Expected a TypeError but got a SyntaxError'
 test/built-ins/ThrowTypeError/extensible.js:
   default: 'Test262Error: Expected SameValue(Â«trueÂ», Â«falseÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«trueÂ», Â«falseÂ») to be true'
@@ -2016,99 +1785,39 @@ test/built-ins/TypedArrayConstructors/of/new-instance-using-custom-ctor.js:
 test/built-ins/WeakMap/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«[object WeakMap]Â», Â«[object WeakMap]Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«[object WeakMap]Â», Â«[object WeakMap]Â») to be true'
-test/built-ins/WeakRef/constructor.js:
-  default: 'Test262Error: typeof WeakRef is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-  strict mode: 'Test262Error: typeof WeakRef is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-test/built-ins/WeakRef/instance-extensible.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/length.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/name.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/newtarget-prototype-is-not-object.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prop-desc.js:
-  default: 'Test262Error: obj should have an own property WeakRef'
-  strict mode: 'Test262Error: obj should have an own property WeakRef'
 test/built-ins/WeakRef/proto-from-ctor-realm.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/proto.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype-from-newtarget-abrupt.js:
-  default: 'Test262Error: Expected a Test262Error but got a ReferenceError'
-  strict mode: 'Test262Error: Expected a Test262Error but got a ReferenceError'
-test/built-ins/WeakRef/prototype-from-newtarget-custom.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype-from-newtarget.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/Symbol.toStringTag.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/constructor.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/custom-this.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/gc-cleanup-not-prevented-with-wr-deref.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/length.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/name.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/prop-desc.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/return-target.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/this-does-not-have-internal-target-throws.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/deref/this-not-object-throws.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/prop-desc.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/prototype/proto.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/returns-new-object-from-constructor.js:
-  default: "ReferenceError: Can't find variable: WeakRef"
-  strict mode: "ReferenceError: Can't find variable: WeakRef"
-test/built-ins/WeakRef/target-not-object-throws.js:
-  default: 'Test262Error: typeof WeakRef is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-  strict mode: 'Test262Error: typeof WeakRef is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-test/built-ins/WeakRef/undefined-newtarget-throws.js:
-  default: 'Test262Error: typeof WeakRef is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
-  strict mode: 'Test262Error: typeof WeakRef is function Expected SameValue(Â«undefinedÂ», Â«functionÂ») to be true'
+  default: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object WeakRef]Â», Â«[object WeakRef]Â») to be true'
+  strict mode: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object WeakRef]Â», Â«[object WeakRef]Â») to be true'
 test/built-ins/WeakSet/proto-from-ctor-realm.js:
   default: 'Test262Error: Expected SameValue(Â«[object WeakSet]Â», Â«[object WeakSet]Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«[object WeakSet]Â», Â«[object WeakSet]Â») to be true'
+test/intl402/BigInt/prototype/toLocaleString/de-DE.js:
+  default: 'RangeError: toString() radix argument must be between 2 and 36'
+  strict mode: 'RangeError: toString() radix argument must be between 2 and 36'
+test/intl402/BigInt/prototype/toLocaleString/default-options-object-prototype.js:
+  default: 'RangeError: toString() radix argument must be between 2 and 36'
+  strict mode: 'RangeError: toString() radix argument must be between 2 and 36'
+test/intl402/BigInt/prototype/toLocaleString/en-US.js:
+  default: 'RangeError: toString() radix argument must be between 2 and 36'
+  strict mode: 'RangeError: toString() radix argument must be between 2 and 36'
+test/intl402/BigInt/prototype/toLocaleString/returns-same-results-as-NumberFormat.js:
+  default: "TypeError: Conversion from 'BigInt' to 'number' is not allowed."
+  strict mode: "TypeError: Conversion from 'BigInt' to 'number' is not allowed."
+test/intl402/BigInt/prototype/toLocaleString/throws-same-exceptions-as-NumberFormat.js:
+  default: "Test262Error: BigInt.prototype.toLocaleString didn't throw exception for locales null. Expected a TypeError but got a RangeError"
+  strict mode: "Test262Error: BigInt.prototype.toLocaleString didn't throw exception for locales null. Expected a TypeError but got a RangeError"
 test/intl402/Collator/missing-unicode-ext-value-defaults-to-true.js:
   default: 'Test262Error: "kn" should be returned in locale. Expected SameValue(Â«falseÂ», Â«trueÂ») to be true'
   strict mode: 'Test262Error: "kn" should be returned in locale. Expected SameValue(Â«falseÂ», Â«trueÂ») to be true'
 test/intl402/Collator/proto-from-ctor-realm.js:
   default: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object Object]Â», Â«[object Object]Â») to be true'
   strict mode: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object Object]Â», Â«[object Object]Â») to be true'
-test/intl402/Collator/prototype/compare/compare-function-name.js:
-  default: 'Test262Error: descriptor value should be '
-  strict mode: 'Test262Error: descriptor value should be '
 test/intl402/Collator/usage-de.js:
-  default: 'Test262Error: Expected ["Ã", "AE"] and ["AE", "Ã"] to have the same contents. search'
-  strict mode: 'Test262Error: Expected ["Ã", "AE"] and ["AE", "Ã"] to have the same contents. search'
+  default: 'Test262Error: Expected [Ã, AE] and [AE, Ã] to have the same contents. search'
+  strict mode: 'Test262Error: Expected [Ã, AE] and [AE, Ã] to have the same contents. search'
+test/intl402/DateTimeFormat/constructor-calendar-numberingSystem-order.js:
+  default: 'Test262Error: Expected [localeMatcher, hour12] and [localeMatcher, calendar, numberingSystem, hour12] to have the same contents. '
+  strict mode: 'Test262Error: Expected [localeMatcher, hour12] and [localeMatcher, calendar, numberingSystem, hour12] to have the same contents. '
 test/intl402/DateTimeFormat/constructor-options-dayPeriod-invalid.js:
   default: 'Test262Error: new Intl.DateTimeFormat("en", { dayPeriod: "" }) throws RangeError Expected a RangeError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: new Intl.DateTimeFormat("en", { dayPeriod: "" }) throws RangeError Expected a RangeError to be thrown but no exception was thrown at all'
@@ -2122,11 +1831,11 @@ test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js:
   default: 'Test262Error: Expected SameValue(Â«undefinedÂ», Â«0Â») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«undefinedÂ», Â«0Â») to be true'
 test/intl402/DateTimeFormat/constructor-options-order-dayPeriod.js:
-  default: 'Test262Error: Expected ["day", "hour", "day", "hour"] and ["day", "dayPeriod", "hour", "day", "dayPeriod", "hour"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["day", "hour", "day", "hour"] and ["day", "dayPeriod", "hour", "day", "dayPeriod", "hour"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [day, hour, day, hour] and [day, dayPeriod, hour, day, dayPeriod, hour] to have the same contents. '
+  strict mode: 'Test262Error: Expected [day, hour, day, hour] and [day, dayPeriod, hour, day, dayPeriod, hour] to have the same contents. '
 test/intl402/DateTimeFormat/constructor-options-order-fractionalSecondDigits.js:
-  default: 'Test262Error: Expected ["second", "localeMatcher", "second", "timeZoneName", "formatMatcher"] and ["second", "fractionalSecondDigits", "localeMatcher", "second", "timeZoneName", "fractionalSecondDigits", "formatMatcher"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["second", "localeMatcher", "second", "timeZoneName", "formatMatcher"] and ["second", "fractionalSecondDigits", "localeMatcher", "second", "timeZoneName", "fractionalSecondDigits", "formatMatcher"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [second, localeMatcher, second, timeZoneName, formatMatcher] and [second, fractionalSecondDigits, localeMatcher, second, timeZoneName, fractionalSecondDigits, formatMatcher] to have the same contents. '
+  strict mode: 'Test262Error: Expected [second, localeMatcher, second, timeZoneName, formatMatcher] and [second, fractionalSecondDigits, localeMatcher, second, timeZoneName, fractionalSecondDigits, formatMatcher] to have the same contents. '
 test/intl402/DateTimeFormat/constructor-options-throwing-getters-dayPeriod.js:
   default: 'Test262Error: Exception from dayPeriod getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all'
   strict mode: 'Test262Error: Exception from dayPeriod getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all'
@@ -2148,9 +1857,6 @@ test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js:
 test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js:
   default: 'Test262Error: 00:00, short format Expected SameValue(Â«12/12/2017Â», Â«at nightÂ») to be true'
   strict mode: 'Test262Error: 00:00, short format Expected SameValue(Â«12/12/2017Â», Â«at nightÂ») to be true'
-test/intl402/DateTimeFormat/prototype/format/format-function-name.js:
-  default: 'Test262Error: descriptor value should be '
-  strict mode: 'Test262Error: descriptor value should be '
 test/intl402/DateTimeFormat/prototype/format/fractionalSecondDigits.js:
   default: 'Test262Error: 1 fractionalSecondDigits round down Expected SameValue(Â«02:03Â», Â«02:03.2Â») to be true'
   strict mode: 'Test262Error: 1 fractionalSecondDigits round down Expected SameValue(Â«02:03Â», Â«02:03.2Â») to be true'
@@ -2166,15 +1872,18 @@ test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js:
 test/intl402/DateTimeFormat/prototype/formatToParts/fractionalSecondDigits.js:
   default: 'Test262Error: length should be 5, 1 fractionalSecondDigits round down Expected SameValue(Â«3Â», Â«5Â») to be true'
   strict mode: 'Test262Error: length should be 5, 1 fractionalSecondDigits round down Expected SameValue(Â«3Â», Â«5Â») to be true'
+test/intl402/DateTimeFormat/prototype/formatToParts/pattern-on-calendar.js:
+  default: 'Test262Error: Expected SameValue(Â«falseÂ», Â«trueÂ») to be true'
+  strict mode: 'Test262Error: Expected SameValue(Â«falseÂ», Â«trueÂ») to be true'
+test/intl402/DateTimeFormat/prototype/formatToParts/related-year.js:
+  default: 'Test262Error: Expected SameValue(Â«falseÂ», Â«trueÂ») to be true'
+  strict mode: 'Test262Error: Expected SameValue(Â«falseÂ», Â«trueÂ») to be true'
 test/intl402/DateTimeFormat/prototype/resolvedOptions/order-dayPeriod.js:
-  default: 'Test262Error: Expected ["locale", "calendar", "numberingSystem", "timeZone", "hour", "hourCycle", "hour12", "minute"] and ["locale", "calendar", "numberingSystem", "timeZone", "hourCycle", "hour12", "dayPeriod", "hour", "minute"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["locale", "calendar", "numberingSystem", "timeZone", "hour", "hourCycle", "hour12", "minute"] and ["locale", "calendar", "numberingSystem", "timeZone", "hourCycle", "hour12", "dayPeriod", "hour", "minute"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [locale, calendar, numberingSystem, timeZone, hourCycle, hour12, hour, minute] and [locale, calendar, numberingSystem, timeZone, hourCycle, hour12, dayPeriod, hour, minute] to have the same contents. '
+  strict mode: 'Test262Error: Expected [locale, calendar, numberingSystem, timeZone, hourCycle, hour12, hour, minute] and [locale, calendar, numberingSystem, timeZone, hourCycle, hour12, dayPeriod, hour, minute] to have the same contents. '
 test/intl402/DateTimeFormat/prototype/resolvedOptions/order-fractionalSecondDigits.js:
-  default: 'Test262Error: Expected ["locale", "calendar", "numberingSystem", "timeZone", "minute", "second"] and ["locale", "calendar", "numberingSystem", "timeZone", "minute", "second", "fractionalSecondDigits"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["locale", "calendar", "numberingSystem", "timeZone", "minute", "second"] and ["locale", "calendar", "numberingSystem", "timeZone", "minute", "second", "fractionalSecondDigits"] to have the same contents. undefined'
-test/intl402/DateTimeFormat/prototype/resolvedOptions/order.js:
-  default: 'Test262Error: Expected ["locale", "calendar", "numberingSystem", "timeZone", "weekday", "era", "year", "month", "day", "hour", "hourCycle", "hour12", "minute", "second", "timeZoneName"] and ["locale", "calendar", "numberingSystem", "timeZone", "hourCycle", "hour12", "weekday", "era", "year", "month", "day", "hour", "minute", "second", "timeZoneName"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["locale", "calendar", "numberingSystem", "timeZone", "weekday", "era", "year", "month", "day", "hour", "hourCycle", "hour12", "minute", "second", "timeZoneName"] and ["locale", "calendar", "numberingSystem", "timeZone", "hourCycle", "hour12", "weekday", "era", "year", "month", "day", "hour", "minute", "second", "timeZoneName"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [locale, calendar, numberingSystem, timeZone, minute, second] and [locale, calendar, numberingSystem, timeZone, minute, second, fractionalSecondDigits] to have the same contents. '
+  strict mode: 'Test262Error: Expected [locale, calendar, numberingSystem, timeZone, minute, second] and [locale, calendar, numberingSystem, timeZone, minute, second, fractionalSecondDigits] to have the same contents. '
 test/intl402/Intl/getCanonicalLocales/canonicalized-tags.js:
   default: 'Test262Error: Expected SameValue(Â«cmnÂ», Â«zhÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«cmnÂ», Â«zhÂ») to be true'
@@ -2193,15 +1902,18 @@ test/intl402/Intl/getCanonicalLocales/preferred-grandfathered.js:
 test/intl402/Intl/getCanonicalLocales/preferred-variant.js:
   default: 'Test262Error: Expected SameValue(Â«ja-Latn-alalc97Â», Â«ja-Latn-hepburn-heplocÂ») to be true'
   strict mode: 'Test262Error: Expected SameValue(Â«ja-Latn-alalc97Â», Â«ja-Latn-hepburn-heplocÂ») to be true'
+test/intl402/NumberFormat/constructor-numberingSystem-order.js:
+  default: 'Test262Error: Expected [localeMatcher, style] and [localeMatcher, numberingSystem, style] to have the same contents. '
+  strict mode: 'Test262Error: Expected [localeMatcher, style] and [localeMatcher, numberingSystem, style] to have the same contents. '
+test/intl402/NumberFormat/constructor-options-throwing-getters.js:
+  default: 'Test262Error: Exception from numberingSystem getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all'
+  strict mode: 'Test262Error: Exception from numberingSystem getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all'
 test/intl402/NumberFormat/numbering-system-options.js:
   default: "Test262Error: Options value for property numberingSystem doesn't override locale extension key nu. Expected SameValue(Â«arabÂ», Â«latnÂ») to be true"
   strict mode: "Test262Error: Options value for property numberingSystem doesn't override locale extension key nu. Expected SameValue(Â«arabÂ», Â«latnÂ») to be true"
 test/intl402/NumberFormat/proto-from-ctor-realm.js:
   default: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object Object]Â», Â«[object Object]Â») to be true'
   strict mode: 'Test262Error: newTarget.prototype is undefined Expected SameValue(Â«[object Object]Â», Â«[object Object]Â») to be true'
-test/intl402/NumberFormat/prototype/format/format-function-name.js:
-  default: 'Test262Error: descriptor value should be '
-  strict mode: 'Test262Error: descriptor value should be '
 test/intl402/NumberFormat/prototype/format/format-negative-numbers.js:
   default: 'Test262Error: Intl.NumberFormat is formatting 0 and -0 the same way. Expected SameValue(Â«0Â», Â«0Â») to be false'
   strict mode: 'Test262Error: Intl.NumberFormat is formatting 0 and -0 the same way. Expected SameValue(Â«0Â», Â«0Â») to be false'
@@ -2226,6 +1938,8 @@ test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-se
   default: 'Test262Error: Expected obj[0] to have configurable:false.'
 test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-class.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-const.js:
@@ -2238,7 +1952,25 @@ test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-var.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-class.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-const.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-let.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-var.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -2246,11 +1978,15 @@ test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-class.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -2263,6 +1999,8 @@ test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attem
 test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-var.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-class.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -2279,6 +2017,9 @@ test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-atte
 test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
@@ -2287,17 +2028,24 @@ test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaratio
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-function.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-function.js:
@@ -2307,6 +2055,8 @@ test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-wi
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-function.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -2379,11 +2129,11 @@ test/language/expressions/assignment/S11.13.1_A7_T3.js:
   default: 'Test262Error: Expected a DummyError but got a Test262Error'
   strict mode: 'Test262Error: Expected a DummyError but got a Test262Error'
 test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js:
-  default: 'Test262Error: Expected ["source", "iterator", "iterator-step", "iterator-done", "target", "target-key", "target-key-tostring", "set"] and ["source", "iterator", "target", "target-key", "target-key-tostring", "iterator-step", "iterator-done", "set"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["source", "iterator", "iterator-step", "iterator-done", "target", "target-key", "target-key-tostring", "set"] and ["source", "iterator", "target", "target-key", "target-key-tostring", "iterator-step", "iterator-done", "set"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [source, iterator, iterator-step, iterator-done, target, target-key, target-key-tostring, set] and [source, iterator, target, target-key, target-key-tostring, iterator-step, iterator-done, set] to have the same contents. '
+  strict mode: 'Test262Error: Expected [source, iterator, iterator-step, iterator-done, target, target-key, target-key-tostring, set] and [source, iterator, target, target-key, target-key-tostring, iterator-step, iterator-done, set] to have the same contents. '
 test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order.js:
-  default: 'Test262Error: Expected ["source", "source-key", "source-key-tostring", "get", "target", "target-key", "target-key-tostring", "set"] and ["source", "source-key", "source-key-tostring", "target", "target-key", "target-key-tostring", "get", "set"] to have the same contents. undefined'
-  strict mode: 'Test262Error: Expected ["source", "source-key", "source-key-tostring", "get", "target", "target-key", "target-key-tostring", "set"] and ["source", "source-key", "source-key-tostring", "target", "target-key", "target-key-tostring", "get", "set"] to have the same contents. undefined'
+  default: 'Test262Error: Expected [source, source-key, source-key-tostring, get, target, target-key, target-key-tostring, set] and [source, source-key, source-key-tostring, target, target-key, target-key-tostring, get, set] to have the same contents. '
+  strict mode: 'Test262Error: Expected [source, source-key, source-key-tostring, get, target, target-key, target-key-tostring, set] and [source, source-key, source-key-tostring, target, target-key, target-key-tostring, get, set] to have the same contents. '
 test/language/expressions/assignment/destructuring/obj-prop-__proto__dup.js:
   default: 'SyntaxError: Attempted to redefine __proto__ property.'
   strict mode: 'SyntaxError: Attempted to redefine __proto__ property.'
@@ -2525,6 +2275,11 @@ test/language/expressions/assignment/dstr/ident-name-prop-name-literal-with-esca
 test/language/expressions/assignment/fn-name-lhs-cover.js:
   default: 'Test262Error: descriptor value should be '
   strict mode: 'Test262Error: descriptor value should be '
+test/language/expressions/async-generator/early-errors-expression-yield-as-function-binding-identifier.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/expressions/async-generator/generator-created-after-decl-inst.js:
+  default: 'Test262Error: Expected SameValue(Â«[object AsyncGenerator]Â», Â«[object AsyncGenerator]Â») to be false'
+  strict mode: 'Test262Error: Expected SameValue(Â«[object AsyncGenerator]Â», Â«[object AsyncGenerator]Â») to be false'
 test/language/expressions/call/eval-realm-indirect.js:
   default: 'Test262Error: Expected SameValue(Â«insideÂ», Â«outsideÂ») to be true'
 test/language/expressions/call/eval-spread-empty-leading.js:
@@ -2566,6 +2321,9 @@ test/language/expressions/class/class-name-ident-static-escaped.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/expressions/class/class-name-ident-static.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-async-gen-meth-valid.js:
+  default: "SyntaxError: Cannot declare an async generator method named 'constructor'."
+  strict mode: "SyntaxError: Cannot declare an async generator method named 'constructor'."
 test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-async-meth-valid.js:
   default: "SyntaxError: Cannot declare an async method named 'constructor'."
   strict mode: "SyntaxError: Cannot declare an async method named 'constructor'."
@@ -2882,6 +2640,8 @@ test/language/expressions/generators/scope-param-rest-elem-var-close.js:
   default: 'Test262Error: Expected SameValue(Â«insideÂ», Â«outsideÂ») to be true'
 test/language/expressions/import.meta/import-meta-is-an-ordinary-object.js:
   module: 'SyntaxError: Cannot use new with import.'
+test/language/expressions/import.meta/syntax/invalid-assignment-target-for-await-of-loop.js:
+  module: 'Test262: This statement should not be evaluated.'
 test/language/expressions/import.meta/syntax/invalid-assignment-target-for-in-loop.js:
   module: 'Test262: This statement should not be evaluated.'
 test/language/expressions/import.meta/syntax/invalid-assignment-target-for-of-loop.js:
@@ -3290,42 +3050,6 @@ test/language/expressions/object/scope-meth-param-rest-elem-var-close.js:
   default: 'Test262Error: Expected SameValue(Â«insideÂ», Â«outsideÂ») to be true'
 test/language/expressions/object/scope-setter-body-lex-distinc.js:
   default: 'Test262Error: Expected a SyntaxError to be thrown but no exception was thrown at all'
-test/language/expressions/optional-chaining/call-expression.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/member-expression-async-identifier.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/member-expression-async-literal.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/member-expression-async-this.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/member-expression.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/optional-chain-async-optional-chain-square-brackets.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/optional-chain-async-square-brackets.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/optional-chain-expression-optional-expression.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/optional-chain.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/optional-expression.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/runtime-semantics-evaluation.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
-test/language/expressions/optional-chaining/short-circuiting.js:
-  default: "SyntaxError: Unexpected token '.'"
-  strict mode: "SyntaxError: Unexpected token '.'"
 test/language/expressions/postfix-decrement/S11.3.2_A5_T1.js:
   default: "ReferenceError: Can't find variable: x"
 test/language/expressions/postfix-decrement/S11.3.2_A5_T2.js:
@@ -3391,6 +3115,9 @@ test/language/expressions/super/call-proto-not-ctor.js:
 test/language/expressions/super/prop-poisoned-underscore-proto.js:
   default: 'Test262Error: should not be called'
   strict mode: 'Test262Error: should not be called'
+test/language/expressions/unsigned-right-shift/bigint-toprimitive.js:
+  default: 'Test262Error: 0n >>> {[Symbol.toPrimitive]: function() {throw new MyError();}} throws MyError Expected a MyError but got a TypeError'
+  strict mode: 'Test262Error: 0n >>> {[Symbol.toPrimitive]: function() {throw new MyError();}} throws MyError Expected a MyError but got a TypeError'
 test/language/expressions/yield/star-iterable.js:
   default: 'Test262Error: First result `done` flag Expected SameValue(Â«falseÂ», Â«undefinedÂ») to be true'
   strict mode: 'Test262Error: First result `done` flag Expected SameValue(Â«falseÂ», Â«undefinedÂ») to be true'
@@ -3539,6 +3266,9 @@ test/language/module-code/parse-err-hoist-lex-fun.js:
   module: 'Test262: This statement should not be evaluated.'
 test/language/module-code/parse-err-hoist-lex-gen.js:
   module: 'Test262: This statement should not be evaluated.'
+test/language/statements/async-generator/generator-created-after-decl-inst.js:
+  default: 'Test262Error: Expected SameValue(Â«[object AsyncGenerator]Â», Â«[object AsyncGenerator]Â») to be false'
+  strict mode: 'Test262Error: Expected SameValue(Â«[object AsyncGenerator]Â», Â«[object AsyncGenerator]Â») to be false'
 test/language/statements/class/class-name-ident-await-escaped.js:
   default: "SyntaxError: Unexpected escaped characters in keyword token: 'aw\\u0061it'"
   strict mode: "SyntaxError: Unexpected escaped characters in keyword token: 'aw\\u0061it'"
@@ -3549,6 +3279,9 @@ test/language/statements/class/class-name-ident-static-escaped.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/class/class-name-ident-static.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/class/elements/syntax/valid/grammar-static-ctor-async-gen-meth-valid.js:
+  default: "SyntaxError: Cannot declare an async generator method named 'constructor'."
+  strict mode: "SyntaxError: Cannot declare an async generator method named 'constructor'."
 test/language/statements/class/elements/syntax/valid/grammar-static-ctor-async-meth-valid.js:
   default: "SyntaxError: Cannot declare an async method named 'constructor'."
   strict mode: "SyntaxError: Cannot declare an async method named 'constructor'."
@@ -3701,13 +3434,29 @@ test/language/statements/class/subclass/class-definition-superclass-generator.js
   strict mode: 'Test262Error: Expected a TypeError to be thrown but no exception was thrown at all'
 test/language/statements/do-while/let-array-with-newline.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array-invalid.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-obj-invalid.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-await-of/async-func-decl-dstr-array-elem-target-simple-strict.js:
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-await-of/let-array-with-newline.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-in/12.6.4-2.js:
   default: 'Test262Error: accessedProp Expected SameValue(Â«trueÂ», Â«falseÂ») to be true'
   strict mode: 'Test262Error: accessedProp Expected SameValue(Â«trueÂ», Â«falseÂ») to be true'
 test/language/statements/for-in/dstr/array-elem-nested-array-invalid.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-in/dstr/array-elem-nested-memberexpr-optchain-prop-ref.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-in/dstr/array-elem-nested-obj-invalid.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-in/dstr/array-elem-put-obj-literal-optchain-prop-ref.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-in/dstr/array-elem-target-simple-strict.js:
@@ -3734,6 +3483,12 @@ test/language/statements/for-in/dstr/array-rest-nested-obj-invalid.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-in/dstr/obj-id-simple-strict.js:
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-in/dstr/obj-prop-elem-target-memberexpr-optchain-prop-ref.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-in/dstr/obj-prop-elem-target-obj-literal-optchain-prop-ref.js:
+  default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-in/dstr/obj-prop-nested-array-invalid.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -3789,7 +3544,13 @@ test/language/statements/for-of/dstr/array-elem-iter-thrw-close.js:
 test/language/statements/for-of/dstr/array-elem-nested-array-invalid.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-of/dstr/array-elem-nested-memberexpr-optchain-prop-ref.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-of/dstr/array-elem-nested-obj-invalid.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-of/dstr/array-elem-put-obj-literal-optchain-prop-ref.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-of/dstr/array-elem-target-simple-strict.js:
@@ -3871,6 +3632,12 @@ test/language/statements/for-of/dstr/obj-id-put-let.js:
   strict mode: 'Test262Error: Expected a ReferenceError to be thrown but no exception was thrown at all'
 test/language/statements/for-of/dstr/obj-id-simple-strict.js:
   strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-of/dstr/obj-prop-elem-target-memberexpr-optchain-prop-ref.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-optchain-prop-ref.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/for-of/dstr/obj-prop-nested-array-invalid.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
@@ -3935,6 +3702,12 @@ test/language/statements/if/if-async-fun-else-stmt.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/if/if-async-fun-no-else.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/if/if-async-gen-else-async-gen.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/if/if-async-gen-else-stmt.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/if/if-async-gen-no-else.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/if/if-gen-else-gen.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/if/if-gen-else-stmt.js:
@@ -3943,11 +3716,16 @@ test/language/statements/if/if-gen-no-else.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/if/if-stmt-else-async-fun.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/if/if-stmt-else-async-gen.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/if/if-stmt-else-gen.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/if/let-array-with-newline.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/labeled/decl-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/labeled/decl-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/labeled/decl-gen.js:
@@ -3965,6 +3743,8 @@ test/language/statements/let/syntax/escaped-let.js:
   default: "SyntaxError: Unexpected escaped characters in keyword token: 'l\\u0065t'"
 test/language/statements/switch/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/async-function-name-redeclaration-attempt-with-class.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/async-function-name-redeclaration-attempt-with-const.js:
@@ -3977,7 +3757,25 @@ test/language/statements/switch/syntax/redeclaration/async-function-name-redecla
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/async-function-name-redeclaration-attempt-with-var.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-class.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-const.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-let.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-var.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/class-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/class-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/class-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -3985,11 +3783,15 @@ test/language/statements/switch/syntax/redeclaration/class-name-redeclaration-at
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/const-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/const-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/const-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/const-name-redeclaration-attempt-with-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/function-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/function-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/function-name-redeclaration-attempt-with-class.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -4002,6 +3804,8 @@ test/language/statements/switch/syntax/redeclaration/function-name-redeclaration
 test/language/statements/switch/syntax/redeclaration/function-name-redeclaration-attempt-with-var.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/generator-name-redeclaration-attempt-with-class.js:
   default: 'Test262: This statement should not be evaluated.'
@@ -4017,11 +3821,16 @@ test/language/statements/switch/syntax/redeclaration/generator-name-redeclaratio
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/let-name-redeclaration-attempt-with-async-function.js:
   default: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/let-name-redeclaration-attempt-with-async-generator.js:
+  default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/let-name-redeclaration-attempt-with-function.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/let-name-redeclaration-attempt-with-generator.js:
   default: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/var-name-redeclaration-attempt-with-async-function.js:
+  default: 'Test262: This statement should not be evaluated.'
+  strict mode: 'Test262: This statement should not be evaluated.'
+test/language/statements/switch/syntax/redeclaration/var-name-redeclaration-attempt-with-async-generator.js:
   default: 'Test262: This statement should not be evaluated.'
   strict mode: 'Test262: This statement should not be evaluated.'
 test/language/statements/switch/syntax/redeclaration/var-name-redeclaration-attempt-with-function.js:

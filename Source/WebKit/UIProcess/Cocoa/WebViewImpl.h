@@ -255,6 +255,7 @@ public:
     void windowDidChangeScreen();
     void windowDidChangeLayerHosting();
     void windowDidChangeOcclusionState();
+    void screenDidChangeColorSpace();
     bool shouldDelayWindowOrderingForEvent(NSEvent *);
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
 
@@ -350,6 +351,8 @@ public:
     void showGuessPanel(id);
     void checkSpelling();
     void changeSpelling(id);
+
+    void setContinuousSpellCheckingEnabled(bool);
     void toggleContinuousSpellChecking();
 
     bool isGrammarCheckingEnabled();

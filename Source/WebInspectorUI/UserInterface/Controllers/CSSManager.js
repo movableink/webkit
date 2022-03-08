@@ -465,7 +465,9 @@ WI.CSSManager = class CSSManager extends WI.Object
         if (styleSheet.isInlineStyleAttributeStyleSheet())
             return;
 
-        styleSheet.noteContentDidChange();
+        if (!styleSheet.noteContentDidChange())
+            return;
+
         this._updateResourceContent(styleSheet);
     }
 
@@ -658,7 +660,7 @@ WI.CSSManager = class CSSManager extends WI.Object
                 // ignore the next _updateResourceContent call.
                 resource.__ignoreNextUpdateResourceContent = true;
 
-                let revision = styleSheet.currentRevision;
+                let revision = styleSheet.editableRevision;
                 revision.updateRevisionContent(resource.content);
             }
 
@@ -702,7 +704,7 @@ WI.CSSManager = class CSSManager extends WI.Object
 
             this._ignoreResourceContentDidChangeEventForResource = representedObject;
 
-            let revision = representedObject.currentRevision;
+            let revision = representedObject.editableRevision;
             if (styleSheet.isInspectorStyleSheet()) {
                 revision.updateRevisionContent(representedObject.content);
                 styleSheet.dispatchEventToListeners(WI.SourceCode.Event.ContentDidChange);

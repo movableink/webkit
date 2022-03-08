@@ -86,6 +86,7 @@ public:
     void closeWindow(Function<void (CommandResult&&)>&&);
     void switchToWindow(const String& windowHandle, Function<void (CommandResult&&)>&&);
     void getWindowHandles(Function<void (CommandResult&&)>&&);
+    void newWindow(Optional<String> typeHint, Function<void (CommandResult&&)>&&);
     void switchToFrame(RefPtr<JSON::Value>&&, Function<void (CommandResult&&)>&&);
     void switchToParentFrame(Function<void (CommandResult&&)>&&);
     void getWindowRect(Function<void (CommandResult&&)>&&);
@@ -107,6 +108,7 @@ public:
     void elementClick(const String& elementID, Function<void (CommandResult&&)>&&);
     void elementClear(const String& elementID, Function<void (CommandResult&&)>&&);
     void elementSendKeys(const String& elementID, const String& text, Function<void (CommandResult&&)>&&);
+    void getPageSource(Function<void (CommandResult&&)>&&);
     void executeScript(const String& script, RefPtr<JSON::Array>&& arguments, ExecuteScriptMode, Function<void (CommandResult&&)>&&);
     void getAllCookies(Function<void (CommandResult&&)>&&);
     void getNamedCookie(const String& name, Function<void (CommandResult&&)>&&);

@@ -36,7 +36,9 @@
 namespace WebCore {
 namespace Layout {
 
+struct ContinousContent;
 class InlineFormattingContext;
+class InlineItemRun;
 
 class Line {
     WTF_MAKE_ISO_ALLOCATED(Line);
@@ -54,52 +56,58 @@ public:
     };
     enum class SkipAlignment { No, Yes };
     Line(const InlineFormattingContext&, const InitialConstraints&, Optional<TextAlignMode>, SkipAlignment);
+    ~Line();
 
     void append(const InlineItem&, LayoutUnit logicalWidth);
     bool hasContent() const { return !isVisuallyEmpty(); }
     LayoutUnit availableWidth() const { return logicalWidth() - contentLogicalWidth(); }
 
-    LayoutUnit trailingTrimmableWidth() const;
+    LayoutUnit trailingTrimmableWidth() const { return m_trimmableContent.width(); }
 
     const LineBox& lineBox() const { return m_lineBox; }
     void moveLogicalLeft(LayoutUnit);
     void moveLogicalRight(LayoutUnit);
 
     struct Run {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
-        Run(const InlineItem&, const Display::Run&);
+        Run(const InlineItemRun&);
+        Run(const InlineItemRun&, const Display::Rect&, const Display::Run::TextContext&, unsigned expansionOpportunityCount);
+        Run(Run&&) = default;
+        Run& operator=(Run&& other) = default;
 
-        const Display::Run& displayRun() const { return m_displayRun; }
-        const Box& layoutBox() const { return m_inlineItem.layoutBox(); }
+        bool isText() const { return m_type == InlineItem::Type::Text; }
+        bool isBox() const { return m_type == InlineItem::Type::Box; }
+        bool isForcedLineBreak() const { return m_type == InlineItem::Type::ForcedLineBreak; }
+        bool isContainerStart() const { return m_type == InlineItem::Type::ContainerStart; }
+        bool isContainerEnd() const { return m_type == InlineItem::Type::ContainerEnd; }
 
-        const Display::Rect& logicalRect() const { return m_displayRun.logicalRect(); }
-        bool isVisuallyEmpty() const { return m_isVisuallyEmpty; }
-
-        bool isText() const { return m_inlineItem.isText(); }
-        bool isBox() const { return m_inlineItem.isBox(); }
-        bool isLineBreak() const { return m_inlineItem.isLineBreak(); }
-        bool isContainerStart() const { return m_inlineItem.isContainerStart(); }
-        bool isContainerEnd() const { return m_inlineItem.isContainerEnd(); }
+        const Box& layoutBox() const { return *m_layoutBox; }
+        const Display::Rect& logicalRect() const { return m_logicalRect; }
+        Optional<Display::Run::TextContext> textContext() const { return m_textContext; }
+        bool isCollapsedToVisuallyEmpty() const { return m_isCollapsedToVisuallyEmpty; }
 
     private:
         friend class Line;
-        void adjustLogicalTop(LayoutUnit logicalTop) { m_displayRun.setLogicalTop(logicalTop); }
-        void moveVertically(LayoutUnit offset) { m_displayRun.moveVertically(offset); }
-        void moveHorizontally(LayoutUnit offset) { m_displayRun.moveHorizontally(offset); }
 
-        void expand(const Run&);
+        void adjustLogicalTop(LayoutUnit logicalTop) { m_logicalRect.setTop(logicalTop); }
+        void moveHorizontally(LayoutUnit offset) { m_logicalRect.moveHorizontally(offset); }
+        void moveVertically(LayoutUnit offset) { m_logicalRect.moveVertically(offset); }
 
-        void setVisuallyIsEmpty() { m_isVisuallyEmpty = true; }
+        bool hasExpansionOpportunity() const { return m_expansionOpportunityCount; }
+        Optional<ExpansionBehavior> expansionBehavior() const;
+        unsigned expansionOpportunityCount() const { return m_expansionOpportunityCount; }
+        void setComputedHorizontalExpansion(LayoutUnit logicalExpansion);
+        void adjustExpansionBehavior(ExpansionBehavior);
 
-        bool isWhitespace() const;
-        bool canBeExtended() const;
-
-        const InlineItem& m_inlineItem;
-        Display::Run m_displayRun;
-        bool m_isVisuallyEmpty { false };
+        const Box* m_layoutBox { nullptr };
+        InlineItem::Type m_type;
+        Display::Rect m_logicalRect;
+        Optional<Display::Run::TextContext> m_textContext;
+        unsigned m_expansionOpportunityCount { 0 };
+        bool m_isCollapsedToVisuallyEmpty { false };
     };
-    using RunList = Vector<std::unique_ptr<Run>>;
-    RunList close();
+    using RunList = Vector<Run, 50>;
+    enum class IsLastLineWithInlineContent { No, Yes };
+    RunList close(IsLastLineWithInlineContent = IsLastLineWithInlineContent::No);
 
     static LineBox::Baseline halfLeadingMetrics(const FontMetrics&, LayoutUnit lineLogicalHeight);
 
@@ -123,23 +131,38 @@ private:
     void appendReplacedInlineBox(const InlineItem&, LayoutUnit logicalWidth);
     void appendInlineContainerStart(const InlineItem&, LayoutUnit logicalWidth);
     void appendInlineContainerEnd(const InlineItem&, LayoutUnit logicalWidth);
-    void appendHardLineBreak(const InlineItem&);
+    void appendLineBreak(const InlineItem&);
 
     void removeTrailingTrimmableContent();
-    void alignContentHorizontally();
-    void alignContentVertically();
+    void alignContentHorizontally(RunList&, IsLastLineWithInlineContent) const;
+    void alignContentVertically(RunList&) const;
 
     void adjustBaselineAndLineHeight(const InlineItem&);
     LayoutUnit inlineItemContentHeight(const InlineItem&) const;
     bool isVisuallyEmpty() const;
 
+    bool isTextAlignJustify() const { return m_horizontalAlignment == TextAlignMode::Justify; };
+    void justifyRuns(RunList&) const;
+
     LayoutState& layoutState() const;
     const InlineFormattingContext& formattingContext() const; 
 
     const InlineFormattingContext& m_inlineFormattingContext;
-    RunList m_runList;
-    ListHashSet<Run*> m_trimmableContent;
+    Vector<std::unique_ptr<InlineItemRun>, 50> m_inlineItemRuns;
+    struct TrimmableContent {
+        void append(InlineItemRun&);
+        void clear();
 
+        LayoutUnit width() const { return m_width; }
+        using TrimmableList = Vector<InlineItemRun*, 5>;
+        TrimmableList& runs() { return m_inlineItemRuns; }
+        bool isEmpty() const { return m_inlineItemRuns.isEmpty(); }
+
+    private:
+        TrimmableList m_inlineItemRuns;
+        LayoutUnit m_width;
+    };
+    TrimmableContent m_trimmableContent;
     Optional<LineBox::Baseline> m_initialStrut;
     LayoutUnit m_lineLogicalWidth;
     Optional<TextAlignMode> m_horizontalAlignment;
@@ -147,14 +170,10 @@ private:
     LineBox m_lineBox;
 };
 
-inline void Line::Run::expand(const Run& other)
+inline void Line::TrimmableContent::clear()
 {
-    ASSERT(isText());
-    ASSERT(other.isText());
-
-    auto& otherDisplayRun = other.displayRun();
-    m_displayRun.expandHorizontally(otherDisplayRun.logicalWidth());
-    m_displayRun.textContext()->expand(*otherDisplayRun.textContext());
+    m_inlineItemRuns.clear();
+    m_width = { };
 }
 
 }

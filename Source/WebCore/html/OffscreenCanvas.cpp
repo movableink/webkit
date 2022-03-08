@@ -26,6 +26,8 @@
 #include "config.h"
 #include "OffscreenCanvas.h"
 
+#if ENABLE(OFFSCREEN_CANVAS)
+
 #include "CanvasRenderingContext.h"
 #include "ImageBitmap.h"
 #include "JSDOMPromiseDeferred.h"
@@ -42,8 +44,8 @@ Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& context, un
 }
 
 OffscreenCanvas::OffscreenCanvas(ScriptExecutionContext& context, unsigned width, unsigned height)
-    : ContextDestructionObserver(&context)
-    , m_size(width, height)
+    : CanvasBase(IntSize(width, height))
+    , ContextDestructionObserver(&context)
 {
 }
 
@@ -51,41 +53,22 @@ OffscreenCanvas::~OffscreenCanvas()
 {
     notifyObserversCanvasDestroyed();
 
-    m_context = nullptr;
-}
-
-unsigned OffscreenCanvas::width() const
-{
-    return m_size.width();
+    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
+    setImageBuffer(nullptr);
 }
 
 void OffscreenCanvas::setWidth(unsigned newWidth)
 {
-    return m_size.setWidth(newWidth);
-}
-
-unsigned OffscreenCanvas::height() const
-{
-    return m_size.height();
+    setSize(IntSize(newWidth, height()));
 }
 
 void OffscreenCanvas::setHeight(unsigned newHeight)
 {
-    return m_size.setHeight(newHeight);
-}
-
-const IntSize& OffscreenCanvas::size() const
-{
-    return m_size;
-}
-
-void OffscreenCanvas::setSize(const IntSize& newSize)
-{
-    m_size = newSize;
+    setSize(IntSize(width(), newHeight));
 }
 
 #if ENABLE(WEBGL)
-ExceptionOr<OffscreenRenderingContext> OffscreenCanvas::getContext(JSC::ExecState& state, RenderingContextType contextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
+ExceptionOr<OffscreenRenderingContext> OffscreenCanvas::getContext(JSC::JSGlobalObject& state, RenderingContextType contextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
     if (m_context && contextType == RenderingContextType::Webgl)
         return { RefPtr<WebGLRenderingContext> { &downcast<WebGLRenderingContext>(*m_context) } };
@@ -121,7 +104,7 @@ RefPtr<ImageBitmap> OffscreenCanvas::transferToImageBitmap()
     // store from this canvas (or its context), but for now we'll just
     // create a new bitmap and paint into it.
 
-    auto imageBitmap = ImageBitmap::create(m_size);
+    auto imageBitmap = ImageBitmap::create(size());
     if (!imageBitmap->buffer())
         return nullptr;
 
@@ -144,4 +127,10 @@ RefPtr<ImageBitmap> OffscreenCanvas::transferToImageBitmap()
 #endif
 }
 
+void OffscreenCanvas::createImageBuffer() const
+{
 }
+
+}
+
+#endif

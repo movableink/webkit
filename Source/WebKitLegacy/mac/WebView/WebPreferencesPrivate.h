@@ -632,6 +632,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL mediaDataLoadsAutomatically;
 @property (nonatomic) BOOL attachmentElementEnabled;
 @property (nonatomic) BOOL allowsInlineMediaPlaybackAfterFullscreen;
+@property (nonatomic) BOOL remotePlaybackEnabled;
 @property (nonatomic) BOOL intersectionObserverEnabled;
 @property (nonatomic) BOOL menuItemElementEnabled;
 @property (nonatomic) BOOL keygenElementEnabled;
@@ -644,6 +645,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL legacyEncryptedMediaAPIEnabled;
 @property (nonatomic) BOOL encryptedMediaAPIEnabled;
 @property (nonatomic) BOOL pictureInPictureAPIEnabled;
+@property (nonatomic) BOOL genericCueAPIEnabled;
 @property (nonatomic) BOOL viewportFitEnabled;
 @property (nonatomic) BOOL constantPropertiesEnabled;
 @property (nonatomic) BOOL colorFilterEnabled;

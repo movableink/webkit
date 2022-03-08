@@ -25,7 +25,7 @@
 
 #import "config.h"
 
-#if PLATFORM(IOS_FAMILY)
+#if HAVE(UIWEBVIEW)
 
 IGNORE_WARNINGS_BEGIN("deprecated-implementations")
 
@@ -38,12 +38,12 @@ IGNORE_WARNINGS_BEGIN("deprecated-implementations")
 @end
 
 @implementation LegacyLoadingDelegate {
-    BOOL _loadComplete;
+    bool _loadComplete;
 }
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView
 {
-    _loadComplete = YES;
+    _loadComplete = true;
 }
 
 - (void)waitForDidFinishLoad

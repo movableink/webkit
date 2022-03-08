@@ -204,6 +204,7 @@ namespace WebCore {
     macro(ReadableStreamBYOBRequest) \
     macro(ReadableStreamDefaultController) \
     macro(ReadableStreamDefaultReader) \
+    macro(RemotePlayback) \
     macro(Request) \
     macro(Response) \
     macro(ScreenLuminance) \
@@ -216,6 +217,7 @@ namespace WebCore {
     macro(StaticRange) \
     macro(StylePropertyMapReadOnly) \
     macro(StylePropertyMap) \
+    macro(TextTrackCue) \
     macro(UndoItem) \
     macro(UndoManager) \
     macro(VRDisplay) \

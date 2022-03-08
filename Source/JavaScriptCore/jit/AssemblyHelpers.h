@@ -35,6 +35,7 @@
 #include "InlineCallFrame.h"
 #include "JITAllocator.h"
 #include "JITCode.h"
+#include "JSCellInlines.h"
 #include "MacroAssembler.h"
 #include "MarkedSpace.h"
 #include "RegisterAtOffsetList.h"
@@ -46,7 +47,7 @@
 
 namespace JSC {
 
-typedef void (*V_DebugOperation_EPP)(ExecState*, void*, void*);
+typedef void (*V_DebugOperation_EPP)(CallFrame*, void*, void*);
 
 class AssemblyHelpers : public MacroAssembler {
 public:
@@ -64,6 +65,14 @@ public:
     CodeBlock* codeBlock() { return m_codeBlock; }
     VM& vm() { return m_codeBlock->vm(); }
     AssemblerType_T& assembler() { return m_assembler; }
+
+    void prepareCallOperation(VM& vm)
+    {
+        UNUSED_PARAM(vm);
+#if !USE(BUILTIN_FRAME_ADDRESS) || !ASSERT_DISABLED
+        storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
+#endif
+    }
 
     void checkStackPointerAlignment()
     {
@@ -1787,7 +1796,7 @@ public:
         functor(TypeofType::Undefined, true);
     }
     
-    void emitDumbVirtualCall(VM&, CallLinkInfo*);
+    void emitDumbVirtualCall(VM&, JSGlobalObject*, CallLinkInfo*);
     
     void makeSpaceOnStackForCCall();
     void reclaimSpaceOnStackForCCall();
@@ -1898,11 +1907,6 @@ public:
 #if USE(JSVALUE64)
     void wangsInt64Hash(GPRReg inputAndResult, GPRReg scratch);
 #endif
-    
-    // This assumes that index and length are 32-bit. This also assumes that they are already
-    // zero-extended. Also this does not clobber index, which is useful in the baseline JIT. This
-    // permits length and result to be in the same register.
-    void emitPreparePreciseIndexMask32(GPRReg index, GPRReg length, GPRReg result);
 
 #if ENABLE(WEBASSEMBLY)
     void loadWasmContextInstance(GPRReg dst);

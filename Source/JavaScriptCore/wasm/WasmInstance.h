@@ -38,6 +38,7 @@
 
 namespace JSC {
 
+class LLIntOffsetsExtractor;
 class JSWebAssemblyInstance;
 
 namespace Wasm {
@@ -45,13 +46,9 @@ namespace Wasm {
 struct Context;
 class Instance;
 
-EncodedJSValue getWasmTableElement(Instance*, unsigned, int32_t);
-bool setWasmTableElement(Instance*, unsigned, int32_t, EncodedJSValue encValue);
-EncodedJSValue doWasmRefFunc(Instance*, uint32_t);
-int32_t doWasmTableGrow(Instance*, unsigned, EncodedJSValue fill, int32_t delta);
-bool doWasmTableFill(Instance*, unsigned, int32_t offset, EncodedJSValue fill, int32_t count);
-
 class Instance : public ThreadSafeRefCounted<Instance>, public CanMakeWeakPtr<Instance> {
+    friend LLIntOffsetsExtractor;
+
 public:
     using StoreTopCallFrameCallback = WTF::Function<void(void*)>;
     using FunctionWrapperMap = HashMap<uint32_t, WriteBarrier<Unknown>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;

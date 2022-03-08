@@ -176,8 +176,8 @@ private:
 
     // ActiveDOMObject API.
     void stop() final;
-    const char* activeDOMObjectName() const final;
-    bool shouldPreventEnteringBackForwardCache_DEPRECATED() const final;
+    const char* activeDOMObjectName() const override;
+    void suspend(ReasonForSuspension) final;
 
     // EventTarget
     void refEventTarget() final { ref(); }

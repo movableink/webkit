@@ -72,15 +72,14 @@ messages -> NetworkProcess LegacyReceiver {
     AllowSpecificHTTPSCertificateForHost(WebCore::CertificateInfo certificate, String host)
     
     ClearCacheForAllOrigins(uint32_t cachesToClear)
-    SetCacheModel(enum:uint8_t WebKit::CacheModel cacheModel, String overrideCacheStorageDirectory);
+    SetCacheModel(enum:uint8_t WebKit::CacheModel cacheModel, String overrideCacheStorageDirectory)
+    SetCacheModelSynchronouslyForTesting(enum:uint8_t WebKit::CacheModel cacheModel) -> () Synchronous
 
     ProcessDidTransitionToBackground()
     ProcessDidTransitionToForeground()
 
-    ProcessWillSuspendImminently()
     ProcessWillSuspendImminentlyForTestingSync() -> () Synchronous
-    PrepareToSuspend()
-    CancelPrepareToSuspend()
+    PrepareToSuspend(bool isSuspensionImminent) -> () Async
     ProcessDidResume()
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
@@ -149,8 +148,6 @@ messages -> NetworkProcess LegacyReceiver {
     RegisterURLSchemeAsBypassingContentSecurityPolicy(String scheme)
     RegisterURLSchemeAsLocal(String scheme)
     RegisterURLSchemeAsNoAccess(String scheme)
-    RegisterURLSchemeAsCORSEnabled(String scheme)
-    RegisterURLSchemeAsCanDisplayOnlyIfCanRequest(String scheme)
 
     SetCacheStorageParameters(PAL::SessionID sessionID, String cacheStorageDirectory, WebKit::SandboxExtension::Handle handle);
 
@@ -169,4 +166,6 @@ messages -> NetworkProcess LegacyReceiver {
 
     SetServiceWorkerFetchTimeoutForTesting(Seconds seconds) -> () Synchronous
     ResetServiceWorkerFetchTimeoutForTesting() -> () Synchronous
+
+    ResetQuota(PAL::SessionID sessionID) -> () Async
 }

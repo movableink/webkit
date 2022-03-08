@@ -27,6 +27,7 @@ WI.loaded = function()
 {
     // Register observers for events from the InspectorBackend.
     // The initialization order should match the same in Main.js.
+    InspectorBackend.registerAnimationDispatcher(WI.AnimationObserver);
     InspectorBackend.registerApplicationCacheDispatcher(WI.ApplicationCacheObserver);
     InspectorBackend.registerCPUProfilerDispatcher(WI.CPUProfilerObserver);
     InspectorBackend.registerCSSDispatcher(WI.CSSObserver);
@@ -76,48 +77,15 @@ WI.loaded = function()
 
     // Targets.
     WI.backendTarget = null;
+    WI._backendTargetAvailablePromise = new WI.WrappedPromise;
+
     WI.pageTarget = null;
-    WI._targetsAvailablePromise = new WI.WrappedPromise;
+    WI._pageTargetAvailablePromise = new WI.WrappedPromise;
 
     if (InspectorBackend.hasDomain("Target"))
         WI.targetManager.createMultiplexingBackendTarget();
     else
         WI.targetManager.createDirectBackendTarget();
-};
-
-WI.initializeBackendTarget = function(target)
-{
-    WI.backendTarget = target;
-
-    WI.resetMainExecutionContext();
-
-    WI._targetsAvailablePromise.resolve();
-};
-
-WI.initializePageTarget = function(target)
-{
-    WI.pageTarget = target;
-
-    WI.resetMainExecutionContext();
-};
-
-WI.transitionPageTarget = function(target)
-{
-    console.error("WI.transitionPageTarget should not be reached in tests.");
-};
-
-WI.terminatePageTarget = function(target)
-{
-    console.error("WI.terminatePageTarget should not be reached in tests.");
-};
-
-WI.resetMainExecutionContext = function()
-{
-    if (WI.mainTarget instanceof WI.MultiplexingBackendTarget)
-        return;
-
-    if (WI.mainTarget.executionContext)
-        WI.runtimeManager.activeExecutionContext = WI.mainTarget.executionContext;
 };
 
 WI.contentLoaded = function()
@@ -133,7 +101,7 @@ WI.contentLoaded = function()
     WI.timelineManager.enable();
 
     // Signal that the frontend is now ready to receive messages.
-    WI.whenTargetsAvailable().then(() => {
+    WI._backendTargetAvailablePromise.promise.then(() => {
         InspectorFrontendAPI.loadCompleted();
     });
 
@@ -162,12 +130,12 @@ WI.initializeTarget = function(target)
 
 WI.targetsAvailable = function()
 {
-    return WI._targetsAvailablePromise.settled;
+    return WI._pageTargetAvailablePromise.settled;
 };
 
 WI.whenTargetsAvailable = function()
 {
-    return WI._targetsAvailablePromise.promise;
+    return WI._pageTargetAvailablePromise.promise;
 };
 
 Object.defineProperty(WI, "mainTarget",
@@ -183,6 +151,9 @@ Object.defineProperty(WI, "targets",
 WI.assumingMainTarget = () => WI.mainTarget;
 
 WI.isDebugUIEnabled = () => false;
+
+WI.isEngineeringBuild = false;
+WI.isExperimentalBuild = true;
 
 WI.unlocalizedString = (string) => string;
 WI.UIString = (string, key, comment) => string;

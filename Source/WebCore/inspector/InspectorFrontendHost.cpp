@@ -57,6 +57,7 @@
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/ScriptFunctionCall.h>
 #include <pal/system/Sound.h>
+#include <wtf/JSONValues.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/Base64.h>
 
@@ -152,15 +153,15 @@ void InspectorFrontendHost::disconnectClient()
 
 void InspectorFrontendHost::addSelfToGlobalObjectInWorld(DOMWrapperWorld& world)
 {
-    auto& state = *execStateFromPage(world, m_frontendPage);
-    auto& vm = state.vm();
+    auto& lexicalGlobalObject = *execStateFromPage(world, m_frontendPage);
+    auto& vm = lexicalGlobalObject.vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject());
-    globalObject.putDirect(vm, JSC::Identifier::fromString(vm, "InspectorFrontendHost"), toJS<IDLInterface<InspectorFrontendHost>>(state, globalObject, *this));
+    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
+    globalObject.putDirect(vm, JSC::Identifier::fromString(vm, "InspectorFrontendHost"), toJS<IDLInterface<InspectorFrontendHost>>(lexicalGlobalObject, globalObject, *this));
     if (UNLIKELY(scope.exception()))
-        reportException(&state, scope.exception());
+        reportException(&lexicalGlobalObject, scope.exception());
 }
 
 void InspectorFrontendHost::loaded()
@@ -410,9 +411,9 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
 #if ENABLE(CONTEXT_MENUS)
     ASSERT(m_frontendPage);
 
-    auto& state = *execStateFromPage(debuggerWorld(), m_frontendPage);
-    auto& vm = state.vm();
-    auto value = state.lexicalGlobalObject()->get(&state, JSC::Identifier::fromString(vm, "InspectorFrontendAPI"));
+    auto& lexicalGlobalObject = *execStateFromPage(debuggerWorld(), m_frontendPage);
+    auto& vm = lexicalGlobalObject.vm();
+    auto value = lexicalGlobalObject.get(&lexicalGlobalObject, JSC::Identifier::fromString(vm, "InspectorFrontendAPI"));
     ASSERT(value);
     ASSERT(value.isObject());
     auto* frontendAPIObject = asObject(value);
@@ -420,7 +421,7 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
     ContextMenu menu;
     populateContextMenu(WTFMove(items), menu);
 
-    auto menuProvider = FrontendMenuProvider::create(this, { &state, frontendAPIObject }, menu.items());
+    auto menuProvider = FrontendMenuProvider::create(this, { &lexicalGlobalObject, frontendAPIObject }, menu.items());
     m_menuProvider = menuProvider.ptr();
     m_frontendPage->contextMenuController().showContextMenu(event, menuProvider);
 #else
@@ -446,6 +447,15 @@ void InspectorFrontendHost::dispatchEventAsContextMenuEvent(Event& event)
 bool InspectorFrontendHost::isUnderTest()
 {
     return m_client && m_client->isUnderTest();
+}
+
+bool InspectorFrontendHost::isExperimentalBuild()
+{
+#if ENABLE(EXPERIMENTAL_FEATURES)
+    return true;
+#else
+    return false;
+#endif
 }
 
 void InspectorFrontendHost::unbufferedLog(const String& message)
@@ -503,5 +513,77 @@ bool InspectorFrontendHost::showCertificate(const String& serializedCertificate)
     m_client->showCertificate(certificateInfo);
     return true;
 }
+
+bool InspectorFrontendHost::supportsDiagnosticLogging()
+{
+#if ENABLE(INSPECTOR_TELEMETRY)
+    return m_client && m_client->supportsDiagnosticLogging();
+#else
+    return false;
+#endif
+}
+
+#if ENABLE(INSPECTOR_TELEMETRY)
+bool InspectorFrontendHost::diagnosticLoggingAvailable()
+{
+    return m_client && m_client->diagnosticLoggingAvailable();
+}
+
+static Optional<DiagnosticLoggingClient::ValuePayload> valuePayloadFromJSONValue(const RefPtr<JSON::Value>& value)
+{
+    switch (value->type()) {
+    case JSON::Value::Type::Array:
+    case JSON::Value::Type::Null:
+    case JSON::Value::Type::Object:
+        ASSERT_NOT_REACHED();
+        return WTF::nullopt;
+
+    case JSON::Value::Type::Boolean:
+        bool boolValue;
+        value->asBoolean(boolValue);
+        return DiagnosticLoggingClient::ValuePayload(boolValue);
+
+    case JSON::Value::Type::Double:
+        double doubleValue;
+        value->asDouble(doubleValue);
+        return DiagnosticLoggingClient::ValuePayload(doubleValue);
+
+    case JSON::Value::Type::Integer:
+        long long intValue;
+        value->asInteger(intValue);
+        return DiagnosticLoggingClient::ValuePayload(intValue);
+
+    case JSON::Value::Type::String:
+        String stringValue;
+        value->asString(stringValue);
+        return DiagnosticLoggingClient::ValuePayload(stringValue);
+    }
+
+    ASSERT_NOT_REACHED();
+    return WTF::nullopt;
+}
+
+void InspectorFrontendHost::logDiagnosticEvent(const String& eventName, const String& payloadString)
+{
+    if (!supportsDiagnosticLogging())
+        return;
+
+    RefPtr<JSON::Value> payloadValue;
+    if (!JSON::Value::parseJSON(payloadString, payloadValue))
+        return;
+
+    RefPtr<JSON::Object> payloadObject;
+    if (!payloadValue->asObject(payloadObject))
+        return;
+
+    DiagnosticLoggingClient::ValueDictionary dictionary;
+    for (const auto& [key, value] : *payloadObject) {
+        if (auto valuePayload = valuePayloadFromJSONValue(value))
+            dictionary.set(key, WTFMove(valuePayload.value()));
+    }
+
+    m_client->logDiagnosticEvent(makeString("WebInspector."_s, eventName), dictionary);
+}
+#endif // ENABLE(INSPECTOR_TELEMETRY)
 
 } // namespace WebCore

@@ -63,6 +63,7 @@ static NSURL * const pagesDocumentURL = [[NSBundle.mainBundle URLForResource:@"p
 @property (nonatomic, readonly) BOOL didFinishNavigation;
 @property (nonatomic, readonly) BOOL didFinishQuickLookLoad;
 @property (nonatomic, readonly) BOOL didStartQuickLookLoad;
+@property (nonatomic, readonly, nullable) NSError *navigationError;
 
 @end
 
@@ -70,6 +71,8 @@ static NSURL * const pagesDocumentURL = [[NSBundle.mainBundle URLForResource:@"p
 @protected
     NSUInteger _downloadFileSize;
     NSUInteger _expectedFileSize;
+    RetainPtr<NSData> _expectedFileData;
+    RetainPtr<NSError> _navigationError;
     RetainPtr<NSString> _expectedFileName;
     RetainPtr<NSString> _expectedFileType;
     RetainPtr<NSString> _expectedMIMEType;
@@ -77,7 +80,7 @@ static NSURL * const pagesDocumentURL = [[NSBundle.mainBundle URLForResource:@"p
     WKNavigationResponsePolicy _responsePolicy;
 }
 
-static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& fileName, RetainPtr<NSString>& fileType, RetainPtr<NSString>& mimeType)
+static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& fileName, RetainPtr<NSString>& fileType, RetainPtr<NSString>& mimeType, RetainPtr<NSData>& fileData)
 {
     if (NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:fileURL.path error:nil])
         fileSize = [attributes[NSFileSize] unsignedIntegerValue];
@@ -89,6 +92,7 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
         fileType = typeIdentifier;
 
     mimeType = adoptCF(UTTypeCopyPreferredTagWithClass((__bridge CFStringRef)typeIdentifier, kUTTagClassMIMEType));
+    fileData = [NSData dataWithContentsOfURL:fileURL];
 }
 
 - (instancetype)initWithExpectedFileURL:(NSURL *)fileURL responsePolicy:(WKNavigationResponsePolicy)responsePolicy
@@ -96,7 +100,7 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
     if (!(self = [super init]))
         return nil;
 
-    readFile(fileURL, _expectedFileSize, _expectedFileName, _expectedFileType, _expectedMIMEType);
+    readFile(fileURL, _expectedFileSize, _expectedFileName, _expectedFileType, _expectedMIMEType, _expectedFileData);
 
     _responsePolicy = responsePolicy;
     return self;
@@ -109,6 +113,11 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
     
     _expectedMIMEType = mimeType;
     return self;
+}
+
+- (nullable NSError *)navigationError
+{
+    return _navigationError.get();
 }
 
 - (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
@@ -139,6 +148,7 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
 - (void)_webView:(WKWebView *)webView didFinishLoadForQuickLookDocumentInMainFrame:(NSData *)documentData
 {
     EXPECT_EQ(_expectedFileSize, documentData.length);
+    EXPECT_TRUE([_expectedFileData isEqualToData:documentData]);
     EXPECT_FALSE(_didFinishQuickLookLoad);
     EXPECT_TRUE(_didStartQuickLookLoad);
     _didFinishQuickLookLoad = YES;
@@ -156,7 +166,9 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
 {
     EXPECT_FALSE(_didFailNavigation);
     EXPECT_FALSE(_didFinishNavigation);
+    EXPECT_NULL(_navigationError);
     _didFailNavigation = YES;
+    _navigationError = error;
     isDone = true;
 }
 
@@ -164,7 +176,9 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
 {
     EXPECT_FALSE(_didFailNavigation);
     EXPECT_FALSE(_didFinishNavigation);
+    EXPECT_NULL(_navigationError);
     _didFailNavigation = YES;
+    _navigationError = error;
     isDone = true;
 }
 
@@ -219,12 +233,14 @@ static void readFile(NSURL *fileURL, NSUInteger& fileSize, RetainPtr<NSString>& 
     EXPECT_TRUE([NSFileManager.defaultManager fileExistsAtPath:[_downloadDestinationURL path]]);
 
     NSUInteger downloadFileSize;
+    RetainPtr<NSData> downloadFileData;
     RetainPtr<NSString> downloadFileName;
     RetainPtr<NSString> downloadFileType;
     RetainPtr<NSString> downloadMIMEType;
-    readFile(_downloadDestinationURL.get(), downloadFileSize, downloadFileName, downloadFileType, downloadMIMEType);
+    readFile(_downloadDestinationURL.get(), downloadFileSize, downloadFileName, downloadFileType, downloadMIMEType, downloadFileData);
 
     EXPECT_EQ(_expectedFileSize, downloadFileSize);
+    EXPECT_TRUE([_expectedFileData isEqualToData:downloadFileData.get()]);
     EXPECT_WK_STREQ(_expectedFileName.get(), downloadFileName.get());
     EXPECT_WK_STREQ(_expectedFileType.get(), downloadFileType.get());
     EXPECT_WK_STREQ(_expectedMIMEType.get(), downloadMIMEType.get());
@@ -322,6 +338,7 @@ TEST(QuickLook, CancelResponseBeforeLoadingPreview)
 {
     auto delegate = adoptNS([[QuickLookDelegate alloc] initWithExpectedFileURL:pagesDocumentURL responsePolicy:WKNavigationResponsePolicyCancel]);
     runTestDecideBeforeLoading(delegate.get(), [NSURLRequest requestWithURL:pagesDocumentURL]);
+    EXPECT_EQ(WebKitErrorFrameLoadInterruptedByPolicyChange, [delegate navigationError].code);
     EXPECT_FALSE([delegate didFinishNavigation]);
     EXPECT_FALSE([delegate didFinishQuickLookLoad]);
     EXPECT_FALSE([delegate didStartQuickLookLoad]);
@@ -332,6 +349,7 @@ TEST(QuickLook, CancelResponseAfterLoadingPreview)
 {
     auto delegate = adoptNS([[QuickLookDelegate alloc] initWithExpectedFileURL:pagesDocumentURL previewMIMEType:pagesDocumentPreviewMIMEType responsePolicy:WKNavigationResponsePolicyCancel]);
     runTestDecideAfterLoading(delegate.get(), [NSURLRequest requestWithURL:pagesDocumentURL]);
+    EXPECT_EQ(WebKitErrorFrameLoadInterruptedByPolicyChange, [delegate navigationError].code);
     EXPECT_FALSE([delegate didFinishNavigation]);
     EXPECT_TRUE([delegate didFailNavigation]);
     EXPECT_TRUE([delegate didFinishQuickLookLoad]);
@@ -342,6 +360,7 @@ TEST(QuickLook, DownloadResponseBeforeLoadingPreview)
 {
     auto delegate = adoptNS([[QuickLookDelegate alloc] initWithExpectedFileURL:pagesDocumentURL responsePolicy:_WKNavigationResponsePolicyBecomeDownload]);
     runTestDecideBeforeLoading(delegate.get(), [NSURLRequest requestWithURL:pagesDocumentURL]);
+    EXPECT_EQ(WebKitErrorFrameLoadInterruptedByPolicyChange, [delegate navigationError].code);
     EXPECT_FALSE([delegate didFinishNavigation]);
     EXPECT_FALSE([delegate didFinishQuickLookLoad]);
     EXPECT_FALSE([delegate didStartQuickLookLoad]);
@@ -355,6 +374,7 @@ TEST(QuickLook, DownloadResponseAfterLoadingPreview)
 {
     auto delegate = adoptNS([[QuickLookDelegate alloc] initWithExpectedFileURL:pagesDocumentURL previewMIMEType:pagesDocumentPreviewMIMEType responsePolicy:_WKNavigationResponsePolicyBecomeDownload]);
     runTestDecideAfterLoading(delegate.get(), [NSURLRequest requestWithURL:pagesDocumentURL]);
+    EXPECT_EQ(WebKitErrorFrameLoadInterruptedByPolicyChange, [delegate navigationError].code);
     EXPECT_FALSE([delegate didFinishNavigation]);
     EXPECT_TRUE([delegate didFailNavigation]);
     EXPECT_TRUE([delegate didFinishQuickLookLoad]);
@@ -465,10 +485,11 @@ TEST(QuickLook, LegacyQuickLookContent)
     WebThreadLock();
 
     NSUInteger expectedFileSize;
+    RetainPtr<NSData> expectedFileData;
     RetainPtr<NSString> expectedFileName;
     RetainPtr<NSString> expectedFileType;
     RetainPtr<NSString> expectedMIMEType;
-    readFile(pagesDocumentURL, expectedFileSize, expectedFileName, expectedFileType, expectedMIMEType);
+    readFile(pagesDocumentURL, expectedFileSize, expectedFileName, expectedFileType, expectedMIMEType, expectedFileData);
 
     NSDictionary *quickLookContent = mainFrame.dataSource._quickLookContent;
     NSString *filePath = quickLookContent[WebQuickLookFileNameKey];
@@ -478,6 +499,8 @@ TEST(QuickLook, LegacyQuickLookContent)
 
     NSDictionary *fileAttributes = [NSFileManager.defaultManager attributesOfItemAtPath:filePath error:nil];
     EXPECT_EQ(expectedFileSize, [fileAttributes[NSFileSize] unsignedIntegerValue]);
+    
+    EXPECT_TRUE([expectedFileData isEqualToData:[NSData dataWithContentsOfFile:filePath]]);
 
     isDone = false;
     [mainFrame loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];

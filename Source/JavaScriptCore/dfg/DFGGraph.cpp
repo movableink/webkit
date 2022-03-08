@@ -365,12 +365,14 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasIgnoreLastIndexIsWritable())
         out.print(comma, "ignoreLastIndexIsWritable = ", node->ignoreLastIndexIsWritable());
+    if (node->hasIntrinsic())
+        out.print(comma, "intrinsic = ", node->intrinsic());
     if (node->isConstant())
         out.print(comma, pointerDumpInContext(node->constant(), context));
     if (node->hasCallLinkStatus())
         out.print(comma, *node->callLinkStatus());
-    if (node->hasGetByIdStatus())
-        out.print(comma, *node->getByIdStatus());
+    if (node->hasGetByStatus())
+        out.print(comma, *node->getByStatus());
     if (node->hasInByIdStatus())
         out.print(comma, *node->inByIdStatus());
     if (node->hasPutByIdStatus())
@@ -404,7 +406,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (clobbersExitState(*this, node))
         out.print(comma, "ClobbersExit");
     if (node->origin.isSet()) {
-        out.print(comma, "bc#", node->origin.semantic.bytecodeIndex());
+        out.print(comma, node->origin.semantic.bytecodeIndex());
         if (node->origin.semantic != node->origin.forExit && node->origin.forExit.isSet())
             out.print(comma, "exit: ", node->origin.forExit);
     }
@@ -1137,6 +1139,7 @@ bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
     
     if (verbose)
         dataLog("Checking of operand is live: ", operand, "\n");
+    bool isCallerOrigin = false;
     CodeOrigin* codeOriginPtr = &codeOrigin;
     for (;;) {
         VirtualRegister reg = VirtualRegister(
@@ -1170,7 +1173,10 @@ bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
 
             if (verbose)
                 dataLog("Asking the bytecode liveness.\n");
-            return livenessFor(inlineCallFrame).operandIsLive(reg.offset(), codeOriginPtr->bytecodeIndex());
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
+            BytecodeIndex bytecodeIndex = codeOriginPtr->bytecodeIndex();
+            return fullLiveness.operandIsLive(reg.offset(), bytecodeIndex, appropriateLivenessCalculationPoint(*codeOriginPtr, isCallerOrigin));
         }
 
         if (!inlineCallFrame) {
@@ -1191,6 +1197,7 @@ bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
         // We need to handle tail callers because we may decide to exit to the
         // the return bytecode following the tail call.
         codeOriginPtr = &inlineCallFrame->directCaller;
+        isCallerOrigin = true;
     }
     
     RELEASE_ASSERT_NOT_REACHED();
@@ -1649,10 +1656,12 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
             }
 
             if (node->hasHeapPrediction())
-                return &profiledBlock->valueProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex());
+                return &profiledBlock->valueProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex());
 
             if (profiledBlock->hasBaselineJITProfiling()) {
-                if (ArithProfile* result = profiledBlock->arithProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex()))
+                if (BinaryArithProfile* result = profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
+                    return result;
+                if (UnaryArithProfile* result = profiledBlock->unaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
                     return result;
             }
         }
@@ -1750,12 +1759,12 @@ bool Graph::willCatchExceptionInMachineFrame(CodeOrigin codeOrigin, CodeOrigin& 
     if (!m_hasExceptionHandlers)
         return false;
 
-    unsigned bytecodeIndexToCheck = codeOrigin.bytecodeIndex();
+    BytecodeIndex bytecodeIndexToCheck = codeOrigin.bytecodeIndex();
     while (1) {
         InlineCallFrame* inlineCallFrame = codeOrigin.inlineCallFrame();
         CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
-        if (HandlerInfo* handler = codeBlock->handlerForBytecodeOffset(bytecodeIndexToCheck)) {
-            opCatchOriginOut = CodeOrigin(handler->target, inlineCallFrame);
+        if (HandlerInfo* handler = codeBlock->handlerForBytecodeIndex(bytecodeIndexToCheck)) {
+            opCatchOriginOut = CodeOrigin(BytecodeIndex(handler->target), inlineCallFrame);
             catchHandlerOut = handler;
             return true;
         }

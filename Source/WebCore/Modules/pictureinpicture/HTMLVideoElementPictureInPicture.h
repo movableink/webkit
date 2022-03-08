@@ -31,6 +31,7 @@
 #include "PictureInPictureObserver.h"
 #include "Supplementable.h"
 #include <wtf/IsoMalloc.h>
+#include <wtf/LoggerHelper.h>
 
 namespace WebCore {
 
@@ -40,11 +41,16 @@ class PictureInPictureWindow;
 
 class HTMLVideoElementPictureInPicture
     : public Supplement<HTMLVideoElement>
-    , public PictureInPictureObserver {
+    , public PictureInPictureObserver
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
     WTF_MAKE_ISO_ALLOCATED(HTMLVideoElementPictureInPicture);
 public:
     HTMLVideoElementPictureInPicture(HTMLVideoElement&);
     static HTMLVideoElementPictureInPicture* from(HTMLVideoElement&);
+    static void providePictureInPictureTo(HTMLVideoElement&);
     virtual ~HTMLVideoElementPictureInPicture();
 
     static void requestPictureInPicture(HTMLVideoElement&, Ref<DeferredPromise>&&);
@@ -55,8 +61,16 @@ public:
 
     void exitPictureInPicture(Ref<DeferredPromise>&&);
 
-    void didEnterPictureInPicture();
+    void didEnterPictureInPicture(const IntSize&);
     void didExitPictureInPicture();
+    void pictureInPictureWindowResized(const IntSize&);
+
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const final { return "HTMLVideoElementPictureInPicture"; }
+    WTFLogChannel& logChannel() const final;
+#endif
 
 private:
     static const char* supplementName() { return "HTMLVideoElementPictureInPicture"; }
@@ -65,8 +79,14 @@ private:
     bool m_disablePictureInPicture { false };
 
     HTMLVideoElement& m_videoElement;
+    RefPtr<PictureInPictureWindow> m_pictureInPictureWindow;
     RefPtr<DeferredPromise> m_enterPictureInPicturePromise;
     RefPtr<DeferredPromise> m_exitPictureInPicturePromise;
+
+#if !RELEASE_LOG_DISABLED
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier;
+#endif
 };
 
 } // namespace WebCore

@@ -1,3 +1,253 @@
+2019-11-21  Daniel Bates  <dabates@apple.com>
+
+        Remove unneeded code that annotated DOMHTMLElement as conforming to UITextInputTraits protocol
+        https://bugs.webkit.org/show_bug.cgi?id=204464
+
+        Reviewed by Wenson Hsieh.
+
+        DOMHTMLElement never really conformed to the UITextInputTraits protocol. It was annotated as doing so
+        in order to register with the runtime as part of advertising that it implemented two UITextInputTraits_Private
+        messages in r222487: -acceptsAutofilledLoginCredentials and -representingPageURL. These messages were
+        subsequently removed in r222991 (over years ago). So, we do not need to continue advertising UITextInputTraits
+        conformance.
+
+        * DOM/DOMHTMLInputElement.h:
+
+2019-11-15  Eric Carlson  <eric.carlson@apple.com>
+
+        Don't use AVCapture on watchOS and tvOS
+        https://bugs.webkit.org/show_bug.cgi?id=204254
+        <rdar://problem/45508044>
+
+        Reviewed by Youenn Fablet.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-11-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [Apple] Enable variation fonts on all Apple platforms
+        https://bugs.webkit.org/show_bug.cgi?id=198100
+
+        Reviewed by Simon Fraser.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-11-13  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [Mac] Fix build
+        https://bugs.webkit.org/show_bug.cgi?id=204136
+
+        Reviewed by Alex Christensen.
+
+        Remove deprecation warnings.
+
+        * Plugins/WebPluginController.mm:
+        (-[WebPluginController webPlugInContainerSelectionColor]):
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::setCopiesOnScroll):
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView view:stringForToolTip:point:userData:]):
+        (-[WebHTMLView pasteboardChangedOwner:]):
+        (-[WebHTMLView pasteboard:provideDataForType:]):
+        (-[WebHTMLView changeFont:]):
+        (-[WebHTMLView changeColor:]):
+        * WebView/WebPDFView.mm:
+        (-[WebPDFView _openWithFinder:]):
+
+2019-11-08  Daniel Bates  <dabates@apple.com>
+
+        Add WebKit Legacy SPI to retrieve editable elements in rect
+        https://bugs.webkit.org/show_bug.cgi?id=204006
+        <rdar://problem/57024093>
+
+        Reviewed by Wenson Hsieh.
+
+        Add SPI to retrieve all the editable elements in a rect.
+
+        * WebView/WebView.mm:
+        (-[WebView _editableElementsInRect:]): Added.
+        * WebView/WebViewPrivate.h:
+
+2019-11-04  Alex Christensen  <achristensen@webkit.org>
+
+        REGRESSION(r243947) Epson software updater fails to install new version
+        https://bugs.webkit.org/show_bug.cgi?id=203809
+        <rdar://problem/56002179>
+
+        Reviewed by Brady Eidson.
+
+        * Misc/WebDownload.mm:
+        (shouldCallOnNetworkThread):
+        (callOnDelegateThread):
+        (isDelegateThread):
+        (-[WebDownloadInternal downloadDidBegin:]):
+        (-[WebDownloadInternal download:willSendRequest:redirectResponse:]):
+        (-[WebDownloadInternal download:didReceiveAuthenticationChallenge:]):
+        (-[WebDownloadInternal download:didReceiveResponse:]):
+        (-[WebDownloadInternal download:didReceiveDataOfLength:]):
+        (-[WebDownloadInternal download:shouldDecodeSourceDataOfMIMEType:]):
+        (-[WebDownloadInternal download:decideDestinationWithSuggestedFilename:]):
+        (-[WebDownloadInternal download:didCreateDestination:]):
+        (-[WebDownloadInternal downloadDidFinish:]):
+        (-[WebDownloadInternal download:didFailWithError:]):
+
+2019-11-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Add diagnostic logging for frontend feature usage
+        https://bugs.webkit.org/show_bug.cgi?id=203579
+        <rdar://problem/56717410>
+
+        Reviewed by Brian Burg.
+
+        Original patch by Matt Baker <mattbaker@apple.com>.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::supportsDiagnosticLogging): Added.
+        (WebInspectorFrontendClient::logDiagnosticEvent): Added.
+
+        * Configurations/FeatureDefines.xcconfig:
+        Add `ENABLE_INSPECTOR_TELEMETRY`, which is only enabled for macOS.
+
+2019-10-30  Peng Liu  <peng.liu6@apple.com>
+
+        [Picture-in-Picture Web API] Enable the support for iOS
+        https://bugs.webkit.org/show_bug.cgi?id=202618
+
+        Reviewed by Jer Noble.
+
+        Enable the Picture-in-Picture API support for iOS (iPad only).
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-10-29  Andy Estes  <aestes@apple.com>
+
+        [Quick Look] Clean up LegacyPreviewLoaderClients
+        https://bugs.webkit.org/show_bug.cgi?id=203472
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::createPreviewLoaderClient):
+
+2019-10-26  Chris Lord  <clord@igalia.com>
+
+        Put OffscreenCanvas behind a build flag
+        https://bugs.webkit.org/show_bug.cgi?id=203146
+
+        Reviewed by Ryosuke Niwa.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-10-23  Andy Estes  <aestes@apple.com>
+
+        [Quick Look] Rename PreviewLoader{,Client} to LegacyPreviewLoader{,Client}
+        https://bugs.webkit.org/show_bug.cgi?id=203306
+
+        Reviewed by Tim Horton.
+
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::createPreviewLoaderClient):
+        * WebView/WebDataSource.mm:
+        (-[WebDataSource _quickLookPreviewLoaderClient]):
+        (-[WebDataSource _setQuickLookPreviewLoaderClient:]):
+        * WebView/WebDataSourceInternal.h:
+
+2019-10-22  Alex Christensen  <achristensen@webkit.org>
+
+        Re-enable legacy TLS by default, keep runtime switch
+        https://bugs.webkit.org/show_bug.cgi?id=203253
+
+        Reviewed by Geoffrey Garen.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+2019-10-21  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        [JSC] Thread JSGlobalObject* instead of ExecState*
+        https://bugs.webkit.org/show_bug.cgi?id=202392
+
+        Reviewed by Geoffrey Garen.
+
+        * DOM/DOMInternal.mm:
+        (-[WebScriptObject _initializeScriptDOMNodeImp]):
+        * DOM/WebDOMOperations.mm:
+        * Plugins/Hosted/NetscapePluginInstanceProxy.h:
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::evaluate):
+        (WebKit::NetscapePluginInstanceProxy::invoke):
+        (WebKit::NetscapePluginInstanceProxy::invokeDefault):
+        (WebKit::NetscapePluginInstanceProxy::construct):
+        (WebKit::NetscapePluginInstanceProxy::getProperty):
+        (WebKit::NetscapePluginInstanceProxy::setProperty):
+        (WebKit::NetscapePluginInstanceProxy::removeProperty):
+        (WebKit::NetscapePluginInstanceProxy::hasProperty):
+        (WebKit::NetscapePluginInstanceProxy::hasMethod):
+        (WebKit::NetscapePluginInstanceProxy::enumerate):
+        (WebKit::NetscapePluginInstanceProxy::addValueToArray):
+        (WebKit::NetscapePluginInstanceProxy::marshalValue):
+        (WebKit::NetscapePluginInstanceProxy::marshalValues):
+        (WebKit::NetscapePluginInstanceProxy::demarshalValueFromArray):
+        (WebKit::NetscapePluginInstanceProxy::demarshalValue):
+        (WebKit::NetscapePluginInstanceProxy::demarshalValues):
+        (WebKit::NetscapePluginInstanceProxy::moveGlobalExceptionToExecState):
+        * Plugins/Hosted/ProxyInstance.h:
+        * Plugins/Hosted/ProxyInstance.mm:
+        (WebKit::ProxyField::valueFromInstance const):
+        (WebKit::ProxyField::setValueToInstance const):
+        (WebKit::ProxyInstance::newRuntimeObject):
+        (WebKit::ProxyInstance::invoke):
+        (WebKit::ProxyRuntimeMethod::create):
+        (WebKit::ProxyInstance::getMethod):
+        (WebKit::ProxyInstance::invokeMethod):
+        (WebKit::ProxyInstance::invokeDefaultMethod):
+        (WebKit::ProxyInstance::invokeConstruct):
+        (WebKit::ProxyInstance::defaultValue const):
+        (WebKit::ProxyInstance::stringValue const):
+        (WebKit::ProxyInstance::numberValue const):
+        (WebKit::ProxyInstance::valueOf const):
+        (WebKit::ProxyInstance::getPropertyNames):
+        (WebKit::ProxyInstance::fieldValue const):
+        (WebKit::ProxyInstance::setFieldValue const):
+        * WebView/WebFrame.mm:
+        (-[WebFrame _stringByEvaluatingJavaScriptFromString:forceUserGesture:]):
+        (-[WebFrame _stringByEvaluatingJavaScriptFromString:withGlobalObject:inScriptWorld:]):
+        (-[WebFrame _globalContextForScriptWorld:]):
+        (-[WebFrame jsWrapperForNode:inScriptWorld:]):
+        (-[WebFrame globalContext]):
+        * WebView/WebScriptDebugger.h:
+        * WebView/WebScriptDebugger.mm:
+        (WebScriptDebugger::sourceParsed):
+        * WebView/WebView.mm:
+        (+[WebView _reportException:inContext:]):
+        (aeDescFromJSValue):
+        (-[WebView aeDescByEvaluatingJavaScriptFromString:]):
+
+2019-10-22  Wenson Hsieh  <wenson_hsieh@apple.com>
+
+        imported/w3c/web-platform-tests/clipboard-apis/async-navigator-clipboard-basics.https.html is flaky
+        https://bugs.webkit.org/show_bug.cgi?id=203181
+
+        Reviewed by Ryosuke Niwa.
+
+        Add a changeCount argument to informationForItemAtIndex and allPasteboardItemInfo, and also make then return
+        optional values. See WebCore ChangeLog for more details.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::changeCount):
+        (WebPlatformStrategies::addTypes):
+        (WebPlatformStrategies::setTypes):
+        (WebPlatformStrategies::setBufferForType):
+        (WebPlatformStrategies::setURL):
+        (WebPlatformStrategies::setColor):
+        (WebPlatformStrategies::setStringForType):
+        (WebPlatformStrategies::writeCustomData):
+        (WebPlatformStrategies::informationForItemAtIndex):
+        (WebPlatformStrategies::allPasteboardItemInfo):
+
 2019-10-17  Devin Rousso  <drousso@apple.com>
 
         Web Inspector: rework frontend agent construction to allow commands/events to be controlled by the related target's type

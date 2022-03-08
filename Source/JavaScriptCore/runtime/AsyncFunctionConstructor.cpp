@@ -39,13 +39,13 @@ const ClassInfo AsyncFunctionConstructor::s_info = { "AsyncFunction", &Base::s_i
 static EncodedJSValue JSC_HOST_CALL callAsyncFunctionConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     ArgList args(callFrame);
-    return JSValue::encode(constructFunction(callFrame, globalObject, args, FunctionConstructionMode::Async));
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::Async));
 }
 
 static EncodedJSValue JSC_HOST_CALL constructAsyncFunctionConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     ArgList args(callFrame);
-    return JSValue::encode(constructFunction(callFrame, globalObject, args, FunctionConstructionMode::Async));
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::Async));
 }
 
 AsyncFunctionConstructor::AsyncFunctionConstructor(VM& vm, Structure* structure)
@@ -55,7 +55,7 @@ AsyncFunctionConstructor::AsyncFunctionConstructor(VM& vm, Structure* structure)
 
 void AsyncFunctionConstructor::finishCreation(VM& vm, AsyncFunctionPrototype* prototype)
 {
-    Base::finishCreation(vm, "AsyncFunction"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, "AsyncFunction"_s, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }

@@ -51,10 +51,11 @@ void WebsiteDataStoreParameters::encode(IPC::Encoder& encoder) const
 
 #if ENABLE(SERVICE_WORKER)
     encoder << serviceWorkerRegistrationDirectory << serviceWorkerRegistrationDirectoryExtensionHandle << serviceWorkerProcessTerminationDelayEnabled;
-    encoder << serviceWorkerRegisteredSchemes;
 #endif
 
     encoder << localStorageDirectory << localStorageDirectoryExtensionHandle;
+
+    encoder << cacheStorageDirectory << cacheStorageDirectoryExtensionHandle;
 
     encoder << perOriginStorageQuota;
     encoder << perThirdPartyOriginStorageQuota;
@@ -128,12 +129,6 @@ Optional<WebsiteDataStoreParameters> WebsiteDataStoreParameters::decode(IPC::Dec
     if (!serviceWorkerProcessTerminationDelayEnabled)
         return WTF::nullopt;
     parameters.serviceWorkerProcessTerminationDelayEnabled = WTFMove(*serviceWorkerProcessTerminationDelayEnabled);
-    
-    Optional<HashSet<String>> serviceWorkerRegisteredSchemes;
-    decoder >> serviceWorkerRegisteredSchemes;
-    if (!serviceWorkerRegisteredSchemes)
-        return WTF::nullopt;
-    parameters.serviceWorkerRegisteredSchemes = WTFMove(*serviceWorkerRegisteredSchemes);
 #endif
 
     Optional<String> localStorageDirectory;
@@ -147,6 +142,18 @@ Optional<WebsiteDataStoreParameters> WebsiteDataStoreParameters::decode(IPC::Dec
     if (!localStorageDirectoryExtensionHandle)
         return WTF::nullopt;
     parameters.localStorageDirectoryExtensionHandle = WTFMove(*localStorageDirectoryExtensionHandle);
+
+    Optional<String> cacheStorageDirectory;
+    decoder >> cacheStorageDirectory;
+    if (!cacheStorageDirectory)
+        return WTF::nullopt;
+    parameters.cacheStorageDirectory = WTFMove(*cacheStorageDirectory);
+
+    Optional<SandboxExtension::Handle> cacheStorageDirectoryExtensionHandle;
+    decoder >> cacheStorageDirectoryExtensionHandle;
+    if (!cacheStorageDirectoryExtensionHandle)
+        return WTF::nullopt;
+    parameters.cacheStorageDirectoryExtensionHandle = WTFMove(*cacheStorageDirectoryExtensionHandle);
 
     Optional<uint64_t> perOriginStorageQuota;
     decoder >> perOriginStorageQuota;

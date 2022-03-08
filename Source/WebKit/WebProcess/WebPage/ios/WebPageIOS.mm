@@ -42,6 +42,7 @@
 #import "PrintInfo.h"
 #import "RemoteLayerTreeDrawingArea.h"
 #import "SandboxUtilities.h"
+#import "SharedMemory.h"
 #import "SyntheticEditingCommandType.h"
 #import "TextCheckingControllerProxy.h"
 #import "UIKitSPI.h"
@@ -55,6 +56,7 @@
 #import "WebCoreArgumentCoders.h"
 #import "WebFrame.h"
 #import "WebImage.h"
+#import "WebPageMessages.h"
 #import "WebPageProxyMessages.h"
 #import "WebPreviewLoaderClient.h"
 #import "WebProcess.h"
@@ -2779,7 +2781,6 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
     FloatPoint adjustedPoint;
     auto* nodeRespondingToClickEvents = m_page->mainFrame().nodeRespondingToClickEvents(request.point, adjustedPoint);
 
-    info.nodeAtPositionIsFocusedElement = nodeRespondingToClickEvents == m_focusedElement;
     info.adjustedPointForNodeRespondingToClickEvents = adjustedPoint;
     info.nodeAtPositionHasDoubleClickHandler = m_page->mainFrame().nodeRespondingToDoubleClickEvent(request.point, adjustedPoint);
 
@@ -2815,7 +2816,7 @@ void WebPage::requestPositionInformation(const InteractionInformationRequest& re
     send(Messages::WebPageProxy::DidReceivePositionInformation(positionInformation(request)));
 }
 
-void WebPage::startInteractionWithElementContextOrPosition(Optional<ElementContext>&& elementContext, WebCore::IntPoint&& point)
+void WebPage::startInteractionWithElementContextOrPosition(Optional<WebCore::ElementContext>&& elementContext, WebCore::IntPoint&& point)
 {
     if (elementContext) {
         m_interactionNode = elementForContext(*elementContext);
@@ -2904,9 +2905,11 @@ void WebPage::getFocusedElementInformation(FocusedElementInformation& informatio
     layoutIfNeeded();
 
     information.lastInteractionLocation = m_lastInteractionLocation;
+    if (auto elementContext = contextForElement(*m_focusedElement))
+        information.elementContext = WTFMove(*elementContext);
 
     if (auto* renderer = m_focusedElement->renderer()) {
-        information.elementRect = rootViewInteractionBoundsForElement(*m_focusedElement);
+        information.interactionRect = rootViewInteractionBoundsForElement(*m_focusedElement);
         information.nodeFontSize = renderer->style().fontDescription().computedSize();
 
         bool inFixed = false;
@@ -2914,7 +2917,7 @@ void WebPage::getFocusedElementInformation(FocusedElementInformation& informatio
         information.insideFixedPosition = inFixed;
         information.isRTL = renderer->style().direction() == TextDirection::RTL;
     } else
-        information.elementRect = IntRect();
+        information.interactionRect = { };
 
     if (is<HTMLElement>(m_focusedElement))
         information.isSpellCheckingEnabled = downcast<HTMLElement>(*m_focusedElement).spellcheck();
@@ -2985,6 +2988,7 @@ void WebPage::getFocusedElementInformation(FocusedElementInformation& informatio
         information.autofillFieldName = WebCore::toAutofillFieldName(element.autofillData().fieldName);
         information.placeholder = element.attributeWithoutSynchronization(HTMLNames::placeholderAttr);
         information.inputMode = element.canonicalInputMode();
+        information.enterKeyHint = element.canonicalEnterKeyHint();
     } else if (is<HTMLInputElement>(*m_focusedElement)) {
         HTMLInputElement& element = downcast<HTMLInputElement>(*m_focusedElement);
         HTMLFormElement* form = element.form();
@@ -3046,6 +3050,7 @@ void WebPage::getFocusedElementInformation(FocusedElementInformation& informatio
         information.hasSuggestions = !!element.list();
 #endif
         information.inputMode = element.canonicalInputMode();
+        information.enterKeyHint = element.canonicalEnterKeyHint();
         information.isReadOnly = element.isReadOnly();
         information.value = element.value();
         information.valueAsNumber = element.valueAsNumber();
@@ -3060,6 +3065,7 @@ void WebPage::getFocusedElementInformation(FocusedElementInformation& informatio
             information.isAutocorrect = focusedElement.shouldAutocorrect();
             information.autocapitalizeType = focusedElement.autocapitalizeType();
             information.inputMode = focusedElement.canonicalInputMode();
+            information.enterKeyHint = focusedElement.canonicalEnterKeyHint();
             information.shouldSynthesizeKeyEventsForEditing = focusedElement.document().settings().syntheticEditingCommandsEnabled();
         } else {
             information.isAutocorrect = true;
@@ -3308,6 +3314,8 @@ void WebPage::dynamicViewportSizeUpdate(const FloatSize& viewLayoutSize, const W
     frameView.setCustomSizeForResizeEvent(expandedIntSize(targetUnobscuredRectInScrollViewCoordinates.size()));
     setDeviceOrientation(deviceOrientation);
     frameView.setScrollOffset(roundedUnobscuredContentRectPosition);
+
+    m_page->updateRendering();
 
 #if ENABLE(VIEWPORT_RESIZING)
     if (immediatelyShrinkToFitContent())
@@ -3836,13 +3844,6 @@ void WebPage::updateStringForFind(const String& findString)
     send(Messages::WebPageProxy::UpdateStringForFind(findString));
 }
 
-#if USE(QUICK_LOOK)
-void WebPage::didReceivePasswordForQuickLookDocument(const String& password)
-{
-    WebPreviewLoaderClient::didReceivePassword(password, m_identifier);
-}
-#endif
-
 bool WebPage::platformPrefersTextLegibilityBasedZoomScaling() const
 {
 #if PLATFORM(WATCHOS)
@@ -3935,6 +3936,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest reques
 
     bool isSpatialRequest = request.options.contains(DocumentEditingContextRequest::Options::Spatial);
     bool wantsRects = request.options.contains(DocumentEditingContextRequest::Options::Rects);
+    bool wantsMarkedTextRects = request.options.contains(DocumentEditingContextRequest::Options::MarkedTextRects);
 
     if (auto textInputContext = request.textInputContext) {
         RefPtr<Element> element = elementForContext(*textInputContext);
@@ -4043,9 +4045,10 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest reques
         context.selectedRangeInMarkedText.length = [context.selectedText.string length];
     }
 
-    if (wantsRects) {
-        CharacterIterator contextIterator(contextBeforeStart.deepEquivalent(), contextAfterEnd.deepEquivalent());
-        unsigned currentLocation = 0;
+    auto characterRectsForRange = [&] (Range& range, uint64_t locationOffset) {
+        Vector<DocumentEditingContext::TextRectAndRange> rects;
+        CharacterIterator contextIterator(range);
+        unsigned currentLocation = locationOffset;
         while (!contextIterator.atEnd()) {
             unsigned length = contextIterator.text().length();
             if (!length) {
@@ -4053,14 +4056,19 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest reques
                 continue;
             }
 
-            DocumentEditingContext::TextRectAndRange rect;
-            rect.rect = contextIterator.range()->absoluteBoundingBox();
-            rect.range = { currentLocation, 1 };
-            context.textRects.append(rect);
-
+            rects.append({ contextIterator.range()->absoluteBoundingBox(), { currentLocation, 1 } });
             currentLocation++;
             contextIterator.advance(1);
         }
+        return rects;
+    };
+
+    if (wantsRects) {
+        if (auto contextRange = makeRange(contextBeforeStart, contextAfterEnd))
+            context.textRects = characterRectsForRange(*contextRange, 0);
+    } else if (wantsMarkedTextRects && compositionRange) {
+        auto compositionStartOffset = plainTextReplacingNoBreakSpace(contextBeforeStart.deepEquivalent(), compositionRange->startPosition()).length();
+        context.textRects = characterRectsForRange(*compositionRange, compositionStartOffset);
     }
 
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
@@ -4070,6 +4078,40 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest reques
 
     completionHandler(context);
 }
+
+#if USE(QUICK_LOOK)
+
+void WebPage::didStartLoadForQuickLookDocumentInMainFrame(const String& fileName, const String& uti)
+{
+    send(Messages::WebPageProxy::DidStartLoadForQuickLookDocumentInMainFrame(fileName, uti));
+}
+
+void WebPage::didFinishLoadForQuickLookDocumentInMainFrame(const SharedBuffer& buffer)
+{
+    ASSERT(!buffer.isEmpty());
+
+    // FIXME: In some cases, buffer conains a single segment that wraps an existing ShareableResource.
+    // If we could create a handle from that existing resource then we could avoid this extra
+    // allocation and copy.
+
+    auto sharedMemory = SharedMemory::copyBuffer(buffer);
+    if (!sharedMemory)
+        return;
+
+    ShareableResource::Handle handle;
+    auto shareableResource = ShareableResource::create(sharedMemory.releaseNonNull(), 0, buffer.size());
+    if (!shareableResource->createHandle(handle))
+        return;
+
+    send(Messages::WebPageProxy::DidFinishLoadForQuickLookDocumentInMainFrame(handle));
+}
+
+void WebPage::requestPasswordForQuickLookDocumentInMainFrame(const String& fileName, CompletionHandler<void(const String&)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::WebPageProxy::RequestPasswordForQuickLookDocumentInMainFrame(fileName), WTFMove(completionHandler));
+}
+
+#endif
 
 } // namespace WebKit
 

@@ -65,6 +65,12 @@ WebResourceLoadObserver::WebResourceLoadObserver()
 {
 }
 
+WebResourceLoadObserver::~WebResourceLoadObserver()
+{
+    if (hasStatistics())
+        updateCentralStatisticsStore();
+}
+
 void WebResourceLoadObserver::requestStorageAccessUnderOpener(const RegistrableDomain& domainInNeedOfStorageAccess, PageIdentifier openerPageID, Document& openerDocument)
 {
     auto openerUrl = openerDocument.url();
@@ -229,7 +235,7 @@ void WebResourceLoadObserver::logScreenAPIAccessed(const Document& document, con
 #endif
 }
 
-void WebResourceLoadObserver::logSubresourceLoading(const Frame* frame, const ResourceRequest& newRequest, const ResourceResponse& redirectResponse)
+void WebResourceLoadObserver::logSubresourceLoading(const Frame* frame, const ResourceRequest& newRequest, const ResourceResponse& redirectResponse, FetchDestinationIsScriptLike isScriptLike)
 {
     ASSERT(frame->page());
 
@@ -263,6 +269,13 @@ void WebResourceLoadObserver::logSubresourceLoading(const Frame* frame, const Re
         auto lastSeen = ResourceLoadStatistics::reduceTimeResolution(WallTime::now());
         targetStatistics.lastSeen = lastSeen;
         targetStatistics.subresourceUnderTopFrameDomains.add(topFrameDomain);
+
+        scheduleNotificationIfNeeded();
+    }
+
+    if (frame->isMainFrame() && isScriptLike == FetchDestinationIsScriptLike::Yes) {
+        auto& topFrameStatistics = ensureResourceStatisticsForRegistrableDomain(topFrameDomain);
+        topFrameStatistics.topFrameLoadedThirdPartyScripts.add(targetDomain);
 
         scheduleNotificationIfNeeded();
     }
@@ -354,6 +367,19 @@ void WebResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const 
 #undef LOCAL_LOG
     }
 #endif
+}
+
+void WebResourceLoadObserver::logSubresourceLoadingForTesting(const RegistrableDomain& firstPartyDomain, const RegistrableDomain& thirdPartyDomain, bool shouldScheduleNotification)
+{
+    auto& targetStatistics = ensureResourceStatisticsForRegistrableDomain(thirdPartyDomain);
+    auto lastSeen = ResourceLoadStatistics::reduceTimeResolution(WallTime::now());
+    targetStatistics.lastSeen = lastSeen;
+    targetStatistics.subresourceUnderTopFrameDomains.add(firstPartyDomain);
+
+    if (shouldScheduleNotification)
+        scheduleNotificationIfNeeded();
+    else
+        m_notificationTimer.stop();
 }
 
 } // namespace WebKit

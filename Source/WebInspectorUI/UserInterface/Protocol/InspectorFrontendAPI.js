@@ -75,6 +75,12 @@ InspectorFrontendAPI = {
         WI.updateVisibilityState(visible);
     },
 
+    setDiagnosticLoggingAvailable: function(available)
+    {
+        if (WI.diagnosticController)
+            WI.diagnosticController.diagnosticLoggingAvailable = available;
+    },
+
     showConsole: function()
     {
         WI.showConsoleTab();

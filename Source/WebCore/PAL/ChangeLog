@@ -1,3 +1,109 @@
+2019-11-21  Jer Noble  <jer.noble@apple.com>
+
+        Experimental support for HDR media query
+        https://bugs.webkit.org/show_bug.cgi?id=204422
+
+        Reviewed by Eric Carlson.
+
+        * PAL.xcodeproj/project.pbxproj:
+        * pal/PlatformMac.cmake:
+        * pal/cocoa/MediaToolboxSoftLink.cpp: Renamed from Source/WebCore/platform/cocoa/MediaToolboxSoftLink.h.
+        * pal/cocoa/MediaToolboxSoftLink.h: Renamed from Source/WebCore/platform/cocoa/MediaToolboxSoftLink.cpp.
+
+2019-11-15  Eric Carlson  <eric.carlson@apple.com>
+
+        Don't use AVCapture on watchOS and tvOS
+        https://bugs.webkit.org/show_bug.cgi?id=204254
+        <rdar://problem/45508044>
+
+        Reviewed by Youenn Fablet.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-11-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [Apple] Enable variation fonts on all Apple platforms
+        https://bugs.webkit.org/show_bug.cgi?id=198100
+
+        Reviewed by Simon Fraser.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-11-06  Eric Liang  <ericliang@apple.com>
+
+        AX: WKWebView does not shift Accessibility Focus for Catalyst (203798)
+        https://bugs.webkit.org/show_bug.cgi?id=203798
+
+        Reviewed by Chris Fleizach.
+
+        Changed the path of NSAccessibilitySPI from Mac to Cocoa
+
+        * PAL.xcodeproj/project.pbxproj:
+        * pal/spi/cocoa/NSAccessibilitySPI.h: Renamed from Source/WebCore/PAL/pal/spi/mac/NSAccessibilitySPI.h.
+
+2019-11-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Add diagnostic logging for frontend feature usage
+        https://bugs.webkit.org/show_bug.cgi?id=203579
+        <rdar://problem/56717410>
+
+        Reviewed by Brian Burg.
+
+        Original patch by Matt Baker <mattbaker@apple.com>.
+
+        * Configurations/FeatureDefines.xcconfig:
+        Add `ENABLE_INSPECTOR_TELEMETRY`, which is only enabled for macOS.
+
+2019-10-31  Alex Christensen  <achristensen@apple.com>
+
+        Enable more features in Mac CMake build
+        https://bugs.webkit.org/show_bug.cgi?id=203699
+
+        Rubber-stamped by Tim Horton.
+
+        * pal/CMakeLists.txt:
+        * pal/PlatformMac.cmake:
+
+2019-10-30  Peng Liu  <peng.liu6@apple.com>
+
+        [Picture-in-Picture Web API] Enable the support for iOS
+        https://bugs.webkit.org/show_bug.cgi?id=202618
+
+        Reviewed by Jer Noble.
+
+        Enable the Picture-in-Picture API support for iOS (iPad only).
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-10-26  Chris Lord  <clord@igalia.com>
+
+        Put OffscreenCanvas behind a build flag
+        https://bugs.webkit.org/show_bug.cgi?id=203146
+
+        Reviewed by Ryosuke Niwa.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2019-10-25  Eric Carlson  <eric.carlson@apple.com>
+
+        Support for callbacks for manifest events
+        https://bugs.webkit.org/show_bug.cgi?id=202101
+        <rdar://problem/54277362>
+
+        Reviewed by Jer Noble.
+
+        * pal/cocoa/AVFoundationSoftLink.h:
+        * pal/cocoa/AVFoundationSoftLink.mm:
+
+2019-10-25  Andy Estes  <aestes@apple.com>
+
+        [Quick Look] Move the QLPreviewConverter delegate into PreviewConverter and vend a C++ client interface
+        https://bugs.webkit.org/show_bug.cgi?id=203396
+
+        Reviewed by Alex Christensen.
+
+        * pal/spi/ios/QuickLookSPI.h:
+
 2019-10-15  Peng Liu  <peng.liu6@apple.com>
 
         [Picture-in-Picture Web API] Implement HTMLVideoElement.requestPictureInPicture() / Document.exitPictureInPicture()

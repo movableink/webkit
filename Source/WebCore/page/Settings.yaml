@@ -298,7 +298,7 @@ inlineMediaPlaybackRequiresPlaysInlineAttribute:
 allowsPictureInPictureMediaPlayback:
   initial: defaultAllowsPictureInPictureMediaPlayback
 pictureInPictureAPIEnabled:
-  initial: false
+  initial: true
 mediaControlsScaleWithPageZoom:
   initial: defaultMediaControlsScaleWithPageZoom
 invisibleAutoplayNotPermitted:
@@ -321,6 +321,9 @@ shouldDisplayCaptions:
 shouldDisplayTextDescriptions:
   initial: false
   conditional: VIDEO_TRACK
+genericCueAPIEnabled:
+    initial: false
+    conditional: VIDEO_TRACK
 scrollingCoordinatorEnabled:
   initial: false
 scrollingTreeIncludesFrames:
@@ -497,6 +500,10 @@ allowsAirPlayForMediaPlayback:
   initial: true
   conditional: WIRELESS_PLAYBACK_TARGET
 
+remotePlaybackEnabled:
+  initial: true
+  conditional: WIRELESS_PLAYBACK_TARGET
+
 shouldConvertPositionStyleOnCopy:
   initial: false
 
@@ -629,6 +636,10 @@ forcedDisplayIsMonochromeAccessibilityValue:
 forcedPrefersReducedMotionAccessibilityValue:
   type: ForcedAccessibilityValue
   initial: defaultForcedPrefersReducedMotionAccessibilityValue
+forcedSupportsHighDynamicRangeValue:
+  type: ForcedAccessibilityValue
+  initial: defaultForcedSupportsHighDynamicRangeValue
+  onChange: setNeedsRecalcStyleInAllFrames
 
 largeImageAsyncDecodingEnabled:
   initial: true
@@ -755,10 +766,6 @@ shouldAllowUserInstalledFonts:
   initial: true
   onChange: setNeedsRecalcStyleInAllFrames
 
-shouldAllowDesignSystemUIFonts:
-  initial: false
-  onChange: setNeedsRecalcStyleInAllFrames
-
 resizeObserverEnabled:
   initial: false
   conditional: RESIZE_OBSERVER
@@ -827,6 +834,10 @@ mediaCapabilitiesExtensionsEnabled:
   type: bool
   initial: false
 
+hdrMediaCapabilitiesEnabled:
+  type: bool
+  initial: false
+
 clientCoordinatesRelativeToLayoutViewport:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
@@ -873,10 +884,13 @@ webRTCEncryptionEnabled:
   initial: true
   inspectorOverride: true
 
-isThirdPartyCookieBlockingOnSitesWithoutUserInteractionEnabled:
+isThirdPartyCookieBlockingEnabled:
   initial: false
 
 isLoggedInAPIEnabled:
+  initial: false
+
+enterKeyHintEnabled:
   initial: false
 
 # Deprecated

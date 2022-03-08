@@ -116,7 +116,7 @@ loader/archive/cf/LegacyWebArchiveMac.mm
 loader/cocoa/DiskCacheMonitorCocoa.mm
 loader/cocoa/SubresourceLoaderCocoa.mm
 
-loader/ios/PreviewLoader.mm
+loader/ios/LegacyPreviewLoader.mm
 
 loader/mac/DocumentLoaderMac.cpp
 loader/mac/LoaderNSURLExtras.mm
@@ -163,6 +163,7 @@ page/scrolling/mac/ScrollingTreeMac.cpp
 
 platform/audio/AudioSession.cpp
 
+platform/audio/cocoa/AudioDestinationCocoa.cpp
 platform/audio/cocoa/MediaSessionManagerCocoa.mm
 platform/audio/cocoa/WebAudioBufferList.cpp
 
@@ -277,6 +278,7 @@ platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/ca/cocoa/WebSystemBackdropLayer.mm
 platform/graphics/ca/cocoa/WebTiledBackingLayer.mm
+platform/graphics/ca/cocoa/WebVideoContainerLayer.mm
 
 platform/graphics/cg/ColorCG.cpp
 platform/graphics/cg/FloatPointCG.cpp
@@ -401,6 +403,7 @@ platform/ios/PlatformPasteboardIOS.mm
 platform/ios/PlatformScreenIOS.mm
 platform/ios/PlatformSpeechSynthesizerIOS.mm @no-unify
 platform/ios/PlaybackSessionInterfaceAVKit.mm @no-unify
+platform/ios/PreviewConverterIOS.mm
 platform/ios/QuickLook.mm
 platform/ios/RemoteCommandListenerIOS.mm
 platform/ios/ScrollAnimatorIOS.mm
@@ -493,6 +496,7 @@ platform/mediastream/mac/MockRealtimeVideoSourceMac.mm
 
 platform/mock/MediaPlaybackTargetPickerMock.cpp
 platform/mock/MediaPlaybackTargetMock.cpp
+platform/mock/MockAudioDestinationCocoa.cpp
 
 platform/network/cf/CertificateInfoCFNet.cpp
 platform/network/cf/DNSResolveQueueCFNet.cpp
@@ -514,7 +518,6 @@ platform/network/cocoa/ResourceResponseCocoa.mm @no-unify // Unsafe to unify unt
 platform/network/cocoa/WebCoreNSURLSession.mm @no-unify
 
 platform/network/ios/NetworkStateNotifierIOS.mm
-platform/network/ios/PreviewConverter.mm
 platform/network/ios/WebCoreURLResponseIOS.mm
 
 platform/network/mac/AuthenticationMac.mm
@@ -544,6 +547,7 @@ rendering/RenderThemeIOS.mm
 rendering/RenderThemeMac.mm
 rendering/TextAutoSizing.cpp
 
+platform/mediastream/mac/BaseAudioSharedUnit.cpp
 platform/mediastream/mac/CoreAudioCaptureDevice.cpp
 platform/mediastream/mac/CoreAudioCaptureDeviceManager.cpp
 platform/mediastream/mac/CoreAudioCaptureSource.cpp
@@ -560,7 +564,7 @@ platform/mediastream/mac/WindowDisplayCaptureSourceMac.mm
 
 platform/audio/mac/AudioSampleDataSource.mm
 
-platform/mediastream/mac/MockRealtimeAudioSourceMac.mm
+platform/mediastream/mac/MockAudioSharedUnit.mm
 platform/mediastream/mac/WebAudioSourceProviderAVFObjC.mm
 
 platform/mediastream/libwebrtc/LibWebRTCProviderCocoa.cpp

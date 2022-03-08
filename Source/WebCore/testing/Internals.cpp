@@ -28,7 +28,6 @@
 #include "Internals.h"
 
 #include "AXObjectCache.h"
-#include "ActiveDOMCallbackMicrotask.h"
 #include "ActivityState.h"
 #include "AnimationTimeline.h"
 #include "ApplicationCacheStorage.h"
@@ -70,6 +69,7 @@
 #include "Element.h"
 #include "EventHandler.h"
 #include "EventListener.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "ExtendableEvent.h"
 #include "ExtensionStyleSheets.h"
@@ -122,6 +122,7 @@
 #include "MediaStreamTrack.h"
 #include "MemoryCache.h"
 #include "MemoryInfo.h"
+#include "MockAudioDestinationCocoa.h"
 #include "MockLibWebRTCPeerConnection.h"
 #include "MockPageOverlay.h"
 #include "MockPageOverlayClient.h"
@@ -291,8 +292,8 @@
 #endif
 
 #if USE(QUICK_LOOK)
+#include "LegacyPreviewLoader.h"
 #include "MockPreviewLoaderClient.h"
-#include "PreviewLoader.h"
 #endif
 
 #if ENABLE(APPLE_PAY)
@@ -529,7 +530,7 @@ void Internals::resetToConsistentState(Page& page)
 
 #if USE(QUICK_LOOK)
     MockPreviewLoaderClient::singleton().setPassword("");
-    PreviewLoader::setClientForTesting(nullptr);
+    LegacyPreviewLoader::setClientForTesting(nullptr);
 #endif
 
     printContextForTesting() = nullptr;
@@ -596,6 +597,10 @@ Internals::Internals(Document& document)
 #endif
 
     m_unsuspendableActiveDOMObject = nullptr;
+
+#if PLATFORM(COCOA) &&  ENABLE(WEB_AUDIO)
+    AudioDestinationCocoa::createOverride = nullptr;
+#endif
 }
 
 Document* Internals::contextDocument() const
@@ -2314,16 +2319,17 @@ private:
 String Internals::parserMetaData(JSC::JSValue code)
 {
     JSC::VM& vm = contextDocument()->vm();
-    JSC::ExecState* exec = vm.topCallFrame;
+    JSC::CallFrame* callFrame = vm.topCallFrame;
+    JSC::JSGlobalObject* globalObject = callFrame->lexicalGlobalObject(vm);
     ScriptExecutable* executable;
 
     if (!code || code.isNull() || code.isUndefined()) {
         GetCallerCodeBlockFunctor iter;
-        exec->iterate(iter);
+        callFrame->iterate(vm, iter);
         CodeBlock* codeBlock = iter.codeBlock();
         executable = codeBlock->ownerExecutable();
     } else if (code.isFunction(vm)) {
-        JSFunction* funcObj = JSC::jsCast<JSFunction*>(code.toObject(exec));
+        JSFunction* funcObj = JSC::jsCast<JSFunction*>(code.toObject(globalObject));
         executable = funcObj->jsExecutable();
     } else
         return String();
@@ -2623,6 +2629,11 @@ uint64_t Internals::documentIdentifier(const Document& document) const
 bool Internals::isDocumentAlive(uint64_t documentIdentifier) const
 {
     return Document::allDocumentsMap().contains(makeObjectIdentifier<DocumentIdentifierType>(documentIdentifier));
+}
+
+uint64_t Internals::elementIdentifier(Element& element) const
+{
+    return element.document().identifierForElement(element).toUInt64();
 }
 
 uint64_t Internals::frameIdentifier(const Document& document) const
@@ -3583,7 +3594,8 @@ Ref<SerializedScriptValue> Internals::deserializeBuffer(ArrayBuffer& buffer) con
 
 bool Internals::isFromCurrentWorld(JSC::JSValue value) const
 {
-    return isWorldCompatible(*contextDocument()->vm().topCallFrame, value);
+    JSC::VM& vm = contextDocument()->vm();
+    return isWorldCompatible(*vm.topCallFrame->lexicalGlobalObject(vm), value);
 }
 
 void Internals::setUsesOverlayScrollbars(bool enabled)
@@ -4190,7 +4202,6 @@ void Internals::sendMediaControlEvent(MediaControlEvent event)
 #endif // ENABLE(MEDIA_SESSION)
 
 #if ENABLE(WEB_AUDIO)
-
 void Internals::setAudioContextRestrictions(AudioContext& context, StringView restrictionsString)
 {
     AudioContext::BehaviorRestrictions restrictions = context.behaviorRestrictions();
@@ -4209,6 +4220,12 @@ void Internals::setAudioContextRestrictions(AudioContext& context, StringView re
     context.addBehaviorRestriction(restrictions);
 }
 
+void Internals::useMockAudioDestinationCocoa()
+{
+#if PLATFORM(COCOA)
+    AudioDestinationCocoa::createOverride = MockAudioDestinationCocoa::create;
+#endif
+}
 #endif
 
 void Internals::simulateSystemSleep() const
@@ -4280,6 +4297,14 @@ ExceptionOr<void> Internals::setMockMediaPlaybackTargetPickerState(const String&
 
     page->setMockMediaPlaybackTargetPickerState(deviceName, state);
     return { };
+}
+
+void Internals::mockMediaPlaybackTargetPickerDismissPopup()
+{
+    auto* page = contextDocument()->frame()->page();
+    ASSERT(page);
+
+    page->mockMediaPlaybackTargetPickerDismissPopup();
 }
 
 #endif
@@ -4415,11 +4440,11 @@ void Internals::queueMicroTask(int testNumber)
     if (!document)
         return;
 
-    auto microtask = makeUnique<ActiveDOMCallbackMicrotask>(MicrotaskQueue::mainThreadQueue(), *document, [document, testNumber]() {
+    ScriptExecutionContext* context = document;
+    auto& eventLoop = context->eventLoop();
+    eventLoop.queueMicrotask([document = makeRef(*document), testNumber]() {
         document->addConsoleMessage(MessageSource::JS, MessageLevel::Debug, makeString("MicroTask #", testNumber, " has run."));
     });
-
-    MicrotaskQueue::mainThreadQueue().append(WTFMove(microtask));
 }
 
 #if ENABLE(CONTENT_FILTERING)
@@ -4576,21 +4601,20 @@ void Internals::setShowAllPlugins(bool show)
 
 #if ENABLE(STREAMS_API)
 
-bool Internals::isReadableStreamDisturbed(JSC::ExecState& state, JSValue stream)
+bool Internals::isReadableStreamDisturbed(JSC::JSGlobalObject& lexicalGlobalObject, JSValue stream)
 {
-    return ReadableStream::isDisturbed(state, stream);
+    return ReadableStream::isDisturbed(lexicalGlobalObject, stream);
 }
 
-JSValue Internals::cloneArrayBuffer(JSC::ExecState& state, JSValue buffer, JSValue srcByteOffset, JSValue srcLength)
+JSValue Internals::cloneArrayBuffer(JSC::JSGlobalObject& lexicalGlobalObject, JSValue buffer, JSValue srcByteOffset, JSValue srcLength)
 {
-    JSC::VM& vm = state.vm();
-    JSGlobalObject* globalObject = vm.vmEntryGlobalObject(&state);
+    JSC::VM& vm = lexicalGlobalObject.vm();
     JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData);
     const Identifier& privateName = clientData->builtinNames().cloneArrayBufferPrivateName();
     JSValue value;
     PropertySlot propertySlot(value, PropertySlot::InternalMethodType::Get);
-    globalObject->methodTable(vm)->getOwnPropertySlot(globalObject, &state, privateName, propertySlot);
-    value = propertySlot.getValue(&state, privateName);
+    lexicalGlobalObject.methodTable(vm)->getOwnPropertySlot(&lexicalGlobalObject, &lexicalGlobalObject, privateName, propertySlot);
+    value = propertySlot.getValue(&lexicalGlobalObject, privateName);
     ASSERT(value.isFunction(vm));
 
     JSObject* function = value.getObject();
@@ -4603,7 +4627,7 @@ JSValue Internals::cloneArrayBuffer(JSC::ExecState& state, JSValue buffer, JSVal
     arguments.append(srcLength);
     ASSERT(!arguments.hasOverflowed());
 
-    return JSC::call(&state, function, callType, callData, JSC::jsUndefined(), arguments);
+    return JSC::call(&lexicalGlobalObject, function, callType, callData, JSC::jsUndefined(), arguments);
 }
 
 #endif
@@ -4765,6 +4789,21 @@ void Internals::postTask(RefPtr<VoidCallback>&& callback)
     });
 }
 
+ExceptionOr<void> Internals::queueTask(ScriptExecutionContext& context, const String& taskSourceName, RefPtr<VoidCallback>&& callback)
+{
+    TaskSource source;
+    if (taskSourceName == "DOMManipulation")
+        source = TaskSource::DOMManipulation;
+    else
+        return Exception { NotSupportedError };
+
+    context.eventLoop().queueTask(source, [callback = WTFMove(callback)]() {
+        callback->handleEvent();
+    });
+
+    return { };
+}
+
 Vector<String> Internals::accessKeyModifiers() const
 {
     Vector<String> accessKeyModifierStrings;
@@ -4799,7 +4838,7 @@ void Internals::setQuickLookPassword(const String& password)
 {
 #if PLATFORM(IOS_FAMILY) && USE(QUICK_LOOK)
     auto& quickLookHandleClient = MockPreviewLoaderClient::singleton();
-    PreviewLoader::setClientForTesting(&quickLookHandleClient);
+    LegacyPreviewLoader::setClientForTesting(&quickLookHandleClient);
     quickLookHandleClient.setPassword(password);
 #else
     UNUSED_PARAM(password);
@@ -4961,16 +5000,6 @@ void Internals::setMediaStreamSourceInterrupted(MediaStreamTrack& track, bool in
 {
     track.source().setInterruptedForTesting(interrupted);
 }
-
-void Internals::setDisableGetDisplayMediaUserGestureConstraint(bool value)
-{
-    Document* document = contextDocument();
-    if (!document || !document->domWindow())
-        return;
-
-    if (auto* mediaDevices = NavigatorMediaDevices::mediaDevices(document->domWindow()->navigator()))
-        mediaDevices->setDisableGetDisplayMediaUserGestureConstraint(value);
-}
 #endif
 
 bool Internals::supportsAudioSession() const
@@ -5125,14 +5154,6 @@ void Internals::terminateServiceWorker(ServiceWorker& worker)
 
     ServiceWorkerProvider::singleton().serviceWorkerConnection().syncTerminateWorker(worker.identifier());
 }
-
-bool Internals::hasServiceWorkerConnection()
-{
-    if (!contextDocument())
-        return false;
-
-    return ServiceWorkerProvider::singleton().existingServiceWorkerConnection();
-}
 #endif
 
 #if ENABLE(APPLE_PAY)
@@ -5256,6 +5277,11 @@ Optional<HEVCParameterSet> Internals::parseHEVCCodecParameters(const String& cod
     return WebCore::parseHEVCCodecParameters(codecString);
 }
 
+Optional<DoViParameterSet> Internals::parseDoViCodecParameters(const String& codecString)
+{
+    return WebCore::parseDoViCodecParameters(codecString);
+}
+
 auto Internals::getCookies() const -> Vector<CookieData>
 {
     auto* document = contextDocument();
@@ -5363,6 +5389,13 @@ void Internals::setMockWebAuthenticationConfiguration(const MockWebAuthenticatio
     if (!page)
         return;
     page->chrome().client().setMockWebAuthenticationConfiguration(configuration);
+}
+#endif
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+void Internals::setPictureInPictureAPITestEnabled(HTMLVideoElement& videoElement, bool enabled)
+{
+    videoElement.setPictureInPictureAPITestEnabled(enabled);
 }
 #endif
 

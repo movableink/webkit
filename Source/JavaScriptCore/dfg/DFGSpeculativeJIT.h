@@ -716,6 +716,7 @@ public:
 
     void cachedGetById(CodeOrigin, JSValueRegs base, JSValueRegs result, unsigned identifierNumber, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
     void cachedPutById(CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg scratchGPR, unsigned identifierNumber, PutKind, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
+    void cachedGetByVal(CodeOrigin, JSValueRegs base, JSValueRegs property, JSValueRegs result, JITCompiler::Jump slowPathTarget);
 
 #if USE(JSVALUE64)
     void cachedGetById(CodeOrigin, GPRReg baseGPR, GPRReg resultGPR, unsigned identifierNumber, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
@@ -736,8 +737,8 @@ public:
     void nonSpeculativeNonPeepholeCompareNullOrUndefined(Edge operand);
     void nonSpeculativePeepholeBranchNullOrUndefined(Edge operand, Node* branchNode);
     
-    void nonSpeculativePeepholeBranch(Node*, Node* branchNode, MacroAssembler::RelationalCondition, S_JITOperation_EJJ helperFunction);
-    void nonSpeculativeNonPeepholeCompare(Node*, MacroAssembler::RelationalCondition, S_JITOperation_EJJ helperFunction);
+    void nonSpeculativePeepholeBranch(Node*, Node* branchNode, MacroAssembler::RelationalCondition, S_JITOperation_GJJ helperFunction);
+    void nonSpeculativeNonPeepholeCompare(Node*, MacroAssembler::RelationalCondition, S_JITOperation_GJJ helperFunction);
     
     void nonSpeculativePeepholeStrictEq(Node*, Node* branchNode, bool invert = false);
     void nonSpeculativeNonPeepholeStrictEq(Node*, bool invert = false);
@@ -966,23 +967,24 @@ public:
 
 #undef FIRST_ARGUMENT_TYPE
 
-    JITCompiler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_ECb operation, void* pointer)
+    JITCompiler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_Cb operation, CodeBlock* codeBlock)
     {
-        m_jit.setupArguments<V_JITOperation_ECb>(TrustedImmPtr(pointer));
+        // Do not register CodeBlock* as a weak-pointer.
+        m_jit.setupArguments<V_JITOperation_Cb>(TrustedImmPtr(static_cast<void*>(codeBlock)));
         return appendCallWithCallFrameRollbackOnException(operation);
     }
 
-    JITCompiler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_E operation, GPRReg result)
+    JITCompiler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_G operation, GPRReg result, JSGlobalObject* globalObject)
     {
-        m_jit.setupArguments<Z_JITOperation_E>();
+        m_jit.setupArguments<Z_JITOperation_G>(TrustedImmPtr::weakPointer(m_graph, globalObject));
         return appendCallWithCallFrameRollbackOnExceptionSetResult(operation, result);
     }
     
-#if !defined(NDEBUG) && !CPU(ARM_THUMB2) && !CPU(MIPS)
     void prepareForExternalCall()
     {
+#if !defined(NDEBUG) && !CPU(ARM_THUMB2) && !CPU(MIPS)
         // We're about to call out to a "native" helper function. The helper
-        // function is expected to set topCallFrame itself with the ExecState
+        // function is expected to set topCallFrame itself with the CallFrame
         // that is passed to it.
         //
         // We explicitly trash topCallFrame here so that we'll know if some of
@@ -992,10 +994,9 @@ public:
 
         for (unsigned i = 0; i < sizeof(void*) / 4; i++)
             m_jit.store32(TrustedImm32(0xbadbeef), reinterpret_cast<char*>(&vm().topCallFrame) + i * 4);
-    }
-#else
-    void prepareForExternalCall() { }
 #endif
+        m_jit.prepareCallOperation(vm());
+    }
 
     // These methods add call instructions, optionally setting results, and optionally rolling back the call frame on an exception.
     JITCompiler::Call appendCall(const FunctionPtr<CFunctionPtrTag> function)
@@ -1165,9 +1166,9 @@ public:
         return betterUseStrictInt52(edge.node());
     }
     
-    bool compare(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_EJJ);
+    bool compare(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_GJJ);
     void compileCompareUnsigned(Node*, MacroAssembler::RelationalCondition);
-    bool compilePeepHoleBranch(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_EJJ);
+    bool compilePeepHoleBranch(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_GJJ);
     void compilePeepHoleInt32Branch(Node*, Node* branchNode, JITCompiler::RelationalCondition);
     void compilePeepHoleInt52Branch(Node*, Node* branchNode, JITCompiler::RelationalCondition);
     void compilePeepHoleBooleanBranch(Node*, Node* branchNode, JITCompiler::RelationalCondition);
@@ -1223,13 +1224,13 @@ public:
     
     void emitSwitchIntJump(SwitchData*, GPRReg value, GPRReg scratch);
     void emitSwitchImm(Node*, SwitchData*);
-    void emitSwitchCharStringJump(SwitchData*, GPRReg value, GPRReg scratch);
+    void emitSwitchCharStringJump(Node*, SwitchData*, GPRReg value, GPRReg scratch);
     void emitSwitchChar(Node*, SwitchData*);
     void emitBinarySwitchStringRecurse(
         SwitchData*, const Vector<StringSwitchCase>&, unsigned numChecked,
         unsigned begin, unsigned end, GPRReg buffer, GPRReg length, GPRReg temp,
         unsigned alreadyCheckedLength, bool checkedExactLength);
-    void emitSwitchStringOnString(SwitchData*, GPRReg string);
+    void emitSwitchStringOnString(Node*, SwitchData*, GPRReg string);
     void emitSwitchString(Node*, SwitchData*);
     void emitSwitch(Node*);
     
@@ -1304,7 +1305,7 @@ public:
     void compileGetArrayLength(Node*);
 
     void compileCheckTypeInfoFlags(Node*);
-    void compileCheckStringIdent(Node*);
+    void compileCheckIdent(Node*);
 
     void compileParseInt(Node*);
     
@@ -1318,7 +1319,7 @@ public:
     void compileValueBitNot(Node*);
     void compileBitwiseNot(Node*);
 
-    template<typename SnippetGenerator, J_JITOperation_EJJ slowPathFunction>
+    template<typename SnippetGenerator, J_JITOperation_GJJ slowPathFunction>
     void emitUntypedBitOp(Node*);
     void compileBitwiseOp(Node*);
     void compileValueBitwiseOp(Node*);
@@ -1333,7 +1334,7 @@ public:
     template <typename Generator, typename RepatchingFunction, typename NonRepatchingFunction>
     void compileMathIC(Node*, JITUnaryMathIC<Generator>*, bool needsScratchGPRReg, RepatchingFunction, NonRepatchingFunction);
 
-    void compileArithDoubleUnaryOp(Node*, double (*doubleFunction)(double), double (*operation)(ExecState*, EncodedJSValue));
+    void compileArithDoubleUnaryOp(Node*, double (*doubleFunction)(double), double (*operation)(JSGlobalObject*, EncodedJSValue));
     void compileValueAdd(Node*);
     void compileValueSub(Node*);
     void compileArithAdd(Node*);
@@ -1341,6 +1342,7 @@ public:
     void compileArithAbs(Node*);
     void compileArithClz32(Node*);
     void compileArithSub(Node*);
+    void compileIncOrDec(Node*);
     void compileValueNegate(Node*);
     void compileArithNegate(Node*);
     void compileValueMul(Node*);
@@ -1482,6 +1484,7 @@ public:
     void compileNewGenerator(Node*);
     void compileNewAsyncGenerator(Node*);
     void compileToPrimitive(Node*);
+    void compileToNumeric(Node*);
     void compileLogShadowChickenPrologue(Node*);
     void compileLogShadowChickenTail(Node*);
     void compileHasIndexedProperty(Node*);
@@ -1489,6 +1492,7 @@ public:
     void compileClearCatchLocals(Node*);
     void compileProfileType(Node*);
     void compileStringCodePointAt(Node*);
+    void compileDateGet(Node*);
 
     template<typename JSClass, typename Operation>
     void compileCreateInternalFieldObject(Node*, Operation);
@@ -1616,6 +1620,8 @@ public:
     void speculateProxyObject(Edge);
     void speculateDerivedArray(Edge, GPRReg cell);
     void speculateDerivedArray(Edge);
+    void speculateDateObject(Edge);
+    void speculateDateObject(Edge, GPRReg cell);
     void speculateMapObject(Edge);
     void speculateMapObject(Edge, GPRReg cell);
     void speculateSetObject(Edge);

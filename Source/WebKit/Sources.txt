@@ -37,6 +37,7 @@ NetworkProcess/NetworkProcessPlatformStrategies.cpp
 NetworkProcess/NetworkResourceLoadParameters.cpp
 NetworkProcess/NetworkResourceLoadMap.cpp
 NetworkProcess/NetworkResourceLoader.cpp
+NetworkProcess/NetworkSchemeRegistry.cpp
 NetworkProcess/NetworkSession.cpp
 NetworkProcess/NetworkSessionCreationParameters.cpp
 NetworkProcess/NetworkSocketChannel.cpp
@@ -77,6 +78,7 @@ NetworkProcess/cache/CacheStorageEngine.cpp
 NetworkProcess/cache/CacheStorageEngineCache.cpp
 NetworkProcess/cache/CacheStorageEngineCaches.cpp
 NetworkProcess/cache/CacheStorageEngineConnection.cpp
+NetworkProcess/cache/AsyncRevalidation.cpp
 NetworkProcess/cache/NetworkCache.cpp
 NetworkProcess/cache/NetworkCacheBlobStorage.cpp
 NetworkProcess/cache/NetworkCacheCoders.cpp
@@ -95,6 +97,7 @@ NetworkProcess/webrtc/NetworkMDNSRegister.cpp
 // TODO: We should unify these files once GTK's PluginProcess2 is removed.
 Platform/Logging.cpp @no-unify
 Platform/Module.cpp @no-unify
+Platform/SharedMemory.cpp @no-unify
 
 // TODO: We should unify these files once GTK's PluginProcess2 is removed.
 Platform/IPC/ArgumentCoders.cpp @no-unify
@@ -121,7 +124,6 @@ Shared/CacheModel.cpp
 Shared/ContextMenuContextData.cpp
 Shared/EditingRange.cpp
 Shared/EditorState.cpp
-Shared/ElementContext.cpp
 Shared/FontInfo.cpp
 Shared/FrameInfoData.cpp
 Shared/LayerTreeContext.cpp
@@ -132,6 +134,7 @@ Shared/PlatformPopupMenuData.cpp
 Shared/PrintInfo.cpp
 Shared/RTCNetwork.cpp
 Shared/RTCPacketOptions.cpp
+Shared/ServiceWorkerInitializationData.cpp
 Shared/SessionState.cpp
 Shared/ShareableBitmap.cpp @no-unify
 Shared/ShareableResource.cpp
@@ -290,7 +293,6 @@ UIProcess/WebPageDiagnosticLoggingClient.cpp
 UIProcess/WebPageGroup.cpp
 UIProcess/WebPageInjectedBundleClient.cpp
 UIProcess/WebPageInspectorController.cpp
-UIProcess/WebPageInspectorTargetAgent.cpp
 UIProcess/WebPageProxy.cpp
 UIProcess/WebPasteboardProxy.cpp
 UIProcess/WebPreferences.cpp
@@ -412,6 +414,7 @@ UIProcess/UserContent/WebUserContentControllerProxy.cpp
 UIProcess/WebAuthentication/fido/CtapAuthenticator.cpp
 UIProcess/WebAuthentication/fido/CtapHidDriver.cpp
 UIProcess/WebAuthentication/fido/CtapNfcDriver.cpp
+UIProcess/WebAuthentication/fido/FidoAuthenticator.cpp
 UIProcess/WebAuthentication/fido/FidoService.cpp
 UIProcess/WebAuthentication/fido/U2fAuthenticator.cpp
 

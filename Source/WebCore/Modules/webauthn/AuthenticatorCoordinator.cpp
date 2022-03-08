@@ -32,6 +32,7 @@
 #include "AuthenticatorAssertionResponse.h"
 #include "AuthenticatorAttestationResponse.h"
 #include "AuthenticatorCoordinatorClient.h"
+#include "Document.h"
 #include "JSBasicCredential.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PublicKeyCredential.h"
@@ -41,6 +42,7 @@
 #include "RegistrableDomain.h"
 #include "LegacySchemeRegistry.h"
 #include "SecurityOrigin.h"
+#include "WebAuthenticationConstants.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/JSONValues.h>
 #include <wtf/NeverDestroyed.h>
@@ -49,11 +51,6 @@
 namespace WebCore {
 
 namespace AuthenticatorCoordinatorInternal {
-
-enum class ClientDataType {
-    Create,
-    Get
-};
 
 // FIXME(181948): Add token binding ID.
 static Ref<ArrayBuffer> produceClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin)
@@ -135,10 +132,13 @@ void AuthenticatorCoordinator::setClient(std::unique_ptr<AuthenticatorCoordinato
     m_client = WTFMove(client);
 }
 
-void AuthenticatorCoordinator::create(const SecurityOrigin& callerOrigin, const PublicKeyCredentialCreationOptions& options, bool sameOriginWithAncestors, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise) const
+void AuthenticatorCoordinator::create(const Document& document, const PublicKeyCredentialCreationOptions& options, bool sameOriginWithAncestors, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise) const
 {
     using namespace AuthenticatorCoordinatorInternal;
 
+    const auto& callerOrigin = document.securityOrigin();
+    auto* frame = document.frame();
+    ASSERT(frame);
     // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
     // Step 1, 3, 16 are handled by the caller.
     // Step 2.
@@ -185,14 +185,14 @@ void AuthenticatorCoordinator::create(const SecurityOrigin& callerOrigin, const 
         return;
     }
 
-    auto completionHandler = [clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(abortSignal)] (const WebCore::PublicKeyCredentialData& data, const WebCore::ExceptionData& exception) mutable {
+    auto callback = [clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(abortSignal)] (PublicKeyCredentialData&& data, ExceptionData&& exception) mutable {
         if (abortSignal && abortSignal->aborted()) {
             promise.reject(Exception { AbortError, "Aborted by AbortSignal."_s });
             return;
         }
 
         data.clientDataJSON = WTFMove(clientDataJson);
-        if (auto publicKeyCredential = PublicKeyCredential::tryCreate(data)) {
+        if (auto publicKeyCredential = PublicKeyCredential::tryCreate(WTFMove(data))) {
             promise.resolve(publicKeyCredential.get());
             return;
         }
@@ -200,13 +200,16 @@ void AuthenticatorCoordinator::create(const SecurityOrigin& callerOrigin, const 
         promise.reject(exception.toException());
     };
     // Async operations are dispatched and handled in the messenger.
-    m_client->makeCredential(clientDataJsonHash, options, WTFMove(completionHandler));
+    m_client->makeCredential(*frame, callerOrigin, clientDataJsonHash, options, WTFMove(callback));
 }
 
-void AuthenticatorCoordinator::discoverFromExternalSource(const SecurityOrigin& callerOrigin, const PublicKeyCredentialRequestOptions& options, bool sameOriginWithAncestors, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise) const
+void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, const PublicKeyCredentialRequestOptions& options, bool sameOriginWithAncestors, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise) const
 {
     using namespace AuthenticatorCoordinatorInternal;
 
+    auto& callerOrigin = document.securityOrigin();
+    auto* frame = document.frame();
+    ASSERT(frame);
     // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
     // Step 1, 3, 13 are handled by the caller.
     // Step 2.
@@ -253,14 +256,14 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const SecurityOrigin& 
         return;
     }
 
-    auto completionHandler = [clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(abortSignal)] (const WebCore::PublicKeyCredentialData& data, const WebCore::ExceptionData& exception) mutable {
+    auto callback = [clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(abortSignal)] (PublicKeyCredentialData&& data, ExceptionData&& exception) mutable {
         if (abortSignal && abortSignal->aborted()) {
             promise.reject(Exception { AbortError, "Aborted by AbortSignal."_s });
             return;
         }
 
         data.clientDataJSON = WTFMove(clientDataJson);
-        if (auto publicKeyCredential = PublicKeyCredential::tryCreate(data)) {
+        if (auto publicKeyCredential = PublicKeyCredential::tryCreate(WTFMove(data))) {
             promise.resolve(publicKeyCredential.get());
             return;
         }
@@ -268,7 +271,7 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const SecurityOrigin& 
         promise.reject(exception.toException());
     };
     // Async operations are dispatched and handled in the messenger.
-    m_client->getAssertion(clientDataJsonHash, options, WTFMove(completionHandler));
+    m_client->getAssertion(*frame, callerOrigin, clientDataJsonHash, options, WTFMove(callback));
 }
 
 void AuthenticatorCoordinator::isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&& promise) const

@@ -648,7 +648,7 @@ public:
     LayoutPoint convertToLayerCoords(const RenderLayer* ancestorLayer, const LayoutPoint&, ColumnOffsetAdjustment adjustForColumns = DontAdjustForColumns) const;
     LayoutSize offsetFromAncestor(const RenderLayer*, ColumnOffsetAdjustment = DontAdjustForColumns) const;
 
-    int zIndex() const { return renderer().style().zIndex(); }
+    int zIndex() const { return renderer().style().usedZIndex(); }
 
     enum PaintLayerFlag {
         PaintLayerHaveTransparency                      = 1 << 0,
@@ -929,8 +929,8 @@ private:
 
     void updateZOrderLists();
     void rebuildZOrderLists();
-    void rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&);
-    void collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&);
+    void rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
+    void collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
     void clearZOrderLists();
 
     void updateNormalFlowList();

@@ -40,11 +40,6 @@ OBJC_CLASS NSEvent;
 OBJC_CLASS WebEvent;
 #endif
 
-#if PLATFORM(GTK)
-typedef struct _GdkEventKey GdkEventKey;
-#include "CompositionResults.h"
-#endif
-
 #if PLATFORM(QT)
 QT_BEGIN_NAMESPACE
 class QKeyEvent;
@@ -62,9 +57,6 @@ namespace WebCore {
             , m_autoRepeat(false)
             , m_isKeypad(false)
             , m_isSystemKey(false)
-#if PLATFORM(GTK)
-            , m_gdkEventKey(0)
-#endif
 #if PLATFORM(QT)
             , m_qtEvent(0)
             , m_useNativeVirtualKeyAsDOMKey(false)
@@ -160,10 +152,6 @@ namespace WebCore {
 #endif
 
 #if PLATFORM(GTK)
-        PlatformKeyboardEvent(GdkEventKey*, const CompositionResults&);
-        GdkEventKey* gdkEventKey() const { return m_gdkEventKey; }
-        const CompositionResults& compositionResults() const { return m_compositionResults; }
-
         // Used by WebKit2
         static String keyValueForGdkKeyCode(unsigned);
         static String keyCodeForHardwareKeyCode(unsigned);
@@ -220,10 +208,7 @@ namespace WebCore {
         RetainPtr<::WebEvent> m_Event;
 #endif
 #endif
-#if PLATFORM(GTK)
-        GdkEventKey* m_gdkEventKey;
-        CompositionResults m_compositionResults;
-#endif
+
 #if PLATFORM(QT)
         QKeyEvent* m_qtEvent;
         bool m_useNativeVirtualKeyAsDOMKey;

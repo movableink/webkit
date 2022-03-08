@@ -28,11 +28,11 @@
 
 #include "AnimationPlaybackEvent.h"
 #include "CSSAnimation.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "DOMWindow.h"
 #include "DeclarativeAnimation.h"
 #include "Document.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "GraphicsLayer.h"
 #include "KeyframeEffect.h"
@@ -308,13 +308,13 @@ void DocumentTimeline::removeAnimation(WebAnimation& animation)
 {
     AnimationTimeline::removeAnimation(animation);
 
-    if (m_animations.isEmpty())
+    if (!shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         unscheduleAnimationResolution();
 }
 
 void DocumentTimeline::scheduleAnimationResolution()
 {
-    if (m_isSuspended || m_animations.isEmpty() || m_animationResolutionScheduled)
+    if (m_isSuspended || m_animationResolutionScheduled || !shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         return;
 
     if (!m_document || !m_document->page())
@@ -330,6 +330,11 @@ void DocumentTimeline::unscheduleAnimationResolution()
     m_animationResolutionScheduled = false;
 }
 
+bool DocumentTimeline::shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const
+{
+    return !m_animations.isEmpty() || !m_acceleratedAnimationsPendingRunningStateChange.isEmpty();
+}
+
 void DocumentTimeline::updateAnimationsAndSendEvents(DOMHighResTimeStamp timestamp)
 {
     // We need to freeze the current time even if no animation is running.
@@ -338,7 +343,7 @@ void DocumentTimeline::updateAnimationsAndSendEvents(DOMHighResTimeStamp timesta
     if (!m_isSuspended)
         cacheCurrentTime(timestamp);
 
-    if (m_isSuspended || m_animations.isEmpty() || !m_animationResolutionScheduled)
+    if (m_isSuspended || !m_animationResolutionScheduled || !shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         return;
 
     internalUpdateAnimationsAndSendEvents();
@@ -384,7 +389,8 @@ void DocumentTimeline::internalUpdateAnimationsAndSendEvents()
     removeReplacedAnimations();
 
     // 3. Perform a microtask checkpoint.
-    MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+    if (auto document = makeRefPtr(this->document()))
+        document->eventLoop().performMicrotaskCheckpoint();
 
     // 4. Let events to dispatch be a copy of doc's pending animation event queue.
     // 5. Clear doc's pending animation event queue.
@@ -636,6 +642,11 @@ void DocumentTimeline::animationAcceleratedRunningStateDidChange(WebAnimation& a
         if (auto* target = downcast<KeyframeEffect>(animation.effect())->target())
             updateListOfElementsWithRunningAcceleratedAnimationsForElement(*target);
     }
+
+    if (shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
+        scheduleAnimationResolution();
+    else
+        unscheduleAnimationResolution();
 }
 
 void DocumentTimeline::updateListOfElementsWithRunningAcceleratedAnimationsForElement(Element& element)
@@ -671,32 +682,6 @@ void DocumentTimeline::applyPendingAcceleratedAnimations()
         }
         animation->applyPendingAcceleratedActions();
     }
-}
-
-bool DocumentTimeline::resolveAnimationsForElement(Element& element, RenderStyle& targetStyle)
-{
-    bool hasNonAcceleratedAnimationProperty = false;
-
-    for (const auto& animation : animationsForElement(element)) {
-        animation->resolve(targetStyle);
-
-        if (hasNonAcceleratedAnimationProperty)
-            continue;
-
-        auto* effect = animation->effect();
-        if (!effect || !is<KeyframeEffect>(effect))
-            continue;
-
-        auto* keyframeEffect = downcast<KeyframeEffect>(effect);
-        for (auto cssPropertyId : keyframeEffect->animatedProperties()) {
-            if (!CSSPropertyAnimation::animationOfPropertyIsAccelerated(cssPropertyId)) {
-                hasNonAcceleratedAnimationProperty = true;
-                break;
-            }
-        }
-    }
-
-    return !hasNonAcceleratedAnimationProperty;
 }
 
 bool DocumentTimeline::runningAnimationsForElementAreAllAccelerated(Element& element) const
