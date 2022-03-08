@@ -220,7 +220,7 @@ JSValue QtInstance::getMethod(JSGlobalObject* lexicalGlobalObject, PropertyName 
     return RuntimeMethod::create(lexicalGlobalObject, lexicalGlobalObject, WebCore::deprecatedGetDOMStructure<RuntimeMethod>(lexicalGlobalObject), propertyName.publicName(), method);
 }
 
-JSValue QtInstance::invokeMethod(JSGlobalObject*, RuntimeMethod*)
+JSValue QtInstance::invokeMethod(JSGlobalObject*, CallFrame*, RuntimeMethod*)
 {
     // Implemented via fallbackMethod & QtRuntimeMetaMethod::callAsFunction
     return jsUndefined();
