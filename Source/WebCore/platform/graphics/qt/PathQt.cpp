@@ -408,12 +408,12 @@ void Path::apply(const PathApplierFunction& function) const
 
         switch (cur.type) {
             case QPainterPath::MoveToElement:
-                pelement.type = PathElementMoveToPoint;
+                pelement.type = PathElement::Type::MoveToPoint;
                 pelement.points[0] = QPointF(cur);
                 function(pelement);
                 break;
             case QPainterPath::LineToElement:
-                pelement.type = PathElementAddLineToPoint;
+                pelement.type = PathElement::Type::AddLineToPoint;
                 pelement.points[0] = QPointF(cur);
                 function(pelement);
                 break;
@@ -425,7 +425,7 @@ void Path::apply(const PathApplierFunction& function) const
                 Q_ASSERT(c1.type == QPainterPath::CurveToDataElement);
                 Q_ASSERT(c2.type == QPainterPath::CurveToDataElement);
 
-                pelement.type = PathElementAddCurveToPoint;
+                pelement.type = PathElement::Type::AddCurveToPoint;
                 pelement.points[0] = QPointF(cur);
                 pelement.points[1] = QPointF(c1);
                 pelement.points[2] = QPointF(c2);
