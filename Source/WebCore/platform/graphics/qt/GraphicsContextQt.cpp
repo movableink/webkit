@@ -280,7 +280,7 @@ GraphicsContextPlatformPrivate::GraphicsContextPlatformPrivate(QPainter* p, cons
     : antiAliasingForRectsAndLines(false)
     , layerCount(0)
     , solidColor(initialSolidColor)
-    , imageInterpolationQuality(InterpolationDefault)
+    , imageInterpolationQuality(InterpolationQuality::Default)
     , initialSmoothPixmapTransformHint(false)
     , painter(p)
     , platformContextIsOwned(false)
@@ -1756,19 +1756,19 @@ void GraphicsContext::setPlatformImageInterpolationQuality(InterpolationQuality 
     m_data->imageInterpolationQuality = quality;
 
     switch (quality) {
-    case InterpolationNone:
-    case InterpolationLow:
+    case InterpolationQuality::DoNotInterpolate:
+    case InterpolationQuality::Low:
         // use nearest-neigbor
         m_data->p()->setRenderHint(QPainter::SmoothPixmapTransform, false);
         break;
 
-    case InterpolationMedium:
-    case InterpolationHigh:
+    case InterpolationQuality::Medium:
+    case InterpolationQuality::High:
         // use the filter
         m_data->p()->setRenderHint(QPainter::SmoothPixmapTransform, true);
         break;
 
-    case InterpolationDefault:
+    case InterpolationQuality::Default:
     default:
         m_data->p()->setRenderHint(QPainter::SmoothPixmapTransform, m_data->initialSmoothPixmapTransformHint);
         break;
