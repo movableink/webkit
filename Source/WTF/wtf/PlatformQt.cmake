@@ -97,6 +97,7 @@ if (USE_GLIB)
         glib/GTypedefs.h
         glib/GUniquePtr.h
         glib/RunLoopSourcePriority.h
+        glib/WTFGType.h
     )
 endif ()
 
