@@ -131,7 +131,7 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const F
 
     CompositeOperator previousOperator = ctxt.compositeOperation();
     BlendMode previousBlendMode = ctxt.blendModeOperation();
-    ctxt.setCompositeOperation(!image.hasAlphaChannel() && options.compositeOperator() == CompositeSourceOver && options.blendMode() == BlendMode::Normal ? CompositeCopy : options.compositeOperator(), options.blendMode());
+    ctxt.setCompositeOperation(!image.hasAlphaChannel() && options.compositeOperator() == CompositeOperator::SourceOver && options.blendMode() == BlendMode::Normal ? CompositeOperator::Copy : options.compositeOperator(), options.blendMode());
 
     if (ctxt.hasShadow() && ctxt.mustUseShadowBlur()) {
         ShadowBlur shadow(ctxt.state());
