@@ -508,7 +508,7 @@ private:
     };
     Optional<DelegatedScrollingGeometry> m_delegatedScrollingGeometry;
 
-#if USE(COORDINATED_GRAPHICS)
+#if USE(COORDINATED_GRAPHICS) || PLATFORM(QT)
     // FIXME: exposedContentRect is a very similar concept to fixedVisibleContentRect except it does not differentiate
     // between exposed and unobscured areas. The two attributes should eventually be merged.
     IntRect m_fixedVisibleContentRect;

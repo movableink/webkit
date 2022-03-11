@@ -223,9 +223,6 @@ public:
     void openFigureAtCurrentPointIfNecessary();
     void closeAnyOpenGeometries(unsigned figureEndStyle) const;
     void clearGeometries();
-#elif PLATFORM(QT)
-    /* QPainterPath is valued based */
-    QPainterPath m_path;
 #endif
 
 #ifndef NDEBUG
@@ -241,6 +238,9 @@ private:
     COMPtr<ID2D1GeometryGroup> m_path;
     mutable COMPtr<ID2D1GeometrySink> m_activePath;
     mutable bool m_figureIsOpened { false };
+#elif PLATFORM(QT)
+    /* QPainterPath is valued based */
+    QPainterPath m_path;
 #else
     PlatformPathPtr m_path { nullptr };
 #endif
