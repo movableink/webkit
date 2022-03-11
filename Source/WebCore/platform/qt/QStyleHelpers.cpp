@@ -70,11 +70,11 @@ String getCascadedStyleProperty(const Element& element, StringView propertyName)
     // declarations, as well as embedded and inline style declarations.
 
     Document& document = element.document();
-    Vector<RefPtr<StyleRule>> rules = document.styleScope().resolver().styleRulesForElement(&element, Style::Resolver::AuthorCSSRules);
+    Vector<RefPtr<const StyleRule>> rules = document.styleScope().resolver().styleRulesForElement(&element, Style::Resolver::AuthorCSSRules);
     for (int i = rules.size(); i > 0; --i) {
         if (!rules[i - 1]->isStyleRule())
             continue;
-        StyleRule* styleRule = static_cast<StyleRule*>(rules[i - 1].get());
+        const StyleRule* styleRule = static_cast<const StyleRule*>(rules[i - 1].get());
 
         if (styleRule->properties().propertyIsImportant(propID))
             return styleRule->properties().getPropertyValue(propID);
