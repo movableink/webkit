@@ -134,13 +134,11 @@ static GraphicsContext* scratchContext()
     return context;
 }
 
-bool Path::strokeContains(StrokeStyleApplier* applier, const FloatPoint& point) const
+bool Path::strokeContains(StrokeStyleApplier& applier, const FloatPoint& point) const
 {
-    ASSERT(applier);
-
     QPainterPathStroker stroke;
     GraphicsContext* context = scratchContext();
-    applier->strokeStyle(context);
+    applier.strokeStyle(context);
 
     QPen pen = context->platformContext()->pen();
     stroke.setWidth(pen.widthF());
@@ -405,8 +403,6 @@ FloatPoint Path::currentPoint() const
 void Path::apply(const PathApplierFunction& function) const
 {
     PathElement pelement;
-    FloatPoint points[3];
-    pelement.points = points;
     for (int i = 0; i < m_path.elementCount(); ++i) {
         const QPainterPath::Element& cur = m_path.elementAt(i);
 
