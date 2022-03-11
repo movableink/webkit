@@ -89,34 +89,34 @@ namespace WebCore {
 static inline QPainter::CompositionMode toQtCompositionMode(CompositeOperator op)
 {
     switch (op) {
-    case CompositeClear:
+    case CompositeOperator::Clear:
         return QPainter::CompositionMode_Clear;
-    case CompositeCopy:
+    case CompositeOperator::Copy:
         return QPainter::CompositionMode_Source;
-    case CompositeSourceOver:
+    case CompositeOperator::SourceOver:
         return QPainter::CompositionMode_SourceOver;
-    case CompositeSourceIn:
+    case CompositeOperator::SourceIn:
         return QPainter::CompositionMode_SourceIn;
-    case CompositeSourceOut:
+    case CompositeOperator::SourceOut:
         return QPainter::CompositionMode_SourceOut;
-    case CompositeSourceAtop:
+    case CompositeOperator::SourceAtop:
         return QPainter::CompositionMode_SourceAtop;
-    case CompositeDestinationOver:
+    case CompositeOperator::DestinationOver:
         return QPainter::CompositionMode_DestinationOver;
-    case CompositeDestinationIn:
+    case CompositeOperator::DestinationIn:
         return QPainter::CompositionMode_DestinationIn;
-    case CompositeDestinationOut:
+    case CompositeOperator::DestinationOut:
         return QPainter::CompositionMode_DestinationOut;
-    case CompositeDestinationAtop:
+    case CompositeOperator::DestinationAtop:
         return QPainter::CompositionMode_DestinationAtop;
-    case CompositeXOR:
+    case CompositeOperator::XOR:
         return QPainter::CompositionMode_Xor;
-    case CompositePlusDarker:
+    case CompositeOperator::PlusDarker:
         // there is no exact match, but this is the closest
         return QPainter::CompositionMode_Darken;
-    case CompositePlusLighter:
+    case CompositeOperator::PlusLighter:
         return QPainter::CompositionMode_Plus;
-    case CompositeDifference:
+    case CompositeOperator::Difference:
         return QPainter::CompositionMode_Difference;
     default:
         ASSERT_NOT_REACHED();
@@ -541,7 +541,7 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect &destRect, const
 
     CompositeOperator previousOperator = compositeOperation();
 
-    setCompositeOperation(!qImage.hasAlphaChannel() && options.compositeOperator() == CompositeSourceOver ? CompositeCopy : options.compositeOperator());
+    setCompositeOperation(!qImage.hasAlphaChannel() && options.compositeOperator() == CompositeOperator::SourceOver ? CompositeOperator::Copy : options.compositeOperator());
 
     QPainter* p = platformContext();
     QTransform transform(patternTransform);
@@ -1481,7 +1481,7 @@ void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendM
 
     ASSERT(op == WebCore::CompositeSourceOver || blendMode == WebCore::BlendMode::Normal);
 
-    if (op == WebCore::CompositeSourceOver)
+    if (op == WebCore::CompositeOperator::SourceOver)
         m_data->p()->setCompositionMode(toQtCompositionMode(blendMode));
     else
         m_data->p()->setCompositionMode(toQtCompositionMode(op));
