@@ -189,13 +189,15 @@ WebKeyboardEvent WebEventFactory::createWebKeyboardEvent(QKeyEvent* event)
     bool isSystemKey                = false; // FIXME: No idea what that is.
     bool isKeypad                   = (state & Qt::KeypadModifier);
     const String keyIdentifier      = keyIdentifierForQtKeyCode(event->key());
+    const String key                = text.isEmpty() ? keyIdentifier : text;
+    const String code               = keyCodeForQtKeyEvent(event);
     int windowsVirtualKeyCode       = windowsKeyCodeForKeyEvent(event->key(), isKeypad);
     int nativeVirtualKeyCode        = event->nativeVirtualKey();
     int macCharCode                 = 0;
     OptionSet<WebEvent::Modifier> modifiers           = modifiersForEvent(event->modifiers());
     WallTime timestamp                = currentTimeForEvent(event);
 
-    return WebKeyboardEvent(type, text, unmodifiedText, keyIdentifier, windowsVirtualKeyCode, nativeVirtualKeyCode, macCharCode, isAutoRepeat, isKeypad, isSystemKey, modifiers, timestamp);
+    return WebKeyboardEvent(type, text, unmodifiedText, key, code, keyIdentifier, windowsVirtualKeyCode, nativeVirtualKeyCode, macCharCode, isAutoRepeat, isKeypad, isSystemKey, modifiers, timestamp);
 }
 
 #if ENABLE(TOUCH_EVENTS)

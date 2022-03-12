@@ -41,7 +41,7 @@ namespace WebCore {
 
 String keyIdentifierForQtKeyCode(int keyCode)
 {
-    // Based on http://www.w3.org/TR/DOM-Level-3-Events/#key-values-list
+    // Based on http://www.w3.org/TR/DOM-Level-3-Events/%23key-values-list
     switch (keyCode) {
     case Qt::Key_unknown:
         return "Unidentified"_s;
@@ -808,6 +808,25 @@ static bool isVirtualKeyCodeRepresentingCharacter(int code)
     default:
         return false;
     }
+}
+
+String keyCodeForQtKeyEvent(const QKeyEvent* event)
+{
+    switch (event->key()) {
+#define MAKE_CODE_FOR_KEY(QtKey, Character) \
+    case Qt::Key_##QtKey: \
+        return #Character##_s; \
+        break;
+
+    MAKE_CODE_FOR_KEY(Escape, Escape);
+    MAKE_CODE_FOR_KEY(1, Digit1);
+    MAKE_CODE_FOR_KEY(A, KeyA);
+    MAKE_CODE_FOR_KEY(B, KeyB);
+// FIXME: Finish this...
+
+#undef MAKE_CODE_FOR_KEY
+    }
+    return "Unidentified"_s;
 }
 
 template<bool unmodified>
