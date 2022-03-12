@@ -338,7 +338,7 @@ public:
 
     const GraphicsContextState& state() const { return m_state; }
 
-#if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
+#if USE(CG) || USE(DIRECT2D) || USE(CAIRO) || PLATFORM(QT)
     WEBCORE_EXPORT void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
 #endif
 
