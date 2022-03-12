@@ -210,6 +210,7 @@ namespace WebCore {
 #if PLATFORM(QT)
 // Used by WebKit2.
 String keyIdentifierForQtKeyCode(int keyCode);
+String keyCodeForQtKeyEvent(const QKeyEvent*);
 int windowsKeyCodeForKeyEvent(int keycode, bool isKeypad = false);
 #endif
 
