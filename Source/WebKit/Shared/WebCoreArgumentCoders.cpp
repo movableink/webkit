@@ -1086,7 +1086,11 @@ static bool decodeNativeImage(Decoder& decoder, NativeImagePtr& nativeImage)
         return false;
 
     nativeImage = image->nativeImage();
+#if PLATFORM(QT)
+    if (nativeImage.isNull())
+#else
     if (!nativeImage)
+#endif
         return false;
 
     return true;
@@ -1094,7 +1098,11 @@ static bool decodeNativeImage(Decoder& decoder, NativeImagePtr& nativeImage)
 
 static void encodeOptionalNativeImage(Encoder& encoder, NativeImagePtr image)
 {
+#if PLATFORM(QT)
+    bool hasImage = !image.isNull();
+#else
     bool hasImage = !!image;
+#endif
     encoder << hasImage;
 
     if (hasImage)
@@ -1103,7 +1111,11 @@ static void encodeOptionalNativeImage(Encoder& encoder, NativeImagePtr image)
 
 static bool decodeOptionalNativeImage(Decoder& decoder, NativeImagePtr& image)
 {
+#if PLATFORM(QT)
+    image = QImage();
+#else
     image = nullptr;
+#endif
 
     bool hasImage;
     if (!decoder.decode(hasImage))
@@ -1117,7 +1129,11 @@ static bool decodeOptionalNativeImage(Decoder& decoder, NativeImagePtr& image)
 
 void ArgumentCoder<NativeImageHandle>::encode(Encoder& encoder, const NativeImageHandle& imageHandle)
 {
+#if PLATFORM(QT)
+    encodeOptionalNativeImage(encoder, imageHandle.image);
+#else
     encodeOptionalNativeImage(encoder, imageHandle.image.get());
+#endif
 }
 
 bool ArgumentCoder<NativeImageHandle>::decode(Decoder& decoder, NativeImageHandle& imageHandle)
