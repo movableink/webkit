@@ -799,9 +799,11 @@ public:
     void setComposition(const String&, const Vector<WebCore::CompositionUnderline>&, const EditingRange& selectionRange);
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(QT)
     void collapseSelectionInFrame(WebCore::FrameIdentifier);
+#if PLATFORM(GTK)
     void showEmojiPicker(WebCore::Frame&);
+#endif
 
     void getCenterForZoomGesture(const WebCore::IntPoint& centerInViewCoordinates, CompletionHandler<void(WebCore::IntPoint&&)>&&);
 #endif
