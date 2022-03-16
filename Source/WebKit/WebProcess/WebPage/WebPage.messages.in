@@ -463,6 +463,10 @@ GenerateSyntheticEditingCommand(enum:uint8_t WebKit::SyntheticEditingCommandType
     DeleteSurrounding(int64_t offset, unsigned characterCount)
 #endif
 
+#if PLATFORM(QT)
+    SetComposition(String text, Vector<WebCore::CompositionUnderline> underlines, struct WebKit::EditingRange selectionRange)
+#endif
+
 #if PLATFORM(GTK)
     CollapseSelectionInFrame(WebCore::FrameIdentifier frameID)
 #endif

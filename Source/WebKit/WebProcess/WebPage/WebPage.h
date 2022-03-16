@@ -941,6 +941,10 @@ public:
     void deleteSurrounding(int64_t offset, unsigned characterCount);
 #endif
 
+#if PLATFORM(QT)
+    void setComposition(const String&, const Vector<WebCore::CompositionUnderline>&, const EditingRange& selectionRange);
+#endif
+
 #if PLATFORM(GTK)
     void collapseSelectionInFrame(WebCore::FrameIdentifier);
     void showEmojiPicker(WebCore::Frame&);

@@ -6226,6 +6226,18 @@ void WebPage::deleteSurrounding(int64_t offset, unsigned characterCount)
 
 #endif
 
+#if PLATFORM(QT)
+void WebPage::setComposition(const String& text, const Vector<CompositionUnderline>& underlines, const EditingRange& selectionRange)
+{
+    auto* targetFrame = targetFrameForEditing(*this);
+    if (!targetFrame || !targetFrame->selection().selection().isContentEditable())
+        return;
+
+    Ref<Frame> protector(*targetFrame);
+    targetFrame->editor().setComposition(text, underlines, selectionRange.location, selectionRange.location + selectionRange.length);
+}
+#endif
+
 void WebPage::didApplyStyle()
 {
     sendEditorStateUpdate();
