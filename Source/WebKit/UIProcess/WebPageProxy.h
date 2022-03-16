@@ -813,6 +813,11 @@ public:
     void setInputMethodState(bool enabled);
 #endif
 
+#if PLATFORM(QT)
+    // QTFIXME: this was deprecated in other ports
+    void setComposition(const String&, const Vector<WebCore::CompositionUnderline>&, const EditingRange& selectionRange);
+#endif
+
 #if PLATFORM(GTK)
     void getCenterForZoomGesture(const WebCore::IntPoint& centerInViewCoordinates, WebCore::IntPoint& center);
 #endif

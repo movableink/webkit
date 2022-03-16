@@ -374,7 +374,7 @@ void QtWebPageEventHandler::handleInputMethodEvent(QInputMethodEvent* ev)
     }
 
     if (composition.isEmpty()) {
-        m_webPageProxy->confirmComposition(commit);
+        m_webPageProxy->cancelComposition(commit);
     } else {
         ASSERT(cursorPositionWithinComposition >= 0);
         ASSERT(replacementStart >= 0);

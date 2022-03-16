@@ -8242,6 +8242,7 @@ void WebPageProxy::cancelComposition(const String& compositionString)
     if (!hasRunningProcess())
         return;
 
+#if !PLATFORM(QT)
     // Remove any pending composition key event.
     if (m_keyEventQueue.size() > 1) {
         auto event = m_keyEventQueue.takeFirst();
@@ -8250,9 +8251,21 @@ void WebPageProxy::cancelComposition(const String& compositionString)
         });
         m_keyEventQueue.prepend(WTFMove(event));
     }
+#endif
     send(Messages::WebPage::CancelComposition(compositionString));
 }
 #endif // PLATFORM(QT) || PLATFORM(GTK)
+
+#if PLATFORM(QT)
+// QTFIXME: other ports removed this
+void WebPageProxy::setComposition(const String& text, const Vector<CompositionUnderline>& underlines, const EditingRange& selectionRange)
+{
+    if (!hasRunningProcess())
+        return;
+
+    send(Messages::WebPage::SetComposition(text, underlines, selectionRange));
+}
+#endif
 
 void WebPageProxy::setScrollPinningBehavior(ScrollPinningBehavior pinning)
 {
