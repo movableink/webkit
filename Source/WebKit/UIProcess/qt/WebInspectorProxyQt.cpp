@@ -131,6 +131,12 @@ String WebInspectorProxy::inspectorBaseURL()
     return String();
 }
 
+DebuggableInfoData WebInspectorProxy::infoForLocalDebuggable()
+{
+    notImplemented();
+    return DebuggableInfoData::empty();
+}
+
 void WebInspectorProxy::platformShowCertificate(const WebCore::CertificateInfo&)
 {
     notImplemented();
