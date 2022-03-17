@@ -37,7 +37,6 @@ class ProgressTrackerClientQt final :  public QObject, public ProgressTrackerCli
     Q_OBJECT
 public:
     ProgressTrackerClientQt(QWebPageAdapter*);
-    void progressTrackerDestroyed() override;
 
     void progressStarted(Frame& originatingProgressFrame) override;
     void progressEstimateChanged(Frame& originatingProgressFrame) override;
