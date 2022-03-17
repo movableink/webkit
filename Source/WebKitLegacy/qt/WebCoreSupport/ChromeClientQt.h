@@ -128,9 +128,7 @@ public:
     PlatformPageClient platformPageClient() const final;
     void contentsSizeChanged(Frame&, const IntSize&) const final;
 
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags) final;
-
-    void setToolTip(const String&, TextDirection) final;
+    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const WTF::String&, WebCore::TextDirection) final;
 
     void print(Frame&) final;
     void exceededDatabaseQuota(Frame&, const String&, DatabaseDetails) final;

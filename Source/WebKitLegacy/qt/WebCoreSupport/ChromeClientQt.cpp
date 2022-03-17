@@ -462,9 +462,8 @@ void ChromeClientQt::contentsSizeChanged(Frame& frame, const IntSize& size) cons
         QWebFrameAdapter::kit(frame)->contentsSizeDidChange(size);
 }
 
-void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, unsigned)
+void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, unsigned, const WTF::String& toolTip, WebCore::TextDirection dir)
 {
-    TextDirection dir;
     if (result.absoluteLinkURL() != lastHoverURL
         || result.title(dir) != lastHoverTitle
         || result.textContent() != lastHoverContent) {
@@ -473,12 +472,9 @@ void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, unsign
         lastHoverContent = result.textContent();
         QMetaObject::invokeMethod(m_webPage->handle(), "linkHovered", Q_ARG(QString, lastHoverURL.string()),
             Q_ARG(QString, lastHoverTitle), Q_ARG(QString, lastHoverContent));
-    }
-}
 
-void ChromeClientQt::setToolTip(const String &tip, TextDirection)
-{
-    m_webPage->setToolTip(tip);
+        m_webPage->setToolTip(toolTip);
+    }
 }
 
 void ChromeClientQt::print(Frame& frame)
