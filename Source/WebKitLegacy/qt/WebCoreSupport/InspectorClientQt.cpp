@@ -287,7 +287,7 @@ void InspectorFrontendClientQt::frontendLoaded()
     setAttachedWindow(DockSide::Bottom);
 }
 
-String InspectorFrontendClientQt::localizedStringsURL()
+String InspectorFrontendClientQt::localizedStringsURL() const
 {
     return "qrc:/webkit/inspector/Localizations/en.lproj/localizedStrings.js"_s;
 }
