@@ -254,15 +254,15 @@ void QWebPageAdapter::initializeWebCorePage()
         LibWebRTCProvider::create(),
         CacheStorageProvider::create(),
         BackForwardList::create(*this),
-        CookieJar::create(storageProvider.copyRef())
+        CookieJar::create(storageProvider.copyRef()),
+        makeUniqueRef<ProgressTrackerClientQt>(this)
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
     pageConfiguration.chromeClient = new ChromeClientQt(this);
     pageConfiguration.contextMenuClient = new ContextMenuClientQt();
-    pageConfiguration.dragClient = new DragClientQt(pageConfiguration.chromeClient);
+    pageConfiguration.dragClient = std::make_unique<DragClientQt>(pageConfiguration.chromeClient);
     pageConfiguration.inspectorClient = new InspectorClientQt(this);
     pageConfiguration.loaderClientForMainFrame = new FrameLoaderClientQt();
-    pageConfiguration.progressTrackerClient = new ProgressTrackerClientQt(this);
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
     pageConfiguration.pluginInfoProvider = &WebKit::PluginInfoProviderQt::singleton();
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
