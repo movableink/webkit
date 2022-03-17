@@ -48,11 +48,6 @@ ProgressTrackerClientQt::ProgressTrackerClientQt(QWebPageAdapter* webPageAdapter
         m_webPage->handle(), SIGNAL(loadProgress(int)));
 }
 
-void ProgressTrackerClientQt::progressTrackerDestroyed()
-{
-    delete this;
-}
-
 void ProgressTrackerClientQt::progressStarted(Frame& originatingProgressFrame)
 {
     QWebFrameAdapter* frame = QWebFrameAdapter::kit(&originatingProgressFrame);
