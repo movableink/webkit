@@ -37,8 +37,8 @@
 #import <WebCore/ProtectionSpace.h>
 #import <WebCore/ResourceError.h>
 #import <WebCore/ResourceRequest.h>
+#import <WebCore/SerializedPlatformDataCueMac.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
-#import <pal/spi/cocoa/NSKeyedArchiverSPI.h>
 #import <wtf/MachSendRight.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -548,11 +548,84 @@ Optional<WebCore::KeypressCommand> ArgumentCoder<WebCore::KeypressCommand>::deco
     return WTFMove(command);
 }
 
+void ArgumentCoder<CGRect>::encode(Encoder& encoder, CGRect rect)
+{
+    encoder << rect.origin << rect.size;
+}
+
+Optional<CGRect> ArgumentCoder<CGRect>::decode(Decoder& decoder)
+{
+    Optional<CGPoint> origin;
+    decoder >> origin;
+    if (!origin)
+        return { };
+
+    Optional<CGSize> size;
+    decoder >> size;
+    if (!size)
+        return { };
+
+    return CGRect { *origin, *size };
+}
+
+void ArgumentCoder<CGSize>::encode(Encoder& encoder, CGSize size)
+{
+    encoder << size.width << size.height;
+}
+
+Optional<CGSize> ArgumentCoder<CGSize>::decode(Decoder& decoder)
+{
+    CGSize size;
+    if (!decoder.decode(size.width))
+        return { };
+    if (!decoder.decode(size.height))
+        return { };
+    return size;
+}
+
+void ArgumentCoder<CGPoint>::encode(Encoder& encoder, CGPoint point)
+{
+    encoder << point.x << point.y;
+}
+
+Optional<CGPoint> ArgumentCoder<CGPoint>::decode(Decoder& decoder)
+{
+    CGPoint point;
+    if (!decoder.decode(point.x))
+        return { };
+    if (!decoder.decode(point.y))
+        return { };
+    return point;
+}
+
+void ArgumentCoder<CGAffineTransform>::encode(Encoder& encoder, CGAffineTransform transform)
+{
+    encoder << transform.a << transform.b << transform.c << transform.d << transform.tx << transform.ty;
+}
+
+Optional<CGAffineTransform> ArgumentCoder<CGAffineTransform>::decode(Decoder& decoder)
+{
+    CGAffineTransform transform;
+    if (!decoder.decode(transform.a))
+        return { };
+    if (!decoder.decode(transform.b))
+        return { };
+    if (!decoder.decode(transform.c))
+        return { };
+    if (!decoder.decode(transform.d))
+        return { };
+    if (!decoder.decode(transform.tx))
+        return { };
+    if (!decoder.decode(transform.ty))
+        return { };
+    return transform;
+}
+
 #if ENABLE(CONTENT_FILTERING)
 
 void ArgumentCoder<WebCore::ContentFilterUnblockHandler>::encode(Encoder& encoder, const WebCore::ContentFilterUnblockHandler& contentFilterUnblockHandler)
 {
-    auto archiver = secureArchiver();
+    auto archiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
     contentFilterUnblockHandler.encode(archiver.get());
     IPC::encode(encoder, (__bridge CFDataRef)archiver.get().encodedData);
 }
@@ -563,7 +636,8 @@ bool ArgumentCoder<WebCore::ContentFilterUnblockHandler>::decode(Decoder& decode
     if (!IPC::decode(decoder, data))
         return false;
 
-    auto unarchiver = secureUnarchiverFromData((__bridge NSData *)data.get());
+    auto unarchiver = adoptNS([[NSKeyedUnarchiver alloc] initForReadingFromData:(__bridge NSData *)data.get() error:nullptr]);
+    unarchiver.get().decodingFailurePolicy = NSDecodingFailurePolicyRaiseException;
     if (!WebCore::ContentFilterUnblockHandler::decode(unarchiver.get(), contentFilterUnblockHandler))
         return false;
 
@@ -594,6 +668,29 @@ bool ArgumentCoder<WebCore::MediaPlaybackTargetContext>::decodePlatformData(Deco
     return true;
 }
 
+#endif
+
+#if ENABLE(VIDEO)
+void ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::encodePlatformData(Encoder& encoder, const WebCore::SerializedPlatformDataCueValue& value)
+{
+    ASSERT(value.platformType() == WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC);
+    if (value.platformType() == WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC)
+        encodeObject(encoder, value.nativeValue());
+}
+
+Optional<WebCore::SerializedPlatformDataCueValue>  ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::decodePlatformData(Decoder& decoder, WebCore::SerializedPlatformDataCueValue::PlatformType platformType)
+{
+    ASSERT(platformType == WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC);
+
+    if (platformType != WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC)
+        return WTF::nullopt;
+
+    auto object = decodeObject(decoder, WebCore::SerializedPlatformDataCueMac::allowedClassesForNativeValues());
+    if (!object)
+        return WTF::nullopt;
+
+    return WebCore::SerializedPlatformDataCueValue { platformType, object.value().get() };
+}
 #endif
 
 } // namespace IPC

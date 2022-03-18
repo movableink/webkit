@@ -25,12 +25,13 @@
 
 #pragma once
 
+#import <wtf/RetainPtr.h>
+
 #if HAVE(NETWORK_FRAMEWORK)
 
 #import <Network/Network.h>
 #import <wtf/Forward.h>
 #import <wtf/HashMap.h>
-#import <wtf/RetainPtr.h>
 #import <wtf/text/StringHash.h>
 
 namespace TestWebKitAPI {
@@ -38,7 +39,8 @@ namespace TestWebKitAPI {
 class HTTPServer {
 public:
     struct HTTPResponse;
-    HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>>);
+    enum class Protocol : uint8_t { Http, Https, HttpsWithLegacyTLS };
+    HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>>, Protocol = Protocol::Http);
     uint16_t port() const;
     NSURLRequest *request() const;
     
@@ -46,15 +48,20 @@ private:
     void respondToRequests(nw_connection_t);
     
     RetainPtr<nw_listener_t> m_listener;
+    const Protocol m_protocol;
     const HashMap<String, HTTPResponse> m_requestResponseMap;
 };
 
 struct HTTPServer::HTTPResponse {
     HTTPResponse(String&& body)
         : body(WTFMove(body)) { }
-    HTTPResponse(String&& body, HashMap<String, String>&& headerFields)
-        : body(WTFMove(body))
-        , headerFields(WTFMove(headerFields)) { }
+    HTTPResponse(HashMap<String, String>&& headerFields, String&& body)
+        : headerFields(WTFMove(headerFields))
+        , body(WTFMove(body)) { }
+    HTTPResponse(unsigned statusCode, HashMap<String, String>&& headerFields, String&& body = { })
+        : statusCode(statusCode)
+        , headerFields(WTFMove(headerFields))
+        , body(WTFMove(body)) { }
 
     HTTPResponse(const HTTPResponse&) = default;
     HTTPResponse(HTTPResponse&&) = default;
@@ -62,10 +69,13 @@ struct HTTPServer::HTTPResponse {
     HTTPResponse& operator=(const HTTPResponse&) = default;
     HTTPResponse& operator=(HTTPResponse&&) = default;
     
-    String body;
+    unsigned statusCode { 200 };
     HashMap<String, String> headerFields;
+    String body;
 };
 
 } // namespace TestWebKitAPI
 
 #endif // HAVE(NETWORK_FRAMEWORK)
+
+RetainPtr<SecIdentityRef> testIdentity();

@@ -29,6 +29,7 @@
 #include "APIClient.h"
 #include "APIData.h"
 #include "WKContext.h"
+#include <wtf/ProcessID.h>
 
 namespace API {
 template<> struct ClientTraits<WKContextClientBase> {
@@ -45,8 +46,8 @@ class WebContextClient : public API::Client<WKContextClientBase> {
 public:
     void plugInAutoStartOriginHashesChanged(WebProcessPool*);
     void networkProcessDidCrash(WebProcessPool*);
-    void serviceWorkerProcessDidCrash(WebProcessPool*);
-    void gpuProcessDidCrash(WebProcessPool*);
+    void serviceWorkerProcessDidCrash(WebProcessPool*, ProcessID);
+    void gpuProcessDidCrash(WebProcessPool*, ProcessID);
 };
 
 } // namespace WebKit

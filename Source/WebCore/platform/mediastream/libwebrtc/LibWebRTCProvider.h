@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "DocumentIdentifier.h"
 #include "LibWebRTCMacros.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
@@ -78,14 +79,10 @@ public:
     using IPAddressOrError = Expected<String, MDNSRegisterError>;
     using MDNSNameOrError = Expected<String, MDNSRegisterError>;
 
-    virtual void unregisterMDNSNames(uint64_t documentIdentifier)
-    {
-        UNUSED_PARAM(documentIdentifier);
-    }
+    virtual void unregisterMDNSNames(DocumentIdentifier) { }
 
-    virtual void registerMDNSName(uint64_t documentIdentifier, const String& ipAddress, CompletionHandler<void(MDNSNameOrError&&)>&& callback)
+    virtual void registerMDNSName(DocumentIdentifier, const String& ipAddress, CompletionHandler<void(MDNSNameOrError&&)>&& callback)
     {
-        UNUSED_PARAM(documentIdentifier);
         UNUSED_PARAM(ipAddress);
         callback(makeUnexpected(MDNSRegisterError::NotImplemented));
     }
@@ -119,7 +116,6 @@ public:
     void setEnableLogging(bool);
     void setEnableWebRTCEncryption(bool);
     void setUseDTLS10(bool);
-    void setUseGPUProcess(bool);
 
     class SuspendableSocketFactory : public rtc::PacketSocketFactory {
     public:
@@ -147,7 +143,6 @@ protected:
     bool m_supportsVP8 { false };
     bool m_enableLogging { true };
     bool m_useDTLS10 { false };
-    bool m_useGPUProcess { false };
 #endif
 };
 

@@ -29,6 +29,7 @@
 
 #include "LayoutUnit.h"
 #include "LayoutPoint.h"
+#include "LayoutRect.h"
 #include "MarginTypes.h"
 #include <wtf/Optional.h>
 
@@ -47,10 +48,6 @@ using InlineLayoutPoint = LayoutPoint;
 using InlineLayoutSize = LayoutSize;
 using InlineLayoutRect = LayoutRect;
 #endif
-
-namespace Display {
-class Box;
-}
 
 namespace Layout {
 
@@ -155,62 +152,42 @@ struct VerticalGeometry {
     ContentHeightAndMargin contentHeightAndMargin;
 };
 
-struct UsedHorizontalValues {
-    struct Constraints {
-        explicit Constraints(const Display::Box& containingBlockGeometry);
-        explicit Constraints(LayoutUnit contentBoxLeft, LayoutUnit horizontalConstraint)
-            : contentBoxLeft(contentBoxLeft)
-            , width(horizontalConstraint)
-        {
-        }
+struct HorizontalConstraints {
+    LayoutUnit logicalRight() const { return logicalLeft + logicalWidth; }
 
-        LayoutUnit contentBoxLeft;
-        LayoutUnit width;
-    };
+    LayoutUnit logicalLeft;
+    LayoutUnit logicalWidth;
+};
 
-    explicit UsedHorizontalValues(Constraints constraints)
-        : constraints(constraints)
-    {
-    }
+struct OutOfFlowHorizontalConstraints {
+    HorizontalConstraints value;
+    // Borders and paddings are resolved against the containing block's content box as if the box was an in-flow box.
+    LayoutUnit borderAndPaddingSpecificWidth;
+};
 
-    explicit UsedHorizontalValues(Constraints constraints, Optional<LayoutUnit> width, Optional<UsedHorizontalMargin> margin)
-        : constraints(constraints)
-        , width(width)
-        , margin(margin)
-    {
-    }
+struct VerticalConstraints {
+    LayoutUnit logicalTop;
+    Optional<LayoutUnit> logicalHeight;
+};
 
-    Constraints constraints;
+struct OverrideHorizontalValues {
     Optional<LayoutUnit> width;
     Optional<UsedHorizontalMargin> margin;
 };
 
-struct UsedVerticalValues {
-    struct Constraints {
-        explicit Constraints(const Display::Box& containingBlockGeometry);
-        explicit Constraints(LayoutUnit contentBoxTop, Optional<LayoutUnit> verticalConstraint = WTF::nullopt)
-            : contentBoxTop(contentBoxTop)
-            , height(verticalConstraint)
-        {
-        }
-
-        LayoutUnit contentBoxTop;
-        Optional<LayoutUnit> height;
-    };
-
-    explicit UsedVerticalValues(Constraints constraints, Optional<LayoutUnit> height = { })
-        : constraints(constraints)
-        , height(height)
-    {
-    }
-
-    Constraints constraints;
+struct OverrideVerticalValues {
+    // Consider collapsing it.
     Optional<LayoutUnit> height;
 };
 
 inline LayoutUnit toLayoutUnit(InlineLayoutUnit value)
 {
     return LayoutUnit { value };
+}
+
+inline LayoutUnit ceiledLayoutUnit(InlineLayoutUnit value)
+{
+    return LayoutUnit::fromFloatCeil(value);
 }
 
 inline LayoutPoint toLayoutPoint(const InlineLayoutPoint& point)

@@ -42,6 +42,8 @@ public:
     static Ref<ScrollingTreeFrameScrollingNode> create(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
     virtual ~ScrollingTreeFrameScrollingNodeMac();
 
+    RetainPtr<CALayer> rootContentsLayer() const { return m_rootContentsLayer; }
+
 protected:
     ScrollingTreeFrameScrollingNodeMac(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
@@ -61,7 +63,7 @@ protected:
     unsigned exposedUnfilledArea() const;
 
 private:
-    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollPositionClamp) const override;
+    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
 
     void currentScrollPositionChanged() override;
     void repositionScrollingLayers() override;

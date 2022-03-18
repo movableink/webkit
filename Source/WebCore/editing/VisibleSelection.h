@@ -32,6 +32,8 @@ namespace WebCore {
 
 class Position;
 
+struct SimpleRange;
+
 const EAffinity SEL_DEFAULT_AFFINITY = DOWNSTREAM;
 enum SelectionDirection : uint8_t { DirectionForward, DirectionBackward, DirectionRight, DirectionLeft };
 
@@ -43,9 +45,7 @@ public:
 
     VisibleSelection(const Position&, EAffinity, bool isDirectional = false);
     VisibleSelection(const Position&, const Position&, EAffinity = SEL_DEFAULT_AFFINITY, bool isDirectional = false);
-
-    WEBCORE_EXPORT VisibleSelection(const Range&, EAffinity = SEL_DEFAULT_AFFINITY, bool isDirectional = false);
-    
+    WEBCORE_EXPORT VisibleSelection(const SimpleRange&, EAffinity = SEL_DEFAULT_AFFINITY, bool isDirectional = false);
     WEBCORE_EXPORT VisibleSelection(const VisiblePosition&, bool isDirectional = false);
     WEBCORE_EXPORT VisibleSelection(const VisiblePosition&, const VisiblePosition&, bool isDirectional = false);
 

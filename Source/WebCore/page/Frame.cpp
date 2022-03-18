@@ -5,7 +5,7 @@
  *                     2000 Simon Hausmann <hausmann@kde.org>
  *                     2000 Stefan Schimanski <1Stein@gmx.de>
  *                     2001 George Staikos <staikos@kde.org>
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov <ap@nypop.com>
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -143,12 +143,12 @@ static inline float parentTextZoomFactor(Frame* frame)
     return parent->textZoomFactor();
 }
 
-Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient& frameLoaderClient)
+Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoaderClient>&& frameLoaderClient)
     : m_mainFrame(ownerElement ? page.mainFrame() : *this)
     , m_page(&page)
     , m_settings(&page.settings())
     , m_treeNode(*this, parentFromOwnerElement(ownerElement))
-    , m_loader(makeUniqueRef<FrameLoader>(*this, frameLoaderClient))
+    , m_loader(makeUniqueRef<FrameLoader>(*this, WTFMove(frameLoaderClient)))
     , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
     , m_ownerElement(ownerElement)
     , m_script(makeUniqueRef<ScriptController>(*this))
@@ -182,11 +182,10 @@ void Frame::init()
     m_loader->init();
 }
 
-Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* client)
+Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoaderClient>&& client)
 {
     ASSERT(page);
-    ASSERT(client);
-    return adoptRef(*new Frame(*page, ownerElement, *client));
+    return adoptRef(*new Frame(*page, ownerElement, WTFMove(client)));
 }
 
 Frame::~Frame()
@@ -293,6 +292,9 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
             editor().didInsertAttachmentElement(attachment);
     }
 #endif
+
+    if (m_page && m_doc && isMainFrame() && !loader().stateMachine().isDisplayingInitialEmptyDocument())
+        m_page->mainFrameDidChangeToNonInitialEmptyDocument();
 
     InspectorInstrumentation::frameDocumentUpdated(*this);
 
@@ -622,6 +624,9 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
 
 void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript& script)
 {
+    if (loader().client().hasNavigatedAwayFromAppBoundDomain() && !loader().client().needsInAppBrowserPrivacyQuirks())
+        return;
+
     auto* document = this->document();
     if (!document)
         return;
@@ -635,6 +640,16 @@ void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript
     document->setAsRunningUserScripts();
     loader().client().willInjectUserScript(world);
     m_script->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), URL(script.url())), world);
+}
+
+Optional<PageIdentifier> Frame::pageID() const
+{
+    return loader().pageID();
+}
+
+Optional<FrameIdentifier> Frame::frameID() const
+{
+    return loader().frameID();
 }
 
 RenderView* Frame::contentRenderer() const
@@ -736,7 +751,8 @@ String Frame::displayStringModifiedByEncoding(const String& str) const
 
 VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint) const
 {
-    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent);
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AllowVisibleChildFrameContentOnly };
+    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, hitType);
     Node* node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
@@ -757,8 +773,10 @@ Document* Frame::documentAtPoint(const IntPoint& point)
     IntPoint pt = view()->windowToContents(point);
     HitTestResult result = HitTestResult(pt);
 
-    if (contentRenderer())
-        result = eventHandler().hitTestResultAtPoint(pt, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent);
+    if (contentRenderer()) {
+        constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+        result = eventHandler().hitTestResultAtPoint(pt, hitType);
+    }
     return result.innerNode() ? &result.innerNode()->document() : 0;
 }
 
@@ -846,10 +864,12 @@ AbstractDOMWindow* Frame::virtualWindow() const
 
 String Frame::layerTreeAsText(LayerTreeFlags flags) const
 {
-    document()->updateLayout();
+    if (!m_view)
+        return { };
 
+    m_view->updateLayoutAndStyleIfNeededRecursive();
     if (!contentRenderer())
-        return String();
+        return { };
 
     return contentRenderer()->compositor().layerTreeAsText(flags);
 }
@@ -922,10 +942,8 @@ float Frame::frameScaleFactor() const
     if (!page || !isMainFrame())
         return 1;
 
-    if (FrameView* view = this->view()) {
-        if (view->delegatesPageScaling())
-            return 1;
-    }
+    if (page->delegatesScaling())
+        return 1;
 
     return page->pageScaleFactor();
 }
@@ -962,7 +980,12 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
     m_doc->resumeScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
 
     // Frame::clearTimers() suspended animations and pending relayouts.
-    animation().resumeAnimationsForDocument(m_doc.get());
+
+    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
+        if (auto* timeline = m_doc->existingTimeline())
+            timeline->resumeAnimations();
+    } else
+        animation().resumeAnimationsForDocument(m_doc.get());
     if (m_view)
         m_view->layoutContext().scheduleLayout();
 }

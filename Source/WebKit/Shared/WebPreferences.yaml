@@ -20,7 +20,7 @@ DeviceOrientationPermissionAPIEnabled:
 
 DisallowSyncXHRDuringPageDismissalEnabled:
   type: bool
-  defaultValue: true
+  defaultValue: defaultDisallowSyncXHRDuringPageDismissalEnabled()
   humanReadableName: "Disallow sync XHR during page dismissal"
   humanReadableDescription: "Disallow synchronous XMLHttpRequest during page dismissal"
   category: experimental
@@ -53,6 +53,13 @@ HTTPSUpgradeEnabled:
    defaultValue: false
    humanReadableName: "Automatic HTTPS upgrade"
    humanReadableDescription: "Automatic HTTPS upgrade for known supported sites"
+   category: experimental
+
+InProcessCookieCacheEnabled:
+   type: bool
+   defaultValue: true
+   humanReadableName: "In-Process Cookie Cache"
+   humanReadableDescription: "In-Process DOM Cookie Cache"
    category: experimental
 
 ThirdPartyIframeRedirectBlockingEnabled:
@@ -216,6 +223,14 @@ AllowSettingAnyXHRHeaderFromFileURLs:
   defaultValue: false
 
 AllowCrossOriginSubresourcesToAskForCredentials:
+  type: bool
+  defaultValue: false
+
+AllowTopNavigationToDataURLs:
+  type: bool
+  defaultValue: false
+
+ShouldRestrictBaseURLSchemes:
   type: bool
   defaultValue: false
 
@@ -575,6 +590,15 @@ WebRTCVP8CodecEnabled:
   humanReadableDescription: "Enable WebRTC VP8 codec"
   category: internal
 
+WebRTCPlatformCodecsInGPUProcessEnabled:
+  type: bool
+  defaultValue: defaultWebRTCCodecsInGPUProcess()
+  webcoreBinding: RuntimeEnabledFeatures
+  condition: ENABLE(WEB_RTC)
+  humanReadableName: "WebRTC Platform Codecs in GPU Process"
+  humanReadableDescription: "Enable WebRTC Platform Codecs in GPU Process"
+  category: experimental
+
 WebRTCDTMFEnabled:
   type: bool
   defaultValue: true
@@ -582,7 +606,7 @@ WebRTCDTMFEnabled:
   condition: ENABLE(WEB_RTC)
   humanReadableName: "WebRTC DTMF"
   humanReadableDescription: "Enable WebRTC DTMF"
-  category: experimental
+  category: internal
 
 WebRTCH264SimulcastEnabled:
   type: bool
@@ -599,7 +623,7 @@ WebRTCMDNSICECandidatesEnabled:
   humanReadableName: "WebRTC mDNS ICE candidates"
   humanReadableDescription: "Enable WebRTC mDNS ICE candidates"
   webcoreBinding: RuntimeEnabledFeatures
-  category: experimental
+  category: internal
   condition: ENABLE(WEB_RTC)
 
 UseLegacyTextAlignPositionedElementBehavior:
@@ -760,7 +784,7 @@ GamepadsEnabled:
   humanReadableDescription: "Web Gamepad API support"
   webcoreBinding: RuntimeEnabledFeatures
   condition: ENABLE(GAMEPAD)
-  
+
 HighlightAPIEnabled:
     type: bool
     defaultValue: false
@@ -791,6 +815,7 @@ WebAuthenticationLocalAuthenticatorEnabled:
   humanReadableName: "Web Authentication Local Authenticator"
   humanReadableDescription: "Enable Web Authentication local authenticator support"
   webcoreBinding: RuntimeEnabledFeatures
+  category: experimental
   condition: ENABLE(WEB_AUTHN)
 
 ModernMediaControlsEnabled:
@@ -907,11 +932,6 @@ DefaultFontSize:
 DefaultFixedFontSize:
   type: double
   defaultValue: 13
-
-LayoutInterval:
-  type: double
-  defaultValue: -1
-  webcoreBinding: custom
 
 MaxParseDuration:
   type: double
@@ -1187,9 +1207,12 @@ IncompleteImageBorderEnabled:
   type: bool
   defaultValue: false
 
-ShouldDeferAsynchronousScriptsUntilAfterDocumentLoad:
+ShouldDeferAsynchronousScriptsUntilAfterDocumentLoadOrFirstPaint:
   type: bool
-  defaultValue: false
+  defaultValue: true
+  humanReadableName: "Defer async scripts until DOMContentLoaded or first-paint"
+  humanReadableDescription: "Defer async scripts until DOMContentLoaded or first-paint"
+  category: experimental
 
 StorageAccessAPIEnabled:
   type: bool
@@ -1241,6 +1264,22 @@ ShouldUseServiceWorkerShortTimeout:
   defaultValue: false
   type: bool
 
+IsInAppBrowserPrivacyEnabled:
+    type: bool
+    defaultValue: defaultInAppBrowserPrivacy()
+    humanReadableName: "In-App Browser Privacy"
+    humanReadableDescription: "Enable In-App Browser Privacy"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: debug
+
+NeedsInAppBrowserPrivacyQuirks:
+    type: bool
+    defaultValue: true
+    humanReadableName: "Needs In-App Browser Privacy Quirks"
+    humanReadableDescription: "Enable quirks needed to support In-App Browser privacy"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: debug
+
 # For experimental features:
 # The type should be boolean.
 # You must provide a humanReadableName and humanReadableDescription for all experimental features. They
@@ -1290,14 +1329,6 @@ VisualViewportAPIEnabled:
   humanReadableDescription: "Enable Visual Viewport API"
   category: experimental
 
-PointerEventsEnabled:
-  type: bool
-  defaultValue: true
-  humanReadableName: "Pointer Events"
-  humanReadableDescription: "Enable Pointer Events"
-  webcoreBinding: RuntimeEnabledFeatures
-  category: experimental
-
 SyntheticEditingCommandsEnabled:
   type: bool
   defaultValue: true
@@ -1318,6 +1349,13 @@ BlockingOfSmallPluginsEnabled:
   humanReadableName: "Block small plugins"
   humanReadableDescription: "Stop plugins smaller than a certain threshold from loading."
   category: internal
+
+CSSOMViewSmoothScrollingEnabled:
+  type: bool
+  defaultValue: false
+  humanReadableName: "CSSOM View Smooth Scrolling"
+  humanReadableDescription: "Enable DOM API and CSS property for 'smooth' scroll behavior"
+  category: experimental
 
 WebAnimationsEnabled:
   type: bool
@@ -1343,6 +1381,14 @@ WebAnimationsCompositeOperationsEnabled:
   category: experimental
   webcoreBinding: RuntimeEnabledFeatures
 
+WebAnimationsMutableTimelinesEnabled:
+  type: bool
+  defaultValue: DEFAULT_EXPERIMENTAL_FEATURES_ENABLED
+  humanReadableName: "Web Animations mutable timelines"
+  humanReadableDescription: "Support for setting the timeline property of an Animation object"
+  category: experimental
+  webcoreBinding: RuntimeEnabledFeatures
+
 WebGL2Enabled:
   type: bool
   defaultValue: false
@@ -1354,12 +1400,21 @@ WebGL2Enabled:
 
 WebGPUEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: defaultWebGPUEnabled()
   humanReadableName: "WebGPU"
   humanReadableDescription: "WebGPU Sketch prototype"
   category: experimental
   webcoreBinding: RuntimeEnabledFeatures
   condition: ENABLE(WEBGPU)
+
+MaskWebGLStringsEnabled:
+  type: bool
+  defaultValue: true
+  humanReadableName: "Mask WebGL Strings"
+  humanReadableDescription: "Mask WebGL Vendor, Renderer, Shader Language Strings"
+  category: experimental
+  webcoreBinding: RuntimeEnabledFeatures
+  condition: ENABLE(WEBGL) || ENABLE(WEBGL2)
 
 AccessibilityObjectModelEnabled:
   type: bool
@@ -1368,15 +1423,6 @@ AccessibilityObjectModelEnabled:
   humanReadableDescription: "Accessibility Object Model support"
   category: experimental
   webcoreBinding: RuntimeEnabledFeatures
-
-WebVREnabled:
-  type: bool
-  defaultValue: DEFAULT_EXPERIMENTAL_FEATURES_ENABLED
-  humanReadableName: "WebVR"
-  humanReadableDescription: "WebVR Module support"
-  webcoreBinding: RuntimeEnabledFeatures
-  category: experimental
-  condition: PLATFORM(GTK) || PLATFORM(WPE)
 
 ServerTimingEnabled:
   type: bool
@@ -1425,7 +1471,7 @@ ProcessSwapOnCrossSiteNavigationEnabled:
   type: bool
   defaultValue: DEFAULT_PROCESS_SWAP_ON_CROSS_SITE_NAVIGATION_ENABLED
   humanReadableName: "Swap Processes on Cross-Site Navigation"
-  humanReadableDescription: "Swap WebContent processes on cross-site navigations"
+  humanReadableDescription: "Swap WebContent Processes on cross-site navigations"
   category: experimental
   webcoreBinding: none
 
@@ -1496,12 +1542,27 @@ GenericCueAPIEnabled:
 CaptureVideoInUIProcessEnabled:
   type: bool
   defaultValue: false
-  humanReadableName: "Capture video in UIProcess"
-  humanReadableDescription: "Enable video capture in UIProcess"
+  humanReadableName: "Capture video in UI Process"
+  humanReadableDescription: "Enable video capture in UI Process"
   category: experimental
   webcoreBinding: none
   condition: ENABLE(MEDIA_STREAM)
 
+CaptureVideoInGPUProcessEnabled:
+  type: bool
+  defaultValue: defaultCaptureVideoInGPUProcessEnabled()
+  humanReadableName: "Capture video in GPU Process"
+  humanReadableDescription: "Enable video capture in GPU Process"
+  category: internal
+  webcoreBinding: none
+  condition: ENABLE(MEDIA_STREAM)
+
+AspectRatioOfImgFromWidthAndHeightEnabled:
+  type: bool
+  defaultValue: true
+  humanReadableName: "Aspect ratio of <img> from width and height"
+  humanReadableDescription: "Map HTML attributes width/height to the default aspect ratio of <img>"
+  category: experimental
 
 # For internal features:
 # The type should be boolean.
@@ -1544,14 +1605,14 @@ ServiceWorkersEnabled:
 
 AsyncFrameScrollingEnabled:
   type: bool
-  defaultValue: DEFAULT_ASYNC_FRAME_SCROLLING_ENABLED
+  defaultValue: defaultAsyncFrameScrollingEnabled()
   humanReadableName: "Async Frame Scrolling"
   humanReadableDescription: "Perform frame scrolling off the main thread"
   category: internal
 
 AsyncOverflowScrollingEnabled:
   type: bool
-  defaultValue: DEFAULT_ASYNC_OVERFLOW_SCROLLING_ENABLED
+  defaultValue: defaultAsyncOverflowScrollingEnabled()
   humanReadableName: "Async Overflow Scrolling"
   humanReadableDescription: "Perform overflow scrolling off the main thread"
   category: internal
@@ -1670,7 +1731,7 @@ LayoutFormattingContextEnabled:
 
 LayoutFormattingContextIntegrationEnabled:
   type: bool
-  defaultValue: false
+  defaultValue: true
   humanReadableName: "Next-generation line layout integration (LFC)"
   humanReadableDescription: "Enable next-generation line layout integration (LFC)"
   category: internal
@@ -1679,27 +1740,35 @@ LayoutFormattingContextIntegrationEnabled:
 
 CaptureAudioInUIProcessEnabled:
   type: bool
-  defaultValue: DEFAULT_CAPTURE_AUDIO_IN_UIPROCESS
-  humanReadableName: "Capture audio in UIProcess"
-  humanReadableDescription: "Enable audio capture in UIProcess"
+  defaultValue: defaultCaptureAudioInUIProcessEnabled()
+  humanReadableName: "Capture audio in UI Process"
+  humanReadableDescription: "Enable audio capture in UI Process"
   category: internal
   webcoreBinding: none
   condition: ENABLE(MEDIA_STREAM)
 
 CaptureAudioInGPUProcessEnabled:
   type: bool
-  defaultValue: false
-  humanReadableName: "Capture audio in GPUProcess"
-  humanReadableDescription: "Capture audio in GPUProcess"
+  defaultValue: defaultCaptureAudioInGPUProcessEnabled()
+  humanReadableName: "Capture audio in GPU Process"
+  humanReadableDescription: "Enable audio capture in GPU Process"
   category: internal
   webcoreBinding: none
   condition: ENABLE(MEDIA_STREAM)
 
+RenderCanvasInGPUProcessEnabled:
+  type: bool
+  defaultValue: defaultRenderCanvasInGPUProcessEnabled()
+  humanReadableName: "Render canvas in GPU Process"
+  humanReadableDescription: "Enable canvas rendering in GPU Process"
+  category: internal
+  webcoreBinding: none
+
 RestrictedHTTPResponseAccess:
   type: bool
   defaultValue: true
-  humanReadableName: "Filter HTTP Response for WebProcesses"
-  humanReadableDescription: "Enable HTTP Response filtering for WebProcesses"
+  humanReadableName: "Filter HTTP Response for Web Processes"
+  humanReadableDescription: "Enable HTTP Response filtering for Web Processes"
   category: internal
   webcoreBinding: RuntimeEnabledFeatures
 
@@ -1822,18 +1891,18 @@ LazyImageLoadingEnabled:
   webcoreBinding: RuntimeEnabledFeatures
   category: experimental
 
-IsThirdPartyCookieBlockingEnabled:
+IsThirdPartyCookieBlockingDisabled:
   type: bool
-  defaultValue: true
-  humanReadableName: "Block All 3rd-Party Cookies (ITP)"
-  humanReadableDescription: "Block all third-party cookies when Intelligent Tracking Prevention is enabled"
+  defaultValue: false
+  humanReadableName: "Disable Full 3rd-Party Cookie Blocking (ITP)"
+  humanReadableDescription: "Disable full third-party cookie blocking when Intelligent Tracking Prevention is enabled"
   category: experimental
 
-IsFirstPartyWebsiteDataRemovalEnabled:
+IsFirstPartyWebsiteDataRemovalDisabled:
   type: bool
-  defaultValue: true
-  humanReadableName: "Remove Non-Cookie Data After 7 Days of No User Interaction (ITP)"
-  humanReadableDescription: "Remove all non-cookie website data after seven days of no user interaction when Intelligent Tracking Prevention is enabled"
+  defaultValue: false
+  humanReadableName: "Disable Removal of Non-Cookie Data After 7 Days of No User Interaction (ITP)"
+  humanReadableDescription: "Disable removal of all non-cookie website data after seven days of no user interaction when Intelligent Tracking Prevention is enabled"
   category: experimental
 
 IsFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
@@ -1871,21 +1940,13 @@ RemotePlaybackEnabled:
   humanReadableDescription: "Enable Remote Playback API"
 
 UseGPUProcessForMedia:
-    type: bool
-    defaultValue: false
-    condition: ENABLE(GPU_PROCESS)
-    humanReadableName: "Media in GPU process"
-    humanReadableDescription: "Do all media loading and playback in the GPU process"
-    category: internal
-    webcoreName: useGPUProcessForMedia
-
-IsInAppBrowserPrivacyEnabled:
-    type: bool
-    defaultValue: true
-    humanReadableName: "In-App Browser Privacy"
-    humanReadableDescription: "Enable In-App Browser Privacy"
-    webcoreBinding: RuntimeEnabledFeatures
-    category: internal
+  type: bool
+  defaultValue: defaultUseGPUProcessForMedia()
+  condition: ENABLE(GPU_PROCESS)
+  humanReadableName: "Media in GPU Process"
+  humanReadableDescription: "Do all media loading and playback in the GPU Process"
+  category: internal
+  webcoreName: useGPUProcessForMedia
 
 DialogElementEnabled:
     type: bool
@@ -1894,6 +1955,32 @@ DialogElementEnabled:
     humanReadableDescription: "Enable the Dialog Element"
     webcoreBinding: RuntimeEnabledFeatures
     category: experimental
+
+IsAccessibilityIsolatedTreeEnabled:
+    type: bool
+    defaultValue: true
+    humanReadableName: "Isolated Accessibility Tree Mode"
+    humanReadableDescription: "Enable an accessibility hierarchy for VoiceOver that can be accessed on a secondary thread for improved performance"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: experimental
+    condition: ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+
+WebShareFileAPIEnabled:
+    type: bool
+    defaultValue: false
+    humanReadableName: "Web Share API Level 2"
+    humanReadableDescription: "Enable level 2 of Web Share API"
+    webcoreBinding: RuntimeEnabledFeatures
+    category: experimental
+
+IncrementalPDFLoadingEnabled:
+  type: bool
+  defaultValue: defaultIncrementalPDFEnabled()
+  humanReadableName: "Incremental PDF Loading"
+  humanReadableDescription: "Enable Incremental PDF Loading on supported platforms"
+  category: experimental
+  condition: HAVE(INCREMENTAL_PDF_APIS)
+  webcoreBinding: RuntimeEnabledFeatures
 
 # Deprecated
 

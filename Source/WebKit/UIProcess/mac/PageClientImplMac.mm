@@ -79,12 +79,9 @@
 #import <WebCore/ValidationBubble.h>
 #import <WebCore/WebCoreCALayerExtras.h>
 #import <wtf/ProcessPrivilege.h>
+#import <wtf/RetainPtr.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/WTFString.h>
-
-#if USE(DICTATION_ALTERNATIVES)
-#import <AppKit/NSTextAlternatives.h>
-#endif
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 #include <WebCore/WebMediaSessionManager.h>
@@ -103,20 +100,16 @@ static NSString * const kAXLoadCompleteNotification = @"AXLoadComplete";
 #endif
 
 namespace WebKit {
+
 using namespace WebCore;
 
-PageClientImpl::PageClientImpl(NSView* view, WKWebView *webView)
+PageClientImpl::PageClientImpl(NSView *view, WKWebView *webView)
     : PageClientImplCocoa(webView)
     , m_view(view)
-#if USE(DICTATION_ALTERNATIVES)
-    , m_alternativeTextUIController(makeUnique<AlternativeTextUIController>())
-#endif
 {
 }
 
-PageClientImpl::~PageClientImpl()
-{
-}
+PageClientImpl::~PageClientImpl() = default;
 
 void PageClientImpl::setImpl(WebViewImpl& impl)
 {
@@ -266,9 +259,7 @@ void PageClientImpl::processDidExit()
 void PageClientImpl::pageClosed()
 {
     m_impl->pageClosed();
-#if USE(DICTATION_ALTERNATIVES)
-    m_alternativeTextUIController->clear();
-#endif
+    PageClientImplCocoa::pageClosed();
 }
 
 void PageClientImpl::didRelaunchProcess()
@@ -565,7 +556,7 @@ CALayer *PageClientImpl::acceleratedCompositingRootLayer() const
     return m_impl->acceleratedCompositingRootLayer();
 }
 
-RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot()
+RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot(Optional<WebCore::IntRect>&&)
 {
     return m_impl->takeViewSnapshot();
 }
@@ -684,15 +675,6 @@ bool PageClientImpl::executeSavedCommandBySelector(const String& selectorString)
 }
 
 #if USE(DICTATION_ALTERNATIVES)
-uint64_t PageClientImpl::addDictationAlternatives(const RetainPtr<NSTextAlternatives>& alternatives)
-{
-    return m_alternativeTextUIController->addAlternatives(alternatives);
-}
-
-void PageClientImpl::removeDictationAlternatives(uint64_t dictationContext)
-{
-    m_alternativeTextUIController->removeAlternatives(dictationContext);
-}
 
 void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect& boundingBoxOfDictatedText, uint64_t dictationContext)
 {
@@ -703,10 +685,6 @@ void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect& boundi
     });
 }
 
-Vector<String> PageClientImpl::dictationAlternatives(uint64_t dictationContext)
-{
-    return m_alternativeTextUIController->alternativesForContext(dictationContext);
-}
 #endif
 
 void PageClientImpl::setEditableElementIsFocused(bool editableElementIsFocused)
@@ -917,11 +895,6 @@ NSView *PageClientImpl::inspectorAttachmentView()
 _WKRemoteObjectRegistry *PageClientImpl::remoteObjectRegistry()
 {
     return m_impl->remoteObjectRegistry();
-}
-
-void PageClientImpl::didFinishProcessingAllPendingMouseEvents()
-{
-    m_impl->didFinishProcessingAllPendingMouseEvents();
 }
 
 void PageClientImpl::didRestoreScrollPosition()

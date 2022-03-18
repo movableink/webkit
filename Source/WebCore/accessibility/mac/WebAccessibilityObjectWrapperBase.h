@@ -45,18 +45,25 @@ class VisiblePosition;
 }
 
 @interface WebAccessibilityObjectWrapperBase : NSObject {
-    WebCore::AXCoreObject* m_object;
+    WebCore::AXCoreObject* m_axObject;
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    WebCore::AXCoreObject* m_isolatedObject;
+#endif
     WebCore::AXID _identifier;
 }
 
 - (id)initWithAccessibilityObject:(WebCore::AXCoreObject*)axObject;
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+- (void)attachIsolatedObject:(WebCore::AXCoreObject*)isolatedObject;
+#endif
 
 - (void)detach;
 
 @property (nonatomic, assign) WebCore::AXID identifier;
 
-- (WebCore::AXCoreObject*)accessibilityObject;
-- (BOOL)updateObjectBackingStore;
+// Updates the underlying object and accessibility hierarchy , and returns the
+// corresponding AXCoreObject.
+- (WebCore::AXCoreObject*)updateObjectBackingStore;
 
 // This can be either an AccessibilityObject or an AXIsolatedObject
 - (WebCore::AXCoreObject*)axBackingObject;

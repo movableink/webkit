@@ -44,6 +44,8 @@ class SQLiteStatement;
 
 namespace IDBServer {
 
+enum class IsSchemaUpgraded : bool { No, Yes };
+
 class IDBSerializationContext;
 class SQLiteIDBCursor;
 
@@ -78,7 +80,6 @@ public:
     IDBError maybeUpdateKeyGeneratorNumber(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, double newKeyNumber) final;
     IDBError openCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&, IDBGetResult& outResult) final;
     IDBError iterateCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&, IDBGetResult& outResult) final;
-    bool prefetchCursor(const IDBResourceIdentifier&, const IDBResourceIdentifier&) final;
 
     IDBObjectStoreInfo* infoForObjectStore(uint64_t objectStoreIdentifier) final;
     void deleteBackingStore() final;
@@ -111,7 +112,9 @@ private:
     bool ensureValidRecordsTable();
     bool ensureValidIndexRecordsTable();
     bool ensureValidIndexRecordsIndex();
+    bool ensureValidIndexRecordsRecordIndex();
     bool ensureValidBlobTables();
+    Optional<IsSchemaUpgraded> ensureValidObjectStoreInfoTable();
     std::unique_ptr<IDBDatabaseInfo> createAndPopulateInitialDatabaseInfo();
     std::unique_ptr<IDBDatabaseInfo> extractExistingDatabaseInfo();
 
@@ -156,7 +159,7 @@ private:
         KeyExistsInObjectStore,
         GetUnusedBlobFilenames,
         DeleteUnusedBlobs,
-        GetObjectStoreRecordID,
+        GetObjectStoreRecord,
         DeleteBlobRecord,
         DeleteObjectStoreRecord,
         DeleteObjectStoreIndexRecord,

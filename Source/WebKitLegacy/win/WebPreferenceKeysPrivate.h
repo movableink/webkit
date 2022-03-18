@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2009, 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 // These are private because callers should be using the cover methods. They are in
 // a Private (as opposed to Internal) header file because Safari uses some of them
 // for managed preferences.
@@ -50,6 +52,7 @@
 #define WebKitJavaScriptEnabledPreferenceKey "WebKitJavaScriptEnabled"
 #define WebKitJavaScriptRuntimeFlagsPreferenceKey "WebKitJavaScriptRuntimeFlags"
 #define WebKitWebSecurityEnabledPreferenceKey "WebKitWebSecurityEnabled"
+#define WebKitAllowTopNavigationToDataURLsPreferenceKey "WebKitAllowTopNavigationToDataURLs"
 #define WebKitAllowUniversalAccessFromFileURLsPreferenceKey "WebKitAllowUniversalAccessFromFileURLs"
 #define WebKitAllowFileAccessFromFileURLsPreferenceKey "WebKitAllowFileAccessFromFileURLs"
 #define WebKitJavaScriptCanOpenWindowsAutomaticallyPreferenceKey "WebKitJavaScriptCanOpenWindowsAutomatically"
@@ -188,6 +191,8 @@
 
 #define WebKitWebAnimationsCompositeOperationsEnabledPreferenceKey "WebKitWebAnimationsCompositeOperationsEnabled"
 
+#define WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey "WebKitWebAnimationsMutableTimelinesEnabled"
+
 #define WebKitWebAnimationsCSSIntegrationEnabledPreferenceKey "WebKitWebAnimationsCSSIntegrationEnabled"
 
 #define WebKitUserTimingEnabledPreferenceKey "WebKitUserTimingEnabled"
@@ -209,6 +214,7 @@
 #define WebKitServerTimingEnabledPreferenceKey "WebKitServerTimingEnabled"
 
 #define WebKitCSSOMViewScrollingAPIEnabledPreferenceKey "WebKitCSSOMViewScrollingAPIEnabled"
+#define WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey "WebKitCSSOMViewSmoothScrollingEnabled"
 
 #define WebKitResizeObserverEnabledPreferenceKey "WebKitResizeObserverEnabled"
 
@@ -217,3 +223,7 @@
 #define WebKitRequestIdleCallbackEnabledPreferenceKey "WebKitRequestIdleCallbackEnabled"
 
 #define WebKitAsyncClipboardAPIEnabledPreferenceKey "WebKitAsyncClipboardAPIEnabled"
+
+#define WebKitAspectRatioOfImgFromWidthAndHeightEnabledPreferenceKey "WebKitAspectRatioOfImgFromWidthAndHeightEnabled"
+
+#define WebKitWebSQLEnabledPreferenceKey "WebKitWebSQLEnabled"

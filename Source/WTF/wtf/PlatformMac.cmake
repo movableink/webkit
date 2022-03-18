@@ -16,6 +16,7 @@ list(APPEND WTF_PUBLIC_HEADERS
     cocoa/CrashReporter.h
     cocoa/Entitlements.h
     cocoa/NSURLExtras.h
+    cocoa/RuntimeApplicationChecksCocoa.h
     cocoa/SoftLinking.h
 
     darwin/WeakLinking.h
@@ -26,10 +27,12 @@ list(APPEND WTF_PUBLIC_HEADERS
     spi/cocoa/CFXPCBridgeSPI.h
     spi/cocoa/CrashReporterClientSPI.h
     spi/cocoa/MachVMSPI.h
+    spi/cocoa/NSLocaleSPI.h
     spi/cocoa/SecuritySPI.h
     spi/cocoa/objcSPI.h
 
     spi/darwin/DataVaultSPI.h
+    spi/darwin/OSVariantSPI.h
     spi/darwin/ProcessMemoryFootprint.h
     spi/darwin/SandboxSPI.h
     spi/darwin/XPCSPI.h
@@ -56,12 +59,15 @@ list(APPEND WTF_SOURCES
     cocoa/CrashReporter.cpp
     cocoa/Entitlements.mm
     cocoa/FileSystemCocoa.mm
+    cocoa/LanguageCocoa.mm
     cocoa/MachSendRight.cpp
     cocoa/MainThreadCocoa.mm
     cocoa/MemoryFootprintCocoa.cpp
     cocoa/MemoryPressureHandlerCocoa.mm
     cocoa/NSURLExtras.mm
     cocoa/ResourceUsageCocoa.cpp
+    cocoa/RuntimeApplicationChecksCocoa.cpp
+    cocoa/SystemTracingCocoa.cpp
     cocoa/URLCocoa.mm
     cocoa/WorkQueueCocoa.cpp
 

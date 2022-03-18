@@ -29,9 +29,12 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "APIData.h"
+#import "ApplicationStateTracker.h"
+#import "AssertionServicesSPI.h"
 #import "DataReference.h"
 #import "DownloadProxy.h"
 #import "DrawingAreaProxy.h"
+#import "FrameInfoData.h"
 #import "InteractionInformationAtPosition.h"
 #import "NativeWebKeyboardEvent.h"
 #import "NavigationState.h"
@@ -67,10 +70,14 @@
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/TextIndicator.h>
 #import <WebCore/ValidationBubble.h>
-#import <pal/spi/cocoa/NSKeyedArchiverSPI.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/cocoa/Entitlements.h>
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, m_webView.get()->_page->process().connection())
+
+@interface UIWindow ()
+- (BOOL)_isHostedInAnotherProcess;
+@end
 
 namespace WebKit {
 using namespace WebCore;
@@ -114,7 +121,7 @@ IntSize PageClientImpl::viewSize()
     if (UIScrollView *scroller = [m_contentView _scroller])
         return IntSize(scroller.bounds.size);
 
-    return IntSize(m_contentView.bounds.size);
+    return IntSize([m_contentView bounds].size);
 }
 
 bool PageClientImpl::isViewWindowActive()
@@ -140,6 +147,34 @@ bool PageClientImpl::isViewVisible()
         return true;
     
     return false;
+}
+
+bool PageClientImpl::isApplicationVisible()
+{
+    switch (applicationType([m_webView window])) {
+    case ApplicationType::Application:
+        return [[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground;
+    case ApplicationType::ViewService:
+    case ApplicationType::Extension:
+        break;
+    }
+
+    UIViewController *serviceViewController = nil;
+    for (UIView *view = m_webView.get().get(); view; view = view.superview) {
+        UIViewController *viewController = [UIViewController viewControllerForView:view];
+        if (viewController._hostProcessIdentifier) {
+            serviceViewController = viewController;
+            break;
+        }
+    }
+    ASSERT(serviceViewController);
+    pid_t applicationPID = serviceViewController._hostProcessIdentifier;
+    ASSERT(applicationPID);
+
+    auto applicationStateMonitor = adoptNS([[BKSApplicationStateMonitor alloc] init]);
+    auto applicationState = [applicationStateMonitor mostElevatedApplicationStateForPID:applicationPID];
+    [applicationStateMonitor invalidate];
+    return applicationState != BKSApplicationStateBackgroundRunning && applicationState != BKSApplicationStateBackgroundTaskSuspended;
 }
 
 bool PageClientImpl::isViewInWindow()
@@ -184,12 +219,19 @@ void PageClientImpl::didCreateContextForVisibilityPropagation(LayerHostingContex
 {
     [m_contentView _processDidCreateContextForVisibilityPropagation];
 }
+
+void PageClientImpl::didCreateContextInGPUProcessForVisibilityPropagation(LayerHostingContextID)
+{
+    [m_contentView _gpuProcessDidCreateContextForVisibilityPropagation];
+}
 #endif
 
-void PageClientImpl::pageClosed()
+#if ENABLE(GPU_PROCESS)
+void PageClientImpl::gpuProcessCrashed()
 {
-    notImplemented();
+    [m_contentView _gpuProcessCrashed];
 }
+#endif
 
 void PageClientImpl::preferencesDidChange()
 {
@@ -211,9 +253,10 @@ void PageClientImpl::didCompleteSyntheticClick()
     [m_contentView _didCompleteSyntheticClick];
 }
 
-void PageClientImpl::decidePolicyForGeolocationPermissionRequest(WebFrameProxy& frame, API::SecurityOrigin& origin, Function<void(bool)>& completionHandler)
+void PageClientImpl::decidePolicyForGeolocationPermissionRequest(WebFrameProxy& frame, const FrameInfoData& frameInfo, Function<void(bool)>& completionHandler)
 {
-    [[wrapper(m_webView.get()->_page->process().processPool()) _geolocationProvider] decidePolicyForGeolocationRequestFromOrigin:origin.securityOrigin() frame:frame completionHandler:std::exchange(completionHandler, nullptr) view:m_webView.get().get()];
+    auto origin = API::SecurityOrigin::create(frameInfo.securityOrigin.protocol, frameInfo.securityOrigin.host, frameInfo.securityOrigin.port);
+    [[wrapper(m_webView.get()->_page->process().processPool()) _geolocationProvider] decidePolicyForGeolocationRequestFromOrigin:FrameInfoData { frameInfo } completionHandler:std::exchange(completionHandler, nullptr) view:m_webView.get().get()];
 }
 
 void PageClientImpl::didStartProvisionalLoadForMainFrame()
@@ -486,7 +529,7 @@ void PageClientImpl::updateAcceleratedCompositingMode(const LayerTreeContext&)
 void PageClientImpl::didPerformDictionaryLookup(const DictionaryPopupInfo& dictionaryPopupInfo)
 {
 #if ENABLE(REVEAL)
-    DictionaryLookup::showPopup(dictionaryPopupInfo, m_contentView, nullptr);
+    DictionaryLookup::showPopup(dictionaryPopupInfo, m_contentView.getAutoreleased(), nullptr);
 #else
     UNUSED_PARAM(dictionaryPopupInfo);
 #endif // ENABLE(REVEAL)
@@ -513,7 +556,7 @@ CALayer *PageClientImpl::acceleratedCompositingRootLayer() const
     return nullptr;
 }
 
-RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot()
+RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot(Optional<WebCore::IntRect>&&)
 {
     return [m_webView _takeViewSnapshot];
 }
@@ -564,8 +607,9 @@ void PageClientImpl::elementDidFocus(const FocusedElementInformation& nodeInform
 
     NSObject <NSSecureCoding> *userObject = nil;
     if (API::Data* data = static_cast<API::Data*>(userData)) {
-        auto nsData = adoptNS([[NSData alloc] initWithBytesNoCopy:const_cast<void*>(static_cast<const void*>(data->bytes())) length:data->size() freeWhenDone:NO]);
-        auto unarchiver = secureUnarchiverFromData(nsData.get());
+        auto nsData = adoptNS([[NSData alloc] initWithBytesNoCopy:const_cast<unsigned char*>(data->bytes()) length:data->size() freeWhenDone:NO]);
+        auto unarchiver = adoptNS([[NSKeyedUnarchiver alloc] initForReadingFromData:nsData.get() error:nullptr]);
+        unarchiver.get().decodingFailurePolicy = NSDecodingFailurePolicyRaiseException;
         @try {
             if (auto* allowedClasses = m_webView.get()->_page->process().processPool().allowedClassesForParameterCoding())
                 userObject = [unarchiver decodeObjectOfClasses:allowedClasses forKey:@"userObject"];
@@ -599,9 +643,9 @@ void PageClientImpl::focusedElementDidChangeInputMode(WebCore::InputMode mode)
     [m_contentView _didUpdateInputMode:mode];
 }
 
-void PageClientImpl::didReceiveEditorStateUpdateAfterFocus()
+void PageClientImpl::didUpdateEditorState()
 {
-    [m_contentView _didReceiveEditorStateUpdateAfterFocus];
+    [m_contentView _didUpdateEditorState];
 }
 
 void PageClientImpl::showPlaybackTargetPicker(bool hasVideo, const IntRect& elementRect, WebCore::RouteSharingPolicy policy, const String& contextUID)
@@ -812,7 +856,7 @@ WebCore::UserInterfaceLayoutDirection PageClientImpl::userInterfaceLayoutDirecti
 
 Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& message, const ValidationBubble::Settings& settings)
 {
-    return ValidationBubble::create(m_contentView, message, settings);
+    return ValidationBubble::create(m_contentView.getAutoreleased(), message, settings);
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -825,7 +869,7 @@ RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy*, const We
 #if ENABLE(DATALIST_ELEMENT)
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy& page)
 {
-    return WebDataListSuggestionsDropdownIOS::create(page, m_contentView);
+    return WebDataListSuggestionsDropdownIOS::create(page, m_contentView.getAutoreleased());
 }
 #endif
 
@@ -893,11 +937,10 @@ void PageClientImpl::requestDOMPasteAccess(const WebCore::IntRect& elementRect, 
 #if HAVE(PENCILKIT)
 RetainPtr<WKDrawingView> PageClientImpl::createDrawingView(WebCore::GraphicsLayer::EmbeddedViewID embeddedViewID)
 {
-    return adoptNS([[WKDrawingView alloc] initWithEmbeddedViewID:embeddedViewID contentView:m_contentView]);
+    return adoptNS([[WKDrawingView alloc] initWithEmbeddedViewID:embeddedViewID contentView:m_contentView.getAutoreleased()]);
 }
 #endif
 
-#if ENABLE(POINTER_EVENTS)
 void PageClientImpl::cancelPointersForGestureRecognizer(UIGestureRecognizer* gestureRecognizer)
 {
     [m_contentView cancelPointersForGestureRecognizer:gestureRecognizer];
@@ -907,12 +950,20 @@ WTF::Optional<unsigned> PageClientImpl::activeTouchIdentifierForGestureRecognize
 {
     return [m_contentView activeTouchIdentifierForGestureRecognizer:gestureRecognizer];
 }
-#endif
 
 void PageClientImpl::handleAutocorrectionContext(const WebAutocorrectionContext& context)
 {
     [m_contentView _handleAutocorrectionContext:context];
 }
+
+#if USE(DICTATION_ALTERNATIVES)
+
+void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect&, uint64_t)
+{
+    notImplemented();
+}
+
+#endif
 
 } // namespace WebKit
 

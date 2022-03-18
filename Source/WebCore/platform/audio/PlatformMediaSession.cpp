@@ -30,6 +30,7 @@
 #include "HTMLMediaElement.h"
 #include "Logging.h"
 #include "MediaPlayer.h"
+#include "NowPlayingInfo.h"
 #include "PlatformMediaSessionManager.h"
 
 namespace WebCore {
@@ -107,28 +108,29 @@ String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType
 
 #endif
 
-std::unique_ptr<PlatformMediaSession> PlatformMediaSession::create(PlatformMediaSessionClient& client)
+std::unique_ptr<PlatformMediaSession> PlatformMediaSession::create(PlatformMediaSessionManager& manager, PlatformMediaSessionClient& client)
 {
-    return makeUnique<PlatformMediaSession>(client);
+    return std::unique_ptr<PlatformMediaSession>(new PlatformMediaSession(manager, client));
 }
 
-PlatformMediaSession::PlatformMediaSession(PlatformMediaSessionClient& client)
-    : m_client(client)
+PlatformMediaSession::PlatformMediaSession(PlatformMediaSessionManager& manager, PlatformMediaSessionClient& client)
+    : m_manager(makeWeakPtr(manager))
+    , m_client(client)
     , m_state(Idle)
     , m_stateToRestore(Idle)
     , m_notifyingClient(false)
 #if !RELEASE_LOG_DISABLED
-    , m_logger(client.hostingDocument()->logger())
+    , m_logger(client.logger())
     , m_logIdentifier(uniqueLogIdentifier())
 #endif
 {
-    ASSERT(m_client.mediaType() >= None && m_client.mediaType() <= MediaStreamCapturingAudio);
-    PlatformMediaSessionManager::sharedManager().addSession(*this);
+    manager.addSession(*this);
 }
 
 PlatformMediaSession::~PlatformMediaSession()
 {
-    PlatformMediaSessionManager::sharedManager().removeSession(*this);
+    if (m_manager)
+        m_manager->removeSession(*this);
 }
 
 void PlatformMediaSession::setState(State state)
@@ -140,7 +142,7 @@ void PlatformMediaSession::setState(State state)
     m_state = state;
     if (m_state == State::Playing)
         m_hasPlayedSinceLastInterruption = true;
-    PlatformMediaSessionManager::sharedManager().sessionStateChanged(*this);
+    m_manager->sessionStateChanged(*this);
 }
 
 void PlatformMediaSession::beginInterruption(InterruptionType type)
@@ -214,7 +216,7 @@ bool PlatformMediaSession::clientWillBeginPlayback()
 
     INFO_LOG(LOGIDENTIFIER, "state = ", m_state);
 
-    if (!PlatformMediaSessionManager::sharedManager().sessionWillBeginPlayback(*this)) {
+    if (!m_manager->sessionWillBeginPlayback(*this)) {
         if (state() == Interrupted)
             m_stateToRestore = Playing;
         return false;
@@ -224,7 +226,7 @@ bool PlatformMediaSession::clientWillBeginPlayback()
     return true;
 }
 
-bool PlatformMediaSession::clientWillPausePlayback()
+bool PlatformMediaSession::processClientWillPausePlayback(DelayCallingUpdateNowPlaying shouldDelayCallingUpdateNowPlaying)
 {
     if (m_notifyingClient)
         return true;
@@ -237,8 +239,18 @@ bool PlatformMediaSession::clientWillPausePlayback()
     }
     
     setState(Paused);
-    PlatformMediaSessionManager::sharedManager().sessionWillEndPlayback(*this);
+    m_manager->sessionWillEndPlayback(*this, shouldDelayCallingUpdateNowPlaying);
     return true;
+}
+
+bool PlatformMediaSession::clientWillPausePlayback()
+{
+    return processClientWillPausePlayback(DelayCallingUpdateNowPlaying::No);
+}
+
+void PlatformMediaSession::clientWillBeDOMSuspended()
+{
+    processClientWillPausePlayback(DelayCallingUpdateNowPlaying::Yes);
 }
 
 void PlatformMediaSession::pauseSession()
@@ -251,7 +263,7 @@ void PlatformMediaSession::stopSession()
 {
     INFO_LOG(LOGIDENTIFIER);
     m_client.suspendPlayback();
-    PlatformMediaSessionManager::sharedManager().removeSession(*this);
+    m_manager->removeSession(*this);
 }
 
 PlatformMediaSession::MediaType PlatformMediaSession::mediaType() const
@@ -264,33 +276,6 @@ PlatformMediaSession::MediaType PlatformMediaSession::presentationType() const
     return m_client.presentationType();
 }
 
-PlatformMediaSession::CharacteristicsFlags PlatformMediaSession::characteristics() const
-{
-    return m_client.characteristics();
-}
-
-#if ENABLE(VIDEO)
-uint64_t PlatformMediaSession::uniqueIdentifier() const
-{
-    return m_client.mediaSessionUniqueIdentifier();
-}
-
-String PlatformMediaSession::title() const
-{
-    return m_client.mediaSessionTitle();
-}
-
-double PlatformMediaSession::duration() const
-{
-    return m_client.mediaSessionDuration();
-}
-
-double PlatformMediaSession::currentTime() const
-{
-    return m_client.mediaSessionCurrentTime();
-}
-#endif
-    
 bool PlatformMediaSession::canReceiveRemoteControlCommands() const
 {
     return m_client.canReceiveRemoteControlCommands();
@@ -306,11 +291,6 @@ void PlatformMediaSession::didReceiveRemoteControlCommand(RemoteControlCommandTy
 bool PlatformMediaSession::supportsSeeking() const
 {
     return m_client.supportsSeeking();
-}
-
-String PlatformMediaSession::sourceApplicationIdentifier() const
-{
-    return m_client.sourceApplicationIdentifier();
 }
 
 bool PlatformMediaSession::isSuspended() const
@@ -333,7 +313,7 @@ void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWirel
     // Save and restore the interruption count so it doesn't get out of sync if beginInterruption is called because
     // if we in the background.
     int interruptionCount = m_interruptionCount;
-    PlatformMediaSessionManager::sharedManager().sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
+    m_manager->sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
     m_interruptionCount = interruptionCount;
 }
 
@@ -344,7 +324,7 @@ PlatformMediaSession::DisplayType PlatformMediaSession::displayType() const
 
 bool PlatformMediaSession::activeAudioSessionRequired() const
 {
-    if (mediaType() == PlatformMediaSession::None)
+    if (mediaType() == PlatformMediaSession::MediaType::None)
         return false;
     if (state() != PlatformMediaSession::State::Playing)
         return false;
@@ -358,34 +338,12 @@ bool PlatformMediaSession::canProduceAudio() const
 
 void PlatformMediaSession::canProduceAudioChanged()
 {
-    PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
+    m_manager->sessionCanProduceAudioChanged();
 }
-
-#if ENABLE(VIDEO)
-uint64_t PlatformMediaSessionClient::mediaSessionUniqueIdentifier() const
-{
-    return 0;
-}
-
-String PlatformMediaSessionClient::mediaSessionTitle() const
-{
-    return String();
-}
-
-double PlatformMediaSessionClient::mediaSessionDuration() const
-{
-    return MediaPlayer::invalidTime();
-}
-
-double PlatformMediaSessionClient::mediaSessionCurrentTime() const
-{
-    return MediaPlayer::invalidTime();
-}
-#endif
 
 void PlatformMediaSession::clientCharacteristicsChanged()
 {
-    PlatformMediaSessionManager::sharedManager().clientCharacteristicsChanged(*this);
+    m_manager->clientCharacteristicsChanged(*this);
 }
 
 bool PlatformMediaSession::canPlayConcurrently(const PlatformMediaSession& otherSession) const
@@ -396,6 +354,16 @@ bool PlatformMediaSession::canPlayConcurrently(const PlatformMediaSession& other
 bool PlatformMediaSession::shouldOverridePauseDuringRouteChange() const
 {
     return m_client.shouldOverridePauseDuringRouteChange();
+}
+
+PlatformMediaSessionManager& PlatformMediaSession::manager()
+{
+    return *m_manager;
+}
+
+Optional<NowPlayingInfo> PlatformMediaSession::nowPlayingInfo() const
+{
+    return { };
 }
 
 #if !RELEASE_LOG_DISABLED

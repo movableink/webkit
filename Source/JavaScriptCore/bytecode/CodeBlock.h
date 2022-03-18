@@ -30,7 +30,6 @@
 #pragma once
 
 #include "ArrayProfile.h"
-#include "ByValInfo.h"
 #include "BytecodeConventions.h"
 #include "CallLinkInfo.h"
 #include "CodeBlockHash.h"
@@ -95,6 +94,9 @@ class MetadataTable;
 class PCToCodeOriginMap;
 class RegisterAtOffsetList;
 class StructureStubInfo;
+struct ByValInfo;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
 
 enum class AccessType : int8_t;
 
@@ -256,6 +258,11 @@ public:
 
     Optional<BytecodeIndex> bytecodeIndexFromCallSiteIndex(CallSiteIndex);
 
+    // Because we might throw out baseline JIT code and all its baseline JIT data (m_jitData),
+    // you need to be careful about the lifetime of when you use the return value of this function.
+    // The return value may have raw pointers into this data structure that gets thrown away.
+    // Specifically, you need to ensure that no GC can be finalized (typically that means no
+    // allocations) between calling this and the last use of it.
     void getICStatusMap(const ConcurrentJSLocker&, ICStatusMap& result);
     void getICStatusMap(ICStatusMap& result);
     
@@ -272,7 +279,7 @@ public:
         Bag<CallLinkInfo> m_callLinkInfos;
         SentinelLinkedList<CallLinkInfo, PackedRawSentinelNode<CallLinkInfo>> m_incomingCalls;
         SentinelLinkedList<PolymorphicCallNode, PackedRawSentinelNode<PolymorphicCallNode>> m_incomingPolymorphicCalls;
-        SegmentedVector<RareCaseProfile, 8> m_rareCaseProfiles;
+        RefCountedArray<RareCaseProfile> m_rareCaseProfiles;
         std::unique_ptr<PCToCodeOriginMap> m_pcToCodeOriginMap;
         std::unique_ptr<RegisterAtOffsetList> m_calleeSaveRegisters;
         JITCodeMap m_jitCodeMap;
@@ -335,7 +342,7 @@ public:
     void setCalleeSaveRegisters(RegisterSet);
     void setCalleeSaveRegisters(std::unique_ptr<RegisterAtOffsetList>);
 
-    RareCaseProfile* addRareCaseProfile(BytecodeIndex);
+    void setRareCaseProfiles(RefCountedArray<RareCaseProfile>&&);
     RareCaseProfile* rareCaseProfileForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
     unsigned rareCaseProfileCountForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
 
@@ -410,7 +417,6 @@ public:
     
     void setJITCode(Ref<JITCode>&& code)
     {
-        ASSERT(heap()->isDeferred());
         if (!code->isShared())
             heap()->reportExtraMemoryAllocated(code->size());
 
@@ -442,6 +448,8 @@ public:
     DFG::CapabilityLevel capabilityLevel();
     DFG::CapabilityLevel capabilityLevelState() { return static_cast<DFG::CapabilityLevel>(m_capabilityLevelState); }
 
+    CodeBlock* optimizedReplacement(JITType typeToReplace);
+    CodeBlock* optimizedReplacement(); // the typeToReplace is my JITType
     bool hasOptimizedReplacement(JITType typeToReplace);
     bool hasOptimizedReplacement(); // the typeToReplace is my JITType
 #endif
@@ -607,7 +615,6 @@ public:
     // Jump Tables
 
     size_t numberOfSwitchJumpTables() const { return m_rareData ? m_rareData->m_switchJumpTables.size() : 0; }
-    SimpleJumpTable& addSwitchJumpTable() { createRareDataIfNecessary(); m_rareData->m_switchJumpTables.append(SimpleJumpTable()); return m_rareData->m_switchJumpTables.last(); }
     SimpleJumpTable& switchJumpTable(int tableIndex) { RELEASE_ASSERT(m_rareData); return m_rareData->m_switchJumpTables[tableIndex]; }
     void clearSwitchJumpTables()
     {
@@ -624,21 +631,20 @@ public:
 #endif
 
     size_t numberOfStringSwitchJumpTables() const { return m_rareData ? m_rareData->m_stringSwitchJumpTables.size() : 0; }
-    StringJumpTable& addStringSwitchJumpTable() { createRareDataIfNecessary(); m_rareData->m_stringSwitchJumpTables.append(StringJumpTable()); return m_rareData->m_stringSwitchJumpTables.last(); }
     StringJumpTable& stringSwitchJumpTable(int tableIndex) { RELEASE_ASSERT(m_rareData); return m_rareData->m_stringSwitchJumpTables[tableIndex]; }
 
     DirectEvalCodeCache& directEvalCodeCache() { createRareDataIfNecessary(); return m_rareData->m_directEvalCodeCache; }
 
-    enum ShrinkMode {
+    enum class ShrinkMode {
         // Shrink prior to generating machine code that may point directly into vectors.
         EarlyShrink,
 
         // Shrink after generating machine code, and after possibly creating new vectors
         // and appending to others. At this time it is not safe to shrink certain vectors
         // because we would have generated machine code that references them directly.
-        LateShrink
+        LateShrink,
     };
-    void shrinkToFit(ShrinkMode);
+    void shrinkToFit(const ConcurrentJSLocker&, ShrinkMode);
 
     // Functions for controlling when JITting kicks in, in a mixed mode
     // execution world.
@@ -861,13 +867,16 @@ public:
     bool m_didFailFTLCompilation : 1;
     bool m_hasBeenCompiledWithFTL : 1;
 
+    bool m_hasLinkedOSRExit : 1;
+    bool m_isEligibleForLLIntDowngrade : 1;
+
     // Internal methods for use by validation code. It would be private if it wasn't
     // for the fact that we use it from anonymous namespaces.
     void beginValidationDidFail();
     NO_RETURN_DUE_TO_CRASH void endValidationDidFail();
 
     struct RareData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
     public:
         Vector<HandlerInfo> m_exceptionHandlers;
 
@@ -938,9 +947,9 @@ private:
 
     void updateAllValueProfilePredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
-    void setConstantIdentifierSetRegisters(VM&, const Vector<ConstantIdentifierSetEntry>& constants);
+    void setConstantIdentifierSetRegisters(VM&, const RefCountedArray<ConstantIdentifierSetEntry>& constants);
 
-    void setConstantRegisters(const Vector<WriteBarrier<Unknown>>& constants, const Vector<SourceCodeRepresentation>& constantsSourceCodeRepresentation, ScriptExecutable* topLevelExecutable);
+    void setConstantRegisters(const RefCountedArray<WriteBarrier<Unknown>>& constants, const RefCountedArray<SourceCodeRepresentation>& constantsSourceCodeRepresentation, ScriptExecutable* topLevelExecutable);
 
     void replaceConstant(VirtualRegister reg, JSValue value)
     {
@@ -1049,16 +1058,23 @@ template <typename ExecutableType>
 Exception* ScriptExecutable::prepareForExecution(VM& vm, JSFunction* function, JSScope* scope, CodeSpecializationKind kind, CodeBlock*& resultCodeBlock)
 {
     if (hasJITCodeFor(kind)) {
-        if (std::is_same<ExecutableType, EvalExecutable>::value)
-            resultCodeBlock = jsCast<CodeBlock*>(jsCast<EvalExecutable*>(this)->codeBlock());
-        else if (std::is_same<ExecutableType, ProgramExecutable>::value)
-            resultCodeBlock = jsCast<CodeBlock*>(jsCast<ProgramExecutable*>(this)->codeBlock());
-        else if (std::is_same<ExecutableType, ModuleProgramExecutable>::value)
-            resultCodeBlock = jsCast<CodeBlock*>(jsCast<ModuleProgramExecutable*>(this)->codeBlock());
-        else if (std::is_same<ExecutableType, FunctionExecutable>::value)
-            resultCodeBlock = jsCast<CodeBlock*>(jsCast<FunctionExecutable*>(this)->codeBlockFor(kind));
-        else
-            RELEASE_ASSERT_NOT_REACHED();
+        if constexpr (std::is_same<ExecutableType, EvalExecutable>::value) {
+            resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
+            return nullptr;
+        }
+        if constexpr (std::is_same<ExecutableType, ProgramExecutable>::value) {
+            resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
+            return nullptr;
+        }
+        if constexpr (std::is_same<ExecutableType, ModuleProgramExecutable>::value) {
+            resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
+            return nullptr;
+        }
+        if constexpr (std::is_same<ExecutableType, FunctionExecutable>::value) {
+            resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlockFor(kind));
+            return nullptr;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
     }
     return prepareForExecutionImpl(vm, function, scope, kind, resultCodeBlock);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,8 @@ class PolymorphicAccess;
 class StructureStubInfo;
 class WatchpointsOnStructureStubInfo;
 class ScratchRegisterAllocator;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PolymorphicAccess);
 
 class AccessGenerationResult {
 public:
@@ -129,7 +131,7 @@ private:
 
 class PolymorphicAccess {
     WTF_MAKE_NONCOPYABLE(PolymorphicAccess);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PolymorphicAccess);
 public:
     PolymorphicAccess();
     ~PolymorphicAccess();
@@ -148,6 +150,8 @@ public:
     unsigned size() const { return m_list.size(); }
     const AccessCase& at(unsigned i) const { return *m_list[i]; }
     const AccessCase& operator[](unsigned i) const { return *m_list[i]; }
+
+    void visitAggregate(SlotVisitor&);
 
     // If this returns false then we are requesting a reset of the owning StructureStubInfo.
     bool visitWeak(VM&) const;

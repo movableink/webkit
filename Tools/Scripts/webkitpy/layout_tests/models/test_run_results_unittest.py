@@ -147,17 +147,22 @@ class InterpretTestFailuresTest(unittest.TestCase):
 
 class SummarizedResultsTest(unittest.TestCase):
     def setUp(self):
-        host = MockHost(initialize_scm_by_default=False)
+        host = MockHost(initialize_scm_by_default=False, create_stub_repository_files=True)
         self.port = host.port_factory.get(port_name='test', options=MockOptions(http=True, pixel_tests=False, world_leaks=False))
 
     def test_no_svn_revision(self):
         summary = summarized_results(self.port, expected=False, passing=False, flaky=False)
         self.assertNotIn('revision', summary)
 
-    def test_svn_revision(self):
+    def test_svn_revision_exists(self):
         self.port._options.builder_name = 'dummy builder'
         summary = summarized_results(self.port, expected=False, passing=False, flaky=False)
         self.assertNotEquals(summary['revision'], '')
+
+    def test_svn_revision(self):
+        self.port._options.builder_name = 'dummy builder'
+        summary = summarized_results(self.port, expected=False, passing=False, flaky=False)
+        self.assertEquals(summary['revision'], '2738499')
 
     def test_summarized_results_wontfix(self):
         self.port._options.builder_name = 'dummy builder'

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,7 +90,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     \
     v(Bool, reportMustSucceedExecutableAllocations, false, Normal, nullptr) \
     \
-    v(Unsigned, maxPerThreadStackUsage, 4 * MB, Normal, "Max allowed stack usage by the VM") \
+    v(Unsigned, maxPerThreadStackUsage, 5 * MB, Normal, "Max allowed stack usage by the VM") \
     v(Unsigned, softReservedZoneSize, 128 * KB, Normal, "A buffer greater than reservedZoneSize that reserves space for stringifying exceptions.") \
     v(Unsigned, reservedZoneSize, 64 * KB, Normal, "The amount of stack space we guarantee to our clients (and to interal VM code that does not call out to clients).") \
     \
@@ -119,6 +119,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Unsigned, shadowChickenLogSize, 1000, Normal, nullptr) \
     v(Unsigned, shadowChickenMaxTailDeletedFramesSize, 128, Normal, nullptr) \
     \
+    v(Bool, useOSLog, false, Normal, "Log dataLog()s to os_log instead of stderr") \
     /* dumpDisassembly implies dumpDFGDisassembly. */ \
     v(Bool, dumpDisassembly, false, Normal, "dumps disassembly of all JIT compiled code upon compilation") \
     v(Bool, asyncDisassembly, false, Normal, nullptr) \
@@ -128,7 +129,6 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, dumpWasmDisassembly, false, Normal, "dumps disassembly of all Wasm code upon compilation") \
     v(Bool, dumpBBQDisassembly, false, Normal, "dumps disassembly of BBQ Wasm code upon compilation") \
     v(Bool, dumpOMGDisassembly, false, Normal, "dumps disassembly of OMG Wasm code upon compilation") \
-    v(Bool, dumpAllDFGNodes, false, Normal, nullptr) \
     v(Bool, logJITCodeForPerf, false, Configurable, nullptr) \
     v(OptionRange, bytecodeRangeToJITCompile, 0, Normal, "bytecode size range to allow compilation on, e.g. 1:100") \
     v(OptionRange, bytecodeRangeToDFGCompile, 0, Normal, "bytecode size range to allow DFG compilation on, e.g. 1:100") \
@@ -164,6 +164,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, reportDFGCompileTimes, false, Normal, "dumps JS function signature and the time it took to DFG and FTL compile") \
     v(Bool, reportFTLCompileTimes, false, Normal, "dumps JS function signature and the time it took to FTL compile") \
     v(Bool, reportTotalCompileTimes, false, Normal, nullptr) \
+    v(Bool, reportTotalPhaseTimes, false, Normal, "This prints phase times at the end of running script inside jsc.cpp") \
     v(Bool, reportParseTimes, false, Normal, "dumps JS function signature and the time it took to parse") \
     v(Bool, reportBytecodeCompileTimes, false, Normal, "dumps JS function signature and the time it took to bytecode compile") \
     v(Bool, countParseTimes, false, Normal, "counts parse times") \
@@ -215,14 +216,13 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useOSREntryToFTL, true, Normal, nullptr) \
     \
     v(Bool, useFTLJIT, true, Normal, "allows the FTL JIT to be used if true") \
-    v(Bool, useFTLTBAA, true, Normal, nullptr) \
     v(Bool, validateFTLOSRExitLiveness, false, Normal, nullptr) \
     v(Unsigned, defaultB3OptLevel, 2, Normal, nullptr) \
     v(Bool, b3AlwaysFailsBeforeCompile, false, Normal, nullptr) \
     v(Bool, b3AlwaysFailsBeforeLink, false, Normal, nullptr) \
     v(Bool, ftlCrashes, false, Normal, nullptr) /* fool-proof way of checking that you ended up in the FTL. ;-) */\
-    v(Bool, clobberAllRegsInFTLICSlowPath, !ASSERT_DISABLED, Normal, nullptr) \
-    v(Bool, enableJITDebugAssertions, !ASSERT_DISABLED, Normal, nullptr) \
+    v(Bool, clobberAllRegsInFTLICSlowPath, ASSERT_ENABLED, Normal, nullptr) \
+    v(Bool, enableJITDebugAssertions, ASSERT_ENABLED, Normal, nullptr) \
     v(Bool, useAccessInlining, true, Normal, nullptr) \
     v(Unsigned, maxAccessVariantListSize, 8, Normal, nullptr) \
     v(Bool, usePolyvariantDevirtualization, true, Normal, nullptr) \
@@ -348,6 +348,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useGC, true, Normal, nullptr) \
     v(Bool, gcAtEnd, false, Normal, "If true, the jsc CLI will do a GC before exiting") \
     v(Bool, forceGCSlowPaths, false, Normal, "If true, we will force all JIT fast allocations down their slow paths.") \
+    v(Bool, forceDidDeferGCWork, false, Normal, "If true, we will force all DeferGC destructions to perform a GC.") \
     v(Unsigned, gcMaxHeapSize, 0, Normal, nullptr) \
     v(Unsigned, forceRAMSize, 0, Normal, nullptr) \
     v(Bool, recordGCPauseTimes, false, Normal, nullptr) \
@@ -400,6 +401,8 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, usePredictionFileCreatingFuzzerAgent, false, Normal, nullptr) \
     v(Bool, requirePredictionForFileBasedFuzzerAgent, false, Normal, nullptr) \
     v(OptionString, fuzzerPredictionsFile, nullptr, Normal, "file with list of predictions for FileBasedFuzzerAgent") \
+    v(Bool, useNarrowingNumberPredictionFuzzerAgent, false, Normal, nullptr) \
+    v(Bool, useWideningNumberPredictionFuzzerAgent, false, Normal, nullptr) \
     \
     v(Bool, logPhaseTimes, false, Normal, nullptr) \
     v(Double, rareBlockPenalty, 0.001, Normal, nullptr) \
@@ -441,10 +444,6 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     \
     v(Bool, useWebAssembly, true, Normal, "Expose the WebAssembly global object.") \
     \
-    v(Bool, enableSpectreMitigations, true, Restricted, "Enable Spectre mitigations.") \
-    v(Bool, enableSpectreGadgets, false, Restricted, "enable gadgets to test Spectre mitigations.") \
-    v(Bool, zeroStackFrame, false, Normal, "Zero stack frame on entry to a function.") \
-    \
     v(Bool, failToCompileWebAssemblyCode, false, Normal, "If true, no Wasm::Plan will sucessfully compile a function.") \
     v(Size, webAssemblyPartialCompileLimit, 5000, Normal, "Limit on the number of bytes a Wasm::Plan::compile should attempt before checking for other work.") \
     v(Unsigned, webAssemblyBBQAirOptimizationLevel, 0, Normal, "Air Optimization level for BBQ Web Assembly module compilations.") \
@@ -460,7 +459,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Int32, omgTierUpCounterIncrementForLoop, 1, Normal, "The amount the tier up counter is incremented on each loop backedge.") \
     v(Int32, omgTierUpCounterIncrementForEntry, 15, Normal, "The amount the tier up counter is incremented on each function entry.") \
     /* FIXME: enable fast memories on iOS and pre-allocate them. https://bugs.webkit.org/show_bug.cgi?id=170774 */ \
-    v(Bool, useWebAssemblyFastMemory, !isIOS(), Normal, "If true, we will try to use a 32-bit address space with a signal handler to bounds check wasm memory.") \
+    v(Bool, useWebAssemblyFastMemory, OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) >= 48, Normal, "If true, we will try to use a 32-bit address space with a signal handler to bounds check wasm memory.") \
     v(Bool, logWebAssemblyMemory, false, Normal, nullptr) \
     v(Unsigned, webAssemblyFastMemoryRedzonePages, 128, Normal, "WebAssembly fast memories use 4GiB virtual allocations, plus a redzone (counted as multiple of 64KiB WebAssembly pages) at the end to catch reg+imm accesses which exceed 32-bit, anything beyond the redzone is explicitly bounds-checked") \
     v(Bool, crashIfWebAssemblyCantFastMemory, false, Normal, "If true, we will crash if we can't obtain fast memory for wasm.") \
@@ -469,11 +468,17 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useFastTLSForWasmContext, true, Normal, "If true, we will store context in fast TLS. If false, we will pin it to a register.") \
     v(Bool, wasmBBQUsesAir, true, Normal, nullptr) \
     v(Bool, useWasmLLInt, true, Normal, nullptr) \
+    v(Bool, useBBQJIT, true, Normal, "allows the BBQ JIT to be used if true") \
+    v(Bool, useOMGJIT, true, Normal, "allows the OMG JIT to be used if true") \
+    v(Bool, useWasmLLIntPrologueOSR, true, Normal, "allows prologue OSR from Wasm LLInt if true") \
+    v(Bool, useWasmLLIntLoopOSR, true, Normal, "allows loop OSR from Wasm LLInt if true") \
+    v(Bool, useWasmLLIntEpilogueOSR, true, Normal, "allows epilogue OSR from Wasm LLInt if true") \
+    v(OptionRange, wasmFunctionIndexRangeToCompile, 0, Normal, "wasm function index range to allow compilation on, e.g. 1:100") \
     v(Bool, wasmLLIntTiersUpToBBQ, true, Normal, nullptr) \
     v(Size, webAssemblyBBQAirModeThreshold, isIOS() ? (10 * MB) : 0, Normal, "If 0, we always use BBQ Air. If Wasm module code size hits this threshold, we compile Wasm module with B3 BBQ mode.") \
     v(Bool, useWebAssemblyStreamingApi, enableWebAssemblyStreamingApi, Normal, "Allow to run WebAssembly's Streaming API") \
     v(Bool, useEagerWebAssemblyModuleHashing, false, Normal, "Unnamed WebAssembly modules are identified in backtraces through their hash, if available.") \
-    v(Bool, useWebAssemblyReferences, true, Normal, "Allow types from the wasm references spec.") \
+    v(Bool, useWebAssemblyReferences, false, Normal, "Allow types from the wasm references spec.") \
     v(Bool, useWebAssemblyMultiValues, true, Normal, "Allow types from the wasm mulit-values spec.") \
     v(Bool, useWeakRefs, false, Normal, "Expose the WeakRef constructor.") \
     v(Bool, useBigInt, false, Normal, "If true, we will enable BigInt support.") \
@@ -494,6 +499,7 @@ constexpr bool enableWebAssemblyStreamingApi = false;
     v(Bool, useUnlinkedCodeBlockJettisoning, false, Normal, "If true, UnlinkedCodeBlock can be jettisoned.") \
     v(Bool, forceOSRExitToLLInt, false, Normal, "If true, we always exit to the LLInt. If false, we exit to whatever is most convenient.") \
     v(Unsigned, getByValICMaxNumberOfIdentifiers, 4, Normal, "Number of identifiers we see in the LLInt that could cause us to bail on generating an IC for get_by_val.") \
+    v(Bool, usePublicClassFields, true, Normal, "If true, the parser will understand public data fields inside classes.") \
 
 enum OptionEquivalence {
     SameOption,
@@ -506,7 +512,6 @@ enum OptionEquivalence {
     v(showDisassembly, dumpDisassembly, SameOption) \
     v(showDFGDisassembly, dumpDFGDisassembly, SameOption) \
     v(showFTLDisassembly, dumpFTLDisassembly, SameOption) \
-    v(showAllDFGNodes, dumpAllDFGNodes, SameOption) \
     v(alwaysDoFullCollection, useGenerationalGC, InvertedOption) \
     v(enableOSREntryToDFG, useOSREntryToDFG, SameOption) \
     v(enableOSREntryToFTL, useOSREntryToFTL, SameOption) \

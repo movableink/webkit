@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,6 +23,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
+
+#pragma once
 
 #include "APICast.h"
 #include "Error.h"
@@ -371,7 +373,7 @@ bool JSCallbackObject<Parent>::putByIndex(JSCell* cell, JSGlobalObject* globalOb
 }
 
 template <class Parent>
-bool JSCallbackObject<Parent>::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+bool JSCallbackObject<Parent>::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -416,7 +418,7 @@ bool JSCallbackObject<Parent>::deleteProperty(JSCell* cell, JSGlobalObject* glob
         }
     }
 
-    return Parent::deleteProperty(thisObject, globalObject, propertyName);
+    return Parent::deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
 template <class Parent>
@@ -424,7 +426,7 @@ bool JSCallbackObject<Parent>::deletePropertyByIndex(JSCell* cell, JSGlobalObjec
 {
     VM& vm = getVM(globalObject);
     JSCallbackObject* thisObject = jsCast<JSCallbackObject*>(cell);
-    return thisObject->methodTable(vm)->deleteProperty(thisObject, globalObject, Identifier::from(vm, propertyName));
+    return JSCell::deleteProperty(thisObject, globalObject, Identifier::from(vm, propertyName));
 }
 
 template <class Parent>

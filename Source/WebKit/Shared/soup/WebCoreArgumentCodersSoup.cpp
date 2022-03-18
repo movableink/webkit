@@ -31,6 +31,7 @@
 
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/DictionaryPopupInfo.h>
+#include <WebCore/Font.h>
 #include <WebCore/FontAttributes.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/ResourceRequest.h>
@@ -250,6 +251,30 @@ bool ArgumentCoder<DictionaryPopupInfo>::decodePlatformData(Decoder&, Dictionary
     ASSERT_NOT_REACHED();
     return false;
 }
+
+void ArgumentCoder<FontHandle>::encodePlatformData(Encoder&, const FontHandle&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+bool ArgumentCoder<FontHandle>::decodePlatformData(Decoder&, FontHandle&)
+{
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+#if ENABLE(VIDEO)
+void ArgumentCoder<SerializedPlatformDataCueValue>::encodePlatformData(Encoder& encoder, const SerializedPlatformDataCueValue& value)
+{
+    ASSERT_NOT_REACHED();
+}
+
+Optional<SerializedPlatformDataCueValue>  ArgumentCoder<SerializedPlatformDataCueValue>::decodePlatformData(Decoder& decoder, WebCore::SerializedPlatformDataCueValue::PlatformType platformType)
+{
+    ASSERT_NOT_REACHED();
+    return WTF::nullopt;
+}
+#endif
 
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -142,12 +142,20 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             adClickAttributionEnabled = parseBooleanTestHeaderValue(value);
         else if (key == "experimental:ResizeObserverEnabled")
             enableResizeObserver = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:CSSOMViewSmoothScrollingEnabled")
+            enableCSSOMViewSmoothScrolling = parseBooleanTestHeaderValue(value);
         else if (key == "experimental:CoreMathMLEnabled")
             enableCoreMathML = parseBooleanTestHeaderValue(value);
         else if (key == "experimental:RequestIdleCallbackEnabled")
             enableRequestIdleCallback = parseBooleanTestHeaderValue(value);
         else if (key == "experimental:AsyncClipboardAPIEnabled")
             enableAsyncClipboardAPI = parseBooleanTestHeaderValue(value);
+        else if (key == "internal:LayoutFormattingContextIntegrationEnabled")
+            layoutFormattingContextIntegrationEnabled = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:AspectRatioOfImgFromWidthAndHeightEnabled")
+            enableAspectRatioOfImgFromWidthAndHeight = parseBooleanTestHeaderValue(value);
+        else if (key == "allowTopNavigationToDataURLs")
+            allowTopNavigationToDataURLs = parseBooleanTestHeaderValue(value);
         pairStart = pairEnd + 1;
     }
 }

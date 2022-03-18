@@ -242,6 +242,11 @@ void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef m
         if (shouldGC)
             WKBundleGarbageCollectJavaScriptObjects(m_bundle);
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        WKRetainPtr<WKStringRef> axIsolatedModeKey = adoptWK(WKStringCreateWithUTF8CString("AccessibilityIsolatedTree"));
+        m_accessibilityIsolatedTreeMode = WKBooleanGetValue(static_cast<WKBooleanRef>(WKDictionaryGetItemForKey(messageBodyDictionary, axIsolatedModeKey.get())));
+#endif
+        
         WKRetainPtr<WKStringRef> allowedHostsKey = adoptWK(WKStringCreateWithUTF8CString("AllowedHosts"));
         WKTypeRef allowedHostsValue = WKDictionaryGetItemForKey(messageBodyDictionary, allowedHostsKey.get());
         if (allowedHostsValue && WKGetTypeID(allowedHostsValue) == WKArrayGetTypeID()) {
@@ -336,6 +341,11 @@ void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef m
         m_testRunner->statisticsCallDidSetShouldBlockThirdPartyCookiesCallback();
         return;
     }
+    
+    if (WKStringIsEqualToUTF8CString(messageName, "CallDidSetInAppBrowserPrivacyEnabled")) {
+        m_testRunner->callDidSetInAppBrowserPrivacyEnabledCallback();
+        return;
+    }
 
     if (WKStringIsEqualToUTF8CString(messageName, "CallDidSetFirstPartyWebsiteDataRemovalMode")) {
         m_testRunner->statisticsCallDidSetFirstPartyWebsiteDataRemovalModeCallback();
@@ -402,6 +412,32 @@ void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef m
         }
 
         m_testRunner->callDidReceiveAllStorageAccessEntriesCallback(domains);
+        return;
+    }
+    
+    if (WKStringIsEqualToUTF8CString(messageName, "CallDidReceiveLoadedThirdPartyDomains")) {
+        ASSERT(messageBody);
+        ASSERT(WKGetTypeID(messageBody) == WKArrayGetTypeID());
+
+        WKArrayRef domainsArray = static_cast<WKArrayRef>(messageBody);
+        auto size = WKArrayGetSize(domainsArray);
+        Vector<String> domains;
+        domains.reserveInitialCapacity(size);
+        for (size_t i = 0; i < size; ++i) {
+            WKTypeRef item = WKArrayGetItemAtIndex(domainsArray, i);
+            if (item && WKGetTypeID(item) == WKStringGetTypeID())
+                domains.uncheckedAppend(toWTFString(static_cast<WKStringRef>(item)));
+        }
+
+        m_testRunner->callDidReceiveLoadedThirdPartyDomainsCallback(WTFMove(domains));
+        return;
+    }
+    
+    if (WKStringIsEqualToUTF8CString(messageName, "CallDidReceiveWebViewCategory")) {
+        ASSERT(messageBody);
+        ASSERT(WKGetTypeID(messageBody) == WKStringGetTypeID());
+
+        m_testRunner->callDidReceiveWebViewCategoryCallback(toWTFString(static_cast<WKStringRef>(messageBody)));
         return;
     }
 
@@ -526,6 +562,9 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings, BegingTestingMode te
     m_textInputController = TextInputController::create();
 #if HAVE(ACCESSIBILITY)
     m_accessibilityController = AccessibilityController::create();
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    m_accessibilityController->setAccessibilityIsolatedTreeMode(m_accessibilityIsolatedTreeMode);
+#endif
 #endif
 
     // Don't change experimental or internal features here; those should be set in TestController::resetPreferencesToConsistentValues().

@@ -409,6 +409,7 @@ private:
                 case FilterInByIdStatus:
                     break;
 
+                case CheckArrayOrEmpty:
                 case CheckArray:
                     escapeBasedOnArrayMode(node->arrayMode(), node->child1(), node);
                     break;
@@ -755,7 +756,7 @@ private:
                     DFG_ASSERT(
                         m_graph, node, node->child1()->op() == PhantomDirectArguments, node->child1()->op());
                     VirtualRegister reg =
-                        virtualRegisterForArgument(node->capturedArgumentsOffset().offset() + 1) +
+                        virtualRegisterForArgumentIncludingThis(node->capturedArgumentsOffset().offset() + 1) +
                         node->origin.semantic.stackOffset();
                     StackAccessData* data = m_graph.m_stackAccessData.add(reg, FlushedJSValue);
                     node->convertToGetStack(data);
@@ -816,7 +817,7 @@ private:
                         }
                         if (safeToGetStack) {
                             StackAccessData* data;
-                            VirtualRegister arg = virtualRegisterForArgument(index + 1);
+                            VirtualRegister arg = virtualRegisterForArgumentIncludingThis(index + 1);
                             if (inlineCallFrame)
                                 arg += inlineCallFrame->stackOffset;
                             data = m_graph.m_stackAccessData.add(arg, FlushedJSValue);
@@ -1003,7 +1004,7 @@ private:
                                     InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
                                     unsigned frameArgumentCount = static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1);
                                     for (unsigned loadIndex = numberOfArgumentsToSkip; loadIndex < frameArgumentCount; ++loadIndex) {
-                                        VirtualRegister reg = virtualRegisterForArgument(loadIndex + 1) + inlineCallFrame->stackOffset;
+                                        VirtualRegister reg = virtualRegisterForArgumentIncludingThis(loadIndex + 1) + inlineCallFrame->stackOffset;
                                         StackAccessData* data = m_graph.m_stackAccessData.add(reg, FlushedJSValue);
                                         Node* value = insertionSet.insertNode(
                                             nodeIndex, SpecNone, GetStack, node->origin.withExitOK(canExit),
@@ -1060,7 +1061,7 @@ private:
                                     unsigned loadIndex = storeIndex + varargsData->offset;
 
                                     if (loadIndex + 1 < inlineCallFrame->argumentCountIncludingThis) {
-                                        VirtualRegister reg = virtualRegisterForArgument(loadIndex + 1) + inlineCallFrame->stackOffset;
+                                        VirtualRegister reg = virtualRegisterForArgumentIncludingThis(loadIndex + 1) + inlineCallFrame->stackOffset;
                                         StackAccessData* data = m_graph.m_stackAccessData.add(
                                             reg, FlushedJSValue);
                                         
@@ -1216,7 +1217,7 @@ private:
                                 unsigned numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
                                 for (unsigned i = 1 + numberOfArgumentsToSkip; i < inlineCallFrame->argumentCountIncludingThis; ++i) {
                                     StackAccessData* data = m_graph.m_stackAccessData.add(
-                                        virtualRegisterForArgument(i) + inlineCallFrame->stackOffset,
+                                        virtualRegisterForArgumentIncludingThis(i) + inlineCallFrame->stackOffset,
                                         FlushedJSValue);
 
                                     Node* value = insertionSet.insertNode(
@@ -1242,7 +1243,7 @@ private:
                             Vector<Node*> arguments;
                             for (unsigned i = 1 + varargsData->firstVarArgOffset; i < inlineCallFrame->argumentCountIncludingThis; ++i) {
                                 StackAccessData* data = m_graph.m_stackAccessData.add(
-                                    virtualRegisterForArgument(i) + inlineCallFrame->stackOffset,
+                                    virtualRegisterForArgumentIncludingThis(i) + inlineCallFrame->stackOffset,
                                     FlushedJSValue);
                                 
                                 Node* value = insertionSet.insertNode(
@@ -1259,6 +1260,7 @@ private:
                     break;
                 }
                     
+                case CheckArrayOrEmpty:
                 case CheckArray:
                 case GetButterfly:
                 case FilterGetByStatus:

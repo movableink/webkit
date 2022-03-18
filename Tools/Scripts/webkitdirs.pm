@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2007, 2010-2016 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2019 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
@@ -133,6 +133,8 @@ our @EXPORT_OK;
 
 my $architecture;
 my $asanIsEnabled;
+my $forceOptimizationLevel;
+my $coverageIsEnabled;
 my $ltoMode;
 my $numberOfCPUs;
 my $maxCPULoad;
@@ -421,6 +423,30 @@ sub determineASanIsEnabled
         close ASAN;
         chomp $asanConfigurationValue;
         $asanIsEnabled = 1 if $asanConfigurationValue eq "YES";
+    }
+}
+
+sub determineForceOptimizationLevel
+{
+    return if defined $forceOptimizationLevel;
+    determineBaseProductDir();
+
+    if (open ForceOptimizationLevel, "$baseProductDir/ForceOptimizationLevel") {
+        $forceOptimizationLevel = <ForceOptimizationLevel>;
+        close ForceOptimizationLevel;
+        chomp $forceOptimizationLevel;
+    }
+}
+
+sub determineCoverageIsEnabled
+{
+    return if defined $coverageIsEnabled;
+    determineBaseProductDir();
+
+    if (open Coverage, "$baseProductDir/Coverage") {
+        $coverageIsEnabled = <Coverage>;
+        close Coverage;
+        chomp $coverageIsEnabled;
     }
 }
 
@@ -809,6 +835,12 @@ sub asanIsEnabled()
     return $asanIsEnabled;
 }
 
+sub forceOptimizationLevel()
+{
+    determineForceOptimizationLevel();
+    return $forceOptimizationLevel;
+}
+
 sub ltoMode()
 {
     determineLTOMode();
@@ -857,6 +889,8 @@ sub XcodeOptions
     determineConfiguration();
     determineArchitecture();
     determineASanIsEnabled();
+    determineForceOptimizationLevel();
+    determineCoverageIsEnabled();
     determineLTOMode();
     determineXcodeSDK();
 
@@ -865,11 +899,21 @@ sub XcodeOptions
     push @options, "-ShowBuildOperationDuration=YES";
     push @options, ("-configuration", $configuration);
     push @options, ("-xcconfig", sourceDir() . "/Tools/asan/asan.xcconfig", "ASAN_IGNORE=" . sourceDir() . "/Tools/asan/webkit-asan-ignore.txt") if $asanIsEnabled;
+    push @options, ("-xcconfig", sourceDir() . "/Tools/coverage/coverage.xcconfig") if $coverageIsEnabled;
+    push @options, ("GCC_OPTIMIZATION_LEVEL=$forceOptimizationLevel") if $forceOptimizationLevel;
     push @options, "WK_LTO_MODE=$ltoMode" if $ltoMode;
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $architecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
-    if (willUseIOSDeviceSDK()) {
+
+    # When this environment variable is set Tools/Scripts/check-for-weak-vtables-and-externals
+    # treats errors as non-fatal when it encounters missing symbols related to coverage.
+    appendToEnvironmentVariableList("WEBKIT_COVERAGE_BUILD", "1") if $coverageIsEnabled;
+
+    die "cannot enable both ASAN and Coverage at this time\n" if $coverageIsEnabled && $asanIsEnabled;
+
+    if (willUseIOSDeviceSDK() || willUseWatchDeviceSDK() || willUseAppleTVDeviceSDK()) {
+        push @options, "-IDEProvisioningProfileSupportRelaxed=YES";
         push @options, "ENABLE_BITCODE=NO";
         if (hasIOSDevelopmentCertificate()) {
             # FIXME: May match more than one installed development certificate.
@@ -929,6 +973,10 @@ sub determinePassedConfiguration
         $passedConfiguration = "Release";
     } elsif (checkForArgumentAndRemoveFromARGV("--profile") || checkForArgumentAndRemoveFromARGV("--profiling")) {
         $passedConfiguration = "Profiling";
+    } elsif(checkForArgumentAndRemoveFromARGV("--testing")) {
+        $passedConfiguration = "Testing";
+    } elsif(checkForArgumentAndRemoveFromARGV("--release-and-assert") || checkForArgumentAndRemoveFromARGV("--ra")) {
+        $passedConfiguration = "Release+Assert";
     }
 }
 
@@ -1373,12 +1421,12 @@ sub determineWinVersion()
     }
 
     my $versionString = `cmd /c ver`;
-    $versionString =~ /(\d)\.(\d)\.(\d+)/;
+    $versionString =~ /(\d+)\.(\d+)\.(\d+)/;
 
     $winVersion = {
         major => $1,
         minor => $2,
-        build => $3,
+        subminor => $3,
     };
 }
 
@@ -1614,10 +1662,11 @@ sub splitVersionString
     my $versionString = shift;
     my @splitVersion = split(/\./, $versionString);
     @splitVersion >= 2 or die "Invalid version $versionString";
+    my @subMinorVersion = defined($splitVersion[2]) ? split(/-/, $splitVersion[2]) : (0);
     return {
         "major" => $splitVersion[0],
         "minor" => $splitVersion[1],
-        "subminor" => (defined($splitVersion[2]) ? $splitVersion[2] : 0),
+        "subminor" => $subMinorVersion[0],
     };
 }
 
@@ -2761,7 +2810,14 @@ sub iosSimulatorRuntime()
 {
     my $xcodeSDKVersion = xcodeSDKVersion();
     $xcodeSDKVersion =~ s/\./-/;
-    return "com.apple.CoreSimulator.SimRuntime.iOS-$xcodeSDKVersion";
+    my $runtime = "com.apple.CoreSimulator.SimRuntime.iOS-$xcodeSDKVersion";
+
+    open(TEST, "-|", "xcrun --sdk iphonesimulator simctl list 2>&1") or die "Failed to run find simulator runtime";
+    while ( my $line = <TEST> ) {
+        $runtime = $1 if ($line =~ m/.+ - (com.apple.CoreSimulator.SimRuntime.iOS-\S+)/);
+    }
+    close(TEST);
+    return $runtime;
 }
 
 sub findOrCreateSimulatorForIOSDevice($)
@@ -2769,13 +2825,9 @@ sub findOrCreateSimulatorForIOSDevice($)
     my ($simulatorNameSuffix) = @_;
     my $simulatorName;
     my $simulatorDeviceType;
-    if (architecture() eq "x86_64") {
-        $simulatorName = "iPhone SE " . $simulatorNameSuffix;
-        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-SE";
-    } else {
-        $simulatorName = "iPhone 5 " . $simulatorNameSuffix;
-        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-5";
-    }
+    $simulatorName = "iPhone SE " . $simulatorNameSuffix;
+    $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-SE";
+
     my $simulatedDevice = iosSimulatorDeviceByName($simulatorName);
     return $simulatedDevice if $simulatedDevice;
     return createiOSSimulatorDevice($simulatorName, $simulatorDeviceType, iosSimulatorRuntime());

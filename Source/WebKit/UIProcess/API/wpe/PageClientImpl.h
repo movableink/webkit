@@ -41,7 +41,7 @@ enum class DOMPasteAccessResponse : uint8_t;
 
 namespace WebKit {
 
-class ScrollGestureController;
+struct InputMethodState;
 struct UserMessage;
 
 enum class UndoOrRedo : bool;
@@ -62,7 +62,7 @@ public:
 #endif
 
     void sendMessageToWebView(UserMessage&&, CompletionHandler<void(UserMessage&&)>&&);
-    void setInputMethodState(bool enabled);
+    void setInputMethodState(Optional<InputMethodState>&&);
 
 private:
     // PageClient
@@ -157,8 +157,6 @@ private:
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
 #endif
 
-    void didFinishProcessingAllPendingMouseEvents() final { }
-
     IPC::Attachment hostFileDescriptor() final;
     void requestDOMPasteAccess(const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) final;
 
@@ -169,8 +167,6 @@ private:
     void selectionDidChange() override;
 
     WKWPE::View& m_view;
-
-    std::unique_ptr<ScrollGestureController> m_scrollGestureController;
 };
 
 } // namespace WebKit

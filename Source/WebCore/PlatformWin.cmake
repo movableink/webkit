@@ -37,20 +37,20 @@ list(APPEND WebCore_SOURCES
 
     platform/audio/PlatformMediaSessionManager.cpp
 
-    platform/graphics/GraphicsContext3DPrivate.cpp
-
     platform/graphics/egl/GLContextEGL.cpp
 
-    platform/graphics/opengl/Extensions3DOpenGLCommon.cpp
-    platform/graphics/opengl/Extensions3DOpenGLES.cpp
-    platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
-    platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp
+    platform/graphics/opengl/ExtensionsGLOpenGLCommon.cpp
+    platform/graphics/opengl/ExtensionsGLOpenGLES.cpp
+    platform/graphics/opengl/GraphicsContextGLOpenGLCommon.cpp
+    platform/graphics/opengl/GraphicsContextGLOpenGLES.cpp
+    platform/graphics/opengl/GraphicsContextGLOpenGLPrivate.cpp
     platform/graphics/opengl/TemporaryOpenGLSetting.cpp
 
     platform/graphics/opentype/OpenTypeUtilities.cpp
 
     platform/graphics/win/ColorDirect2D.cpp
     platform/graphics/win/ComplexTextControllerDirectWrite.cpp
+    platform/graphics/win/ComplexTextControllerUniscribe.cpp
     platform/graphics/win/DIBPixelData.cpp
     platform/graphics/win/FloatPointDirect2D.cpp
     platform/graphics/win/FloatRectDirect2D.cpp
@@ -69,7 +69,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/win/SimpleFontDataWin.cpp
     platform/graphics/win/TransformationMatrixDirect2D.cpp
     platform/graphics/win/TransformationMatrixWin.cpp
-    platform/graphics/win/UniscribeController.cpp
 
     platform/network/win/DownloadBundleWin.cpp
     platform/network/win/NetworkStateNotifierWin.cpp
@@ -120,7 +119,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/win/DIBPixelData.h
     platform/graphics/win/FullScreenController.h
     platform/graphics/win/FullScreenControllerClient.h
-    platform/graphics/win/ImageBufferDataDirect2D.h
     platform/graphics/win/LocalWindowsContext.h
     platform/graphics/win/MediaPlayerPrivateFullscreenWindow.h
     platform/graphics/win/SharedGDIObject.h

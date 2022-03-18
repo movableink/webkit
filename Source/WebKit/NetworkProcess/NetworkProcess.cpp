@@ -44,7 +44,6 @@
 #include "NetworkProcessCreationParameters.h"
 #include "NetworkProcessPlatformStrategies.h"
 #include "NetworkProcessProxyMessages.h"
-#include "NetworkResourceLoadMap.h"
 #include "NetworkResourceLoader.h"
 #include "NetworkSession.h"
 #include "NetworkSessionCreationParameters.h"
@@ -70,6 +69,7 @@
 #include <WebCore/DNS.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/DiagnosticLoggingClient.h>
+#include <WebCore/HTTPCookieAcceptPolicy.h>
 #include <WebCore/LegacySchemeRegistry.h>
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MIMETypeRegistry.h>
@@ -78,6 +78,7 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/RuntimeApplicationChecks.h>
 #include <WebCore/RuntimeEnabledFeatures.h>
+#include <WebCore/SecurityOrigin.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/StorageQuotaManager.h>
 #include <wtf/Algorithms.h>
@@ -85,6 +86,7 @@
 #include <wtf/OptionSet.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/RunLoop.h>
+#include <wtf/UUID.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/AtomString.h>
 
@@ -214,6 +216,13 @@ bool NetworkProcess::shouldTerminate()
 
 void NetworkProcess::didReceiveMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
+    ASSERT(parentProcessConnection() == &connection);
+    if (parentProcessConnection() != &connection) {
+        WTFLogAlways("Ignored message '%s:%s' because it did not come from the UIProcess (destination: %" PRIu64 ")", decoder.messageReceiverName().toString().data(), decoder.messageName().toString().data(), decoder.destinationID());
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
     if (messageReceiverMap().dispatchMessage(connection, decoder))
         return;
 
@@ -234,6 +243,13 @@ void NetworkProcess::didReceiveMessage(IPC::Connection& connection, IPC::Decoder
 
 void NetworkProcess::didReceiveSyncMessage(IPC::Connection& connection, IPC::Decoder& decoder, std::unique_ptr<IPC::Encoder>& replyEncoder)
 {
+    ASSERT(parentProcessConnection() == &connection);
+    if (parentProcessConnection() != &connection) {
+        WTFLogAlways("Ignored message '%s:%s' because it did not come from the UIProcess (destination: %" PRIu64 ")", decoder.messageReceiverName().toString().data(), decoder.messageName().toString().data(), decoder.destinationID());
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
     if (messageReceiverMap().dispatchSyncMessage(connection, decoder, replyEncoder))
         return;
 
@@ -280,6 +296,11 @@ void NetworkProcess::lowMemoryHandler(Critical critical)
     forEachNetworkSession([](auto& networkSession) {
         networkSession.clearPrefetchCache();
     });
+
+#if ENABLE(SERVICE_WORKER)
+    for (auto& swServer : m_swServers.values())
+        swServer->handleLowMemoryWarning();
+#endif
 }
 
 void NetworkProcess::initializeNetworkProcess(NetworkProcessCreationParameters&& parameters)
@@ -304,7 +325,7 @@ void NetworkProcess::initializeNetworkProcess(NetworkProcessCreationParameters&&
         memoryPressureHandler.install();
     }
 
-    setCacheModel(parameters.cacheModel, parameters.defaultDataStoreParameters.networkSessionParameters.networkCacheDirectory);
+    setCacheModel(parameters.cacheModel);
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     m_isITPDatabaseEnabled = parameters.shouldEnableITPDatabase;
@@ -312,7 +333,7 @@ void NetworkProcess::initializeNetworkProcess(NetworkProcessCreationParameters&&
 
     WebCore::RuntimeEnabledFeatures::sharedFeatures().setAdClickAttributionDebugModeEnabled(parameters.enableAdClickAttributionDebugMode);
 
-    SandboxExtension::consumePermanently(parameters.defaultDataStoreParameters.networkSessionParameters.resourceLoadStatisticsDirectoryExtensionHandle);
+    SandboxExtension::consumePermanently(parameters.defaultDataStoreParameters.networkSessionParameters.resourceLoadStatisticsParameters.directoryExtensionHandle);
 
     auto sessionID = parameters.defaultDataStoreParameters.networkSessionParameters.sessionID;
     setSession(sessionID, NetworkSession::create(*this, WTFMove(parameters.defaultDataStoreParameters.networkSessionParameters)));
@@ -368,11 +389,11 @@ void NetworkProcess::initializeConnection(IPC::Connection* connection)
         supplement->initializeConnection(connection);
 }
 
-void NetworkProcess::createNetworkConnectionToWebProcess(ProcessIdentifier identifier, PAL::SessionID sessionID, CompletionHandler<void(Optional<IPC::Attachment>&&)>&& completionHandler)
+void NetworkProcess::createNetworkConnectionToWebProcess(ProcessIdentifier identifier, PAL::SessionID sessionID, CompletionHandler<void(Optional<IPC::Attachment>&&, HTTPCookieAcceptPolicy)>&& completionHandler)
 {
     auto ipcConnection = createIPCConnectionPair();
     if (!ipcConnection) {
-        completionHandler({ });
+        completionHandler({ }, HTTPCookieAcceptPolicy::Never);
         return;
     }
 
@@ -382,7 +403,8 @@ void NetworkProcess::createNetworkConnectionToWebProcess(ProcessIdentifier ident
     ASSERT(!m_webProcessConnections.contains(identifier));
     m_webProcessConnections.add(identifier, WTFMove(newConnection));
 
-    completionHandler(WTFMove(ipcConnection->second));
+    auto* storage = storageSession(sessionID);
+    completionHandler(WTFMove(ipcConnection->second), storage ? storage->cookieAcceptPolicy() : HTTPCookieAcceptPolicy::Never);
 
     connection.setOnLineState(NetworkStateNotifier::singleton().onLine());
 
@@ -432,8 +454,11 @@ void NetworkProcess::addSessionStorageQuotaManager(PAL::SessionID sessionID, uin
     auto isNewEntry = m_sessionStorageQuotaManagers.ensure(sessionID, [defaultQuota, defaultThirdPartyQuota, &cacheRootPath] {
         return makeUnique<SessionStorageQuotaManager>(cacheRootPath, defaultQuota, defaultThirdPartyQuota);
     }).isNewEntry;
-    if (isNewEntry)
+    if (isNewEntry) {
         SandboxExtension::consumePermanently(cacheRootPathHandle);
+        if (!cacheRootPath.isEmpty())
+            postStorageTask(createCrossThreadTask(*this, &NetworkProcess::ensurePathExists, cacheRootPath));
+    }
 }
 
 void NetworkProcess::removeSessionStorageQuotaManager(PAL::SessionID sessionID)
@@ -489,7 +514,7 @@ void NetworkProcess::ensureSession(const PAL::SessionID& sessionID, bool shouldU
     
 #if PLATFORM(COCOA)
     RetainPtr<CFURLStorageSessionRef> storageSession;
-    RetainPtr<CFStringRef> cfIdentifier = String(identifierBase + ".PrivateBrowsing").createCFString();
+    RetainPtr<CFStringRef> cfIdentifier = makeString(identifierBase, ".PrivateBrowsing.", createCanonicalUUIDString()).createCFString();
     if (sessionID.isEphemeral())
         storageSession = adoptCF(createPrivateStorageSession(cfIdentifier.get()));
     else
@@ -505,6 +530,12 @@ void NetworkProcess::ensureSession(const PAL::SessionID& sessionID, bool shouldU
 #elif USE(CURL) || USE(SOUP)
     addResult.iterator->value = makeUnique<NetworkStorageSession>(sessionID);
 #endif
+}
+
+void NetworkProcess::cookieAcceptPolicyChanged(HTTPCookieAcceptPolicy newPolicy)
+{
+    for (auto& connection : m_webProcessConnections.values())
+        connection->cookieAcceptPolicyChanged(newPolicy);
 }
 
 WebCore::NetworkStorageSession* NetworkProcess::storageSession(const PAL::SessionID& sessionID) const
@@ -543,8 +574,8 @@ void NetworkProcess::setSession(PAL::SessionID sessionID, std::unique_ptr<Networ
 void NetworkProcess::destroySession(PAL::SessionID sessionID)
 {
     ASSERT(RunLoop::isMain());
-#if !USE(SOUP)
-    // Soup based ports destroy the default session right before the process exits to avoid leaking
+#if !USE(SOUP) && !USE(CURL)
+    // cURL and Soup based ports destroy the default session right before the process exits to avoid leaking
     // network resources like the cookies database.
     ASSERT(sessionID != PAL::SessionID::defaultSessionID());
 #endif
@@ -984,11 +1015,11 @@ void NetworkProcess::getAllStorageAccessEntries(PAL::SessionID sessionID, Comple
     }
 }
 
-void NetworkProcess::logFrameNavigation(PAL::SessionID sessionID, const RegistrableDomain& targetDomain, const RegistrableDomain& topFrameDomain, const RegistrableDomain& sourceDomain, bool isRedirect, bool isMainFrame)
+void NetworkProcess::logFrameNavigation(PAL::SessionID sessionID, const RegistrableDomain& targetDomain, const RegistrableDomain& topFrameDomain, const RegistrableDomain& sourceDomain, bool isRedirect, bool isMainFrame, Seconds delayAfterMainFrameDocumentLoad, bool wasPotentiallyInitiatedByUser)
 {
     if (auto* networkSession = this->networkSession(sessionID)) {
         if (auto* resourceLoadStatistics = networkSession->resourceLoadStatistics())
-            resourceLoadStatistics->logFrameNavigation(targetDomain, topFrameDomain, sourceDomain, isRedirect, isMainFrame);
+            resourceLoadStatistics->logFrameNavigation(targetDomain, topFrameDomain, sourceDomain, isRedirect, isMainFrame, delayAfterMainFrameDocumentLoad, wasPotentiallyInitiatedByUser);
     } else
         ASSERT_NOT_REACHED();
 }
@@ -1056,12 +1087,6 @@ void NetworkProcess::hasLocalStorage(PAL::SessionID sessionID, const Registrable
         return;
     }
     completionHandler(false);
-}
-
-void NetworkProcess::removePrevalentDomains(PAL::SessionID sessionID, const Vector<RegistrableDomain>& domains)
-{
-    if (auto* networkStorageSession = storageSession(sessionID))
-        networkStorageSession->removePrevalentDomains(domains);
 }
 
 void NetworkProcess::setCacheMaxAgeCapForPrevalentResources(PAL::SessionID sessionID, Seconds seconds, CompletionHandler<void()>&& completionHandler)
@@ -1177,6 +1202,18 @@ void NetworkProcess::setResourceLoadStatisticsDebugMode(PAL::SessionID sessionID
     }
 }
 
+void NetworkProcess::isResourceLoadStatisticsEphemeral(PAL::SessionID sessionID, CompletionHandler<void(bool)>&& completionHandler) const
+{
+    if (auto* networkSession = this->networkSession(sessionID)) {
+        if (auto* resourceLoadStatistics = networkSession->resourceLoadStatistics()) {
+            completionHandler(resourceLoadStatistics->isEphemeral());
+            return;
+        }
+    } else
+        ASSERT_NOT_REACHED();
+    completionHandler(false);
+}
+
 void NetworkProcess::resetCacheMaxAgeCapForPrevalentResources(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
 {
     if (auto* networkStorageSession = storageSession(sessionID))
@@ -1271,6 +1308,32 @@ void NetworkProcess::setFirstPartyWebsiteDataRemovalModeForTesting(PAL::SessionI
     }
 }
 #endif // ENABLE(RESOURCE_LOAD_STATISTICS)
+
+void NetworkProcess::preconnectTo(PAL::SessionID sessionID, const URL& url, const String& userAgent, WebCore::StoredCredentialsPolicy storedCredentialsPolicy)
+{
+#if ENABLE(SERVER_PRECONNECT)
+#if ENABLE(LEGACY_CUSTOM_PROTOCOL_MANAGER)
+    if (supplement<LegacyCustomProtocolManager>()->supportsScheme(url.protocol().toString()))
+        return;
+#endif
+
+    NetworkLoadParameters parameters;
+    parameters.request = ResourceRequest { url };
+    if (!userAgent.isEmpty()) {
+        // FIXME: we add user-agent to the preconnect request because otherwise the preconnect
+        // gets thrown away by CFNetwork when using an HTTPS proxy (<rdar://problem/59434166>).
+        parameters.request.setHTTPUserAgent(userAgent);
+    }
+    parameters.storedCredentialsPolicy = storedCredentialsPolicy;
+    parameters.shouldPreconnectOnly = PreconnectOnly::Yes;
+
+    new PreconnectTask(*this, sessionID, WTFMove(parameters), [](const WebCore::ResourceError&) { });
+#else
+    UNUSED_PARAM(url);
+    UNUSED_PARAM(userAgent);
+    UNUSED_PARAM(storedCredentialsPolicy);
+#endif
+}
 
 bool NetworkProcess::sessionIsControlledByAutomation(PAL::SessionID sessionID) const
 {
@@ -1412,6 +1475,15 @@ void NetworkProcess::fetchWebsiteData(PAL::SessionID sessionID, OptionSet<Websit
             });
         });
     }
+
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+    if (websiteDataTypes.contains(WebsiteDataType::AlternativeServices)) {
+        if (auto* session = networkSession(sessionID)) {
+            for (auto& origin : session->hostNamesWithAlternativeServices())
+                callbackAggregator->m_websiteData.entries.append({ origin, WebsiteDataType::AlternativeServices, 0 });
+        }
+    }
+#endif
 }
 
 void NetworkProcess::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<WebsiteDataType> websiteDataTypes, WallTime modifiedSince, uint64_t callbackID)
@@ -1481,6 +1553,13 @@ void NetworkProcess::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<Websi
         if (auto* networkSession = this->networkSession(sessionID))
             networkSession->clearAdClickAttribution();
     }
+
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+    if (websiteDataTypes.contains(WebsiteDataType::AlternativeServices)) {
+        if (auto* networkSession = this->networkSession(sessionID))
+            networkSession->clearAlternativeServices(modifiedSince);
+    }
+#endif
 }
 
 static void clearDiskCacheEntries(NetworkCache::Cache* cache, const Vector<SecurityOriginData>& origins, CompletionHandler<void()>&& completionHandler)
@@ -1518,6 +1597,18 @@ void NetworkProcess::deleteWebsiteDataForOrigins(PAL::SessionID sessionID, Optio
     if (websiteDataTypes.contains(WebsiteDataType::HSTSCache)) {
         if (auto* networkStorageSession = storageSession(sessionID))
             deleteHSTSCacheForHostNames(*networkStorageSession, HSTSCacheHostNames);
+    }
+#endif
+
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+    if (websiteDataTypes.contains(WebsiteDataType::AlternativeServices)) {
+        if (auto* networkSession = this->networkSession(sessionID)) {
+            Vector<String> hosts;
+            hosts.reserveInitialCapacity(originDatas.size());
+            for (auto& origin : originDatas)
+                hosts.uncheckedAppend(origin.host);
+            networkSession->deleteAlternativeServicesForHostNames(hosts);
+        }
     }
 #endif
 
@@ -1693,6 +1784,18 @@ void NetworkProcess::deleteWebsiteDataForRegistrableDomains(PAL::SessionID sessi
                 callbackAggregator->m_domains.add(RegistrableDomain::uncheckedCreateFromHost(host));
 
             deleteHSTSCacheForHostNames(*networkStorageSession, hostnamesWithHSTSToDelete);
+        }
+    }
+#endif
+
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+    if (websiteDataTypes.contains(WebsiteDataType::AlternativeServices)) {
+        if (auto* networkSession = this->networkSession(sessionID)) {
+            Vector<String> registrableDomainsToDelete;
+            registrableDomainsToDelete.reserveInitialCapacity(domains.size());
+            for (auto& domain : domains)
+                registrableDomainsToDelete.uncheckedAppend(domain.first.string());
+            networkSession->deleteAlternativeServicesForHostNames(registrableDomainsToDelete);
         }
     }
 #endif
@@ -1995,11 +2098,11 @@ void NetworkProcess::continueDecidePendingDownloadDestination(DownloadID downloa
 
 void NetworkProcess::setCacheModelSynchronouslyForTesting(CacheModel cacheModel, CompletionHandler<void()>&& completionHandler)
 {
-    setCacheModel(cacheModel, { });
+    setCacheModel(cacheModel);
     completionHandler();
 }
 
-void NetworkProcess::setCacheModel(CacheModel cacheModel, String cacheStorageDirectory)
+void NetworkProcess::setCacheModel(CacheModel cacheModel)
 {
     if (m_hasSetCacheModel && (cacheModel == m_cacheModel))
         return;
@@ -2007,28 +2110,9 @@ void NetworkProcess::setCacheModel(CacheModel cacheModel, String cacheStorageDir
     m_hasSetCacheModel = true;
     m_cacheModel = cacheModel;
 
-    unsigned urlCacheMemoryCapacity = 0;
-    uint64_t urlCacheDiskCapacity = 0;
-    uint64_t diskFreeSize = 0;
-
-    // FIXME: Move the cache model to WebsiteDataStore so we don't need to assume the first cache is on the same volume as all caches.
-    forEachNetworkSession([&](auto& session) {
-        if (!cacheStorageDirectory.isNull())
-            return;
+    forEachNetworkSession([](auto& session) {
         if (auto* cache = session.cache())
-            cacheStorageDirectory = cache->storageDirectory();
-    });
-
-    if (FileSystem::getVolumeFreeSpace(cacheStorageDirectory, diskFreeSize)) {
-        // As a fudge factor, use 1000 instead of 1024, in case the reported byte
-        // count doesn't align exactly to a megabyte boundary.
-        diskFreeSize /= KB * 1000;
-        calculateURLCacheSizes(cacheModel, diskFreeSize, urlCacheMemoryCapacity, urlCacheDiskCapacity);
-    }
-
-    forEachNetworkSession([urlCacheDiskCapacity](auto& session) {
-        if (auto* cache = session.cache())
-            cache->setCapacity(urlCacheDiskCapacity);
+            cache->updateCapacity();
     });
 }
 
@@ -2102,6 +2186,15 @@ void NetworkProcess::prepareToSuspend(bool isSuspensionImminent, CompletionHandl
         RELEASE_LOG(ProcessSuspension, "%p - NetworkProcess::prepareToSuspend() Process is ready to suspend", this);
         completionHandler();
     });
+    
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    forEachNetworkSession([&callbackAggregator](auto& networkSession) {
+        if (auto* resourceLoadStatistics = networkSession.resourceLoadStatistics()) {
+            if (!resourceLoadStatistics->isEphemeral())
+                resourceLoadStatistics->suspend([callbackAggregator] { });
+        }
+    });
+#endif
 
     platformPrepareToSuspend([callbackAggregator] { });
     platformSyncAllCookies([callbackAggregator] { });
@@ -2145,6 +2238,15 @@ void NetworkProcess::resume()
     for (auto& connection : m_webProcessConnections.values())
         connection->endSuspension();
 
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    forEachNetworkSession([](auto& networkSession) {
+        if (auto* resourceLoadStatistics = networkSession.resourceLoadStatistics()) {
+            if (!resourceLoadStatistics->isEphemeral())
+                resourceLoadStatistics->resume();
+        }
+    });
+#endif
+    
 #if ENABLE(SERVICE_WORKER)
     for (auto& server : m_swServers.values())
         server->endSuspension();
@@ -2332,12 +2434,6 @@ void NetworkProcess::clearLegacyPrivateBrowsingLocalStorage()
         m_storageManagerSet->deleteLocalStorageModifiedSince(PAL::SessionID::legacyPrivateSessionID(), -WallTime::infinity(), []() { });
 }
 
-void NetworkProcess::updateQuotaBasedOnSpaceUsageForTesting(PAL::SessionID sessionID, const ClientOrigin& origin)
-{
-    auto storageQuotaManager = this->storageQuotaManager(sessionID, origin);
-    storageQuotaManager->resetQuotaUpdatedBasedOnUsageForTesting();
-}
-
 void NetworkProcess::resetQuota(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
 {
     LockHolder locker(m_sessionStorageQuotaManagersLock);
@@ -2347,13 +2443,6 @@ void NetworkProcess::resetQuota(PAL::SessionID sessionID, CompletionHandler<void
     }
     completionHandler();
 }
-
-#if ENABLE(SANDBOX_EXTENSIONS)
-void NetworkProcess::getSandboxExtensionsForBlobFiles(const Vector<String>& filenames, CompletionHandler<void(SandboxExtension::HandleArray&&)>&& completionHandler)
-{
-    parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::GetSandboxExtensionsForBlobFiles(filenames), WTFMove(completionHandler));
-}
-#endif // ENABLE(SANDBOX_EXTENSIONS)
 
 #if ENABLE(SERVICE_WORKER)
 void NetworkProcess::forEachSWServer(const Function<void(SWServer&)>& callback)
@@ -2373,9 +2462,9 @@ SWServer& NetworkProcess::swServerForSession(PAL::SessionID sessionID)
 
         return makeUnique<SWServer>(makeUniqueRef<WebSWOriginStore>(), info.processTerminationDelayEnabled, WTFMove(path), sessionID, [this, sessionID](auto&& jobData, bool shouldRefreshCache, auto&& request, auto&& completionHandler) mutable {
             ServiceWorkerSoftUpdateLoader::start(networkSession(sessionID), WTFMove(jobData), shouldRefreshCache, WTFMove(request), WTFMove(completionHandler));
-        }, [this, sessionID](auto& registrableDomain) {
+        }, [this, sessionID](auto& registrableDomain, auto&& completionHandler) {
             ASSERT(!registrableDomain.isEmpty());
-            parentProcessConnection()->send(Messages::NetworkProcessProxy::EstablishWorkerContextConnectionToNetworkProcess { registrableDomain, sessionID }, 0);
+            parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::EstablishWorkerContextConnectionToNetworkProcess { registrableDomain, sessionID }, WTFMove(completionHandler), 0);
         });
     });
     return *result.iterator->value;
@@ -2571,6 +2660,25 @@ void NetworkProcess::resetServiceWorkerFetchTimeoutForTesting(CompletionHandler<
 {
     m_serviceWorkerFetchTimeout = defaultServiceWorkerFetchTimeout;
     completionHandler();
+}
+
+void NetworkProcess::hasAppBoundSession(PAL::SessionID sessionID, CompletionHandler<void(bool)>&& completionHandler) const
+{
+    bool result = false;
+    if (auto* networkSession = this->networkSession(sessionID))
+        result = networkSession->hasAppBoundSession();
+    completionHandler(result);
+}
+
+void NetworkProcess::setInAppBrowserPrivacyEnabled(PAL::SessionID sessionID, bool enable, CompletionHandler<void()>&& completionHandler)
+{
+    if (auto* networkSession = this->networkSession(sessionID)) {
+        networkSession->setInAppBrowserPrivacyEnabled(enable);
+        completionHandler();
+    } else {
+        ASSERT_NOT_REACHED();
+        completionHandler();
+    }
 }
 
 } // namespace WebKit

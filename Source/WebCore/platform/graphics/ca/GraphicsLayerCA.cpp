@@ -1002,6 +1002,17 @@ void GraphicsLayerCA::setEventRegion(EventRegion&& eventRegion)
     noteLayerPropertyChanged(EventRegionChanged, m_isCommittingChanges ? DontScheduleFlush : ScheduleFlush);
 }
 
+#if ENABLE(SCROLLING_THREAD)
+void GraphicsLayerCA::setScrollingNodeID(ScrollingNodeID nodeID)
+{
+    if (nodeID == m_scrollingNodeID)
+        return;
+
+    GraphicsLayer::setScrollingNodeID(nodeID);
+    noteLayerPropertyChanged(ScrollingNodeChanged);
+}
+#endif
+
 bool GraphicsLayerCA::shouldRepaintOnSizeChange() const
 {
     return drawsContent() && !tiledBacking();
@@ -1075,7 +1086,7 @@ void GraphicsLayerCA::pauseAnimation(const String& animationName, double timeOff
 
 void GraphicsLayerCA::seekAnimation(const String& animationName, double timeOffset)
 {
-    LOG_WITH_STREAM(Animations, stream << "GraphicsLayerCA " << this << " id " << primaryLayerID() << " seekAnimation " << animationName << " (is running " << animationIsRunning(animationName) << ")");
+    LOG_WITH_STREAM(Animations, stream << "GraphicsLayerCA " << this << " id " << primaryLayerID() << " seekAnimation " << animationName << " to " << timeOffset << " (is running " << animationIsRunning(animationName) << ")");
 
     // Call add since if there is already a Remove in there, we don't want to overwrite it with a Pause.
     addProcessingActionForAnimation(animationName, AnimationProcessingAction { Seek, Seconds { timeOffset } });
@@ -1216,8 +1227,15 @@ void GraphicsLayerCA::setContentsToPlatformLayer(PlatformLayer* platformLayer, C
     // PlatformCALayer is using a user data pointer in the raw layer, and
     // the creator of the raw layer is using it for some other purpose.
     // For now we don't support such a case.
-    PlatformCALayer* platformCALayer = PlatformCALayer::platformCALayer(platformLayer);
-    m_contentsLayer = platformLayer ? (platformCALayer ? platformCALayer : createPlatformCALayer(platformLayer, this).ptr()) : nullptr;
+    if (platformLayer) {
+        auto platformCALayer = PlatformCALayer::platformCALayerForLayer(platformLayer);
+        if (platformCALayer)
+            m_contentsLayer = WTFMove(platformCALayer);
+        else
+            m_contentsLayer = createPlatformCALayer(platformLayer, this);
+    } else
+        m_contentsLayer = nullptr;
+
     m_contentsLayerPurpose = platformLayer ? purpose : ContentsLayerPurpose::None;
 
     if (m_contentsClippingLayer && m_contentsLayer)
@@ -1878,6 +1896,11 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
 
     if (m_uncommittedChanges & EventRegionChanged)
         updateEventRegion();
+
+#if ENABLE(SCROLLING_THREAD)
+    if (m_uncommittedChanges & ScrollingNodeChanged)
+        updateScrollingNode();
+#endif
 
     if (m_uncommittedChanges & MaskLayerChanged) {
         updateMaskLayer();
@@ -2734,6 +2757,13 @@ void GraphicsLayerCA::updateEventRegion()
 {
     m_layer->setEventRegion(eventRegion());
 }
+
+#if ENABLE(SCROLLING_THREAD)
+void GraphicsLayerCA::updateScrollingNode()
+{
+    m_layer->setScrollingNodeID(scrollingNodeID());
+}
+#endif
 
 void GraphicsLayerCA::updateMaskLayer()
 {
@@ -4035,8 +4065,7 @@ RefPtr<PlatformCALayer> GraphicsLayerCA::fetchCloneLayers(GraphicsLayer* replica
         replicaState.setBranchType(ReplicaState::ChildBranch);
     }
 
-    if (contentsClippingLayer) {
-        ASSERT(contentsLayer);
+    if (contentsClippingLayer && contentsLayer) {
         contentsClippingLayer->appendSublayer(*contentsLayer);
     }
 
@@ -4200,12 +4229,6 @@ void GraphicsLayerCA::noteSublayersChanged(ScheduleFlushOrNot scheduleFlush)
     propagateLayerChangeToReplicas(scheduleFlush);
 }
 
-bool GraphicsLayerCA::canThrottleLayerFlush() const
-{
-    // Tile layers are currently plain CA layers, attached directly by TileController. They require immediate flush as they may contain garbage.
-    return !(m_uncommittedChanges & TilesAdded);
-}
-
 void GraphicsLayerCA::addUncommittedChanges(LayerChangeFlags flags)
 {
     m_uncommittedChanges |= flags;
@@ -4233,12 +4256,11 @@ void GraphicsLayerCA::noteLayerPropertyChanged(LayerChangeFlags flags, ScheduleF
         return;
 
     bool hadUncommittedChanges = !!m_uncommittedChanges;
-    bool oldCanThrottleLayerFlush = canThrottleLayerFlush();
 
     addUncommittedChanges(flags);
 
     if (scheduleFlush == ScheduleFlush) {
-        bool needsFlush = !hadUncommittedChanges || oldCanThrottleLayerFlush != canThrottleLayerFlush();
+        bool needsFlush = !hadUncommittedChanges;
         if (needsFlush)
             client().notifyFlushRequired(this);
     }

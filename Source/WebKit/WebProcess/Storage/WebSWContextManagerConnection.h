@@ -62,12 +62,11 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&) final;
 
-    void removeFrameLoaderClient(ServiceWorkerFrameLoaderClient&);
-
 private:
     void updatePreferencesStore(const WebPreferencesStore&);
 
     // WebCore::SWContextManager::Connection.
+    void establishConnection(CompletionHandler<void()>&&) final;
     void postMessageToServiceWorkerClient(const WebCore::ServiceWorkerClientIdentifier& destinationIdentifier, const WebCore::MessageWithMessagePorts&, WebCore::ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin) final;
     void didFinishInstall(Optional<WebCore::ServiceWorkerJobDataIdentifier>, WebCore::ServiceWorkerIdentifier, bool wasSuccessful) final;
     void didFinishActivation(WebCore::ServiceWorkerIdentifier) final;
@@ -75,7 +74,7 @@ private:
     void workerTerminated(WebCore::ServiceWorkerIdentifier) final;
     void findClientByIdentifier(WebCore::ServiceWorkerIdentifier, WebCore::ServiceWorkerClientIdentifier, FindClientByIdentifierCallback&&) final;
     void matchAll(WebCore::ServiceWorkerIdentifier, const WebCore::ServiceWorkerClientQueryOptions&, WebCore::ServiceWorkerClientsMatchAllCallback&&) final;
-    void claim(WebCore::ServiceWorkerIdentifier, CompletionHandler<void()>&&) final;
+    void claim(WebCore::ServiceWorkerIdentifier, CompletionHandler<void(WebCore::ExceptionOr<void>&&)>&&) final;
     void skipWaiting(WebCore::ServiceWorkerIdentifier, CompletionHandler<void()>&&) final;
     void setScriptResource(WebCore::ServiceWorkerIdentifier, const URL&, const WebCore::ServiceWorkerContextData::ImportedScript&) final;
     bool isThrottleable() const final;
@@ -95,7 +94,6 @@ private:
     void syncTerminateWorker(WebCore::ServiceWorkerIdentifier, Messages::WebSWContextManagerConnection::SyncTerminateWorkerDelayedReply&&);
     void findClientByIdentifierCompleted(uint64_t requestIdentifier, Optional<WebCore::ServiceWorkerClientData>&&, bool hasSecurityError);
     void matchAllCompleted(uint64_t matchAllRequestIdentifier, Vector<WebCore::ServiceWorkerClientData>&&);
-    void claimCompleted(uint64_t claimRequestIdentifier);
     void setUserAgent(String&& userAgent);
     void close();
     void setThrottleState(bool isThrottleable);
@@ -105,14 +103,12 @@ private:
     uint64_t m_pageGroupID;
     WebPageProxyIdentifier m_webPageProxyID;
     WebCore::PageIdentifier m_pageID;
-    uint64_t m_previousServiceWorkerID { 0 };
 
     WebCore::SecurityOrigin::StorageBlockingPolicy m_storageBlockingPolicy { WebCore::SecurityOrigin::StorageBlockingPolicy::AllowAllStorage };
 
     HashSet<std::unique_ptr<ServiceWorkerFrameLoaderClient>> m_loaders;
     HashMap<uint64_t, FindClientByIdentifierCallback> m_findClientByIdentifierRequests;
     HashMap<uint64_t, WebCore::ServiceWorkerClientsMatchAllCallback> m_matchAllRequests;
-    HashMap<uint64_t, WTF::CompletionHandler<void()>> m_claimRequests;
     uint64_t m_previousRequestIdentifier { 0 };
     String m_userAgent;
     bool m_isThrottleable { true };
@@ -121,25 +117,23 @@ private:
 
 class ServiceWorkerFrameLoaderClient final : public WebCore::EmptyFrameLoaderClient {
 public:
-    ServiceWorkerFrameLoaderClient(WebSWContextManagerConnection&, WebPageProxyIdentifier, WebCore::PageIdentifier, WebCore::FrameIdentifier, const String& userAgent);
+    ServiceWorkerFrameLoaderClient(WebPageProxyIdentifier, WebCore::PageIdentifier, WebCore::FrameIdentifier, const String& userAgent);
+
+    WebPageProxyIdentifier webPageProxyID() const { return m_webPageProxyID; }
 
     void setUserAgent(String&& userAgent) { m_userAgent = WTFMove(userAgent); }
-    
-    WebPageProxyIdentifier webPageProxyID() const { return m_webPageProxyID; }
-    Optional<WebCore::PageIdentifier> pageID() const final { return m_pageID; }
-    Optional<WebCore::FrameIdentifier> frameID() const final { return m_frameID; }
 
 private:
     Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) final;
 
-    void frameLoaderDestroyed() final { m_connection.removeFrameLoaderClient(*this); }
+    Optional<WebCore::PageIdentifier> pageID() const final { return m_pageID; }
+    Optional<WebCore::FrameIdentifier> frameID() const final { return m_frameID; }
 
     bool shouldUseCredentialStorage(WebCore::DocumentLoader*, unsigned long) final { return true; }
     bool isServiceWorkerFrameLoaderClient() const final { return true; }
 
-    String userAgent(const URL&) final { return m_userAgent; }
+    String userAgent(const URL&) const final { return m_userAgent; }
 
-    WebSWContextManagerConnection& m_connection;
     WebPageProxyIdentifier m_webPageProxyID;
     WebCore::PageIdentifier m_pageID;
     WebCore::FrameIdentifier m_frameID;

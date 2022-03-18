@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,13 +57,17 @@
 #import <WebCore/FontCascade.h>
 #import <WebCore/HistoryController.h>
 #import <WebCore/HistoryItem.h>
+#import <WebCore/LocalizedDeviceModel.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/LogInitialization.h>
+#import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/MemoryRelease.h>
 #import <WebCore/NSScrollerImpDetails.h>
 #import <WebCore/PerformanceLogging.h>
+#import <WebCore/PictureInPictureSupport.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SWContextManager.h>
+#import <WebCore/UTIUtilities.h>
 #import <algorithm>
 #import <dispatch/dispatch.h>
 #import <objc/runtime.h>
@@ -77,23 +81,31 @@
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <stdio.h>
 #import <wtf/FileSystem.h>
+#import <wtf/ProcessPrivilege.h>
 #import <wtf/cocoa/NSURLExtras.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+
+#if ENABLE(REMOTE_INSPECTOR)
+#include <JavaScriptCore/RemoteInspector.h>
+#endif
 
 #if PLATFORM(IOS)
-#import "UIKitSPI.h"
 #import <WebCore/ParentalControlsContentFilter.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include <bmalloc/MemoryStatusSPI.h>
+#import "UIKitSPI.h"
+#import <bmalloc/MemoryStatusSPI.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
 #import "AccessibilitySupportSPI.h"
 #import "AssertionServicesSPI.h"
+#import "RunningBoardServicesSPI.h"
 #import "UserInterfaceIdiom.h"
 #import "WKAccessibilityWebPageObjectIOS.h"
 #import <UIKit/UIAccessibility.h>
+#import <WebCore/UTTypeRecordSwizzler.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
 #endif
 
@@ -109,7 +121,7 @@
 #if PLATFORM(MAC)
 #import "WKAccessibilityWebPageObjectMac.h"
 #import "WebSwitchingGPUClient.h"
-#import <WebCore/GraphicsContext3DManager.h>
+#import <WebCore/GraphicsContextGLOpenGLManager.h>
 #import <WebCore/ScrollbarThemeMac.h>
 #import <pal/spi/mac/NSScrollerImpSPI.h>
 #endif
@@ -120,11 +132,16 @@
 
 #if PLATFORM(COCOA)
 #import <WebCore/NetworkExtensionContentFilter.h>
+#import <WebCore/SystemBattery.h>
 #endif
 
 #if HAVE(CSCHECKFIXDISABLE)
 extern "C" void _CSCheckFixDisable();
 #endif
+
+#define RELEASE_LOG_SESSION_ID (m_sessionID ? m_sessionID->toUInt64() : 0)
+#define RELEASE_LOG_IF_ALLOWED(channel, fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), channel, "%p - [sessionID=%" PRIu64 "] WebProcess::" fmt, this, RELEASE_LOG_SESSION_ID, ##__VA_ARGS__)
+#define RELEASE_LOG_ERROR_IF_ALLOWED(channel, fmt, ...) RELEASE_LOG_ERROR_IF(isAlwaysOnLoggingAllowed(), channel, "%p - [sessionID=%" PRIu64 "] WebProcess::" fmt, this, RELEASE_LOG_SESSION_ID, ##__VA_ARGS__)
 
 namespace WebKit {
 using namespace WebCore;
@@ -157,7 +174,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #endif
 
     WebCore::setApplicationBundleIdentifier(parameters.uiProcessBundleIdentifier);
-    WebCore::setApplicationSDKVersion(parameters.uiProcessSDKVersion);
+    setApplicationSDKVersion(parameters.uiProcessSDKVersion);
 
     m_uiProcessBundleIdentifier = parameters.uiProcessBundleIdentifier;
 
@@ -190,6 +207,8 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
 #if PLATFORM(IOS_FAMILY)
     setCurrentUserInterfaceIdiomIsPad(parameters.currentUserInterfaceIdiomIsPad);
+    setLocalizedDeviceModel(parameters.localizedDeviceModel);
+    setSupportsPictureInPicture(parameters.supportsPictureInPicture);
 #endif
 
 #if USE(APPKIT)
@@ -236,12 +255,17 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     if (parameters.compilerServiceExtensionHandle)
         SandboxExtension::consumePermanently(*parameters.compilerServiceExtensionHandle);
 
-    if (parameters.diagnosticsExtensionHandle)
-        SandboxExtension::consumePermanently(*parameters.diagnosticsExtensionHandle);
-
     if (parameters.contentFilterExtensionHandle)
         SandboxExtension::consumePermanently(*parameters.contentFilterExtensionHandle);
     ParentalControlsContentFilter::setHasConsumedSandboxExtension(parameters.contentFilterExtensionHandle.hasValue());
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    if (parameters.diagnosticsExtensionHandle)
+        SandboxExtension::consumePermanently(*parameters.diagnosticsExtensionHandle);
+
+    for (size_t i = 0, size = parameters.dynamicMachExtensionHandles.size(); i < size; ++i)
+        SandboxExtension::consumePermanently(parameters.dynamicMachExtensionHandles[i]);
 #endif
     
 #if PLATFORM(COCOA)
@@ -250,6 +274,37 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     if (parameters.neSessionManagerExtensionHandle)
         SandboxExtension::consumePermanently(*parameters.neSessionManagerExtensionHandle);
     NetworkExtensionContentFilter::setHasConsumedSandboxExtensions(parameters.neHelperExtensionHandle.hasValue() && parameters.neSessionManagerExtensionHandle.hasValue());
+    setSystemHasBattery(parameters.systemHasBattery);
+
+    if (parameters.mimeTypesMap)
+        overriddenMimeTypesMap() = WTFMove(parameters.mimeTypesMap);
+
+    setUTIFromMIMETypeMap(WTFMove(parameters.mapUTIFromMIMEType));
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    RenderThemeIOS::setCSSValueToSystemColorMap(WTFMove(parameters.cssValueToSystemColorMap));
+    RenderThemeIOS::setFocusRingColor(parameters.focusRingColor);
+#endif
+
+#if PLATFORM(COCOA)
+    // FIXME(207716): The following should be removed when the GPU process is complete.
+    for (size_t i = 0, size = parameters.mediaExtensionHandles.size(); i < size; ++i)
+        SandboxExtension::consumePermanently(parameters.mediaExtensionHandles[i]);
+#endif
+
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    if (parameters.preferencesExtensionHandle) {
+        SandboxExtension::consumePermanently(*parameters.preferencesExtensionHandle);
+        _CFPrefsSetDirectModeEnabled(false);
+    }
+#endif
+        
+#if USE(UTTYPE_SWIZZLER)
+    if (!parameters.vectorOfUTTypeItem.isEmpty()) {
+        swizzleUTTypeRecord();
+        setVectorOfUTTypeItem(WTFMove(parameters.vectorOfUTTypeItem));
+    }
 #endif
 }
 
@@ -310,10 +365,10 @@ void WebProcess::updateProcessName()
         auto error = _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSDisplayNameKey, (CFStringRef)applicationName, nullptr);
         ASSERT(!error);
         if (error) {
-            RELEASE_LOG_ERROR(Process, "Failed to set the display name of the WebContent process, error code: %ld", static_cast<long>(error));
+            RELEASE_LOG_ERROR_IF_ALLOWED(Process, "updateProcessName: Failed to set the display name of the WebContent process, error code: %ld", static_cast<long>(error));
             return;
         }
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         // It is possible for _LSSetApplicationInformationItem() to return 0 and yet fail to set the display name so we make sure the display name has actually been set.
         String actualApplicationName = adoptCF((CFStringRef)_LSCopyApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSDisplayNameKey)).get();
         ASSERT(!actualApplicationName.isEmpty());
@@ -323,74 +378,17 @@ void WebProcess::updateProcessName()
 }
 
 #if PLATFORM(IOS_FAMILY)
-void WebProcess::processTaskStateDidChange(ProcessTaskStateObserver::TaskState taskState)
-{
-    // NOTE: This will be called from a background thread.
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() - taskState(%d)", this, taskState);
-    if (taskState != ProcessTaskStateObserver::Running)
-        return;
-
-    LockHolder holder(m_processWasResumedAssertionsLock);
-    if (m_processWasResumedUIAssertion && m_processWasResumedOwnAssertion)
-        return;
-
-    // We were awakened from suspension unexpectedly. Notify the WebProcessProxy, but take a process assertion on our parent PID
-    // to ensure that it too is awakened.
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() Taking 'WebProcess was resumed' assertion on behalf on UIProcess", this);
-    m_processWasResumedUIAssertion = adoptNS([[BKSProcessAssertion alloc] initWithPID:parentProcessConnection()->remoteProcessID() flags:BKSProcessAssertionPreventTaskSuspend reason:BKSProcessAssertionReasonFinishTask name:@"WebProcess was resumed" withHandler:^(BOOL acquired) {
-        if (!acquired)
-            RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() failed to take 'WebProcess was resumed' assertion for parent process", this);
-    }]);
-    m_processWasResumedUIAssertion.get().invalidationHandler = [this] {
-        RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() Releasing 'WebProcess was resumed' assertion on behalf on UIProcess due to invalidation", this);
-        releaseProcessWasResumedAssertions();
-    };
-    m_processWasResumedOwnAssertion = adoptNS([[BKSProcessAssertion alloc] initWithPID:getpid() flags:BKSProcessAssertionPreventTaskSuspend reason:BKSProcessAssertionReasonFinishTask name:@"WebProcess was resumed" withHandler:^(BOOL acquired) {
-        if (!acquired)
-            RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() failed to take 'WebProcess was resumed' assertion for WebContent process", this);
-    }]);
-    m_processWasResumedOwnAssertion.get().invalidationHandler = [this] {
-        RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::processTaskStateChanged() Releasing 'WebProcess was resumed' assertion on behalf on WebContent process due to invalidation", this);
-        releaseProcessWasResumedAssertions();
-    };
-
-    parentProcessConnection()->sendWithAsyncReply(Messages::WebProcessProxy::ProcessWasResumed(), [this] {
-        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::processTaskStateDidChange() Parent process handled ProcessWasResumed IPC, releasing our assertions", this);
-        releaseProcessWasResumedAssertions();
-    });
-}
-
-void WebProcess::releaseProcessWasResumedAssertions()
-{
-    LockHolder holder(m_processWasResumedAssertionsLock);
-    if (m_processWasResumedUIAssertion) {
-        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::releaseProcessWasResumedAssertions() Releasing parent process 'WebProcess was resumed' assertion", this);
-        [m_processWasResumedUIAssertion invalidate];
-        m_processWasResumedUIAssertion = nullptr;
-    }
-    if (m_processWasResumedOwnAssertion) {
-        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::releaseProcessWasResumedAssertions() Releasing WebContent process 'WebProcess was resumed' assertion", this);
-        [m_processWasResumedOwnAssertion invalidate];
-        m_processWasResumedOwnAssertion = nullptr;
-    }
-}
-
-#endif
-
-#if PLATFORM(IOS_FAMILY)
 static NSString *webProcessLoaderAccessibilityBundlePath()
 {
-    NSString *accessibilityBundlesPath = nil;
 #if HAVE(ACCESSIBILITY_BUNDLES_PATH)
-    accessibilityBundlesPath = (__bridge NSString *)_AXSAccessibilityBundlesPath();
+    return (__bridge NSString *)CFAutorelease(_AXSCopyPathForAccessibilityBundle(CFSTR("WebProcessLoader")));
 #else
-    accessibilityBundlesPath = (__bridge NSString *)GSSystemRootDirectory();
+    NSString *path = (__bridge NSString *)GSSystemRootDirectory();
 #if PLATFORM(MACCATALYST)
-    accessibilityBundlesPath = [accessibilityBundlesPath stringByAppendingPathComponent:@"System/iOSSupport"];
+    path = [path stringByAppendingPathComponent:@"System/iOSSupport"];
 #endif
-    accessibilityBundlesPath = [accessibilityBundlesPath stringByAppendingPathComponent:@"System/Library/AccessibilityBundles"];
+    return [path stringByAppendingPathComponent:@"System/Library/AccessibilityBundles/WebProcessLoader.axbundle"];
 #endif // HAVE(ACCESSIBILITY_BUNDLES_PATH)
-    return [accessibilityBundlesPath stringByAppendingPathComponent:@"WebProcessLoader.axbundle"];
 }
 #endif
 
@@ -531,8 +529,6 @@ void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationP
     else
         m_processType = ProcessType::WebContent;
 
-    registerWithAccessibility();
-
 #if USE(OS_STATE)
     registerWithStateDumper();
 #endif
@@ -627,14 +623,20 @@ static RetainPtr<NSArray<NSString *>> activePagesOrigins(const HashMap<PageIdent
 }
 #endif
 
-void WebProcess::updateActivePages()
+void WebProcess::updateActivePages(const String& overrideDisplayName)
 {
 #if PLATFORM(MAC)
-    auto activeOrigins = activePagesOrigins(m_pageMap);
+    if (!overrideDisplayName) {
+        auto activeOrigins = activePagesOrigins(m_pageMap);
 
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [activeOrigins = WTFMove(activeOrigins)] {
-        _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), CFSTR("LSActivePageUserVisibleOriginsKey"), (__bridge CFArrayRef)activeOrigins.get(), nullptr);
-    });
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [activeOrigins = WTFMove(activeOrigins)] {
+            _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), CFSTR("LSActivePageUserVisibleOriginsKey"), (__bridge CFArrayRef)activeOrigins.get(), nullptr);
+        });
+    } else {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSDisplayNameKey, overrideDisplayName.createCFString().get(), nullptr);
+        });
+    }
 #endif
 }
 
@@ -691,9 +693,9 @@ void WebProcess::updateCPUMonitorState(CPUMonitorUpdateReason reason)
     if (!m_cpuMonitor) {
         m_cpuMonitor = makeUnique<CPUMonitor>(cpuMonitoringInterval, [this](double cpuUsage) {
             if (m_processType == ProcessType::ServiceWorker)
-                RELEASE_LOG_ERROR(PerformanceLogging, "%p - Service worker process exceeded CPU limit of %.1f%% (was using %.1f%%)", this, m_cpuLimit.value() * 100, cpuUsage * 100);
+                RELEASE_LOG_ERROR_IF_ALLOWED(ProcessSuspension, "updateCPUMonitorState: Service worker process exceeded CPU limit of %.1f%% (was using %.1f%%)", m_cpuLimit.value() * 100, cpuUsage * 100);
             else
-                RELEASE_LOG_ERROR(PerformanceLogging, "%p - WebProcess exceeded CPU limit of %.1f%% (was using %.1f%%) hasVisiblePages? %d", this, m_cpuLimit.value() * 100, cpuUsage * 100, hasVisibleWebPage());
+                RELEASE_LOG_ERROR_IF_ALLOWED(ProcessSuspension, "updateCPUMonitorState: WebProcess exceeded CPU limit of %.1f%% (was using %.1f%%) hasVisiblePages? %d", m_cpuLimit.value() * 100, cpuUsage * 100, hasVisibleWebPage());
             parentProcessConnection()->send(Messages::WebProcessProxy::DidExceedCPULimit(), 0);
         });
     } else if (reason == CPUMonitorUpdateReason::VisibilityHasChanged) {
@@ -789,7 +791,7 @@ void WebProcess::destroyRenderingResources()
 #if !RELEASE_LOG_DISABLED
     MonotonicTime endTime = MonotonicTime::now();
 #endif
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcess::destroyRenderingResources() took %.2fms", this, (endTime - startTime).milliseconds());
+    RELEASE_LOG_IF_ALLOWED(ProcessSuspension, "destroyRenderingResources: took %.2fms", (endTime - startTime).milliseconds());
 }
 
 // FIXME: This should live somewhere else, and it should have the implementation in line instead of calling out to WKSI.
@@ -830,9 +832,9 @@ void WebProcess::updateFreezerStatus()
     bool isFreezable = shouldFreezeOnSuspension();
     auto result = memorystatus_control(MEMORYSTATUS_CMD_SET_PROCESS_IS_FREEZABLE, getpid(), isFreezable ? 1 : 0, nullptr, 0);
     if (result)
-        RELEASE_LOG_ERROR(ProcessSuspension, "%p - WebProcess::updateFreezerStatus() isFreezable: %d, error: %d", this, isFreezable, result);
+        RELEASE_LOG_ERROR_IF_ALLOWED(ProcessSuspension, "updateFreezerStatus: isFreezable: %d, error: %d", isFreezable, result);
     else
-        RELEASE_LOG(ProcessSuspension, "%p - WebProcess::updateFreezerStatus() isFreezable: %d, success", this, isFreezable);
+        RELEASE_LOG_IF_ALLOWED(ProcessSuspension, "updateFreezerStatus: isFreezable: %d, success", isFreezable);
 }
 #endif
 
@@ -853,7 +855,7 @@ void WebProcess::scrollerStylePreferenceChanged(bool useOverlayScrollbars)
 
 void WebProcess::displayConfigurationChanged(CGDirectDisplayID displayID, CGDisplayChangeSummaryFlags flags)
 {
-    GraphicsContext3DManager::displayWasReconfigured(displayID, flags, nullptr);
+    GraphicsContextGLOpenGLManager::displayWasReconfigured(displayID, flags, nullptr);
 }
     
 void WebProcess::displayWasRefreshed(CGDirectDisplayID displayID)
@@ -862,7 +864,7 @@ void WebProcess::displayWasRefreshed(CGDirectDisplayID displayID)
 }
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
 static float currentBacklightLevel()
 {
     return WebProcess::singleton().backlightLevel();
@@ -882,9 +884,106 @@ void WebProcess::backlightLevelDidChange(float backlightLevel)
 }
 #endif
 
+#if ENABLE(REMOTE_INSPECTOR)
+void WebProcess::enableRemoteWebInspector(const SandboxExtension::Handle& handle)
+{
+    SandboxExtension::consumePermanently(handle);
+    Inspector::RemoteInspector::setNeedMachSandboxExtension(false);
+    Inspector::RemoteInspector::singleton();
+}
+#endif
+
 void WebProcess::setMediaMIMETypes(const Vector<String> types)
 {
-    AVAssetMIMETypeCache::singleton().addSupportedTypes(types);
+    auto& cache = AVAssetMIMETypeCache::singleton();
+    if (cache.isEmpty())
+        cache.addSupportedTypes(types);
 }
 
+#if ENABLE(CFPREFS_DIRECT_MODE)
+void WebProcess::notifyPreferencesChanged(const String& domain, const String& key, const Optional<String>& encodedValue)
+{
+    auto defaults = adoptNS([[NSUserDefaults alloc] initWithSuiteName:domain]);
+    if (!encodedValue.hasValue()) {
+        [defaults setObject:nil forKey:key];
+        return;
+    }
+    auto encodedData = adoptNS([[NSData alloc] initWithBase64EncodedString:*encodedValue options:0]);
+    if (!encodedData)
+        return;
+    NSError *err = nil;
+    auto object = retainPtr([NSKeyedUnarchiver unarchivedObjectOfClass:[NSObject class] fromData:encodedData.get() error:&err]);
+    ASSERT(!err);
+    if (err)
+        return;
+    [defaults setObject:object.get() forKey:key];
+}
+
+void WebProcess::unblockPreferenceService(const SandboxExtension::Handle& handle)
+{
+    bool ok = SandboxExtension::consumePermanently(handle);
+    ASSERT_UNUSED(ok, ok);
+    _CFPrefsSetDirectModeEnabled(false);
+}
+#endif
+
+#if PLATFORM(IOS)
+void WebProcess::grantAccessToAssetServices(WebKit::SandboxExtension::Handle&& mobileAssetHandle,  WebKit::SandboxExtension::Handle&& mobileAssetV2Handle)
+{
+    if (m_assetServiceExtension && m_assetServiceV2Extension)
+        return;
+    m_assetServiceExtension = SandboxExtension::create(WTFMove(mobileAssetHandle));
+    m_assetServiceExtension->consume();
+    m_assetServiceV2Extension = SandboxExtension::create(WTFMove(mobileAssetV2Handle));
+    m_assetServiceV2Extension->consume();
+}
+
+void WebProcess::revokeAccessToAssetServices()
+{
+    if (!m_assetServiceExtension || !m_assetServiceV2Extension)
+        return;
+    m_assetServiceExtension->revoke();
+    m_assetServiceExtension = nullptr;
+    m_assetServiceV2Extension->revoke();
+    m_assetServiceV2Extension = nullptr;
+}
+#endif
+
+#if PLATFORM(MAC)
+void WebProcess::setScreenProperties(const ScreenProperties& properties)
+{
+    WebCore::setScreenProperties(properties);
+    for (auto& page : m_pageMap.values())
+        page->screenPropertiesDidChange();
+    updatePageScreenProperties();
+}
+
+void WebProcess::updatePageScreenProperties()
+{
+    if (hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer)) {
+        setShouldOverrideScreenSupportsHighDynamicRange(false, false);
+        return;
+    }
+
+    bool allPagesAreOnHDRScreens = allOf(m_pageMap.values(), [] (auto& page) {
+        return screenSupportsHighDynamicRange(page->mainFrameView());
+    });
+    setShouldOverrideScreenSupportsHighDynamicRange(true, allPagesAreOnHDRScreens);
+}
+#endif
+
+void WebProcess::unblockAccessibilityServer(const SandboxExtension::Handle& handle)
+{
+#if PLATFORM(IOS_FAMILY)
+    bool ok = SandboxExtension::consumePermanently(handle);
+    ASSERT_UNUSED(ok, ok);
+#endif
+    registerWithAccessibility();
+}
+
+
 } // namespace WebKit
+
+#undef RELEASE_LOG_SESSION_ID
+#undef RELEASE_LOG_IF_ALLOWED
+#undef RELEASE_LOG_ERROR_IF_ALLOWED

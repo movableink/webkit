@@ -20,9 +20,12 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/cg/CoreGraphicsSPI.h
     spi/cg/ImageIOSPI.h
 
+    spi/cocoa/AVFoundationSPI.h
+    spi/cocoa/AVKitSPI.h
+    spi/cocoa/AccessibilitySupportSPI.h
+    spi/cocoa/AccessibilitySupportSoftLink.h
     spi/cocoa/AppSSOSPI.h
     spi/cocoa/AuthKitSPI.h
-    spi/cocoa/AVKitSPI.h
     spi/cocoa/AudioToolboxSPI.h
     spi/cocoa/CFNSURLConnectionSPI.h
     spi/cocoa/CommonCryptoSPI.h
@@ -37,6 +40,7 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/cocoa/LaunchServicesSPI.h
     spi/cocoa/MetalSPI.h
     spi/cocoa/NEFilterSourceSPI.h
+    spi/cocoa/NSAccessibilitySPI.h
     spi/cocoa/NSAttributedStringSPI.h
     spi/cocoa/NSButtonCellSPI.h
     spi/cocoa/NSCalendarDateSPI.h
@@ -44,7 +48,6 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/cocoa/NSExtensionSPI.h
     spi/cocoa/NSFileManagerSPI.h
     spi/cocoa/NSFileSizeFormatterSPI.h
-    spi/cocoa/NSKeyedArchiverSPI.h
     spi/cocoa/NSProgressSPI.h
     spi/cocoa/NSStringSPI.h
     spi/cocoa/NSTouchBarSPI.h
@@ -52,7 +55,6 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/cocoa/NSURLDownloadSPI.h
     spi/cocoa/NSURLFileTypeMappingsSPI.h
     spi/cocoa/NSXPCConnectionSPI.h
-    spi/cocoa/OSVariantSPI.h
     spi/cocoa/PassKitSPI.h
     spi/cocoa/QuartzCoreSPI.h
     spi/cocoa/SecKeyProxySPI.h
@@ -64,14 +66,12 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/ios/DataDetectorsUISPI.h
     spi/ios/GraphicsServicesSPI.h
 
-    spi/mac/AVFoundationSPI.h
     spi/mac/CoreUISPI.h
     spi/mac/DataDetectorsSPI.h
     spi/mac/HIServicesSPI.h
     spi/mac/HIToolboxSPI.h
     spi/mac/LookupSPI.h
     spi/mac/MediaRemoteSPI.h
-    spi/mac/NSAccessibilitySPI.h
     spi/mac/NSAppearanceSPI.h
     spi/mac/NSApplicationSPI.h
     spi/mac/NSCellSPI.h
@@ -97,7 +97,6 @@ list(APPEND PAL_PUBLIC_HEADERS
     spi/mac/NSViewSPI.h
     spi/mac/NSWindowSPI.h
     spi/mac/PIPSPI.h
-    spi/mac/QTKitSPI.h
     spi/mac/QuickLookMacSPI.h
     spi/mac/SpeechSynthesisSPI.h
     spi/mac/TelephonyUtilitiesSPI.h
@@ -126,6 +125,8 @@ list(APPEND PAL_SOURCES
     crypto/commoncrypto/CryptoDigestCommonCrypto.cpp
 
     mac/LookupSoftLink.mm
+
+    spi/cocoa/AccessibilitySupportSoftLink.cpp
 
     system/cocoa/SleepDisablerCocoa.cpp
 

@@ -42,6 +42,7 @@
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "ResourceLoadObserver.h"
@@ -51,6 +52,9 @@
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannel.h"
 #include "WebSocketChannel.h"
+#include "WorkerGlobalScope.h"
+#include "WorkerLoaderProxy.h"
+#include "WorkerThread.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/ScriptCallStack.h>
@@ -103,7 +107,7 @@ static String encodeProtocolString(const String& protocol)
     for (size_t i = 0; i < protocol.length(); i++) {
         if (protocol[i] < 0x20 || protocol[i] > 0x7E) {
             builder.appendLiteral("\\u");
-            appendUnsignedAsHexFixedSize(protocol[i], builder, 4);
+            builder.append(hex(protocol[i], 4));
         } else if (protocol[i] == 0x5c)
             builder.appendLiteral("\\\\");
         else
@@ -320,6 +324,17 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         failAsynchronously();
         return { };
     }
+
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    auto reportRegistrableDomain = [domain = RegistrableDomain(m_url).isolatedCopy()](auto& context) mutable {
+        if (auto* frame = downcast<Document>(context).frame())
+            frame->loader().client().didLoadFromRegistrableDomain(WTFMove(domain));
+    };
+    if (is<Document>(context))
+        reportRegistrableDomain(context);
+    else
+        downcast<WorkerGlobalScope>(context).thread().workerLoaderProxy().postTaskToLoader(WTFMove(reportRegistrableDomain));
+#endif
 
     m_pendingActivity = makePendingActivity(*this);
 

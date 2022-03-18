@@ -30,7 +30,9 @@
 #import "PageClientImplCocoa.h"
 #import "WebFullScreenManagerProxy.h"
 #import <wtf/RetainPtr.h>
+#import <wtf/WeakObjCPtr.h>
 
+OBJC_CLASS NSTextAlternatives;
 OBJC_CLASS WKContentView;
 OBJC_CLASS WKEditorUndoTarget;
 
@@ -62,6 +64,7 @@ private:
     bool isViewWindowActive() override;
     bool isViewFocused() override;
     bool isViewVisible() override;
+    bool isApplicationVisible() override;
     bool isViewInWindow() override;
     bool isViewVisibleOrOccluded() override;
     bool isVisuallyIdle() override;
@@ -70,11 +73,14 @@ private:
     void didRelaunchProcess() override;
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     void didCreateContextForVisibilityPropagation(LayerHostingContextID) override;
+    void didCreateContextInGPUProcessForVisibilityPropagation(LayerHostingContextID) override;
 #endif
-    void pageClosed() override;
+#if ENABLE(GPU_PROCESS)
+    void gpuProcessCrashed() override;
+#endif
     void preferencesDidChange() override;
     void toolTipChanged(const String&, const String&) override;
-    void decidePolicyForGeolocationPermissionRequest(WebFrameProxy&, API::SecurityOrigin&, Function<void(bool)>&) override;
+    void decidePolicyForGeolocationPermissionRequest(WebFrameProxy&, const FrameInfoData&, Function<void(bool)>&) override;
     void didStartProvisionalLoadForMainFrame() override;
     void didFailProvisionalLoadForMainFrame() override;
     void didCommitLoadForMainFrame(const String& mimeType, bool useCustomContentProvider) override;
@@ -133,7 +139,7 @@ private:
     CALayer* acceleratedCompositingRootLayer() const override;
     LayerHostingMode viewLayerHostingMode() override { return LayerHostingMode::OutOfProcess; }
 
-    RefPtr<ViewSnapshot> takeViewSnapshot() override;
+    RefPtr<ViewSnapshot> takeViewSnapshot(Optional<WebCore::IntRect>&&) override;
     void wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent&) override;
 
     void commitPotentialTapFailed() override;
@@ -155,7 +161,7 @@ private:
     void updateInputContextAfterBlurringAndRefocusingElement() final;
     void elementDidBlur() override;
     void focusedElementDidChangeInputMode(WebCore::InputMode) override;
-    void didReceiveEditorStateUpdateAfterFocus() override;
+    void didUpdateEditorState() override;
     bool isFocusingElement() override;
     void selectionDidChange() override;
     bool interpretKeyEvent(const NativeWebKeyboardEvent&, bool isCharEvent) override;
@@ -247,18 +253,18 @@ private:
 
     void handleAutocorrectionContext(const WebAutocorrectionContext&) final;
 
-    void didFinishProcessingAllPendingMouseEvents() final { }
-
 #if HAVE(PENCILKIT)
     RetainPtr<WKDrawingView> createDrawingView(WebCore::GraphicsLayer::EmbeddedViewID) override;
 #endif
 
-#if ENABLE(POINTER_EVENTS)
     void cancelPointersForGestureRecognizer(UIGestureRecognizer*) override;
     WTF::Optional<unsigned> activeTouchIdentifierForGestureRecognizer(UIGestureRecognizer*) override;
+
+#if USE(DICTATION_ALTERNATIVES)
+    void showDictationAlternativeUI(const WebCore::FloatRect&, uint64_t dictationContext) override;
 #endif
 
-    WKContentView *m_contentView;
+    WeakObjCPtr<WKContentView> m_contentView;
     RetainPtr<WKEditorUndoTarget> m_undoTarget;
 };
 } // namespace WebKit

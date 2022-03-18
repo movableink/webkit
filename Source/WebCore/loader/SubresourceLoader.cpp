@@ -70,8 +70,10 @@
 
 #undef RELEASE_LOG_IF_ALLOWED
 #undef RELEASE_LOG_ERROR_IF_ALLOWED
-#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), ResourceLoading, "%p - SubresourceLoader::" fmt, this, ##__VA_ARGS__)
-#define RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(isAlwaysOnLoggingAllowed(), ResourceLoading, "%p - SubresourceLoader::" fmt, this, ##__VA_ARGS__)
+#define PAGE_ID ((frame() ? frame()->pageID().valueOr(PageIdentifier()) : PageIdentifier()).toUInt64())
+#define FRAME_ID ((frame() ? frame()->frameID().valueOr(FrameIdentifier()) : FrameIdentifier()).toUInt64())
+#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), ResourceLoading, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", frameLoader=%p, resourceID=%lu] SubresourceLoader::" fmt, this, PAGE_ID, FRAME_ID, frameLoader(), identifier(), ##__VA_ARGS__)
+#define RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(isAlwaysOnLoggingAllowed(), ResourceLoading, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", frameLoader=%p, resourceID=%lu] SubresourceLoader::" fmt, this, PAGE_ID, FRAME_ID, frameLoader(), identifier(), ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -166,7 +168,7 @@ void SubresourceLoader::init(ResourceRequest&& request, CompletionHandler<void(b
             return completionHandler(false);
         if (!m_documentLoader) {
             ASSERT_NOT_REACHED();
-            RELEASE_LOG_ERROR(ResourceLoading, "SubresourceLoader::init: resource load canceled because document loader is null (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_ERROR_IF_ALLOWED("init: resource load canceled because document loader is null");
             return completionHandler(false);
         }
         ASSERT(!reachedTerminalState());
@@ -189,6 +191,7 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
     Ref<SubresourceLoader> protectedThis(*this);
 
     if (!newRequest.url().isValid()) {
+        RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because new request is invalid");
         cancel(cannotShowURLError());
         return completionHandler(WTFMove(newRequest));
     }
@@ -200,20 +203,28 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
     }
 
     auto continueWillSendRequest = [this, protectedThis = makeRef(*this), redirectResponse] (CompletionHandler<void(ResourceRequest&&)>&& completionHandler, ResourceRequest&& newRequest) mutable {
-        if (newRequest.isNull() || reachedTerminalState())
+        if (newRequest.isNull() || reachedTerminalState()) {
+            if (newRequest.isNull())
+                RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because new request is NULL (1)");
+            else
+                RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because reached terminal state");
             return completionHandler(WTFMove(newRequest));
+        }
 
         ResourceLoader::willSendRequestInternal(WTFMove(newRequest), redirectResponse, [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler), redirectResponse] (ResourceRequest&& request) mutable {
             if (reachedTerminalState())
                 return completionHandler(WTFMove(request));
 
             if (request.isNull()) {
+                RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because request is NULL (2)");
                 cancel();
                 return completionHandler(WTFMove(request));
             }
 
             if (m_resource->type() == CachedResource::Type::MainResource && !redirectResponse.isNull())
                 m_documentLoader->willContinueMainResourceLoadAfterRedirect(request);
+
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load finished; calling completion handler");
             completionHandler(WTFMove(request));
         });
     };
@@ -227,7 +238,7 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
                 if (m_frame && m_frame->document())
                     m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, error.localizedDescription());
 
-                RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load canceled because not allowed to follow a redirect (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+                RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because not allowed to follow a redirect");
 
                 cancel(error);
                 return completionHandler(WTFMove(newRequest));
@@ -238,17 +249,17 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
             opaqueRedirectedResponse.setTainting(ResourceResponse::Tainting::Opaqueredirect);
             m_resource->responseReceived(opaqueRedirectedResponse);
             if (reachedTerminalState()) {
-                RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: reached terminal state (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
-                return;
+                RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: reached terminal state");
+                return completionHandler(WTFMove(newRequest));
             }
 
-            RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load completed (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load completed");
 
             NetworkLoadMetrics emptyMetrics;
             didFinishLoading(emptyMetrics);
             return completionHandler(WTFMove(newRequest));
         } else if (m_redirectCount++ >= options().maxRedirectCount) {
-            RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load canceled because too many redirects (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because too many redirects");
             cancel(ResourceError(String(), 0, request().url(), "Too many redirections"_s, ResourceError::Type::General));
             return completionHandler(WTFMove(newRequest));
         }
@@ -265,33 +276,35 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
         }
 
         if (!m_documentLoader->cachedResourceLoader().updateRequestAfterRedirection(m_resource->type(), newRequest, options())) {
-            RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load canceled because something about updateRequestAfterRedirection (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because CachedResourceLoader::updateRequestAfterRedirection (really CachedResourceLoader::canRequestAfterRedirection) said no");
             cancel();
             return completionHandler(WTFMove(newRequest));
         }
 
-        String errorDescription;
-        if (!checkRedirectionCrossOriginAccessControl(request(), redirectResponse, newRequest, errorDescription)) {
-            String errorMessage = "Cross-origin redirection to " + newRequest.url().string() + " denied by Cross-Origin Resource Sharing policy: " + errorDescription;
+        auto accessControlCheckResult = checkRedirectionCrossOriginAccessControl(request(), redirectResponse, newRequest);
+        if (!accessControlCheckResult) {
+            auto errorMessage = makeString("Cross-origin redirection to ", newRequest.url().string(), " denied by Cross-Origin Resource Sharing policy: ", accessControlCheckResult.error());
             if (m_frame && m_frame->document())
                 m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, errorMessage);
-            RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load canceled because crosss-origin redirection denied by CORS policy (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because crosss-origin redirection denied by CORS policy");
             cancel(ResourceError(String(), 0, request().url(), errorMessage, ResourceError::Type::AccessControl));
             return completionHandler(WTFMove(newRequest));
         }
 
         if (m_resource->isImage() && m_documentLoader->cachedResourceLoader().shouldDeferImageLoad(newRequest.url())) {
-            RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load canceled because it's an image that should be defered (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource load canceled because it's an image that should be defered");
             cancel();
             return completionHandler(WTFMove(newRequest));
         }
         m_loadTiming.addRedirect(redirectResponse.url(), newRequest.url());
-        m_resource->redirectReceived(WTFMove(newRequest), redirectResponse, [completionHandler = WTFMove(completionHandler), continueWillSendRequest = WTFMove(continueWillSendRequest)] (ResourceRequest&& request) mutable {
+        m_resource->redirectReceived(WTFMove(newRequest), redirectResponse, [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler), continueWillSendRequest = WTFMove(continueWillSendRequest)] (ResourceRequest&& request) mutable {
+            RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: resource done notifying clients");
             continueWillSendRequest(WTFMove(completionHandler), WTFMove(request));
         });
         return;
     }
 
+    RELEASE_LOG_IF_ALLOWED("willSendRequestInternal: redirect response is NULL");
     continueWillSendRequest(WTFMove(completionHandler), WTFMove(newRequest));
 }
 
@@ -351,7 +364,7 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
     if (response.source() == ResourceResponse::Source::ServiceWorker && response.url() != request().url()) {
         auto& loader = m_documentLoader->cachedResourceLoader();
         if (!loader.allowedByContentSecurityPolicy(m_resource->type(), response.url(), options(), ContentSecurityPolicy::RedirectResponseReceived::Yes)) {
-            RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because not allowed by content policy (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because not allowed by content policy");
             cancel(ResourceError({ }, 0, response.url(), { }, ResourceError::Type::General));
             return;
         }
@@ -359,7 +372,7 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
 #endif
 
     if (auto error = validateRangeRequestedFlag(request(), response)) {
-        RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because receiving a range requested response for a non-range request (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+        RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because receiving a range requested response for a non-range request");
         cancel(WTFMove(*error));
         return;
     }
@@ -398,12 +411,12 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
             m_frame->page()->diagnosticLoggingClient().logDiagnosticMessageWithResult(DiagnosticLoggingKeys::cachedResourceRevalidationKey(), emptyString(), DiagnosticLoggingResultFail, ShouldSample::Yes);
     }
 
-    String errorDescription;
-    if (!checkResponseCrossOriginAccessControl(response, errorDescription)) {
+    auto accessControlCheckResult = checkResponseCrossOriginAccessControl(response);
+    if (!accessControlCheckResult) {
         if (m_frame && m_frame->document())
-            m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, errorDescription);
-        RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because of cross origin access control (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
-        cancel(ResourceError(String(), 0, request().url(), errorDescription, ResourceError::Type::AccessControl));
+            m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, accessControlCheckResult.error());
+        RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because of cross origin access control");
+        cancel(ResourceError(String(), 0, request().url(), accessControlCheckResult.error(), ResourceError::Type::AccessControl));
         return;
     }
 
@@ -442,7 +455,7 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
             // We don't count multiParts in a CachedResourceLoader's request count
             m_requestCountTracker = WTF::nullopt;
             if (!m_resource->isImage()) {
-                RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because something about a multi-part non-image (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+                RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because something about a multi-part non-image");
                 cancel();
                 return;
             }
@@ -587,22 +600,27 @@ static void logResourceLoaded(Frame* frame, CachedResource::Type type)
     frame->page()->diagnosticLoggingClient().logDiagnosticMessage(DiagnosticLoggingKeys::resourceLoadedKey(), resourceType, ShouldSample::Yes);
 }
 
-bool SubresourceLoader::checkResponseCrossOriginAccessControl(const ResourceResponse& response, String& errorDescription)
+Expected<void, String> SubresourceLoader::checkResponseCrossOriginAccessControl(const ResourceResponse& response)
 {
     if (!m_resource->isCrossOrigin() || options().mode != FetchOptions::Mode::Cors)
-        return true;
+        return { };
 
 #if ENABLE(SERVICE_WORKER)
-    if (response.source() == ResourceResponse::Source::ServiceWorker)
-        return response.tainting() != ResourceResponse::Tainting::Opaque;
+    if (response.source() == ResourceResponse::Source::ServiceWorker) {
+        if (response.tainting() == ResourceResponse::Tainting::Opaque) {
+            // FIXME: This should have an error message.
+            return makeUnexpected(String());
+        }
+        return { };
+    }
 #endif
 
     ASSERT(m_origin);
 
-    return passesAccessControlCheck(response, options().credentials == FetchOptions::Credentials::Include ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse, *m_origin, errorDescription);
+    return passesAccessControlCheck(response, options().credentials == FetchOptions::Credentials::Include ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse, *m_origin, &CrossOriginAccessControlCheckDisabler::singleton());
 }
 
-bool SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceRequest& previousRequest, const ResourceResponse& redirectResponse, ResourceRequest& newRequest, String& errorMessage)
+Expected<void, String> SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceRequest& previousRequest, const ResourceResponse& redirectResponse, ResourceRequest& newRequest)
 {
     bool crossOriginFlag = m_resource->isCrossOrigin();
     bool isNextRequestCrossOrigin = m_origin && !m_origin->canRequest(newRequest.url());
@@ -616,14 +634,17 @@ bool SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceR
     if (options().mode == FetchOptions::Mode::Cors) {
         if (m_resource->isCrossOrigin()) {
             auto locationString = redirectResponse.httpHeaderField(HTTPHeaderName::Location);
-            errorMessage = validateCrossOriginRedirectionURL(URL(redirectResponse.url(), locationString));
+            String errorMessage = validateCrossOriginRedirectionURL(URL(redirectResponse.url(), locationString));
             if (!errorMessage.isNull())
-                return false;
+                return makeUnexpected(WTFMove(errorMessage));
         }
 
         ASSERT(m_origin);
-        if (crossOriginFlag && !passesAccessControlCheck(redirectResponse, options().storedCredentialsPolicy, *m_origin, errorMessage))
-            return false;
+        if (crossOriginFlag) {
+            auto accessControlCheckResult = passesAccessControlCheck(redirectResponse, options().storedCredentialsPolicy, *m_origin, &CrossOriginAccessControlCheckDisabler::singleton());
+            if (!accessControlCheckResult)
+                return accessControlCheckResult;
+        }
     }
 
     bool redirectingToNewOrigin = false;
@@ -648,7 +669,9 @@ bool SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceR
     
     updateRequestReferrer(newRequest, referrerPolicy(), previousRequest.httpReferrer());
 
-    return true;
+    FrameLoader::addHTTPOriginIfNeeded(newRequest, m_origin ? m_origin->toString() : String());
+
+    return { };
 }
 
 void SubresourceLoader::updateReferrerPolicy(const String& referrerPolicyValue)
@@ -661,7 +684,7 @@ void SubresourceLoader::updateReferrerPolicy(const String& referrerPolicyValue)
 
 void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMetrics)
 {
-    RELEASE_LOG_IF_ALLOWED("didFinishLoading: (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+    RELEASE_LOG_IF_ALLOWED("didFinishLoading:");
 
 #if USE(QUICK_LOOK)
     if (auto previewLoader = m_previewLoader.get()) {
@@ -691,7 +714,13 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
         // This is the legacy path for platforms (and ResourceHandle paths) that do not provide
         // complete load metrics in didFinishLoad. In those cases, fall back to the possibility
         // that they populated partial load timing information on the ResourceResponse.
-        reportResourceTiming(m_resource->response().deprecatedNetworkLoadMetrics());
+        const auto* timing = m_resource->response().deprecatedNetworkLoadMetricsOrNull();
+        Optional<NetworkLoadMetrics> empty;
+        if (!timing) {
+            empty.emplace();
+            timing = &empty.value();
+        }
+        reportResourceTiming(*timing);
     }
 
     if (m_resource->type() != CachedResource::Type::MainResource)
@@ -701,7 +730,7 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
     m_resource->finishLoading(resourceData());
 
     if (wasCancelled()) {
-        RELEASE_LOG_IF_ALLOWED("didFinishLoading: was canceled (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+        RELEASE_LOG_IF_ALLOWED("didFinishLoading: was canceled");
         return;
     }
 
@@ -711,7 +740,7 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
     notifyDone(LoadCompletionType::Finish);
 
     if (reachedTerminalState()) {
-        RELEASE_LOG_IF_ALLOWED("didFinishLoading: reached terminal state (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+        RELEASE_LOG_IF_ALLOWED("didFinishLoading: reached terminal state");
         return;
     }
     releaseResources();
@@ -719,7 +748,7 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
 
 void SubresourceLoader::didFail(const ResourceError& error)
 {
-    RELEASE_LOG_IF_ALLOWED("didFail: (frame = %p, frameLoader = %p, resourceID = %lu, type = %d, code = %d)", frame(), frameLoader(), identifier(), static_cast<int>(error.type()), error.errorCode());
+    RELEASE_LOG_IF_ALLOWED("didFail: (type = %d, code = %d)", static_cast<int>(error.type()), error.errorCode());
 
 #if USE(QUICK_LOOK)
     if (auto previewLoader = m_previewLoader.get())
@@ -757,7 +786,7 @@ void SubresourceLoader::didFail(const ResourceError& error)
 
 void SubresourceLoader::willCancel(const ResourceError& error)
 {
-    RELEASE_LOG_IF_ALLOWED("willCancel: (frame = %p, frameLoader = %p, resourceID = %lu, type = %d, code = %d)", frame(), frameLoader(), identifier(), static_cast<int>(error.type()), error.errorCode());
+    RELEASE_LOG_IF_ALLOWED("willCancel: (type = %d, code = %d)", static_cast<int>(error.type()), error.errorCode());
 
 #if PLATFORM(IOS_FAMILY)
     // Since we defer initialization to scheduling time on iOS but
@@ -861,7 +890,9 @@ const HTTPHeaderMap* SubresourceLoader::originalHeaders() const
     return (m_resource  && m_resource->originalRequest()) ? &m_resource->originalRequest()->httpHeaderFields() : nullptr;
 }
 
-}
+} // namespace WebCore
 
+#undef PAGE_ID
+#undef FRAME_ID
 #undef RELEASE_LOG_IF_ALLOWED
 #undef RELEASE_LOG_ERROR_IF_ALLOWED

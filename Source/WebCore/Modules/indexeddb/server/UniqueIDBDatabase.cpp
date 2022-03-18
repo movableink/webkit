@@ -116,7 +116,6 @@ UniqueIDBDatabase::UniqueIDBDatabase(IDBServer& server, const IDBDatabaseIdentif
 {
     ASSERT(!isMainThread());
 
-    m_server.addDatabase(*this);
     LOG(IndexedDB, "UniqueIDBDatabase::UniqueIDBDatabase() (%p) %s", this, m_identifier.loggingString().utf8().data());
 }
 
@@ -132,8 +131,6 @@ UniqueIDBDatabase::~UniqueIDBDatabase()
     ASSERT(!m_versionChangeTransaction);
     ASSERT(!m_versionChangeDatabaseConnection);
     RELEASE_ASSERT(!m_backingStore);
-
-    m_server.removeDatabase(*this);
 }
 
 const IDBDatabaseInfo& UniqueIDBDatabase::info() const
@@ -181,6 +178,14 @@ void UniqueIDBDatabase::performCurrentOpenOperation()
         }
     }
 
+    if (!backingStoreOpenError.isNull()) {
+        auto result = IDBResultData::error(m_currentOpenDBRequest->requestData().requestIdentifier(), backingStoreOpenError);
+        m_currentOpenDBRequest->connection().didOpenDatabase(result);
+        m_currentOpenDBRequest = nullptr;
+
+        return;
+    }
+
     // If we previously started a version change operation but were blocked by having open connections,
     // we might now be unblocked.
     if (m_versionChangeDatabaseConnection) {
@@ -200,14 +205,6 @@ void UniqueIDBDatabase::performCurrentOpenOperation()
     // If the database version higher than the requested version, abort these steps and return a VersionError.
     if (requestedVersion < m_databaseInfo->version()) {
         auto result = IDBResultData::error(m_currentOpenDBRequest->requestData().requestIdentifier(), IDBError(VersionError));
-        m_currentOpenDBRequest->connection().didOpenDatabase(result);
-        m_currentOpenDBRequest = nullptr;
-
-        return;
-    }
-
-    if (!backingStoreOpenError.isNull()) {
-        auto result = IDBResultData::error(m_currentOpenDBRequest->requestData().requestIdentifier(), backingStoreOpenError);
         m_currentOpenDBRequest->connection().didOpenDatabase(result);
         m_currentOpenDBRequest = nullptr;
 
@@ -309,7 +306,7 @@ void UniqueIDBDatabase::didDeleteBackingStore(uint64_t deletedVersion)
     // we won't have a m_mostRecentDeletedDatabaseInfo. In that case, we'll manufacture one using the
     // passed in deletedVersion argument.
     if (!m_mostRecentDeletedDatabaseInfo)
-        m_mostRecentDeletedDatabaseInfo = makeUnique<IDBDatabaseInfo>(m_identifier.databaseName(), deletedVersion);
+        m_mostRecentDeletedDatabaseInfo = makeUnique<IDBDatabaseInfo>(m_identifier.databaseName(), deletedVersion, 0);
 
     if (m_currentOpenDBRequest) {
         m_currentOpenDBRequest->notifyDidDeleteDatabase(*m_mostRecentDeletedDatabaseInfo);
@@ -633,6 +630,7 @@ void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, c
         auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(info.objectStoreIdentifier());
         ASSERT(objectStoreInfo);
         objectStoreInfo->addExistingIndex(info);
+        m_databaseInfo->setMaxIndexID(info.identifier());
     }
 
     callback(error);
@@ -853,27 +851,6 @@ void UniqueIDBDatabase::iterateCursor(const IDBRequestData& requestData, const I
     auto error = m_backingStore->iterateCursor(transactionIdentifier, cursorIdentifier, data, result);
 
     callback(error, result);
-
-    if (error.isNull()) {
-        m_cursorPrefetches.add(cursorIdentifier);
-        prefetchCursor(transactionIdentifier, cursorIdentifier);
-    }
-}
-
-void UniqueIDBDatabase::prefetchCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier)
-{
-    LOG(IndexedDB, "UniqueIDBDatabase::prefetchCursor");
-
-    ASSERT(!isMainThread());
-    ASSERT(m_cursorPrefetches.contains(cursorIdentifier));
-
-    uint64_t countToPrefetch = 2;
-    while (countToPrefetch --) {
-        if (!m_backingStore->prefetchCursor(transactionIdentifier, cursorIdentifier)) {
-            m_cursorPrefetches.remove(cursorIdentifier);
-            return;
-        }
-    }
 }
 
 void UniqueIDBDatabase::commitTransaction(UniqueIDBDatabaseTransaction& transaction, ErrorCallback callback)

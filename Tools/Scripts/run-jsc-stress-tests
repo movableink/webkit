@@ -612,6 +612,10 @@ def slow!
     $runCommandOptions[:isSlow] = true
 end
 
+def crash!
+    $runCommandOptions[:shouldCrash] = true
+end
+
 def requireOptions(*options)
     $testSpecificRequiredOptions += options
 end
@@ -694,12 +698,6 @@ def runBytecodeCacheNoAssertion(*optionalTestSpecificOptions)
 end
 
 def runBigIntEnabled(*optionalTestSpecificOptions)
-    # FIXME: <rdar://problem/40331121>
-    if $remote or ($architecture !~ /x86/i and $hostOS == "darwin")
-        skip
-        return
-    end
-
     run("big-int-enabled", "--useBigInt=true" , *(FTL_OPTIONS + optionalTestSpecificOptions))
 end
 
@@ -926,7 +924,7 @@ def defaultNoSamplingProfilerRun
 end
 
 def runProfiler
-    if $remote or ($architecture !~ /x86/i and $hostOS == "darwin") or ($hostOS == "windows") or ($hostOS == "playstation")
+    if $remote or $memoryLimited or ($hostOS == "windows") or ($hostOS == "playstation")
         skip
         return
     end
@@ -1652,6 +1650,7 @@ def handleCollectionFile(collection)
                     $benchmarkDirectory = path.dirname
                     
                     $runCommandOptions = {}
+                    $testSpecificRequiredOptions = []
                     eval entry["cmd"]
                 }
             }
@@ -1941,11 +1940,14 @@ def numberOfProcessors
     return numProcessors
 end
 
+$runnerDirMutex = Mutex.new
 def runAndMonitorTestRunnerCommand(*cmd)
     numberOfTests = 0
-    Dir.chdir($runnerDir) {
-        # -1 for the runscript, and -2 for '..' and '.'
-        numberOfTests = Dir.entries(".").count - 3
+    $runnerDirMutex.synchronize {
+        Dir.chdir($runnerDir) {
+            # -1 for the runscript, and -2 for '..' and '.'
+            numberOfTests = Dir.entries(".").count - 3
+        }
     }
     unless $progressMeter
         mysys(cmd.join(' '))

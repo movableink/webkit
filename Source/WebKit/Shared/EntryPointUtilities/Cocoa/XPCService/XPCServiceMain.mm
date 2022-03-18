@@ -28,6 +28,7 @@
 #import "XPCServiceEntryPoint.h"
 
 #import <CoreFoundation/CoreFoundation.h>
+#import <pal/spi/cf/CFUtilitiesSPI.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/spi/darwin/XPCSPI.h>
@@ -58,7 +59,7 @@ static void XPCServiceEventHandler(xpc_connection_t peer)
 
                 const char* serviceName = xpc_dictionary_get_string(event, "service-name");
                 CFStringRef entryPointFunctionName = nullptr;
-                if (!strcmp(serviceName, "com.apple.WebKit.WebContent") || !strcmp(serviceName, "com.apple.WebKit.WebContent.Development"))
+                if (strstr(serviceName, "com.apple.WebKit.WebContent") == serviceName)
                     entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(WEBCONTENT_SERVICE_INITIALIZER));
                 else if (!strcmp(serviceName, "com.apple.WebKit.Networking"))
                     entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(NETWORK_SERVICE_INITIALIZER));
@@ -114,6 +115,11 @@ int XPCServiceMain(int, const char**)
         setenv(key, xpc_string_get_string_ptr(value), 1);
         return true;
     });
+#endif
+
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    // Enable CF prefs direct mode to avoid connecting to the CF prefs daemon.
+    _CFPrefsSetDirectModeEnabled(YES);
 #endif
 
     if (bootstrap) {

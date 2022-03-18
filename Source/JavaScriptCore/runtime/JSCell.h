@@ -24,6 +24,7 @@
 
 #include "CallData.h"
 #include "CellState.h"
+#include "ConcurrentJSLock.h"
 #include "ConstructData.h"
 #include "EnumerationMode.h"
 #include "Heap.h"
@@ -180,7 +181,8 @@ public:
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
     bool putInline(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
         
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
+    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
 
     static JSValue toThis(JSCell*, JSGlobalObject*, ECMAMode);
@@ -288,6 +290,9 @@ private:
     JS_EXPORT_PRIVATE void unlockSlow();
 };
 
+using ConcurrentJSCellLocker = ConcurrentJSLockerImpl<JSCellLock>;
+using GCSafeConcurrentJSCellLocker = GCSafeConcurrentJSLockerImpl<JSCellLock>;
+
 // FIXME: Refer to Subspace by reference.
 // https://bugs.webkit.org/show_bug.cgi?id=166988
 template<typename Type>
@@ -301,5 +306,9 @@ inline auto subspaceForConcurrently(VM& vm)
 {
     return Type::template subspaceFor<Type, SubspaceAccess::Concurrently>(vm);
 }
+
+#if CPU(X86_64)
+JS_EXPORT_PRIVATE NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCrash(Heap&, const JSCell*);
+#endif
 
 } // namespace JSC

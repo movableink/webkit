@@ -28,7 +28,9 @@
 
 #if USE(LIBWEBRTC)
 
+ALLOW_UNUSED_PARAMETERS_BEGIN
 #include <webrtc/sdk/WebKit/WebKitUtilities.h>
+ALLOW_UNUSED_PARAMETERS_END
 #include <wtf/MainThread.h>
 #include <wtf/darwin/WeakLinking.h>
 
@@ -71,7 +73,11 @@ void LibWebRTCProviderCocoa::setActive(bool value)
 
 bool LibWebRTCProvider::webRTCAvailable()
 {
+#if PLATFORM(IOS)
+    return true;
+#else
     return !isNullFunctionPointer(rtc::LogMessage::LogToDebug);
+#endif
 }
 
 } // namespace WebCore

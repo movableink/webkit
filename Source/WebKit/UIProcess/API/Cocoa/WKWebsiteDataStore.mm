@@ -219,9 +219,16 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     static dispatch_once_t onceToken;
     static NSSet *allWebsiteDataTypes;
     dispatch_once(&onceToken, ^ {
-        auto *privateTypes = @[_WKWebsiteDataTypeHSTSCache, _WKWebsiteDataTypeMediaKeys, _WKWebsiteDataTypeSearchFieldRecentSearches, _WKWebsiteDataTypeResourceLoadStatistics, _WKWebsiteDataTypeCredentials, _WKWebsiteDataTypeAdClickAttributions
+        auto *privateTypes = @[
+            _WKWebsiteDataTypeHSTSCache,
+            _WKWebsiteDataTypeMediaKeys,
+            _WKWebsiteDataTypeSearchFieldRecentSearches,
+            _WKWebsiteDataTypeResourceLoadStatistics,
+            _WKWebsiteDataTypeCredentials,
+            _WKWebsiteDataTypeAdClickAttributions,
+            _WKWebsiteDataTypeAlternativeServices
 #if !TARGET_OS_IPHONE
-        , _WKWebsiteDataTypePlugInData
+            , _WKWebsiteDataTypePlugInData
 #endif
         ];
 
@@ -278,6 +285,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_setResourceLoadStatisticsEnabled:(BOOL)enabled
 {
+    _websiteDataStore->useExplicitITPState();
     _websiteDataStore->setResourceLoadStatisticsEnabled(enabled);
 }
 
@@ -319,71 +327,26 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 {
 }
 
-- (NSString *)_cacheStorageDirectory
-{
-    return _websiteDataStore->cacheStorageDirectory();
-}
-
-- (void)_setCacheStorageDirectory:(NSString *)directory
-{
-    _websiteDataStore->setCacheStorageDirectory(directory);
-}
-
-- (NSString *)_serviceWorkerRegistrationDirectory
-{
-    return _websiteDataStore->serviceWorkerRegistrationDirectory();
-}
-
-- (void)_setServiceWorkerRegistrationDirectory:(NSString *)directory
-{
-    _websiteDataStore->setServiceWorkerRegistrationDirectory(directory);
-}
-
 - (void)_setBoundInterfaceIdentifier:(NSString *)identifier
 {
-    _websiteDataStore->setBoundInterfaceIdentifier(identifier);
 }
 
 - (NSString *)_boundInterfaceIdentifier
 {
-    return _websiteDataStore->boundInterfaceIdentifier();
+    return nil;
 }
 
 - (void)_setAllowsCellularAccess:(BOOL)allows
 {
-    _websiteDataStore->setAllowsCellularAccess(allows ? WebKit::AllowsCellularAccess::Yes : WebKit::AllowsCellularAccess::No);
 }
 
 - (BOOL)_allowsCellularAccess
 {
-    return _websiteDataStore->allowsCellularAccess() == WebKit::AllowsCellularAccess::Yes;
+    return YES;
 }
 
 - (void)_setProxyConfiguration:(NSDictionary *)configuration
 {
-    _websiteDataStore->setProxyConfiguration((__bridge CFDictionaryRef)configuration);
-}
-
-- (NSString *)_sourceApplicationBundleIdentifier
-{
-    return _websiteDataStore->sourceApplicationBundleIdentifier();
-}
-
-- (void)_setSourceApplicationBundleIdentifier:(NSString *)identifier
-{
-    if (!_websiteDataStore->setSourceApplicationBundleIdentifier(identifier))
-        [NSException raise:NSGenericException format:@"_setSourceApplicationBundleIdentifier cannot be called after networking has begun"];
-}
-
-- (NSString *)_sourceApplicationSecondaryIdentifier
-{
-    return _websiteDataStore->sourceApplicationSecondaryIdentifier();
-}
-
-- (void)_setSourceApplicationSecondaryIdentifier:(NSString *)identifier
-{
-    if (!_websiteDataStore->setSourceApplicationSecondaryIdentifier(identifier))
-        [NSException raise:NSGenericException format:@"_setSourceApplicationSecondaryIdentifier cannot be called after networking has begun"];
 }
 
 - (void)_setAllowsTLSFallback:(BOOL)allows
@@ -397,23 +360,12 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (NSDictionary *)_proxyConfiguration
 {
-    return (__bridge NSDictionary *)_websiteDataStore->proxyConfiguration();
+    return nil;
 }
 
 - (NSURL *)_indexedDBDatabaseDirectory
 {
     return [NSURL fileURLWithPath:_websiteDataStore->configuration().indexedDBDatabaseDirectory() isDirectory:YES];
-}
-
-- (void)_resourceLoadStatisticsSetShouldSubmitTelemetry:(BOOL)value
-{
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
-    auto* store = _websiteDataStore->resourceLoadStatistics();
-    if (!store)
-        return;
-
-    store->setShouldSubmitTelemetry(value);
-#endif
 }
 
 - (void)_setResourceLoadStatisticsTestingCallback:(void (^)(WKWebsiteDataStore *, NSString *))callback
@@ -438,6 +390,46 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     WebKit::WebsiteDataStore::allowWebsiteDataRecordsForAllOrigins();
 }
 
+- (void)_loadedThirdPartyDomainsFor:(WKWebView *)webView completionHandler:(void (^)(NSArray<NSString *> *domains))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    if (!webView) {
+        completionHandler(nil);
+        return;
+    }
+
+    auto webPageProxy = [webView _page];
+    if (!webPageProxy) {
+        completionHandler(nil);
+        return;
+    }
+    
+    webPageProxy->loadedThirdPartyDomains([completionHandler = makeBlockPtr(completionHandler)] (Vector<WebCore::RegistrableDomain>&& loadedThirdPartyDomains) {
+        Vector<RefPtr<API::Object>> apiDomains = WTF::map(loadedThirdPartyDomains, [](auto& domain) {
+            return RefPtr<API::Object>(API::String::create(WTFMove(domain.string())));
+        });
+        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))));
+    });
+#else
+    completionHandler(nil);
+#endif
+}
+
+- (void)_clearLoadedThirdPartyDomainsFor:(WKWebView *)webView
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    if (!webView)
+        return;
+
+    auto webPageProxy = [webView _page];
+    if (!webPageProxy)
+        return;
+
+    webPageProxy->clearLoadedThirdPartyDomains();
+#endif
+}
+
+
 - (void)_getAllStorageAccessEntriesFor:(WKWebView *)webView completionHandler:(void (^)(NSArray<NSString *> *domains))completionHandler
 {
     if (!webView) {
@@ -445,7 +437,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         return;
     }
 
-    auto* webPageProxy = [webView _page];
+    auto webPageProxy = [webView _page];
     if (!webPageProxy) {
         completionHandler({ });
         return;
@@ -462,6 +454,22 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #else
     completionHandler({ });
 #endif
+}
+
+- (void)_getWebViewCategoryFor:(WKWebView *)webView completionHandler:(void (^)(_WKWebViewCategory category))completionHandler
+{
+    if (!webView) {
+        completionHandler(_WKWebViewCategoryWebBrowser);
+        return;
+    }
+
+    auto webPageProxy = [webView _page];
+    if (!webPageProxy) {
+        completionHandler(_WKWebViewCategoryWebBrowser);
+        return;
+    }
+
+    completionHandler(toWKWebViewCategory(webPageProxy->configuration().webViewCategory()));
 }
 
 - (void)_scheduleCookieBlockingUpdate:(void (^)(void))completionHandler
@@ -567,10 +575,21 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #endif
 }
 
+- (void)_setThirdPartyCookieBlockingMode:(BOOL)enabled onlyOnSitesWithoutUserInteraction:(BOOL)onlyOnSitesWithoutUserInteraction completionHandler:(void (^)(void))completionHandler
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    _websiteDataStore->setResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(enabled, onlyOnSitesWithoutUserInteraction, [completionHandler = makeBlockPtr(completionHandler)]() {
+        completionHandler();
+    });
+#else
+    completionHandler();
+#endif
+}
+
 - (bool)_hasRegisteredServiceWorker
 {
 #if ENABLE(SERVICE_WORKER)
-    return FileSystem::fileExists(WebCore::serviceWorkerRegistrationDatabaseFilename(_websiteDataStore->serviceWorkerRegistrationDirectory()));
+    return FileSystem::fileExists(WebCore::serviceWorkerRegistrationDatabaseFilename(_websiteDataStore->configuration().serviceWorkerRegistrationDirectory()));
 #else
     return NO;
 #endif
@@ -590,6 +609,17 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 - (_WKWebsiteDataStoreConfiguration *)_configuration
 {
     return wrapper(_websiteDataStore->configuration().copy());
+}
+
+- (void)_appBoundDomains:(void (^)(NSArray<NSString *> *))completionHandler
+{
+    _websiteDataStore->appBoundDomainsForTesting([completionHandler = makeBlockPtr(completionHandler)](auto& domains) mutable {
+        Vector<RefPtr<API::Object>> apiDomains;
+        apiDomains.reserveInitialCapacity(domains.size());
+        for (auto& domain : domains)
+            apiDomains.uncheckedAppend(API::String::create(domain.string()));
+        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))));
+    });
 }
 
 @end

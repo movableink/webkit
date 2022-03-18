@@ -32,6 +32,7 @@
 #include "Logging.h"
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcess.h"
+#include "NetworkProcessProxyMessages.h"
 #include "ServiceWorkerFetchTask.h"
 #include "ServiceWorkerFetchTaskMessages.h"
 #include "WebCoreArgumentCoders.h"
@@ -107,7 +108,8 @@ void WebSWServerToContextConnection::terminateWorker(ServiceWorkerIdentifier ser
 
 void WebSWServerToContextConnection::syncTerminateWorker(ServiceWorkerIdentifier serviceWorkerIdentifier)
 {
-    sendSync(Messages::WebSWContextManagerConnection::SyncTerminateWorker(serviceWorkerIdentifier), Messages::WebSWContextManagerConnection::SyncTerminateWorker::Reply());
+    if (!sendSync(Messages::WebSWContextManagerConnection::SyncTerminateWorker(serviceWorkerIdentifier), Messages::WebSWContextManagerConnection::SyncTerminateWorker::Reply(), 0, 10_s, IPC::SendSyncOption::ForceDispatchWhenDestinationIsWaitingForUnboundedSyncReply))
+        m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::TerminateUnresponsiveServiceWorkerProcesses { webProcessIdentifier() }, 0);
 }
 
 void WebSWServerToContextConnection::findClientByIdentifierCompleted(uint64_t requestIdentifier, const Optional<ServiceWorkerClientData>& data, bool hasSecurityError)
@@ -118,11 +120,6 @@ void WebSWServerToContextConnection::findClientByIdentifierCompleted(uint64_t re
 void WebSWServerToContextConnection::matchAllCompleted(uint64_t requestIdentifier, const Vector<ServiceWorkerClientData>& clientsData)
 {
     send(Messages::WebSWContextManagerConnection::MatchAllCompleted { requestIdentifier, clientsData });
-}
-
-void WebSWServerToContextConnection::claimCompleted(uint64_t requestIdentifier)
-{
-    send(Messages::WebSWContextManagerConnection::ClaimCompleted { requestIdentifier });
 }
 
 void WebSWServerToContextConnection::connectionIsNoLongerNeeded()
@@ -160,28 +157,6 @@ void WebSWServerToContextConnection::unregisterFetch(ServiceWorkerFetchTask& tas
 {
     ASSERT(m_ongoingFetches.contains(task.fetchIdentifier()));
     m_ongoingFetches.remove(task.fetchIdentifier());
-}
-
-void WebSWServerToContextConnection::fetchTaskTimedOut(ServiceWorkerIdentifier serviceWorkerIdentifier)
-{
-    // Gather all fetches in this service worker.
-    Vector<ServiceWorkerFetchTask*> fetches;
-    for (auto& fetchTask : m_ongoingFetches.values()) {
-        if (fetchTask->serviceWorkerIdentifier() == serviceWorkerIdentifier)
-            fetches.append(fetchTask.get());
-    }
-
-    // Signal load failure for them.
-    for (auto* fetchTask : fetches)
-        fetchTask->contextClosed();
-
-    if (m_server) {
-        if (auto* worker = m_server->workerByID(serviceWorkerIdentifier)) {
-            worker->setHasTimedOutAnyFetchTasks();
-            if (worker->isRunning())
-                m_server->syncTerminateWorker(*worker);
-        }
-    }
 }
 
 WebCore::ProcessIdentifier WebSWServerToContextConnection::webProcessIdentifier() const

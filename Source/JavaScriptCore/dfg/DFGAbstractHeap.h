@@ -57,7 +57,6 @@ namespace JSC { namespace DFG {
     macro(JSCell_indexingType) \
     macro(JSCell_structureID) \
     macro(JSCell_typeInfoFlags) \
-    macro(JSCell_typeInfoType) \
     macro(JSObject_butterfly) \
     macro(JSPropertyNameEnumerator_cachedPropertyNames) \
     macro(RegExpObject_lastIndex) \
@@ -77,7 +76,7 @@ namespace JSC { namespace DFG {
     macro(JSSetFields) \
     macro(JSWeakMapFields) \
     macro(JSWeakSetFields) \
-    macro(JSPromiseFields) \
+    macro(JSInternalFields) \
     macro(InternalState) \
     macro(CatchLocals) \
     macro(Absolute) \
@@ -319,6 +318,7 @@ public:
 private:
     static constexpr unsigned valueShift = 15;
     static constexpr unsigned topShift = 14;
+    static_assert((64 - valueShift) >= Operand::maxBits, "Operand should fit in Payload's encoded format");
     
     Payload payloadImpl() const
     {

@@ -517,6 +517,12 @@ bool WebDriverService::findSessionOrCompleteWithError(JSON::Object& parameters, 
         return false;
     }
 
+    if (!m_session->isConnected()) {
+        m_session = nullptr;
+        completionHandler(CommandResult::fail(CommandResult::ErrorCode::InvalidSessionID, String("session deleted because of page crash or hang.")));
+        return false;
+    }
+
     return true;
 }
 
@@ -2238,15 +2244,12 @@ void WebDriverService::takeElementScreenshot(RefPtr<JSON::Object>&& parameters, 
     if (!elementID)
         return;
 
-    bool scrollIntoView = true;
-    parameters->getBoolean("scroll"_s, scrollIntoView);
-
-    m_session->waitForNavigationToComplete([this, elementID, scrollIntoView, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
+    m_session->waitForNavigationToComplete([this, elementID, completionHandler = WTFMove(completionHandler)](CommandResult&& result) mutable {
         if (result.isError()) {
             completionHandler(WTFMove(result));
             return;
         }
-        m_session->takeScreenshot(elementID.value(), scrollIntoView, WTFMove(completionHandler));
+        m_session->takeScreenshot(elementID.value(), true, WTFMove(completionHandler));
     });
 }
 

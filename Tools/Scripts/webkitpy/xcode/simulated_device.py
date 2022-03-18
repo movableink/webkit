@@ -203,15 +203,18 @@ class SimulatedDeviceManager(object):
 
     @staticmethod
     def get_runtime_for_device_type(device_type):
+        # Search for an available runtime that best matches the provided device type
+        candidate = None
         for runtime in SimulatedDeviceManager.AVAILABLE_RUNTIMES:
-            if runtime.os_variant == device_type.software_variant and (device_type.software_version is None or device_type.software_version == runtime.version):
-                return runtime
-
-        # Allow for a partial version match.
-        for runtime in SimulatedDeviceManager.AVAILABLE_RUNTIMES:
-            if runtime.os_variant == device_type.software_variant and runtime.version in device_type.software_version:
-                return runtime
-        return None
+            if runtime.os_variant != device_type.software_variant:
+                continue
+            if device_type.software_version and runtime.version.major != device_type.software_version.major:
+                continue
+            if device_type.software_version and runtime.version < device_type.software_version:
+                continue
+            if not candidate or runtime.version < candidate.version:
+                candidate = runtime
+        return candidate
 
     @staticmethod
     def _disambiguate_device_type(device_type):
@@ -563,7 +566,7 @@ class SimulatedDevice(object):
             _log.debug(u'{} has no service to check if the device is usable'.format(self.device_type.software_variant))
             return True
 
-        system_processes = self.executive.run_command([SimulatedDeviceManager.xcrun, 'simctl', 'spawn', self.udid, 'launchctl', 'print', 'system'], decode_output=False)
+        system_processes = self.executive.run_command([SimulatedDeviceManager.xcrun, 'simctl', 'spawn', self.udid, 'launchctl', 'print', 'system'], decode_output=True)
         if re.search(r'"{}"'.format(home_screen_service), system_processes) or re.search(r'A\s+{}'.format(home_screen_service), system_processes):
             return True
         return False
@@ -604,7 +607,7 @@ class SimulatedDevice(object):
 
     def install_app(self, app_path, env=None):
         # Even after carousel is running, it takes a few seconds for watchOS to allow installs.
-        for i in xrange(self.NUM_INSTALL_RETRIES):
+        for i in range(self.NUM_INSTALL_RETRIES):
             exit_code = self.executive.run_command(['xcrun', 'simctl', 'install', self.udid, app_path], return_exit_code=True)
             if exit_code == 0:
                 return True

@@ -27,36 +27,52 @@
 
 #if PLATFORM(COCOA)
 
+#include "AudioHardwareListener.h"
 #include "GenericTaskQueue.h"
 #include "PlatformMediaSessionManager.h"
+#include "RemoteCommandListener.h"
+#include <pal/system/SystemSleepListener.h>
 
 namespace WebCore {
 
-class MediaSessionManagerCocoa : public PlatformMediaSessionManager {
+struct NowPlayingInfo;
+
+class MediaSessionManagerCocoa
+    : public PlatformMediaSessionManager
+    , private RemoteCommandListenerClient
+    , private PAL::SystemSleepListener::Client
+    , private AudioHardwareListener::Client {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual ~MediaSessionManagerCocoa() = default;
+    MediaSessionManagerCocoa();
     
-    void updateSessionState() override;
-    void beginInterruption(PlatformMediaSession::InterruptionType) override;
+    void updateSessionState() final;
+    void beginInterruption(PlatformMediaSession::InterruptionType) final;
 
     bool hasActiveNowPlayingSession() const final { return m_nowPlayingActive; }
     String lastUpdatedNowPlayingTitle() const final { return m_lastUpdatedNowPlayingTitle; }
     double lastUpdatedNowPlayingDuration() const final { return m_lastUpdatedNowPlayingDuration; }
     double lastUpdatedNowPlayingElapsedTime() const final { return m_lastUpdatedNowPlayingElapsedTime; }
-    uint64_t lastUpdatedNowPlayingInfoUniqueIdentifier() const final { return m_lastUpdatedNowPlayingInfoUniqueIdentifier; }
+    MediaSessionIdentifier lastUpdatedNowPlayingInfoUniqueIdentifier() const final { return m_lastUpdatedNowPlayingInfoUniqueIdentifier; }
     bool registeredAsNowPlayingApplication() const final { return m_registeredAsNowPlayingApplication; }
     void prepareToSendUserMediaPermissionRequest() final;
 
+    static WEBCORE_EXPORT void clearNowPlayingInfo();
+    static WEBCORE_EXPORT void setNowPlayingInfo(bool setAsNowPlayingApplication, const NowPlayingInfo&);
+
 protected:
-    void scheduleUpdateNowPlayingInfo() override;
+    void scheduleUpdateNowPlayingInfo() final;
     void updateNowPlayingInfo();
-    void removeSession(PlatformMediaSession&) override;
-    
-    bool sessionWillBeginPlayback(PlatformMediaSession&) override;
-    void sessionWillEndPlayback(PlatformMediaSession&) override;
-    void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) override;
-    void clientCharacteristicsChanged(PlatformMediaSession&) override;
-    void sessionCanProduceAudioChanged() override;
+
+    void removeSession(PlatformMediaSession&) final;
+    void addSession(PlatformMediaSession&) final;
+    void setCurrentSession(PlatformMediaSession&) final;
+
+    bool sessionWillBeginPlayback(PlatformMediaSession&) final;
+    void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying) override;
+    void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) final;
+    void clientCharacteristicsChanged(PlatformMediaSession&) final;
+    void sessionCanProduceAudioChanged() final;
 
     virtual void providePresentingApplicationPIDIfNecessary() { }
 
@@ -67,6 +83,19 @@ private:
     const char* logClassName() const override { return "MediaSessionManagerCocoa"; }
 #endif
 
+    // RemoteCommandListenerClient
+    void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType type, const PlatformMediaSession::RemoteCommandArgument* argument) final { processDidReceiveRemoteControlCommand(type, argument); }
+    bool supportsSeeking() const final { return computeSupportsSeeking(); }
+
+    // AudioHardwareListenerClient
+    void audioHardwareDidBecomeActive() final { }
+    void audioHardwareDidBecomeInactive() final { }
+    void audioOutputDeviceChanged() final { updateSessionState(); }
+
+    // PAL::SystemSleepListener
+    void systemWillSleep() final { processSystemWillSleep(); }
+    void systemDidWake() final { processSystemDidWake(); }
+
     bool m_nowPlayingActive { false };
     bool m_registeredAsNowPlayingApplication { false };
 
@@ -74,9 +103,13 @@ private:
     String m_lastUpdatedNowPlayingTitle;
     double m_lastUpdatedNowPlayingDuration { NAN };
     double m_lastUpdatedNowPlayingElapsedTime { NAN };
-    uint64_t m_lastUpdatedNowPlayingInfoUniqueIdentifier { 0 };
+    MediaSessionIdentifier m_lastUpdatedNowPlayingInfoUniqueIdentifier;
 
     GenericTaskQueue<Timer> m_nowPlayingUpdateTaskQueue;
+
+    std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
+    std::unique_ptr<PAL::SystemSleepListener> m_systemSleepListener;
+    RefPtr<AudioHardwareListener> m_audioHardwareListener;
 };
 
 }

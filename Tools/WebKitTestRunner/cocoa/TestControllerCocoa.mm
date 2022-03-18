@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,23 +65,14 @@ void initializeWebViewConfiguration(const char* libraryPath, WKStringRef injecte
     globalWebViewConfiguration = [[WKWebViewConfiguration alloc] init];
 
     globalWebViewConfiguration.processPool = (__bridge WKProcessPool *)context;
-    globalWebViewConfiguration.websiteDataStore = (__bridge WKWebsiteDataStore *)TestController::websiteDataStore();
+    globalWebViewConfiguration.websiteDataStore = (__bridge WKWebsiteDataStore *)TestController::defaultWebsiteDataStore();
     globalWebViewConfiguration._allowUniversalAccessFromFileURLs = YES;
+    globalWebViewConfiguration._allowTopNavigationToDataURLs = YES;
     globalWebViewConfiguration._applePayEnabled = YES;
 
     WKContextSetStorageAccessAPIEnabled(context, true);
 
-    WKWebsiteDataStore* poolWebsiteDataStore = (__bridge WKWebsiteDataStore *)TestController::websiteDataStore();
-    if (libraryPath) {
-        String cacheStorageDirectory = String(libraryPath) + '/' + "CacheStorage";
-        [poolWebsiteDataStore _setCacheStorageDirectory: cacheStorageDirectory];
-
-        String serviceWorkerRegistrationDirectory = String(libraryPath) + '/' + "ServiceWorkers";
-        [poolWebsiteDataStore _setServiceWorkerRegistrationDirectory: serviceWorkerRegistrationDirectory];
-    }
-
     [globalWebViewConfiguration.websiteDataStore _setResourceLoadStatisticsEnabled:YES];
-    [globalWebViewConfiguration.websiteDataStore _resourceLoadStatisticsSetShouldSubmitTelemetry:NO];
 
     [globalWebsiteDataStoreDelegateClient release];
     globalWebsiteDataStoreDelegateClient = [[TestWebsiteDataStoreDelegate alloc] init];
@@ -145,8 +136,8 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
         [copiedConfiguration setIgnoresViewportScaleLimits:YES];
     if (options.useCharacterSelectionGranularity)
         [copiedConfiguration setSelectionGranularity:WKSelectionGranularityCharacter];
-    if (options.useCharacterSelectionGranularity)
-        [copiedConfiguration setSelectionGranularity:WKSelectionGranularityCharacter];
+#else
+    [copiedConfiguration _setServiceControlsEnabled:options.enableServiceControls];
 #endif
 
     if (options.enableAttachmentElement)
@@ -160,9 +151,14 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
 
     if (options.enableUndoManagerAPI)
         [copiedConfiguration _setUndoManagerAPIEnabled:YES];
-        
-    if (options.useEphemeralSession)
-        [copiedConfiguration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
+
+    if (options.useEphemeralSession) {
+        auto ephemeralWebsiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+        [ephemeralWebsiteDataStore _setResourceLoadStatisticsEnabled:YES];
+        [copiedConfiguration setWebsiteDataStore:ephemeralWebsiteDataStore];
+    }
+
+    [copiedConfiguration _setAllowTopNavigationToDataURLs:options.allowTopNavigationToDataURLs];
 
     configureContentMode(copiedConfiguration.get(), options);
 
@@ -220,17 +216,24 @@ void TestController::platformRunUntil(bool& done, WTF::Seconds timeout)
 
 static NSCalendar *swizzledCalendar()
 {
-    return [NSCalendar calendarWithIdentifier:TestController::singleton().getOverriddenCalendarIdentifier().get()];
-}
-    
-RetainPtr<NSString> TestController::getOverriddenCalendarIdentifier() const
-{
-    return m_overriddenCalendarIdentifier;
+    NSCalendar *calendar = [NSCalendar calendarWithIdentifier:TestController::singleton().overriddenCalendarIdentifier()];
+    calendar.locale = [NSLocale localeWithLocaleIdentifier:TestController::singleton().overriddenCalendarLocaleIdentifier()];
+    return calendar;
 }
 
-void TestController::setDefaultCalendarType(NSString *identifier)
+NSString *TestController::overriddenCalendarIdentifier() const
 {
-    m_overriddenCalendarIdentifier = identifier;
+    return m_overriddenCalendarAndLocaleIdentifiers.first.get();
+}
+
+NSString *TestController::overriddenCalendarLocaleIdentifier() const
+{
+    return m_overriddenCalendarAndLocaleIdentifiers.second.get();
+}
+
+void TestController::setDefaultCalendarType(NSString *identifier, NSString *localeIdentifier)
+{
+    m_overriddenCalendarAndLocaleIdentifiers = { identifier, localeIdentifier };
     if (!m_calendarSwizzler)
         m_calendarSwizzler = makeUnique<ClassMethodSwizzler>([NSCalendar class], @selector(currentCalendar), reinterpret_cast<IMP>(swizzledCalendar));
 }
@@ -250,10 +253,24 @@ void TestController::resetContentExtensions()
     }
 }
 
+void TestController::setApplicationBundleIdentifier(const String& bundleIdentifier)
+{
+    if (bundleIdentifier.isEmpty())
+        return;
+    
+    [TestRunnerWKWebView _setApplicationBundleIdentifier:(NSString *)bundleIdentifier.createCFString().get()];
+}
+
+void TestController::clearApplicationBundleIdentifierTestingOverride()
+{
+    [TestRunnerWKWebView _clearApplicationBundleIdentifierTestingOverride];
+    m_hasSetApplicationBundleIdentifier = false;
+}
+
 void TestController::cocoaResetStateToConsistentValues(const TestOptions& options)
 {
     m_calendarSwizzler = nullptr;
-    m_overriddenCalendarIdentifier = nil;
+    m_overriddenCalendarAndLocaleIdentifiers = { nil, nil };
     
     if (auto* webView = mainWebView()) {
         TestRunnerWKWebView *platformView = webView->platformView();
@@ -263,7 +280,7 @@ void TestController::cocoaResetStateToConsistentValues(const TestOptions& option
         [platformView resetInteractionCallbacks];
     }
 
-    [globalWebsiteDataStoreDelegateClient setAllowRaisingQuota: true];
+    [globalWebsiteDataStoreDelegateClient setAllowRaisingQuota:YES];
 }
 
 void TestController::platformWillRunTest(const TestInvocation& testInvocation)
@@ -325,6 +342,56 @@ void TestController::getAllStorageAccessEntries()
     }];
 }
 
+void TestController::loadedThirdPartyDomains()
+{
+    auto* parentView = mainWebView();
+    if (!parentView)
+        return;
+    
+    [globalWebViewConfiguration.websiteDataStore _loadedThirdPartyDomainsFor:parentView->platformView() completionHandler:^(NSArray<NSString *> *nsDomains) {
+        Vector<String> domains;
+        domains.reserveInitialCapacity(nsDomains.count);
+        for (NSString *domain : nsDomains)
+            domains.uncheckedAppend(domain);
+        m_currentInvocation->didReceiveLoadedThirdPartyDomains(WTFMove(domains));
+    }];
+}
+
+void TestController::clearLoadedThirdPartyDomains()
+{
+    auto* parentView = mainWebView();
+    if (!parentView)
+        return;
+
+    [globalWebViewConfiguration.websiteDataStore _clearLoadedThirdPartyDomainsFor:parentView->platformView()];
+}
+
+void TestController::getWebViewCategory()
+{
+    auto* parentView = mainWebView();
+    if (!parentView)
+        return;
+
+    [globalWebViewConfiguration.websiteDataStore _getWebViewCategoryFor:parentView->platformView() completionHandler:^(_WKWebViewCategory webViewCategory) {
+        String category;
+        switch (webViewCategory) {
+        case _WKWebViewCategoryAppBoundDomain:
+            category = "AppBoundDomain";
+            break;
+        case _WKWebViewCategoryHybridApp:
+            category = "HybridApp";
+            break;
+        case _WKWebViewCategoryInAppBrowser:
+            category = "InAppBrowser";
+            break;
+        case _WKWebViewCategoryWebBrowser:
+            category = "WebBrowser";
+            break;
+        }
+        m_currentInvocation->didReceiveWebViewCategory(category);
+    }];
+}
+
 void TestController::injectUserScript(WKStringRef script)
 {
     auto userScript = adoptNS([[WKUserScript alloc] initWithSource: toWTFString(script) injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO]);
@@ -352,6 +419,7 @@ void TestController::addTestKeyToKeychain(const String& privateKeyBase64, const 
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrLabel: attrLabel,
         (id)kSecAttrApplicationTag: adoptNS([[NSData alloc] initWithBase64EncodedString:applicationTagBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock,
 #if HAVE(DATA_PROTECTION_KEYCHAIN)
         (id)kSecUseDataProtectionKeychain: @YES
 #else
@@ -362,7 +430,7 @@ void TestController::addTestKeyToKeychain(const String& privateKeyBase64, const 
     ASSERT_UNUSED(status, !status);
 }
 
-void TestController::cleanUpKeychain(const String& attrLabel, const String& applicationTagBase64)
+void TestController::cleanUpKeychain(const String& attrLabel, const String& applicationLabelBase64)
 {
     auto deleteQuery = adoptNS([[NSMutableDictionary alloc] init]);
     [deleteQuery setObject:(id)kSecClassKey forKey:(id)kSecClass];
@@ -372,19 +440,19 @@ void TestController::cleanUpKeychain(const String& attrLabel, const String& appl
 #else
     [deleteQuery setObject:@YES forKey:(id)kSecAttrNoLegacy];
 #endif
-    if (!!applicationTagBase64)
-        [deleteQuery setObject:adoptNS([[NSData alloc] initWithBase64EncodedString:applicationTagBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get() forKey:(id)kSecAttrApplicationTag];
+    if (!!applicationLabelBase64)
+        [deleteQuery setObject:adoptNS([[NSData alloc] initWithBase64EncodedString:applicationLabelBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get() forKey:(id)kSecAttrApplicationLabel];
 
     SecItemDelete((__bridge CFDictionaryRef)deleteQuery.get());
 }
 
-bool TestController::keyExistsInKeychain(const String& attrLabel, const String& applicationTagBase64)
+bool TestController::keyExistsInKeychain(const String& attrLabel, const String& applicationLabelBase64)
 {
     NSDictionary *query = @{
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrLabel: attrLabel,
-        (id)kSecAttrApplicationTag: adoptNS([[NSData alloc] initWithBase64EncodedString:applicationTagBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (id)kSecAttrApplicationLabel: adoptNS([[NSData alloc] initWithBase64EncodedString:applicationLabelBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
 #if HAVE(DATA_PROTECTION_KEYCHAIN)
         (id)kSecUseDataProtectionKeychain: @YES
 #else

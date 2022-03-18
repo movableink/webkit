@@ -285,7 +285,7 @@ interface TestRunner {
     void installCustomMenuAction(DOMString name, boolean dismissesAutomatically, object callback);
 
     // Gamepad
-    void setMockGamepadDetails(unsigned long index, DOMString id, unsigned long axisCount, unsigned long buttonCount);
+    void setMockGamepadDetails(unsigned long index, DOMString id, DOMString mapping, unsigned long axisCount, unsigned long buttonCount);
     void setMockGamepadAxisValue(unsigned long index, unsigned long axisIndex, double value);
     void setMockGamepadButtonValue(unsigned long index, unsigned long buttonIndex, double value);
     void connectMockGamepad(unsigned long index);
@@ -293,6 +293,7 @@ interface TestRunner {
 
     // Resource Load Statistics
     void setStatisticsEnabled(boolean value);
+    boolean isStatisticsEphemeral();
     void installStatisticsDidModifyDataRecordsCallback(object callback);
     void installStatisticsDidScanDataRecordsCallback(object callback);
     void installStatisticsDidRunTelemetryCallback(object callback);
@@ -344,6 +345,7 @@ interface TestRunner {
     void setStatisticsShouldDowngradeReferrer(boolean value, object callback);
     void setStatisticsShouldBlockThirdPartyCookies(boolean value, object callback, optional boolean onlyOnSitesWithoutUserInteraction);
     void setStatisticsFirstPartyWebsiteDataRemovalMode(boolean value, object callback);
+    void loadedThirdPartyDomains(object callback);
 
     // Injected bundle form client.
     void installTextDidChangeInTextFieldCallback(object callback);
@@ -351,8 +353,10 @@ interface TestRunner {
     void installTextFieldDidEndEditingCallback(object callback);
 
     // Storage Access API
-    void setStorageAccessAPIEnabled(boolean enabled);
     void getAllStorageAccessEntries(object callback);
+
+    void getWebViewCategory(object callback);
+    void setInAppBrowserPrivacyEnabled(boolean value, object callback);
 
     // Open panel
     void setOpenPanelFiles(object filesArray);
@@ -389,6 +393,7 @@ interface TestRunner {
     void resetMockMediaDevices();
     void setMockCameraOrientation(unsigned long orientation);
     boolean isMockRealtimeMediaSourceCenterEnabled();
+    boolean hasAppBoundSession();
 
     void injectUserScript(DOMString string);
     readonly attribute unsigned long userScriptInjectedCount;
@@ -399,8 +404,8 @@ interface TestRunner {
 
     // WebAuthn
     void addTestKeyToKeychain(DOMString privateKeyBase64, DOMString attrLabel, DOMString applicationTagBase64);
-    void cleanUpKeychain(DOMString attrLabel, optional DOMString applicationTagBase64);
-    boolean keyExistsInKeychain(DOMString attrLabel, DOMString applicationTagBase64);
+    void cleanUpKeychain(DOMString attrLabel, optional DOMString applicationLabelBase64);
+    boolean keyExistsInKeychain(DOMString attrLabel, DOMString applicationLabelBase64);
 
     // Ad Click Attribution
     void clearAdClickAttribution();

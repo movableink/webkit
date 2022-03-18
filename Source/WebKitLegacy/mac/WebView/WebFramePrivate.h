@@ -142,7 +142,7 @@ typedef enum {
 - (void)setSelectionChangeCallbacksDisabled:(BOOL)flag;
 - (NSRect)caretRect;
 - (NSRect)rectForScrollToVisible; // return caretRect if selection is caret, selectionRect otherwise
-- (void)setCaretColor:(CGColorRef)color;
+@property (nonatomic, readwrite) CGColorRef caretColor;
 - (NSView *)documentView;
 - (int)layoutCount;
 - (BOOL)isTelephoneNumberParsingAllowed;
@@ -150,6 +150,7 @@ typedef enum {
 
 - (DOMRange *)selectedDOMRange;
 - (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)affinity closeTyping:(BOOL)closeTyping;
+- (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)affinity closeTyping:(BOOL)closeTyping userTriggered:(BOOL)userTriggered;
 - (NSSelectionAffinity)selectionAffinity;
 - (void)expandSelectionToElementContainingCaretSelection;
 - (DOMRange *)elementRangeContainingCaretSelection;

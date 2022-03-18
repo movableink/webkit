@@ -17,7 +17,7 @@ ifeq (,$(DO_NOT_BUILD_IMAGE_DIFF))
 endif
 
 ifeq (iosmac,$(SDK_VARIANT))
-	MODULES = ../Source/ThirdParty/gtest/xcode TestWebKitAPI
+	MODULES = DumpRenderTree WebKitTestRunner ../Source/ThirdParty/gtest/xcode TestWebKitAPI
 endif
 
 all:
@@ -29,6 +29,14 @@ debug d development dev develop:
 	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
 
 release r deployment dep deploy:
+	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
+	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+
+release+assert ra:
+	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
+	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+
+testing t:
 	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
 	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
 

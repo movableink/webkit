@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
+#include "ContentFilterClient.h"
 #include "ContentSecurityPolicyClient.h"
 #include "DeviceOrientationOrMotionPermissionState.h"
 #include "DocumentIdentifier.h"
@@ -137,12 +138,16 @@ enum class LegacyOverflowScrollingTouchPolicy : uint8_t {
     Enable,
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
 class DocumentLoader
     : public RefCounted<DocumentLoader>
     , public FrameDestructionObserver
     , public ContentSecurityPolicyClient
+#if ENABLE(CONTENT_FILTERING)
+    , public ContentFilterClient
+#endif
     , private CachedRawResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DocumentLoader);
     friend class ContentFilter;
 public:
     static Ref<DocumentLoader> create(const ResourceRequest& request, const SubstituteData& data)
@@ -236,7 +241,7 @@ public:
 
     WEBCORE_EXPORT Vector<Ref<ArchiveResource>> subresources() const;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool isSubstituteLoadPending(ResourceLoader*) const;
 #endif
     void cancelPendingSubstituteLoad(ResourceLoader*);   
@@ -365,7 +370,9 @@ public:
     ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicyToPropagate() const;
 
 #if ENABLE(CONTENT_FILTERING)
-    ContentFilter* contentFilter() const;
+    ContentFilter* contentFilter() const { return m_contentFilter.get(); }
+    void ref() const final { RefCounted<DocumentLoader>::ref(); }
+    void deref() const final { RefCounted<DocumentLoader>::deref(); }
 #endif
 
     bool isAlwaysOnLoggingAllowed() const;
@@ -386,6 +393,9 @@ public:
 
     void setAllowsWebArchiveForMainFrame(bool allowsWebArchiveForMainFrame) { m_allowsWebArchiveForMainFrame = allowsWebArchiveForMainFrame; }
     bool allowsWebArchiveForMainFrame() const { return m_allowsWebArchiveForMainFrame; }
+
+    void setAllowsDataURLsForMainFrame(bool allowsDataURLsForMainFrame) { m_allowsDataURLsForMainFrame = allowsDataURLsForMainFrame; }
+    bool allowsDataURLsForMainFrame() const { return m_allowsDataURLsForMainFrame; }
 
     void setDownloadAttribute(const String& attribute) { m_downloadAttribute = attribute; }
     const String& downloadAttribute() const { return m_downloadAttribute; }
@@ -443,6 +453,15 @@ private:
 #endif
 
     void responseReceived(const ResourceResponse&, CompletionHandler<void()>&&);
+
+#if ENABLE(CONTENT_FILTERING)
+    // ContentFilterClient
+    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const char*, int) final;
+    WEBCORE_EXPORT ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
+    WEBCORE_EXPORT void cancelMainResourceLoadForContentFilter(const ResourceError&) final;
+    WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) final;
+#endif
+
     void dataReceived(const char* data, int length);
 
     bool maybeLoadEmpty();
@@ -486,6 +505,7 @@ private:
     WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEvent::Init&&) final;
 
     bool disallowWebArchive() const;
+    bool disallowDataRequest() const;
 
     Ref<CachedResourceLoader> m_cachedResourceLoader;
 
@@ -619,11 +639,12 @@ private:
     Optional<DocumentIdentifier> m_temporaryServiceWorkerClient;
 #endif
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool m_hasEverBeenAttached { false };
 #endif
 
     bool m_allowsWebArchiveForMainFrame { false };
+    bool m_allowsDataURLsForMainFrame { false };
     String m_downloadAttribute;
 };
 
@@ -700,15 +721,6 @@ inline ApplicationCacheHost* DocumentLoader::applicationCacheHostUnlessBeingDest
 {
     return m_applicationCacheHost.get();
 }
-
-#if ENABLE(CONTENT_FILTERING)
-
-inline ContentFilter* DocumentLoader::contentFilter() const
-{
-    return m_contentFilter.get();
-}
-
-#endif
 
 inline void DocumentLoader::didTellClientAboutLoad(const String& url)
 {

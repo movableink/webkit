@@ -315,7 +315,7 @@ void HTMLPlugInImageElement::didMoveToNewDocument(Document& oldDocument, Documen
     }
 
     if (m_imageLoader)
-        m_imageLoader->elementDidMoveToNewDocument();
+        m_imageLoader->elementDidMoveToNewDocument(oldDocument);
 
     if (m_hasUpdateScheduledForAfterStyleResolution) {
         oldDocument.decrementLoadEventDelayCount();
@@ -363,7 +363,7 @@ void HTMLPlugInImageElement::updateSnapshot(Image* image)
 
 static DOMWrapperWorld& plugInImageElementIsolatedWorld()
 {
-    static auto& isolatedWorld = DOMWrapperWorld::create(commonVM()).leakRef();
+    static auto& isolatedWorld = DOMWrapperWorld::create(commonVM(), DOMWrapperWorld::Type::Internal, "Plugin"_s).leakRef();
     return isolatedWorld;
 }
 

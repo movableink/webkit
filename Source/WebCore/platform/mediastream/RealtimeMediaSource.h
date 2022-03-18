@@ -42,6 +42,7 @@
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeMediaSourceFactory.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RecursiveLockAdapter.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -70,7 +71,7 @@ class WEBCORE_EXPORT RealtimeMediaSource
     : public ThreadSafeRefCounted<RealtimeMediaSource, WTF::DestructionThread::MainRunLoop>
     , public CanMakeWeakPtr<RealtimeMediaSource>
 #if !RELEASE_LOG_DISABLED
-    , private LoggerHelper
+    , protected LoggerHelper
 #endif
 {
 public:
@@ -83,6 +84,7 @@ public:
         virtual void sourceStopped() { }
         virtual void sourceMutedChanged() { }
         virtual void sourceSettingsChanged() { }
+        virtual void audioUnitWillStart() { }
 
         // Observer state queries.
         virtual bool preventSourceFromStopping() { return false; }
@@ -105,6 +107,8 @@ public:
 
     enum class Type { None, Audio, Video };
     Type type() const { return m_type; }
+
+    virtual void whenReady(CompletionHandler<void(String)>&&);
 
     bool isProducingData() const { return m_isProducingData; }
     void start();
@@ -184,7 +188,7 @@ public:
     virtual bool isIncomingVideoSource() const { return false; }
 
 #if !RELEASE_LOG_DISABLED
-    void setLogger(const Logger&, const void*);
+    virtual void setLogger(const Logger&, const void*);
     const Logger* loggerPtr() const { return m_logger.get(); }
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
@@ -281,6 +285,11 @@ struct CaptureSourceOrError {
 };
 
 String convertEnumerationToString(RealtimeMediaSource::Type);
+
+inline void RealtimeMediaSource::whenReady(CompletionHandler<void(String)>&& callback)
+{
+    callback({ });
+}
 
 } // namespace WebCore
 

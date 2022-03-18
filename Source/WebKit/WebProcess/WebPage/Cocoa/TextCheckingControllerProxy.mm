@@ -40,6 +40,7 @@
 #import <WebCore/FocusController.h>
 #import <WebCore/RenderObject.h>
 #import <WebCore/RenderedDocumentMarker.h>
+#import <WebCore/SimpleRange.h>
 #import <WebCore/TextIterator.h>
 #import <WebCore/VisibleUnits.h>
 
@@ -192,14 +193,14 @@ AttributedString TextCheckingControllerProxy::annotatedSubstringBetweenPositions
 
         [string appendAttributedString:[[[NSAttributedString alloc] initWithString:it.text().createNSStringWithoutCopying().get()] autorelease]];
 
-        RefPtr<Range> currentTextRange = it.range();
-        auto markers = document->markers().markersInRange(*currentTextRange, DocumentMarker::PlatformTextChecking);
+        SimpleRange currentTextRange = it.range();
+        auto markers = document->markers().markersInRange(createLiveRange(currentTextRange), DocumentMarker::PlatformTextChecking);
         for (const auto* marker : markers) {
             if (!WTF::holds_alternative<DocumentMarker::PlatformTextCheckingData>(marker->data()))
                 continue;
 
             auto& textCheckingData = WTF::get<DocumentMarker::PlatformTextCheckingData>(marker->data());
-            auto subrange = TextIterator::subrange(*currentTextRange, marker->startOffset(), marker->endOffset() - marker->startOffset());
+            auto subrange = TextIterator::subrange(createLiveRange(currentTextRange), marker->startOffset(), marker->endOffset() - marker->startOffset());
 
             size_t subrangeLocation;
             size_t subrangeLength;

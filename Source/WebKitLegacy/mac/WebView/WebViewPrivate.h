@@ -817,6 +817,7 @@ Could be worth adding to the API.
 
 // SPI for DumpRenderTree
 + (void)_setLoadResourcesSerially:(BOOL)serialize;
+- (void)_forceRepaintForTesting;
 
 /*!
     @method cssAnimationsSuspended
@@ -1086,6 +1087,7 @@ typedef struct WebEdgeInsets {
 
 @interface WebView (WebViewIOSAdditions)
 - (NSArray<DOMElement *> *)_editableElementsInRect:(CGRect)rect;
+- (void)revealCurrentSelection;
 @end
 
 #endif

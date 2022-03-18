@@ -160,11 +160,6 @@ enum UnloadEventPolicy {
     UnloadEventPolicyUnloadAndPageHide
 };
 
-enum ShouldSendReferrer {
-    MaybeSendReferrer,
-    NeverSendReferrer
-};
-
 // Passed to FrameLoader::urlSelected() and ScriptController::executeIfJavaScriptURL()
 // to control whether, in the case of a JavaScript URL, executeIfJavaScriptURL() should
 // replace the document. It is a FIXME to eliminate this extra parameter from
@@ -227,6 +222,11 @@ enum class LoadCompletionType : uint8_t {
     Cancel
 };
 
+enum class AllowsContentJavaScript : uint8_t {
+    Yes,
+    No,
+};
+
 } // namespace WebCore
 
 namespace WTF {
@@ -263,6 +263,14 @@ template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
         WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
+    >;
+};
+
+template<> struct EnumTraits<WebCore::AllowsContentJavaScript> {
+    using values = EnumValues<
+        WebCore::AllowsContentJavaScript,
+        WebCore::AllowsContentJavaScript::Yes,
+        WebCore::AllowsContentJavaScript::No
     >;
 };
 

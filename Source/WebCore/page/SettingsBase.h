@@ -104,6 +104,7 @@ public:
     void pageDestroyed() { m_page = nullptr; }
 
     enum class FontLoadTimingOverride { None, Block, Swap, Failure };
+    enum class ParserScriptingFlagPolicy : uint8_t { OnlyIfScriptIsEnabled, Enabled };
 
     // FIXME: Move these default values to SettingsDefaultValues.h
 
@@ -158,9 +159,6 @@ public:
     WEBCORE_EXPORT void setMinimumDOMTimerInterval(Seconds); // Initialized to DOMTimer::defaultMinimumInterval().
     Seconds minimumDOMTimerInterval() const { return m_minimumDOMTimerInterval; }
 
-    WEBCORE_EXPORT void setLayoutInterval(Seconds);
-    Seconds layoutInterval() const { return m_layoutInterval; }
-
 #if ENABLE(TEXT_AUTOSIZING)
     float oneLineTextMultiplierCoefficient() const { return m_oneLineTextMultiplierCoefficient; }
     float multiLineTextMultiplierCoefficient() const { return m_multiLineTextMultiplierCoefficient; }
@@ -205,7 +203,6 @@ protected:
     Page* m_page;
 
     const std::unique_ptr<FontGenericFamilies> m_fontGenericFamilies;
-    Seconds m_layoutInterval;
     Seconds m_minimumDOMTimerInterval;
 
     Timer m_setImageLoadingSettingsTimer;

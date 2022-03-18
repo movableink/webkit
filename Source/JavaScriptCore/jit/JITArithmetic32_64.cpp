@@ -48,8 +48,8 @@ void JIT::emit_compareAndJump(const Instruction* instruction, RelationalConditio
     JumpList notInt32Op2;
 
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
 
     // Character less.
@@ -102,8 +102,8 @@ template <typename Op>
 void JIT::emit_compareUnsignedAndJump(const Instruction* instruction, RelationalCondition condition)
 {
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
 
     if (isOperandConstantInt(op1)) {
@@ -122,9 +122,9 @@ template <typename Op>
 void JIT::emit_compareUnsigned(const Instruction* instruction, RelationalCondition condition)
 {
     auto bytecode = instruction->as<Op>();
-    int dst = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
     if (isOperandConstantInt(op1)) {
         emitLoad(op2, regT3, regT2);
@@ -143,8 +143,8 @@ template <typename Op>
 void JIT::emit_compareAndJumpSlow(const Instruction *instruction, DoubleCondition, size_t (JIT_OPERATION *operation)(JSGlobalObject*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator& iter)
 {
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
 
     linkAllSlowCases(iter);
@@ -158,8 +158,8 @@ void JIT::emit_compareAndJumpSlow(const Instruction *instruction, DoubleConditio
 void JIT::emit_op_unsigned(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpUnsigned>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_operand.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_operand;
     
     emitLoad(op1, regT1, regT0);
     
@@ -171,7 +171,7 @@ void JIT::emit_op_unsigned(const Instruction* currentInstruction)
 void JIT::emit_op_inc(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpInc>();
-    int srcDst = bytecode.m_srcDst.offset();
+    VirtualRegister srcDst = bytecode.m_srcDst;
 
     emitLoad(srcDst, regT1, regT0);
 
@@ -183,7 +183,7 @@ void JIT::emit_op_inc(const Instruction* currentInstruction)
 void JIT::emit_op_dec(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpDec>();
-    int srcDst = bytecode.m_srcDst.offset();
+    VirtualRegister srcDst = bytecode.m_srcDst;
 
     emitLoad(srcDst, regT1, regT0);
 
@@ -200,8 +200,8 @@ void JIT::emitBinaryDoubleOp(const Instruction *instruction, OperandTypes types,
     auto bytecode = instruction->as<Op>();
     int opcodeID = Op::opcodeID;
     int target = jumpTarget(instruction, bytecode.m_targetLabel);
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
     if (!notInt32Op1.empty()) {
         // Double case 1: Op1 is not int32; Op2 is unknown.
@@ -233,19 +233,19 @@ void JIT::emitBinaryDoubleOp(const Instruction *instruction, OperandTypes types,
         switch (opcodeID) {
             case op_jless:
                 emitLoadDouble(op1, fpRegT2);
-                addJump(branchDouble(DoubleLessThan, fpRegT2, fpRegT0), target);
+                addJump(branchDouble(DoubleLessThanAndOrdered, fpRegT2, fpRegT0), target);
                 break;
             case op_jlesseq:
                 emitLoadDouble(op1, fpRegT2);
-                addJump(branchDouble(DoubleLessThanOrEqual, fpRegT2, fpRegT0), target);
+                addJump(branchDouble(DoubleLessThanOrEqualAndOrdered, fpRegT2, fpRegT0), target);
                 break;
             case op_jgreater:
                 emitLoadDouble(op1, fpRegT2);
-                addJump(branchDouble(DoubleGreaterThan, fpRegT2, fpRegT0), target);
+                addJump(branchDouble(DoubleGreaterThanAndOrdered, fpRegT2, fpRegT0), target);
                 break;
             case op_jgreatereq:
                 emitLoadDouble(op1, fpRegT2);
-                addJump(branchDouble(DoubleGreaterThanOrEqual, fpRegT2, fpRegT0), target);
+                addJump(branchDouble(DoubleGreaterThanOrEqualAndOrdered, fpRegT2, fpRegT0), target);
                 break;
             case op_jnless:
                 emitLoadDouble(op1, fpRegT2);
@@ -290,19 +290,19 @@ void JIT::emitBinaryDoubleOp(const Instruction *instruction, OperandTypes types,
         switch (opcodeID) {
             case op_jless:
                 emitLoadDouble(op2, fpRegT1);
-                addJump(branchDouble(DoubleLessThan, fpRegT0, fpRegT1), target);
+                addJump(branchDouble(DoubleLessThanAndOrdered, fpRegT0, fpRegT1), target);
                 break;
             case op_jlesseq:
                 emitLoadDouble(op2, fpRegT1);
-                addJump(branchDouble(DoubleLessThanOrEqual, fpRegT0, fpRegT1), target);
+                addJump(branchDouble(DoubleLessThanOrEqualAndOrdered, fpRegT0, fpRegT1), target);
                 break;
             case op_jgreater:
                 emitLoadDouble(op2, fpRegT1);
-                addJump(branchDouble(DoubleGreaterThan, fpRegT0, fpRegT1), target);
+                addJump(branchDouble(DoubleGreaterThanAndOrdered, fpRegT0, fpRegT1), target);
                 break;
             case op_jgreatereq:
                 emitLoadDouble(op2, fpRegT1);
-                addJump(branchDouble(DoubleGreaterThanOrEqual, fpRegT0, fpRegT1), target);
+                addJump(branchDouble(DoubleGreaterThanOrEqualAndOrdered, fpRegT0, fpRegT1), target);
                 break;
             case op_jnless:
                 emitLoadDouble(op2, fpRegT1);

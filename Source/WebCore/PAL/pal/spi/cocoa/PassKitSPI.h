@@ -58,13 +58,11 @@ WTF_EXTERN_C_END
 
 #import <Foundation/Foundation.h>
 
-#if HAVE(PASSKIT_API_TYPE)
 typedef NS_ENUM(NSUInteger, PKPaymentRequestAPIType) {
     PKPaymentRequestAPITypeInApp = 0,
     PKPaymentRequestAPITypeWebJS,
     PKPaymentRequestAPITypeWebPaymentRequest,
 };
-#endif
 
 #if PLATFORM(IOS_FAMILY)
 
@@ -191,6 +189,7 @@ typedef NSString * PKPaymentNetwork NS_EXTENSIBLE_STRING_ENUM;
 @property (nonatomic, copy, readonly, nullable) PKPaymentNetwork network;
 @property (nonatomic, readonly) PKPaymentMethodType type;
 @property (nonatomic, copy, readonly, nullable) PKPaymentPass *paymentPass;
+@property (nonatomic, copy, readonly, nullable) CNContact *billingAddress;
 @end
 
 @interface PKPaymentToken : NSObject
@@ -280,9 +279,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface PKPaymentAuthorizationViewController ()
 + (void)paymentServicesMerchantURL:(void(^)(NSURL *merchantURL, NSError *error))completion;
-#if HAVE(PASSKIT_API_TYPE)
 + (void)paymentServicesMerchantURLForAPIType:(PKPaymentRequestAPIType)APIType completion:(void(^)(NSURL *merchantURL, NSError *error))completion;
-#endif
 @property (nonatomic, assign, nullable) id<PKPaymentAuthorizationViewControllerPrivateDelegate> privateDelegate;
 @end
 
@@ -302,11 +299,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) NSString *CTDataConnectionServiceType;
 @end
 
-#if HAVE(PASSKIT_API_TYPE)
 @interface PKPaymentRequest ()
 @property (nonatomic, assign) PKPaymentRequestAPIType APIType;
 @end
-#endif
 
 #if HAVE(PASSKIT_BOUND_INTERFACE_IDENTIFIER)
 @interface PKPaymentRequest ()
@@ -369,7 +364,7 @@ NS_ASSUME_NONNULL_END
 #endif
 
 extern "C"
-void PKDrawApplePayButton(_Nonnull CGContextRef, CGRect drawRect, CGFloat scale, PKPaymentButtonType, PKPaymentButtonStyle, NSString * _Nullable languageCode);
+void PKDrawApplePayButtonWithCornerRadius(_Nonnull CGContextRef, CGRect drawRect, CGFloat scale, CGFloat cornerRadius, PKPaymentButtonType, PKPaymentButtonStyle, NSString * _Nullable languageCode);
 
 NS_ASSUME_NONNULL_BEGIN
 

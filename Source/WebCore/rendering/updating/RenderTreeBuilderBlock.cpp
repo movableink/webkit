@@ -166,7 +166,14 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
         ASSERT(beforeChildContainer);
 
         if (beforeChildContainer->isAnonymous()) {
-            RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!beforeChildContainer->isInline());
+            if (beforeChildContainer->isInline() && child->isInline()) {
+                // The before child happens to be a block level box wrapped in an anonymous inline-block in an inline context (e.g. ruby).
+                // Let's attach this new child before the anonymous inline-block wrapper.
+                ASSERT(beforeChildContainer->isInlineBlockOrInlineTable());
+                m_builder.attach(parent, WTFMove(child), beforeChildContainer);
+                return;
+            }
+            RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!beforeChildContainer->isInline() || beforeChildContainer->isTable());
 
             // If the requested beforeChild is not one of our children, then this is because
             // there is an anonymous container within this object that contains the beforeChild.

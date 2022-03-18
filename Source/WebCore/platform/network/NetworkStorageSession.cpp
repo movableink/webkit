@@ -26,6 +26,8 @@
 #include "config.h"
 #include "NetworkStorageSession.h"
 
+#include "Cookie.h"
+#include "HTTPCookieAcceptPolicy.h"
 #include "RuntimeApplicationChecks.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
@@ -54,6 +56,14 @@ void NetworkStorageSession::permitProcessToUseCookieAPI(bool value)
     else
         removeProcessPrivilege(ProcessPrivilege::CanAccessRawCookies);
 }
+
+#if !PLATFORM(COCOA)
+Vector<Cookie> NetworkStorageSession::domCookiesForHost(const String&)
+{
+    ASSERT_NOT_IMPLEMENTED_YET();
+    return { };
+}
+#endif // !PLATFORM(COCOA)
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
 
@@ -156,14 +166,6 @@ void NetworkStorageSession::setDomainsWithUserInteractionAsFirstParty(const Vect
 {
     m_registrableDomainsWithUserInteractionAsFirstParty.clear();
     m_registrableDomainsWithUserInteractionAsFirstParty.add(domains.begin(), domains.end());
-}
-
-void NetworkStorageSession::removePrevalentDomains(const Vector<RegistrableDomain>& domains)
-{
-    for (auto& domain : domains) {
-        m_registrableDomainsToBlockAndDeleteCookiesFor.remove(domain);
-        m_registrableDomainsToBlockButKeepCookiesFor.remove(domain);
-    }
 }
 
 bool NetworkStorageSession::hasStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, Optional<FrameIdentifier> frameID, PageIdentifier pageID) const

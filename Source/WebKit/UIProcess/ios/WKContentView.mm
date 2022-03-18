@@ -31,6 +31,7 @@
 #import "APIPageConfiguration.h"
 #import "AccessibilityIOS.h"
 #import "FullscreenClient.h"
+#import "GPUProcessProxy.h"
 #import "InputViewUpdateDeferrer.h"
 #import "Logging.h"
 #import "PageClientImplIOS.h"
@@ -134,6 +135,7 @@
 
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     RetainPtr<_UILayerHostView> _visibilityPropagationView;
+    RetainPtr<_UILayerHostView> _visibilityPropagationViewForGPUProcess;
 #endif
 
     WebCore::HistoricalVelocityData _historicalKinematicData;
@@ -169,7 +171,7 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     _page->setDelegatesScrolling(true);
 
 #if ENABLE(FULLSCREEN_API)
-    _page->setFullscreenClient(makeUnique<WebKit::FullscreenClient>(_webView));
+    _page->setFullscreenClient(makeUnique<WebKit::FullscreenClient>(self.webView));
 #endif
 
     WebKit::WebProcessPool::statistics().wkViewCount++;
@@ -199,10 +201,13 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     [self _setupVisibilityPropagationView];
+    [self _setupVisibilityPropagationViewForGPUProcess];
 #endif
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillResignActive:) name:UIApplicationWillResignActiveNotification object:[UIApplication sharedApplication]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:[UIApplication sharedApplication]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:[UIApplication sharedApplication]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:[UIApplication sharedApplication]];
 
 #if USE(UIKIT_KEYBOARD_ADDITIONS)
     if (WebCore::IOSApplication::isEvernote() && !linkedOnOrAfter(WebKit::SDKVersion::FirstWhereWKContentViewDoesNotOverrideKeyCommands))
@@ -227,6 +232,24 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     [self addSubview:_visibilityPropagationView.get()];
 }
 
+- (void)_setupVisibilityPropagationViewForGPUProcess
+{
+    if (!WebKit::GPUProcessProxy::singletonIfCreated())
+        return;
+    auto processIdentifier = WebKit::GPUProcessProxy::singleton().processIdentifier();
+    auto contextID = WebKit::GPUProcessProxy::singleton().contextIDForVisibilityPropagation();
+    if (!processIdentifier || !contextID)
+        return;
+
+    if (_visibilityPropagationViewForGPUProcess)
+        return;
+
+    // Propagate the view's visibility state to the GPU process so that it is marked as "Foreground Running" when necessary.
+    _visibilityPropagationViewForGPUProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processIdentifier contextID:contextID]);
+    RELEASE_LOG(Process, "Created visibility propagation view %p (contextID: %u) for GPU process with PID %d", _visibilityPropagationViewForGPUProcess.get(), contextID, processIdentifier);
+    [self addSubview:_visibilityPropagationViewForGPUProcess.get()];
+}
+
 - (void)_removeVisibilityPropagationView
 {
     if (!_visibilityPropagationView)
@@ -236,9 +259,19 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     [_visibilityPropagationView removeFromSuperview];
     _visibilityPropagationView = nullptr;
 }
+
+- (void)_removeVisibilityPropagationViewForGPUProcess
+{
+    if (!_visibilityPropagationViewForGPUProcess)
+        return;
+
+    RELEASE_LOG(Process, "Removing visibility propagation view %p", _visibilityPropagationViewForGPUProcess.get());
+    [_visibilityPropagationViewForGPUProcess removeFromSuperview];
+    _visibilityPropagationViewForGPUProcess = nullptr;
+}
 #endif
 
-- (instancetype)initWithFrame:(CGRect)frame processPool:(WebKit::WebProcessPool&)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView
+- (instancetype)initWithFrame:(CGRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView
 {
     if (!(self = [super initWithFrame:frame webView:webView]))
         return nil;
@@ -267,6 +300,11 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 - (WebKit::WebPageProxy*)page
 {
     return _page.get();
+}
+
+- (WKWebView *)webView
+{
+    return _webView.getAutoreleased();
 }
 
 - (void)willMoveToWindow:(UIWindow *)newWindow
@@ -426,7 +464,7 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
         isStableState,
         _sizeChangedSinceLastVisibleContentRectUpdate,
         isChangingObscuredInsetsInteractively,
-        _webView._allowsViewportShrinkToFit,
+        self.webView._allowsViewportShrinkToFit,
         enclosedInScrollableAncestorView,
         velocityData,
         downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*drawingArea).lastCommittedLayerTreeTransactionID());
@@ -584,6 +622,13 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
     _isPrintingToPDF = NO;
 }
 
+#if ENABLE(GPU_PROCESS)
+- (void)_gpuProcessCrashed
+{
+    [self _removeVisibilityPropagationViewForGPUProcess];
+}
+#endif
+
 - (void)_processWillSwap
 {
     // FIXME: Should we do something differently?
@@ -604,6 +649,11 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 {
     [self _setupVisibilityPropagationView];
 }
+
+- (void)_gpuProcessDidCreateContextForVisibilityPropagation
+{
+    [self _setupVisibilityPropagationViewForGPUProcess];
+}
 #endif
 
 - (void)_didCommitLayerTree:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
@@ -622,14 +672,14 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
     if (_interactionViewsContainerView) {
         WebCore::FloatPoint scaledOrigin = layerTreeTransaction.scrollOrigin();
-        float scale = [[_webView scrollView] zoomScale];
+        float scale = self.webView.scrollView.zoomScale;
         scaledOrigin.scale(scale);
         [_interactionViewsContainerView setFrame:CGRectMake(scaledOrigin.x(), scaledOrigin.y(), 0, 0)];
     }
     
     if (boundsChanged) {
         // FIXME: factor computeLayoutViewportRect() into something that gives us this rect.
-        WebCore::FloatRect fixedPositionRect = _page->computeLayoutViewportRect(_page->unobscuredContentRect(), _page->unobscuredContentRectRespectingInputViewBounds(), _page->layoutViewportRect(), [[_webView scrollView] zoomScale]);
+        WebCore::FloatRect fixedPositionRect = _page->computeLayoutViewportRect(_page->unobscuredContentRect(), _page->unobscuredContentRectRespectingInputViewBounds(), _page->layoutViewportRect(), self.webView.scrollView.zoomScale);
         [self updateFixedClippingView:fixedPositionRect];
 
         // We need to push the new content bounds to the webview to update fixed position rects.
@@ -713,6 +763,18 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
     _page->applicationDidBecomeActive();
 }
 
+- (void)_applicationDidEnterBackground:(NSNotification*)notification
+{
+    if (!self.window)
+        _page->applicationDidEnterBackgroundForMedia();
+}
+
+- (void)_applicationWillEnterForeground:(NSNotification*)notification
+{
+    if (!self.window)
+        _page->applicationWillEnterForegroundForMedia();
+}
+
 @end
 
 #pragma mark Printing
@@ -729,7 +791,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
     WebCore::FrameIdentifier frameID;
     if (_WKFrameHandle *handle = printFormatter.frameToPrint)
-        frameID = WebCore::frameIdentifierFromID(handle._frameID);
+        frameID = handle->_frameHandle->frameID();
     else if (auto mainFrame = _page->mainFrame())
         frameID = mainFrame->frameID();
     else

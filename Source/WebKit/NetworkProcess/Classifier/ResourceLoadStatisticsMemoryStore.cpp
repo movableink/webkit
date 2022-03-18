@@ -316,11 +316,11 @@ void ResourceLoadStatisticsMemoryStore::requestStorageAccess(SubFrameDomain&& su
     auto& subFrameStatistic = ensureResourceStatisticsForRegistrableDomain(subFrameDomain);
     switch (cookieAccess(subFrameStatistic, topFrameDomain)) {
     case CookieAccess::CannotRequest:
-        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "Cannot grant storage access to %{public}s since its cookies are blocked in third-party contexts and it has not received user interaction as first-party.", subFrameDomain.string().utf8().data());
+        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "Cannot grant storage access to %" PUBLIC_LOG_STRING " since its cookies are blocked in third-party contexts and it has not received user interaction as first-party.", subFrameDomain.string().utf8().data());
         completionHandler(StorageAccessStatus::CannotRequestAccess);
         return;
     case CookieAccess::BasedOnCookiePolicy:
-        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "No need to grant storage access to %{public}s since its cookies are not blocked in third-party contexts. Note that the underlying cookie policy may still block this third-party from setting cookies.", subFrameDomain.string().utf8().data());
+        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "No need to grant storage access to %" PUBLIC_LOG_STRING " since its cookies are not blocked in third-party contexts. Note that the underlying cookie policy may still block this third-party from setting cookies.", subFrameDomain.string().utf8().data());
         completionHandler(StorageAccessStatus::HasAccess);
         return;
     case CookieAccess::OnlyIfGranted:
@@ -330,13 +330,13 @@ void ResourceLoadStatisticsMemoryStore::requestStorageAccess(SubFrameDomain&& su
 
     auto userWasPromptedEarlier = hasUserGrantedStorageAccessThroughPrompt(subFrameStatistic, topFrameDomain);
     if (userWasPromptedEarlier == StorageAccessPromptWasShown::No) {
-        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "About to ask the user whether they want to grant storage access to %{public}s under %{public}s or not.", subFrameDomain.string().utf8().data(), topFrameDomain.string().utf8().data());
+        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "About to ask the user whether they want to grant storage access to %" PUBLIC_LOG_STRING " under %" PUBLIC_LOG_STRING " or not.", subFrameDomain.string().utf8().data(), topFrameDomain.string().utf8().data());
         completionHandler(StorageAccessStatus::RequiresUserPrompt);
         return;
     }
 
     if (userWasPromptedEarlier == StorageAccessPromptWasShown::Yes)
-        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "Storage access was granted to %{public}s under %{public}s.", subFrameDomain.string().utf8().data(), topFrameDomain.string().utf8().data());
+        RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "Storage access was granted to %" PUBLIC_LOG_STRING " under %" PUBLIC_LOG_STRING ".", subFrameDomain.string().utf8().data(), topFrameDomain.string().utf8().data());
 
     subFrameStatistic.timesAccessedAsFirstPartyDueToStorageAccessAPI++;
 
@@ -353,7 +353,7 @@ void ResourceLoadStatisticsMemoryStore::requestStorageAccessUnderOpener(DomainIn
     if (domainInNeedOfStorageAccess == openerDomain)
         return;
 
-    RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "[Temporary combatibility fix] Storage access was granted for %{public}s under opener page from %{public}s, with user interaction in the opened window.", domainInNeedOfStorageAccess.string().utf8().data(), openerDomain.string().utf8().data());
+    RELEASE_LOG_INFO_IF(debugLoggingEnabled(), ITPDebug, "[Temporary combatibility fix] Storage access was granted for %" PUBLIC_LOG_STRING " under opener page from %" PUBLIC_LOG_STRING ", with user interaction in the opened window.", domainInNeedOfStorageAccess.string().utf8().data(), openerDomain.string().utf8().data());
     grantStorageAccessInternal(WTFMove(domainInNeedOfStorageAccess), WTFMove(openerDomain), WTF::nullopt, openerPageID, StorageAccessPromptWasShown::No, [](StorageAccessWasGranted) { });
 }
 
@@ -422,13 +422,13 @@ Vector<RegistrableDomain> ResourceLoadStatisticsMemoryStore::ensurePrevalentReso
         auto& manualResourceStatistic = ensureResourceStatisticsForRegistrableDomain(debugManualPrevalentResource());
         setPrevalentResource(manualResourceStatistic, ResourceLoadPrevalence::High);
         domainsToBlock.uncheckedAppend(debugManualPrevalentResource());
-        RELEASE_LOG_INFO(ITPDebug, "Did set %{public}s as prevalent resource for the purposes of ITP Debug Mode.", debugManualPrevalentResource().string().utf8().data());
+        RELEASE_LOG_INFO(ITPDebug, "Did set %" PUBLIC_LOG_STRING " as prevalent resource for the purposes of ITP Debug Mode.", debugManualPrevalentResource().string().utf8().data());
     }
     
     return domainsToBlock;
 }
 
-void ResourceLoadStatisticsMemoryStore::logFrameNavigation(const RegistrableDomain& targetDomain, const RegistrableDomain& topFrameDomain, const RegistrableDomain& sourceDomain, bool isRedirect, bool isMainFrame)
+void ResourceLoadStatisticsMemoryStore::logFrameNavigation(const RegistrableDomain& targetDomain, const RegistrableDomain& topFrameDomain, const RegistrableDomain& sourceDomain, bool isRedirect, bool isMainFrame, Seconds delayAfterMainFrameDocumentLoad, bool wasPotentiallyInitiatedByUser)
 {
     ASSERT(!RunLoop::isMain());
 
@@ -443,15 +443,18 @@ void ResourceLoadStatisticsMemoryStore::logFrameNavigation(const RegistrableDoma
             statisticsWereUpdated = true;
     }
 
-    if (isRedirect && !areTargetAndSourceDomainsSameSite) {
+    if (!areTargetAndSourceDomainsSameSite) {
         if (isMainFrame) {
             auto& redirectingDomainStatistics = ensureResourceStatisticsForRegistrableDomain(sourceDomain);
-            if (redirectingDomainStatistics.topFrameUniqueRedirectsTo.add(targetDomain).isNewEntry)
-                statisticsWereUpdated = true;
-            auto& targetStatistics = ensureResourceStatisticsForRegistrableDomain(targetDomain);
-            if (targetStatistics.topFrameUniqueRedirectsFrom.add(sourceDomain).isNewEntry)
-                statisticsWereUpdated = true;
-        } else {
+            bool wasNavigatedAfterShortDelayWithoutUserInteraction = !wasPotentiallyInitiatedByUser && delayAfterMainFrameDocumentLoad < parameters().minDelayAfterMainFrameDocumentLoadToNotBeARedirect;
+            if (isRedirect || wasNavigatedAfterShortDelayWithoutUserInteraction) {
+                if (redirectingDomainStatistics.topFrameUniqueRedirectsTo.add(targetDomain).isNewEntry)
+                    statisticsWereUpdated = true;
+                auto& targetStatistics = ensureResourceStatisticsForRegistrableDomain(targetDomain);
+                if (targetStatistics.topFrameUniqueRedirectsFrom.add(sourceDomain).isNewEntry)
+                    statisticsWereUpdated = true;
+            }
+        } else if (isRedirect) {
             auto& redirectingDomainStatistics = ensureResourceStatisticsForRegistrableDomain(sourceDomain);
             if (redirectingDomainStatistics.subresourceUniqueRedirectsTo.add(targetDomain).isNewEntry)
                 statisticsWereUpdated = true;
@@ -548,9 +551,15 @@ void ResourceLoadStatisticsMemoryStore::dumpResourceLoadStatistics(CompletionHan
 
     StringBuilder result;
     result.appendLiteral("Resource load statistics:\n\n");
+    Vector<String> sortedMapEntries;
     for (auto& mapEntry : m_resourceStatisticsMap.values())
-        result.append(mapEntry.toString());
+        sortedMapEntries.append(mapEntry.toString());
 
+    std::sort(sortedMapEntries.begin(), sortedMapEntries.end(), WTF::codePointCompareLessThan);
+
+    for (auto& entry : sortedMapEntries)
+        result.append(entry);
+    
     auto thirdPartyData = aggregatedThirdPartyData();
     if (!thirdPartyData.isEmpty()) {
         result.append("\nITP Data:\n");
@@ -915,8 +924,11 @@ Vector<std::pair<RegistrableDomain, WebsiteDataToRemove>> ResourceLoadStatistics
     if (shouldClearGrandfathering)
         clearEndOfGrandfatheringTimeStamp();
 
+    auto now = WallTime::now();
+    auto oldestUserInteraction = now;
     Vector<std::pair<RegistrableDomain, WebsiteDataToRemove>> domainsToRemoveWebsiteDataFor;
     for (auto& statistic : m_resourceStatisticsMap.values()) {
+        oldestUserInteraction = std::min(oldestUserInteraction, statistic.mostRecentUserInteractionTime);
         if (shouldRemoveAllWebsiteDataFor(statistic, shouldCheckForGrandfathering))
             domainsToRemoveWebsiteDataFor.append(std::make_pair(statistic.registrableDomain, WebsiteDataToRemove::All));
         else if (shouldRemoveAllButCookiesFor(statistic, shouldCheckForGrandfathering)) {
@@ -926,6 +938,13 @@ Vector<std::pair<RegistrableDomain, WebsiteDataToRemove>> ResourceLoadStatistics
 
         if (shouldClearGrandfathering && statistic.grandfathered)
             statistic.grandfathered = false;
+    }
+
+    // Give the user enough time to interact with websites until we remove non-cookie website data.
+    if (!parameters().isRunningTest && now - oldestUserInteraction > parameters().minimumTimeBetweenDataRecordsRemoval) {
+        domainsToRemoveWebsiteDataFor.removeAllMatching([&] (auto& pair) {
+            return pair.second == WebsiteDataToRemove::AllButCookies;
+        });
     }
 
     return domainsToRemoveWebsiteDataFor;

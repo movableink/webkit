@@ -47,7 +47,7 @@ class MediaStreamTrackPrivate final
     , public CanMakeWeakPtr<MediaStreamTrackPrivate, WeakPtrFactoryInitialization::Eager>
     , public RealtimeMediaSource::Observer
 #if !RELEASE_LOG_DISABLED
-    , private LoggerHelper
+    , public LoggerHelper
 #endif
 {
 public:
@@ -100,17 +100,17 @@ public:
     Ref<MediaStreamTrackPrivate> clone();
 
     RealtimeMediaSource& source() { return m_source.get(); }
-    RealtimeMediaSource::Type type() const;
+    WEBCORE_EXPORT RealtimeMediaSource::Type type() const;
 
     void endTrack();
 
     void addObserver(Observer&);
     void removeObserver(Observer&);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool hasObserver(Observer&) const;
 #endif
 
-    const RealtimeMediaSourceSettings& settings() const;
+    WEBCORE_EXPORT const RealtimeMediaSourceSettings& settings() const;
     const RealtimeMediaSourceCapabilities& capabilities() const;
 
     void applyConstraints(const MediaConstraints&, RealtimeMediaSource::ApplyConstraintsHandler&&);
@@ -140,6 +140,7 @@ private:
     bool preventSourceFromStopping() final;
     void videoSampleAvailable(MediaSample&) final;
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
+    void audioUnitWillStart() final;
 
     void updateReadyState();
 
@@ -170,7 +171,7 @@ private:
 
 typedef Vector<RefPtr<MediaStreamTrackPrivate>> MediaStreamTrackPrivateVector;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 inline bool MediaStreamTrackPrivate::hasObserver(Observer& observer) const
 {
     auto locker = holdLock(m_observersLock);

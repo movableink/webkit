@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(JIT)
 
 #include "CCallHelpers.h"
+#include "CacheableIdentifierInlines.h"
 #include "CallLinkInfo.h"
 #include "DOMJITGetterSetter.h"
 #include "DirectArguments.h"
@@ -54,22 +55,26 @@ namespace AccessCaseInternal {
 static constexpr bool verbose = false;
 }
 
-AccessCase::AccessCase(VM& vm, JSCell* owner, AccessType type, const Identifier& identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
+
+AccessCase::AccessCase(VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
     : m_type(type)
     , m_offset(offset)
     , m_polyProtoAccessChain(WTFMove(prototypeAccessChain))
-    , m_identifier(Box<Identifier>::create(identifier))
+    , m_identifier(identifier)
 {
     m_structure.setMayBeNull(vm, owner, structure);
     m_conditionSet = conditionSet;
     RELEASE_ASSERT(m_conditionSet.isValid());
 }
 
-std::unique_ptr<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, const Identifier& identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+std::unique_ptr<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
 {
     switch (type) {
     case InHit:
     case InMiss:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
         break;
     case ArrayLength:
     case StringLength:
@@ -103,11 +108,11 @@ std::unique_ptr<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType
     return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, type, identifier, offset, structure, conditionSet, WTFMove(prototypeAccessChain)));
 }
 
-std::unique_ptr<AccessCase> AccessCase::create(
-    VM& vm, JSCell* owner, const Identifier& identifier, PropertyOffset offset, Structure* oldStructure, Structure* newStructure,
+std::unique_ptr<AccessCase> AccessCase::createTransition(
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* oldStructure, Structure* newStructure,
     const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
 {
-    RELEASE_ASSERT(oldStructure == newStructure->previousID());
+    RELEASE_ASSERT(oldStructure == newStructure->previousID(vm));
 
     // Skip optimizing the case where we need a realloc, if we don't have
     // enough registers to make it happen.
@@ -120,12 +125,23 @@ std::unique_ptr<AccessCase> AccessCase::create(
     return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, Transition, identifier, offset, newStructure, conditionSet, WTFMove(prototypeAccessChain)));
 }
 
+std::unique_ptr<AccessCase> AccessCase::createDelete(
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* oldStructure, Structure* newStructure)
+{
+    RELEASE_ASSERT(oldStructure == newStructure->previousID(vm));
+    // We do not cache this case so that we do not need to check the jscell, e.g. TypedArray cells require a check for neutering status.
+    // See the Delete code below.
+    if (!newStructure->canCacheDeleteIC())
+        return nullptr;
+    return std::unique_ptr<AccessCase>(new AccessCase(vm, owner, Delete, identifier, offset, newStructure, { }, { }));
+}
+
 AccessCase::~AccessCase()
 {
 }
 
 std::unique_ptr<AccessCase> AccessCase::fromStructureStubInfo(
-    VM& vm, JSCell* owner, const Identifier& identifier, StructureStubInfo& stubInfo)
+    VM& vm, JSCell* owner, CacheableIdentifier identifier, StructureStubInfo& stubInfo)
 {
     switch (stubInfo.cacheType()) {
     case CacheType::GetByIdSelf:
@@ -134,18 +150,22 @@ std::unique_ptr<AccessCase> AccessCase::fromStructureStubInfo(
 
     case CacheType::PutByIdReplace:
         RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        ASSERT(!identifier.isCell());
         return AccessCase::create(vm, owner, Replace, identifier, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
 
     case CacheType::InByIdSelf:
         RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        ASSERT(!identifier.isCell());
         return AccessCase::create(vm, owner, InHit, identifier, stubInfo.u.byIdSelf.offset, stubInfo.u.byIdSelf.baseObjectStructure.get());
 
     case CacheType::ArrayLength:
         RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        ASSERT(!identifier.isCell());
         return AccessCase::create(vm, owner, AccessCase::ArrayLength, identifier);
 
     case CacheType::StringLength:
         RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
+        ASSERT(!identifier.isCell());
         return AccessCase::create(vm, owner, AccessCase::StringLength, identifier);
 
     default:
@@ -180,11 +200,11 @@ Vector<WatchpointSet*, 2> AccessCase::commit(VM& vm)
     Vector<WatchpointSet*, 2> result;
     Structure* structure = this->structure();
 
-    if (!m_identifier->isNull()) {
+    if (m_identifier) {
         if ((structure && structure->needImpurePropertyWatchpoint())
             || m_conditionSet.needImpurePropertyWatchpoint()
-            || (m_polyProtoAccessChain && m_polyProtoAccessChain->needImpurePropertyWatchpoint()))
-            result.append(vm.ensureWatchpointSetForImpureProperty(*m_identifier));
+            || (m_polyProtoAccessChain && m_polyProtoAccessChain->needImpurePropertyWatchpoint(vm)))
+            result.append(vm.ensureWatchpointSetForImpureProperty(m_identifier.uid()));
     }
 
     if (additionalSet())
@@ -255,6 +275,9 @@ bool AccessCase::requiresIdentifierNameMatch() const
     case Load:
     // We don't currently have a by_val for these puts, but we do care about the identifier.
     case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
     case Replace: 
     case Miss:
     case GetGetter:
@@ -302,6 +325,9 @@ bool AccessCase::requiresInt32PropertyCheck() const
     switch (m_type) {
     case Load:
     case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
     case Replace: 
     case Miss:
     case GetGetter:
@@ -349,6 +375,9 @@ bool AccessCase::needsScratchFPR() const
     switch (m_type) {
     case Load:
     case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
     case Replace: 
     case Miss:
     case GetGetter:
@@ -392,14 +421,14 @@ bool AccessCase::needsScratchFPR() const
 }
 
 template<typename Functor>
-void AccessCase::forEachDependentCell(const Functor& functor) const
+void AccessCase::forEachDependentCell(VM& vm, const Functor& functor) const
 {
     m_conditionSet.forEachDependentCell(functor);
     if (m_structure)
         functor(m_structure.get());
     if (m_polyProtoAccessChain) {
-        for (Structure* structure : m_polyProtoAccessChain->chain())
-            functor(structure);
+        for (StructureID structureID : m_polyProtoAccessChain->chain())
+            functor(vm.getStructure(structureID));
     }
 
     switch (type()) {
@@ -440,6 +469,9 @@ void AccessCase::forEachDependentCell(const Functor& functor) const
     case CustomAccessorSetter:
     case Load:
     case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
     case Replace:
     case Miss:
     case GetGetter:
@@ -470,7 +502,7 @@ void AccessCase::forEachDependentCell(const Functor& functor) const
     }
 }
 
-bool AccessCase::doesCalls(Vector<JSCell*>* cellsToMarkIfDoesCalls) const
+bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) const
 {
     bool doesCalls = false;
     switch (type()) {
@@ -485,6 +517,9 @@ bool AccessCase::doesCalls(Vector<JSCell*>* cellsToMarkIfDoesCalls) const
     case CustomAccessorSetter:
         doesCalls = true;
         break;
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
     case Load:
     case Replace:
     case Miss:
@@ -521,7 +556,7 @@ bool AccessCase::doesCalls(Vector<JSCell*>* cellsToMarkIfDoesCalls) const
     }
 
     if (doesCalls && cellsToMarkIfDoesCalls) {
-        forEachDependentCell([&](JSCell* cell) {
+        forEachDependentCell(vm, [&](JSCell* cell) {
             cellsToMarkIfDoesCalls->append(cell);
         });
     }
@@ -550,7 +585,7 @@ bool AccessCase::canReplace(const AccessCase& other) const
     // Note that if A->guardedByStructureCheck() && B->guardedByStructureCheck() then
     // A->canReplace(B) == B->canReplace(A).
 
-    if (*m_identifier != *other.m_identifier)
+    if (m_identifier != other.m_identifier)
         return false;
     
     switch (type()) {
@@ -607,6 +642,9 @@ bool AccessCase::canReplace(const AccessCase& other) const
 
     case Load:
     case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
     case Replace:
     case Miss:
     case GetGetter:
@@ -648,7 +686,7 @@ void AccessCase::dump(PrintStream& out) const
 
     out.print(comma, m_state);
 
-    out.print(comma, "ident = '", *m_identifier, "'");
+    out.print(comma, "ident = '", m_identifier, "'");
     if (isValidOffset(m_offset))
         out.print(comma, "offset = ", m_offset);
 
@@ -656,7 +694,7 @@ void AccessCase::dump(PrintStream& out) const
         out.print(comma, "prototype access chain = ");
         m_polyProtoAccessChain->dump(structure(), out);
     } else {
-        if (m_type == Transition)
+        if (m_type == Transition || m_type == Delete)
             out.print(comma, "structure = ", pointerDump(structure()), " -> ", pointerDump(newStructure()));
         else if (m_structure)
             out.print(comma, "structure = ", pointerDump(m_structure.get()));
@@ -678,7 +716,7 @@ bool AccessCase::visitWeak(VM& vm) const
     }
 
     bool isValid = true;
-    forEachDependentCell([&](JSCell* cell) {
+    forEachDependentCell(vm, [&](JSCell* cell) {
         isValid &= vm.heap.isMarked(cell);
     });
     return isValid;
@@ -692,13 +730,14 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
         result &= m_structure->markIfCheap(visitor);
 
     if (m_polyProtoAccessChain) {
-        for (Structure* structure : m_polyProtoAccessChain->chain())
-            result &= structure->markIfCheap(visitor);
+        for (StructureID structureID : m_polyProtoAccessChain->chain())
+            result &= visitor.vm().getStructure(structureID)->markIfCheap(visitor);
     }
 
     switch (m_type) {
     case Transition:
-        if (visitor.vm().heap.isMarked(m_structure->previousID()))
+    case Delete:
+        if (visitor.vm().heap.isMarked(m_structure->previousID(visitor.vm())))
             visitor.appendUnbarriered(m_structure.get());
         else
             result = false;
@@ -708,6 +747,11 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
     }
 
     return result;
+}
+
+void AccessCase::visitAggregate(SlotVisitor& visitor) const
+{
+    m_identifier.visitAggregate(visitor);
 }
 
 void AccessCase::generateWithGuard(
@@ -728,7 +772,7 @@ void AccessCase::generateWithGuard(
     GPRReg scratchGPR = state.scratchGPR;
 
     if (requiresIdentifierNameMatch() && !stubInfo.hasConstantIdentifier) {
-        RELEASE_ASSERT(!m_identifier->isNull());
+        RELEASE_ASSERT(m_identifier);
         GPRReg propertyGPR = state.u.propertyGPR;
         // non-rope string check done inside polymorphic access.
 
@@ -743,7 +787,7 @@ void AccessCase::generateWithGuard(
         if (m_polyProtoAccessChain) {
             GPRReg baseForAccessGPR = state.scratchGPR;
             jit.move(state.baseGPR, baseForAccessGPR);
-            m_polyProtoAccessChain->forEach(structure(), [&] (Structure* structure, bool atEnd) {
+            m_polyProtoAccessChain->forEach(vm, structure(), [&] (Structure* structure, bool atEnd) {
                 fallThrough.append(
                     jit.branchStructure(
                         CCallHelpers::NotEqual,
@@ -1569,7 +1613,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             CCallHelpers::Jump returnUndefined = jit.branchTestPtr(
                 CCallHelpers::Zero, loadedValueGPR);
 
-            unsigned numberOfRegsForCall = CallFrame::headerSizeInRegisters + numberOfParameters;
+            unsigned numberOfRegsForCall = CallFrame::headerSizeInRegisters + roundArgumentCountToAlignFrame(numberOfParameters);
+            ASSERT(!(numberOfRegsForCall % stackAlignmentRegisters()));
             unsigned numberOfBytesForCall = numberOfRegsForCall * sizeof(Register) - sizeof(CallerFrameAndPC);
 
             unsigned alignedNumberOfBytesForCall =
@@ -1592,13 +1637,13 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
             jit.storeCell(
                 thisGPR,
-                calleeFrame.withOffset(virtualRegisterForArgument(0).offset() * sizeof(Register)));
+                calleeFrame.withOffset(virtualRegisterForArgumentIncludingThis(0).offset() * sizeof(Register)));
 
             if (m_type == Setter) {
                 jit.storeValue(
                     valueRegs,
                     calleeFrame.withOffset(
-                        virtualRegisterForArgument(1).offset() * sizeof(Register)));
+                        virtualRegisterForArgumentIncludingThis(1).offset() * sizeof(Register)));
             }
 
             CCallHelpers::Jump slowCase = jit.branchPtrWithPatch(
@@ -1666,7 +1711,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             // FIXME: Revisit JSGlobalObject.
             // https://bugs.webkit.org/show_bug.cgi?id=203204
             if (m_type == CustomValueGetter || m_type == CustomAccessorGetter) {
-                RELEASE_ASSERT(!m_identifier->isNull());
+                RELEASE_ASSERT(m_identifier);
                 jit.setupArguments<PropertySlot::GetValueFunc>(
                     CCallHelpers::TrustedImmPtr(codeBlock->globalObject()),
                     CCallHelpers::CellValue(baseForCustom),
@@ -1839,7 +1884,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                 state.restoreLiveRegistersFromStackForCall(spillState, resultRegisterToExclude);
             }
         }
-        
+
         if (isInlineOffset(m_offset)) {
             jit.storeValue(
                 valueRegs,
@@ -1882,6 +1927,70 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                 state.failAndIgnore.append(slowPath);
         } else
             RELEASE_ASSERT(slowPath.empty());
+        return;
+    }
+
+    case Delete: {
+        ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+        allocator.lock(stubInfo.baseRegs());
+        allocator.lock(valueRegs);
+        allocator.lock(baseGPR);
+        allocator.lock(scratchGPR);
+        ASSERT(structure()->transitionWatchpointSetHasBeenInvalidated());
+        ASSERT(newStructure()->isPropertyDeletionTransition());
+        ASSERT(baseGPR != scratchGPR);
+        ASSERT(!valueRegs.uses(baseGPR));
+        ASSERT(!valueRegs.uses(scratchGPR));
+
+        ScratchRegisterAllocator::PreservedState preservedState =
+            allocator.preserveReusedRegistersByPushing(jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+
+        bool hasIndexingHeader = newStructure()->mayHaveIndexingHeader();
+        // We do not cache this case yet so that we do not need to check the jscell.
+        // See Structure::hasIndexingHeader and JSObject::deleteProperty.
+        ASSERT(newStructure()->canCacheDeleteIC());
+        // Clear the butterfly if we have no properties, since our put code expects this.
+        bool shouldNukeStructureAndClearButterfly = !newStructure()->outOfLineCapacity() && structure()->outOfLineCapacity() && !hasIndexingHeader;
+
+        jit.moveValue(JSValue(), valueRegs);
+
+        if (shouldNukeStructureAndClearButterfly) {
+            jit.nukeStructureAndStoreButterfly(vm, valueRegs.payloadGPR(), baseGPR);
+        } else if (isInlineOffset(m_offset)) {
+            jit.storeValue(
+                valueRegs,
+                CCallHelpers::Address(
+                    baseGPR,
+                    JSObject::offsetOfInlineStorage() +
+                    offsetInInlineStorage(m_offset) * sizeof(JSValue)));
+        } else {
+            jit.loadPtr(CCallHelpers::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
+            jit.storeValue(
+                valueRegs,
+                CCallHelpers::Address(scratchGPR, offsetInButterfly(m_offset) * sizeof(JSValue)));
+        }
+
+        uint32_t structureBits = bitwise_cast<uint32_t>(newStructure()->id());
+        jit.store32(
+            CCallHelpers::TrustedImm32(structureBits),
+            CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
+
+        jit.move(MacroAssembler::TrustedImm32(true), valueRegs.payloadGPR());
+
+        allocator.restoreReusedRegistersByPopping(jit, preservedState);
+        state.succeed();
+        return;
+    }
+
+    case DeleteNonConfigurable: {
+        jit.move(MacroAssembler::TrustedImm32(false), valueRegs.payloadGPR());
+        state.succeed();
+        return;
+    }
+
+    case DeleteMiss: {
+        jit.move(MacroAssembler::TrustedImm32(true), valueRegs.payloadGPR());
+        state.succeed();
         return;
     }
         
@@ -1981,7 +2090,7 @@ TypedArrayType AccessCase::toTypedArrayType(AccessType accessType)
     }
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 void AccessCase::checkConsistency(StructureStubInfo& stubInfo)
 {
     RELEASE_ASSERT(!(requiresInt32PropertyCheck() && requiresIdentifierNameMatch()));
@@ -1991,7 +2100,7 @@ void AccessCase::checkConsistency(StructureStubInfo& stubInfo)
         RELEASE_ASSERT(requiresIdentifierNameMatch());
     }
 }
-#endif
+#endif // ASSERT_ENABLED
 
 } // namespace JSC
 

@@ -200,6 +200,7 @@ bool isValidHTTPToken(const String& value)
     return true;
 }
 
+#if USE(GLIB)
 // True if the character at the given position satisifies a predicate, incrementing "pos" by one.
 // Note: Might return pos == str.length()
 static inline bool skipCharacter(const String& value, unsigned& pos, WTF::Function<bool(const UChar)>&& predicate)
@@ -306,6 +307,7 @@ bool isValidUserAgentHeaderValue(const String& value)
 
     return pos == value.length();
 }
+#endif
 
 static const size_t maxInputSampleSize = 128;
 static String trimInputSample(const char* p, size_t length)
@@ -959,7 +961,7 @@ bool isCrossOriginSafeHeader(HTTPHeaderName name, const HTTPHeaderSet& accessCon
 
 bool isCrossOriginSafeHeader(const String& name, const HTTPHeaderSet& accessControlExposeHeaderSet)
 {
-#ifndef ASSERT_DISABLED
+#if ASSERT_ENABLED
     HTTPHeaderName headerName;
     ASSERT(!findHTTPHeaderName(name, headerName));
 #endif
@@ -1011,6 +1013,17 @@ String normalizeHTTPMethod(const String& method)
         }
     }
     return method;
+}
+
+// Defined by https://tools.ietf.org/html/rfc7231#section-4.2.1
+bool isSafeMethod(const String& method)
+{
+    const ASCIILiteral safeMethods[] = { "GET"_s, "HEAD"_s, "OPTIONS"_s, "TRACE"_s };
+    for (auto value : safeMethods) {
+        if (equalIgnoringASCIICase(method, value.characters()))
+            return true;
+    }
+    return false;
 }
 
 CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView header)

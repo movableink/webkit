@@ -33,7 +33,6 @@
 #include <WebCore/ActivityState.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/IntRect.h>
-#include <WebCore/LayerFlushThrottleState.h>
 #include <WebCore/LayoutMilestone.h>
 #include <WebCore/PlatformScreen.h>
 #include <wtf/Forward.h>
@@ -85,7 +84,6 @@ public:
     virtual bool forceRepaintAsync(CallbackID) { return false; }
     virtual void setLayerTreeStateIsFrozen(bool) { }
     virtual bool layerTreeStateIsFrozen() const { return false; }
-    virtual bool layerFlushThrottlingIsActive() const { return false; }
 
     virtual void updatePreferences(const WebPreferencesStore&) { }
     virtual void enablePainting() { }
@@ -113,9 +111,8 @@ public:
 
     virtual WebCore::GraphicsLayerFactory* graphicsLayerFactory() { return nullptr; }
     virtual void setRootCompositingLayer(WebCore::GraphicsLayer*) = 0;
-    virtual void scheduleCompositingLayerFlush() = 0;
-    virtual void scheduleInitialDeferredPaint() = 0;
-    virtual void scheduleCompositingLayerFlushImmediately() = 0;
+    virtual void scheduleRenderingUpdate() = 0;
+    virtual void scheduleImmediateRenderingUpdate() = 0;
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     virtual RefPtr<WebCore::DisplayRefreshMonitor> createDisplayRefreshMonitor(WebCore::PlatformDisplayID);
@@ -128,8 +125,6 @@ public:
 
     virtual bool markLayersVolatileImmediatelyIfPossible() { return true; }
 
-    virtual bool adjustLayerFlushThrottling(WebCore::LayerFlushThrottleState::Flags) { return false; }
-
     virtual void attachViewOverlayGraphicsLayer(WebCore::GraphicsLayer*) { }
 
     virtual void setShouldScaleViewToFitDocument(bool) { }
@@ -141,7 +136,9 @@ public:
     virtual void updateGeometry(const WebCore::IntSize& viewSize, bool flushSynchronously, const WTF::MachSendRight& fencePort) { }
 #endif
 
+#if USE(COORDINATED_GRAPHICS)
     virtual void layerHostDidFlushLayers() { }
+#endif
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
     virtual void didChangeViewportAttributes(WebCore::ViewportAttributes&&) = 0;

@@ -47,7 +47,7 @@ namespace WebCore {
 
 struct SameSizeAsScrollableArea {
     virtual ~SameSizeAsScrollableArea();
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool weakPtrFactorWasConstructedOnMainThread;
 #endif
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -71,6 +71,7 @@ ScrollableArea::ScrollableArea()
     , m_scrollOriginChanged(false)
     , m_currentScrollType(static_cast<unsigned>(ScrollType::User))
     , m_scrollShouldClearLatchedState(false)
+    , m_currentScrollBehaviorStatus(static_cast<unsigned>(ScrollBehaviorStatus::NotInAnimation))
 {
 }
 
@@ -140,6 +141,12 @@ bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granula
 
     step = adjustScrollStepForFixedContent(step, orientation, granularity);
     return scrollAnimator().scroll(orientation, granularity, step, multiplier);
+}
+
+void ScrollableArea::scrollToOffsetWithAnimation(const FloatPoint& offset, ScrollClamping)
+{
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToOffsetWithAnimation " << offset);
+    scrollAnimator().scrollToOffset(offset);
 }
 
 void ScrollableArea::scrollToOffsetWithoutAnimation(const FloatPoint& offset, ScrollClamping clamping)
@@ -227,7 +234,7 @@ void ScrollableArea::setScrollOffsetFromInternals(const ScrollOffset& offset)
 void ScrollableArea::setScrollOffsetFromAnimation(const ScrollOffset& offset)
 {
     ScrollPosition position = scrollPositionFromOffset(offset);
-    if (requestScrollPositionUpdate(position))
+    if (requestScrollPositionUpdate(position, currentScrollType()))
         return;
 
     scrollPositionChanged(position);

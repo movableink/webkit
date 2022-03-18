@@ -46,6 +46,7 @@
 #include <JavaScriptCore/InspectorFrontendRouter.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <algorithm>
+#include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
 #include <wtf/Optional.h>
 #include <wtf/URL.h>
@@ -388,12 +389,6 @@ void WebAutomationSession::setWindowFrameOfBrowsingContext(const String& handle,
 
         if (!(y = optionalOriginObject->getNumber<float>("y"_s)))
             ASYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS(MissingParameter, "The 'y' parameter was not found or invalid.");
-
-        if (x.value() < 0)
-            ASYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS(InvalidParameter, "The 'x' parameter had an invalid value.");
-
-        if (y.value() < 0)
-            ASYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS(InvalidParameter, "The 'y' parameter had an invalid value.");
     }
 
     Optional<float> width;
@@ -1281,7 +1276,7 @@ static Ref<Inspector::Protocol::Automation::Cookie> buildObjectForCookie(const W
         .setValue(cookie.value)
         .setDomain(cookie.domain)
         .setPath(cookie.path)
-        .setExpires(cookie.expires ? cookie.expires / 1000 : 0)
+        .setExpires(cookie.expires ? *cookie.expires / 1000 : 0)
         .setSize((cookie.name.length() + cookie.value.length()))
         .setHttpOnly(cookie.httpOnly)
         .setSecure(cookie.secure)
@@ -1932,7 +1927,7 @@ void WebAutomationSession::performInteractionSequence(const String& handle, cons
 
             RefPtr<JSON::Object> locationObject;
             if (stateObject->getObject("location"_s, locationObject)) {
-                int x, y;
+                int x = 0, y = 0;
                 if (locationObject->getInteger("x"_s, x) && locationObject->getInteger("y"_s, y))
                     sourceState.location = WebCore::IntPoint(x, y);
             }
@@ -2007,10 +2002,45 @@ void WebAutomationSession::takeScreenshot(const String& handle, const String* op
     String nodeHandle = optionalNodeHandle ? *optionalNodeHandle : emptyString();
     bool clipToViewport = optionalClipToViewport ? *optionalClipToViewport : false;
 
+#if PLATFORM(GTK)
+    Function<void(WebPageProxy&, Optional<WebCore::IntRect>&&, Ref<TakeScreenshotCallback>&&)> takeViewSnapsot = [](WebPageProxy& page, Optional<WebCore::IntRect>&& rect, Ref<TakeScreenshotCallback>&& callback) {
+        page.callAfterNextPresentationUpdate([page = makeRef(page), rect = WTFMove(rect), callback = WTFMove(callback)](CallbackBase::Error error) mutable {
+            if (error != CallbackBase::Error::None)
+                ASYNC_FAIL_WITH_PREDEFINED_ERROR(InternalError);
+
+            auto snapshot = page->takeViewSnapshot(WTFMove(rect));
+            if (!snapshot)
+                ASYNC_FAIL_WITH_PREDEFINED_ERROR(InternalError);
+
+            Optional<String> base64EncodedData = platformGetBase64EncodedPNGData(*snapshot);
+            if (!base64EncodedData)
+                ASYNC_FAIL_WITH_PREDEFINED_ERROR(InternalError);
+
+            callback->sendSuccess(base64EncodedData.value());
+        });
+    };
+
+    if (nodeHandle.isEmpty()) {
+        takeViewSnapsot(*page, WTF::nullopt, WTFMove(callback));
+        return;
+    }
+
+    CompletionHandler<void(Optional<String>, WebCore::IntRect&&)> completionHandler = [page = makeRef(*page), callback = callback.copyRef(), takeViewSnapsot = WTFMove(takeViewSnapsot)](Optional<String> errorType, WebCore::IntRect&& rect) mutable {
+        if (errorType) {
+            callback->sendFailure(STRING_FOR_PREDEFINED_ERROR_MESSAGE(*errorType));
+            return;
+        }
+
+        takeViewSnapsot(page.get(), WTFMove(rect), WTFMove(callback));
+    };
+
+    page->sendWithAsyncReply(Messages::WebAutomationSessionProxy::SnapshotRectForScreenshot(page->webPageID(), frameID, nodeHandle, scrollIntoViewIfNeeded, clipToViewport), WTFMove(completionHandler));
+#else
     uint64_t callbackID = m_nextScreenshotCallbackID++;
     m_screenshotCallbacks.set(callbackID, WTFMove(callback));
 
     page->send(Messages::WebAutomationSessionProxy::TakeScreenshot(page->webPageID(), frameID, nodeHandle, scrollIntoViewIfNeeded, clipToViewport, callbackID), 0);
+#endif
 }
 
 void WebAutomationSession::didTakeScreenshot(uint64_t callbackID, const ShareableBitmap::Handle& imageDataHandle, const String& errorType)
@@ -2033,6 +2063,11 @@ void WebAutomationSession::didTakeScreenshot(uint64_t callbackID, const Shareabl
 
 #if !PLATFORM(COCOA) && !USE(CAIRO)
 Optional<String> WebAutomationSession::platformGetBase64EncodedPNGData(const ShareableBitmap::Handle&)
+{
+    return WTF::nullopt;
+}
+
+Optional<String> WebAutomationSession::platformGetBase64EncodedPNGData(const ViewSnapshot&)
 {
     return WTF::nullopt;
 }

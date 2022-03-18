@@ -52,6 +52,7 @@
 #include "Settings.h"
 #include "TextNodeTraversal.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/SystemTracing.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -289,8 +290,13 @@ bool ScriptElement::requestClassicScript(const String& sourceURL)
             m_element.attributeWithoutSynchronization(HTMLNames::crossoriginAttr),
             scriptCharset(),
             m_element.localName(),
-            m_element.isInUserAgentShadowTree());
-        if (script->load(m_element.document(), m_element.document().completeURL(sourceURL))) {
+            m_element.isInUserAgentShadowTree(),
+            hasAsyncAttribute());
+
+        auto scriptURL = m_element.document().completeURL(sourceURL);
+        m_element.document().willLoadScriptElement(scriptURL);
+
+        if (script->load(m_element.document(), scriptURL)) {
             m_loadableScript = WTFMove(script);
             m_isExternalScript = true;
         }
@@ -387,7 +393,9 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
     IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(m_isExternalScript ? &document : nullptr);
     CurrentScriptIncrementer currentScriptIncrementer(document, m_element);
 
+    WTFBeginSignpost(this, "Execute Script Element", "executing classic script from URL: %{public}s async: %d defer: %d", m_isExternalScript ? sourceCode.url().string().utf8().data() : "inline", hasAsyncAttribute(), hasDeferAttribute());
     frame->script().evaluateIgnoringException(sourceCode);
+    WTFEndSignpost(this, "Execute Script Element");
 }
 
 void ScriptElement::executeModuleScript(LoadableModuleScript& loadableModuleScript)
@@ -404,7 +412,9 @@ void ScriptElement::executeModuleScript(LoadableModuleScript& loadableModuleScri
     IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(&document);
     CurrentScriptIncrementer currentScriptIncrementer(document, m_element);
 
+    WTFBeginSignpost(this, "Execute Script Element", "executing module script");
     frame->script().linkAndEvaluateModuleScript(loadableModuleScript);
+    WTFEndSignpost(this, "Execute Script Element", "executing module script");
 }
 
 void ScriptElement::dispatchLoadEventRespectingUserGestureIndicator()

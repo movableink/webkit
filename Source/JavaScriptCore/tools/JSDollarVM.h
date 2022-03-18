@@ -38,6 +38,12 @@ struct DollarVMAssertScope {
 class JSDollarVM final : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
     
     DECLARE_EXPORT_INFO;
     
@@ -54,6 +60,8 @@ public:
         instance->finishCreation(vm);
         return instance;
     }
+
+    Structure* objectDoingSideEffectPutWithoutCorrectSlotStatusStructure() { return m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructure.get(); }
     
 private:
     JSDollarVM(VM& vm, Structure* structure)
@@ -62,10 +70,13 @@ private:
         DollarVMAssertScope assertScope;
     }
 
-
     void finishCreation(VM&);
     void addFunction(VM&, JSGlobalObject*, const char* name, NativeFunction, unsigned arguments);
     void addConstructibleFunction(VM&, JSGlobalObject*, const char* name, NativeFunction, unsigned arguments);
+
+    static void visitChildren(JSCell*, SlotVisitor&);
+
+    WriteBarrier<Structure> m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructure;
 };
 
 } // namespace JSC

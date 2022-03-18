@@ -33,23 +33,24 @@
 #import "WebPageProxyMessages.h"
 #import "WebPaymentCoordinator.h"
 #import "WebRemoteObjectRegistry.h"
+#import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/Editor.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/FocusController.h>
+#import <WebCore/FrameView.h>
 #import <WebCore/HTMLConverter.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/NodeRenderStyle.h>
 #import <WebCore/PaymentCoordinator.h>
 #import <WebCore/PlatformMediaSessionManager.h>
+#import <WebCore/Range.h>
 #import <WebCore/RenderElement.h>
-#import <WebCore/RenderObject.h>
-#import <WebCore/TextIterator.h>
+#import <WebCore/SimpleRange.h>
 
 #if PLATFORM(COCOA)
 
 namespace WebKit {
-using namespace WebCore;
 
 void WebPage::platformDidReceiveLoadParameters(const LoadParameters& loadParameters)
 {
@@ -69,7 +70,7 @@ void WebPage::requestActiveNowPlayingSessionInfo(CallbackID callbackID)
         title = sharedManager->lastUpdatedNowPlayingTitle();
         duration = sharedManager->lastUpdatedNowPlayingDuration();
         elapsedTime = sharedManager->lastUpdatedNowPlayingElapsedTime();
-        uniqueIdentifier = sharedManager->lastUpdatedNowPlayingInfoUniqueIdentifier();
+        uniqueIdentifier = sharedManager->lastUpdatedNowPlayingInfoUniqueIdentifier().toUInt64();
         registeredAsNowPlayingApplication = sharedManager->registeredAsNowPlayingApplication();
     }
 
@@ -84,7 +85,8 @@ void WebPage::performDictionaryLookupAtLocation(const FloatPoint& floatPoint)
     }
     
     // Find the frame the point is over.
-    HitTestResult result = m_page->mainFrame().eventHandler().hitTestResultAtPoint(m_page->mainFrame().view()->windowToContents(roundedIntPoint(floatPoint)), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent);
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+    HitTestResult result = m_page->mainFrame().eventHandler().hitTestResultAtPoint(m_page->mainFrame().view()->windowToContents(roundedIntPoint(floatPoint)), hitType);
     auto [range, options] = DictionaryLookup::rangeAtHitTestResult(result);
     if (!range)
         return;
@@ -118,29 +120,28 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(Frame& frame, Range& ra
 {
     Editor& editor = frame.editor();
     editor.setIsGettingDictionaryPopupInfo(true);
-    
+
     DictionaryPopupInfo dictionaryPopupInfo;
     if (range.text().stripWhiteSpace().isEmpty()) {
         editor.setIsGettingDictionaryPopupInfo(false);
         return dictionaryPopupInfo;
     }
-    
+
     Vector<FloatQuad> quads;
     range.absoluteTextQuads(quads);
     if (quads.isEmpty()) {
         editor.setIsGettingDictionaryPopupInfo(false);
         return dictionaryPopupInfo;
     }
-    
+
     IntRect rangeRect = frame.view()->contentsToWindow(quads[0].enclosingBoundingBox());
-    
+
     const RenderStyle* style = range.startContainer().renderStyle();
     float scaledAscent = style ? style->fontMetrics().ascent() * pageScaleFactor() : 0;
     dictionaryPopupInfo.origin = FloatPoint(rangeRect.x(), rangeRect.y() + scaledAscent);
     dictionaryPopupInfo.options = options;
 
 #if PLATFORM(MAC)
-
     NSAttributedString *nsAttributedString = editingAttributedStringFromRange(range, IncludeImagesInAttributedString::No);
     
     RetainPtr<NSMutableAttributedString> scaledNSAttributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[nsAttributedString string]]);
@@ -158,9 +159,8 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(Frame& frame, Range& ra
         
         [scaledNSAttributedString addAttributes:scaledAttributes.get() range:range];
     }];
-
 #endif // PLATFORM(MAC)
-    
+
     TextIndicatorOptions indicatorOptions = TextIndicatorOptionUseBoundingRectAndPaintAllContentForComplexRanges;
     if (presentationTransition == TextIndicatorPresentationTransition::BounceAndCrossfade)
         indicatorOptions |= TextIndicatorOptionIncludeSnapshotWithSelectionHighlight;
@@ -170,18 +170,34 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(Frame& frame, Range& ra
         editor.setIsGettingDictionaryPopupInfo(false);
         return dictionaryPopupInfo;
     }
-    
+
     dictionaryPopupInfo.textIndicator = textIndicator->data();
 #if PLATFORM(MAC)
     dictionaryPopupInfo.attributedString = scaledNSAttributedString;
-#endif // PLATFORM(MAC)
-    
-#if PLATFORM(MACCATALYST)
+#elif PLATFORM(MACCATALYST)
     dictionaryPopupInfo.attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:range.text()]);
-#endif // PLATFORM(MACCATALYST)
-    
+#endif
+
     editor.setIsGettingDictionaryPopupInfo(false);
     return dictionaryPopupInfo;
+}
+
+void WebPage::insertDictatedTextAsync(const String& text, const EditingRange& replacementEditingRange, const Vector<WebCore::DictationAlternative>& dictationAlternativeLocations, bool registerUndoGroup)
+{
+    auto& frame = m_page->focusController().focusedOrMainFrame();
+    Ref<Frame> protector { frame };
+
+    if (replacementEditingRange.location != notFound) {
+        auto replacementRange = EditingRange::toRange(frame, replacementEditingRange);
+        if (replacementRange)
+            frame.selection().setSelection(VisibleSelection { *replacementRange, SEL_DEFAULT_AFFINITY });
+    }
+
+    if (registerUndoGroup)
+        send(Messages::WebPageProxy::RegisterInsertionUndoGrouping { });
+
+    ASSERT(!frame.editor().hasComposition());
+    frame.editor().insertDictatedText(text, dictationAlternativeLocations, nullptr /* triggeringEvent */);
 }
 
 void WebPage::accessibilityTransferRemoteToken(RetainPtr<NSData> remoteToken)
@@ -282,6 +298,15 @@ RetainPtr<CFDataRef> WebPage::pdfSnapshotAtSize(IntRect rect, IntSize bitmapSize
     CGPDFContextClose(pdfContext.get());
 
     return data;
+}
+
+void WebPage::getProcessDisplayName(CompletionHandler<void(String&&)>&& completionHandler)
+{
+#if PLATFORM(MAC)
+    completionHandler(adoptCF((CFStringRef)_LSCopyApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSDisplayNameKey)).get());
+#else
+    completionHandler({ });
+#endif
 }
 
 } // namespace WebKit

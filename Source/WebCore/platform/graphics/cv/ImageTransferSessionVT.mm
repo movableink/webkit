@@ -28,17 +28,20 @@
 
 #if USE(VIDEOTOOLBOX)
 
+#import "GraphicsContextCG.h"
 #import "Logging.h"
 #import "MediaSampleAVFObjC.h"
+#import "RemoteVideoSample.h"
 #import <CoreMedia/CMFormatDescription.h>
 #import <CoreMedia/CMSampleBuffer.h>
+
+#import "CoreVideoSoftLink.h"
 #import <pal/cf/CoreMediaSoftLink.h>
+#import "VideoToolboxSoftLink.h"
 
 #if HAVE(IOSURFACE) && !PLATFORM(MACCATALYST)
 #include <pal/spi/cocoa/IOSurfaceSPI.h>
 #endif
-
-#import "CoreVideoSoftLink.h"
 
 namespace WebCore {
 using namespace PAL;
@@ -307,6 +310,20 @@ CFDictionaryRef ImageTransferSessionVT::ioSurfacePixelBufferCreationOptions(IOSu
     return m_ioSurfaceBufferAttributes.get();
 }
 
+RetainPtr<CVPixelBufferRef> ImageTransferSessionVT::createPixelBuffer(IOSurfaceRef surface)
+{
+    if (!surface)
+        return nullptr;
+
+    CVPixelBufferRef pixelBuffer;
+    auto status = CVPixelBufferCreateWithIOSurface(kCFAllocatorDefault, surface, ioSurfacePixelBufferCreationOptions(surface), &pixelBuffer);
+    if (status) {
+        RELEASE_LOG(Media, "CVPixelBufferCreateWithIOSurface failed with error code: %d", static_cast<int>(status));
+        return nullptr;
+    }
+    return adoptCF(pixelBuffer);
+}
+
 RetainPtr<CVPixelBufferRef> ImageTransferSessionVT::createPixelBuffer(IOSurfaceRef surface, const IntSize& size)
 {
     if (!surface || !setSize(size))
@@ -351,6 +368,13 @@ RefPtr<MediaSample> ImageTransferSessionVT::convertMediaSample(MediaSample& samp
 }
 
 #if HAVE(IOSURFACE) && !PLATFORM(MACCATALYST)
+#if ENABLE(MEDIA_STREAM)
+RefPtr<MediaSample> ImageTransferSessionVT::createMediaSample(const RemoteVideoSample& remoteSample)
+{
+    return createMediaSample(remoteSample.surface(), remoteSample.time(), remoteSample.size(), remoteSample.rotation(), remoteSample.mirrored());
+}
+#endif
+
 RefPtr<MediaSample> ImageTransferSessionVT::createMediaSample(IOSurfaceRef surface, const MediaTime& sampleTime, const IntSize& size, MediaSample::VideoRotation rotation, bool mirrored)
 {
     auto sampleBuffer = createCMSampleBuffer(surface, sampleTime, size);

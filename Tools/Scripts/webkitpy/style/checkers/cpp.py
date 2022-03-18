@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2009, 2010, 2012 Google Inc. All rights reserved.
 # Copyright (C) 2009 Torch Mobile Inc.
-# Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2009-2020 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 """Support for check-webkit-style."""
 
 import codecs
+import functools
 import math  # for log
 import os
 import os.path
@@ -136,6 +137,24 @@ _AUTO_GENERATED_FILES = [
 # for faking a header file.
 _unit_test_config = {}
 
+
+_NO_CONFIG_H_PATH_PATTERNS = [
+    '^Source/bmalloc/',
+]
+
+_EXPORT_MACRO_SPEC = {
+    'BEXPORT': 'Source/bmalloc',
+    'JS_EXPORT': 'Source/JavaScriptCore/API',
+    'JS_EXPORT_PRIVATE': 'Source/JavaScriptCore',
+    'PAL_EXPORT': 'Source/WebCore/PAL',
+    'WEBCORE_TESTSUPPORT_EXPORT': 'Source/WebCore/testing',
+    # Excludes PAL and testing directories
+    'WEBCORE_EXPORT': 'Source/WebCore/(?!(PAL|testing))',
+    'WK_EXPORT': 'Source/WebKit',
+    'WTF_EXPORT_PRIVATE': 'Source/WTF',
+}
+
+_EXPORT_MACROS = sorted(_EXPORT_MACRO_SPEC.keys())
 
 def iteratively_replace_matches_with_char(pattern, char_replacement, s):
     """Returns the string with replacement done.
@@ -294,7 +313,7 @@ class _IncludeState(dict):
     def visited_soft_link_section(self):
         return self._visited_soft_link_section
 
-    def check_next_include_order(self, header_type, filename, file_is_header, primary_header_exists):
+    def check_next_include_order(self, header_type, filename, file_is_header, primary_header_exists, has_config_header):
         """Returns a non-empty error message if the next header is out of order.
 
         This function also updates the internal state to be ready to check
@@ -305,6 +324,7 @@ class _IncludeState(dict):
           filename: The name of the current file.
           file_is_header: Whether the file that owns this _IncludeState is itself a header
           primary_header_exists: Whether the primary header file actually exists on disk
+          has_config_header: Whether project uses config.h or not.
 
         Returns:
           The empty string if the header is in the right order, or an
@@ -334,7 +354,7 @@ class _IncludeState(dict):
         elif header_type == _PRIMARY_HEADER:
             if self._section >= self._PRIMARY_SECTION:
                 error_message = after_error_message
-            elif self._section < self._CONFIG_SECTION:
+            elif has_config_header and self._section < self._CONFIG_SECTION:
                 error_message = before_error_message
             self._section = self._PRIMARY_SECTION
             self._visited_primary_section = True
@@ -575,9 +595,11 @@ class _FunctionState(object):
         return bool(search(r'\bvirtual\b', self.modifiers_and_return_type()))
 
     def export_macro(self):
-        export_match = match(
-            r'\b(WTF_EXPORT|WTF_EXPORT_PRIVATE|PAL_EXPORT|JS_EXPORT_PRIVATE|WEBCORE_EXPORT)\b', self.modifiers_and_return_type())
-        return export_match.group(1) if export_match else None
+        for m in _EXPORT_MACROS:
+            export_match = match(r'\b' + m + r'\b', self.modifiers_and_return_type())
+            if export_match:
+                return export_match.group(0)
+        return None
 
     def parameter_list(self):
         if not self._parameter_list:
@@ -925,30 +947,59 @@ def check_for_copyright(lines, error):
               'You should have a line: "Copyright [year] <Copyright Owner>"')
 
 
-def check_for_header_guard(lines, error):
+def check_for_header_guard(file_path, lines, error):
     """Checks that the file contains a header guard.
 
     Logs an error if there was an #ifndef guard in a header
-    that should be a #pragma once guard.
+    that should be a #pragma once guard, or if there is a missing
+    #pragma once guard.
 
     Args:
+      file_path: Path to the header file that is being processed.
       lines: An array of strings, each representing a line of the file.
       error: The function to call with any errors found.
     """
 
+    filename = os.path.split(file_path)[-1]
+    if filename == 'config.h' or filename.endswith('Prefix.h'):
+        return
+
+    first_blank_line_number = 0
+    has_import_statement = False
+    has_objc_check = False
+    has_objc_keywords = False
     for line_number, line in enumerate(lines):
+        if line == '' and first_blank_line_number == 0:
+            first_blank_line_number = line_number
         if line.startswith('#pragma once'):
             return
+        if line.startswith('#import '):
+            has_import_statement = True
+        if '__OBJC__' in line:
+            has_objc_check = True
+        if functools.reduce(lambda x, y: x or y, map(lambda x: x in line, ['@class', '@interface', '@protocol'])):
+            has_objc_keywords = True
+
+    if (has_import_statement or has_objc_keywords) and not has_objc_check:
+        return  # Objective-C-only headers don't need guards.
 
     # If there is no #pragma once, but there is an #ifndef, warn only if it was modified.
     ifndef_line_number = 0
+    previous_line = None
     for line_number, line in enumerate(lines):
-        line_split = line.split()
-        if len(line_split) >= 2:
-            if line_split[0] == '#ifndef' and line_split[1].endswith('_h'):
-                error(line_number, 'build/header_guard', 5,
-                    'Use #pragma once instead of #ifndef for header guard.')
-                return
+        if previous_line is not None:
+            previous_line_split = previous_line.split()
+            line_split = line.split()
+            if len(previous_line_split) >= 2 and len(line_split) >= 2:
+                if previous_line_split[0] == '#ifndef' and line_split[0] == '#define' \
+                        and previous_line_split[1] == line_split[1]:
+                    error(line_number, 'build/header_guard', 5,
+                          'Use #pragma once instead of #ifndef for header guard.')
+                    return
+        previous_line = line
+
+    error(first_blank_line_number + 1, 'build/header_guard_missing', 5,
+          'Missing #pragma once for header guard.')
 
 
 def check_for_unicode_replacement_characters(lines, error):
@@ -1119,13 +1170,16 @@ _RE_PATTERN_XCODE_VERSION_MACRO = re.compile(
 _RE_PATTERN_XCODE_MIN_REQUIRED_MACRO = re.compile(
     r'.+?([A-Z_]+)_VERSION_MIN_REQUIRED [><=]+ (\d+)')
 
+_RE_PATTERN_PLATFORM_HEADER = re.compile(
+    r'Source/WTF/wtf/Platform[a-zA-Z]+\.h')
+
 
 def check_os_version_checks(filename, clean_lines, line_number, error):
     """ Checks for mistakes using VERSION_MIN_REQUIRED and VERSION_MAX_ALLOWED macros:
     1. These should only be used centrally to defined named HAVE, USE or ENABLE style macros.
     2. VERSION_MIN_REQUIRED never changes for a minor OS version.
 
-    These should be centralized in wtf/Platform.h and wtf/FeatureDefines.h.
+    These should be centralized in the wtf/Platform*.h suite of files.
 
     Args:
       filename: Name of the file that is being processed.
@@ -1143,11 +1197,11 @@ def check_os_version_checks(filename, clean_lines, line_number, error):
             error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.')
             break
 
-    if filename == 'Source/WTF/wtf/Platform.h' or filename == 'Source/WTF/wtf/FeatureDefines.h':
+    if _RE_PATTERN_PLATFORM_HEADER.match(filename):
         return
 
     if _RE_PATTERN_XCODE_VERSION_MACRO.match(line):
-        error(line_number, 'build/version_check', 5, 'Misplaced OS version check. Please use a named macro in wtf/Platform.h, wtf/FeatureDefines.h, or an appropriate internal file.')
+        error(line_number, 'build/version_check', 5, 'Misplaced OS version check. Please use a named macro in one of headers in the wtf/Platform.h suite of files or an appropriate internal file.')
 
 class _ClassInfo(object):
     """Stores information about a class."""
@@ -1784,6 +1838,12 @@ def check_function_definition(filename, file_extension, clean_lines, line_number
                   'macro from the class and apply it to each appropriate method, or move '
                   'the inline function definition out-of-line.' %
                   class_state.classinfo_stack[-1].export_macro)
+    elif function_state.export_macro():
+        export_macro = function_state.export_macro()
+        path = _EXPORT_MACRO_SPEC[export_macro]
+        if not match(path, _unix_path(filename)):
+            error(line_number, 'build/export_macro', 5,
+                  '%s should only appear in directories matching %s.' % (export_macro, path))
 
 
 def check_for_leaky_patterns(clean_lines, line_number, function_state, error):
@@ -2446,6 +2506,26 @@ def check_wtf_make_unique(clean_lines, line_number, file_state, error):
               "Use 'WTF::makeUnique<{typename}>' instead of 'std::make_unique<{typename}>'.".format(typename=typename))
 
 
+def check_lock_guard(clean_lines, line_number, file_state, error):
+    """Looks for use of 'std::lock_guard<>' which should be replaced with 'WTF::Locker'.
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      file_state: A _FileState instance which maintains information about
+                  the state of things in the file.
+      error: The function to call with any errors found.
+    """
+
+    line = clean_lines.elided[line_number]  # Get rid of comments and strings.
+
+    using_std_lock_guard_search = search(r'\bstd::lock_guard\s*<([^(]+)', line)
+    if not using_std_lock_guard_search:
+        return
+
+    error(line_number, 'runtime/lock_guard', 4, "Use 'auto locker = holdLock(mutex)' instead of 'std::lock_guard<>'.")
+
+
 def check_ctype_functions(clean_lines, line_number, file_state, error):
     """Looks for use of the standard functions in ctype.h and suggest they be replaced
        by use of equivilent ones in <wtf/ASCIICType.h>?.
@@ -3006,6 +3086,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
     check_wtf_move(clean_lines, line_number, file_state, error)
     check_wtf_optional(clean_lines, line_number, file_state, error)
     check_wtf_make_unique(clean_lines, line_number, file_state, error)
+    check_lock_guard(clean_lines, line_number, file_state, error)
     check_ctype_functions(clean_lines, line_number, file_state, error)
     check_switch_indentation(clean_lines, line_number, error)
     check_braces(clean_lines, line_number, file_state, error)
@@ -3080,7 +3161,7 @@ def _classify_include(filename, include, is_system, include_state):
     """
 
     # If it is a system header we know it is classified as _OTHER_HEADER.
-    if is_system and not include.startswith('public/') and not include.startswith('wtf/'):
+    if is_system and not include.startswith('public/') and not include.startswith('wtf/') and not include.endswith('SoftLink.h'):
         return _OTHER_HEADER
 
     # If the include is named config.h then this is WebCore/config.h.
@@ -3192,6 +3273,8 @@ def check_include_line(filename, file_extension, clean_lines, line_number, inclu
 
     header_type = _classify_include(filename, include, is_system, include_state)
     primary_header_exists = _does_primary_header_exist(filename)
+    has_config_header = check_has_config_header(filename)
+
     include_state.header_types[line_number] = header_type
 
     # Only proceed if this isn't a duplicate header.
@@ -3206,7 +3289,8 @@ def check_include_line(filename, file_extension, clean_lines, line_number, inclu
     error_message = include_state.check_next_include_order(header_type,
                                                            filename,
                                                            file_extension == "h",
-                                                           primary_header_exists)
+                                                           primary_header_exists,
+                                                           has_config_header)
 
     # Check to make sure *SoftLink.h headers always appear last and never in a header.
     if error_message and include_state.visited_soft_link_section():
@@ -3220,7 +3304,7 @@ def check_include_line(filename, file_extension, clean_lines, line_number, inclu
         if not is_blank_line(next_line):
             error(line_number, 'build/include_order', 4,
                 'You should add a blank line after implementation file\'s own header.')
-        if is_blank_line(previous_line):
+        if has_config_header and is_blank_line(previous_line):
             error(line_number, 'build/include_order', 4,
                 'You should not add a blank line before implementation file\'s own header.')
 
@@ -3806,11 +3890,25 @@ for _header, _templates in _HEADERS_CONTAINING_TEMPLATES:
              _header))
 
 
+def _unix_path(file_path):
+    if os.path.sep == '/':
+        return file_path
+    return file_path.replace(os.path.sep, '/')
+
+
 def is_generated_file(file_path):
     """Check if the file is auto-generated."""
-    # Convert file paths using unix path separator for normalization.
-    file_path = file_path.replace(os.path.sep, '/')
+    file_path = _unix_path(file_path)
     return file_path in _AUTO_GENERATED_FILES
+
+
+def check_has_config_header(file_path):
+    """Check if the module uses config.h"""
+    file_path = _unix_path(file_path)
+    for pattern in _NO_CONFIG_H_PATH_PATTERNS:
+        if re.match(pattern, file_path):
+            return False
+    return True
 
 
 def files_belong_to_same_module(filename_cpp, filename_h):
@@ -4075,7 +4173,7 @@ def _process_lines(filename, file_extension, lines, error, min_confidence):
     check_for_copyright(lines, error)
 
     if file_extension == 'h':
-        check_for_header_guard(lines, error)
+        check_for_header_guard(filename, lines, error)
         if filename == 'Source/WTF/wtf/Platform.h':
             check_platformh_comments(lines, error)
 
@@ -4114,8 +4212,10 @@ class CppChecker(object):
         'build/class',
         'build/deprecated',
         'build/endif_comment',
+        'build/export_macro',
         'build/forward_decl',
         'build/header_guard',
+        'build/header_guard_missing',
         'build/include',
         'build/include_order',
         'build/include_what_you_use',
@@ -4149,7 +4249,6 @@ class CppChecker(object):
         'readability/streams',
         'readability/todo',
         'readability/utf8',
-        'readability/webkit_export',
         'runtime/arrays',
         'runtime/bitfields',
         'runtime/casting',
@@ -4161,6 +4260,7 @@ class CppChecker(object):
         'runtime/int',
         'runtime/invalid_increment',
         'runtime/leaky_pattern',
+        'runtime/lock_guard',
         'runtime/max_min_macros',
         'runtime/memset',
         'runtime/printf',

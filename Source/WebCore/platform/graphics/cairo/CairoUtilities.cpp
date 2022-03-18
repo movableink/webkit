@@ -30,12 +30,12 @@
 #if USE(CAIRO)
 
 #include "AffineTransform.h"
+#include "CairoUniquePtr.h"
 #include "Color.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "IntRect.h"
 #include "Path.h"
-#include "PlatformPathCairo.h"
 #include "RefPtrCairo.h"
 #include "Region.h"
 #include <wtf/Assertions.h>
@@ -56,7 +56,7 @@
 
 namespace WebCore {
 
-#if USE(FREETYPE) && !PLATFORM(GTK)
+#if USE(CAIRO) && !PLATFORM(GTK)
 const cairo_font_options_t* getDefaultCairoFontOptions()
 {
     static NeverDestroyed<cairo_font_options_t*> options = cairo_font_options_create();
@@ -94,9 +94,8 @@ void setSourceRGBAFromColor(cairo_t* context, const Color& color)
 
 void appendPathToCairoContext(cairo_t* to, cairo_t* from)
 {
-    auto cairoPath = cairo_copy_path(from);
-    cairo_append_path(to, cairoPath);
-    cairo_path_destroy(cairoPath);
+    CairoUniquePtr<cairo_path_t> cairoPath(cairo_copy_path(from));
+    cairo_append_path(to, cairoPath.get());
 }
 
 void setPathOnCairoContext(cairo_t* to, cairo_t* from)
@@ -109,7 +108,7 @@ void appendWebCorePathToCairoContext(cairo_t* context, const Path& path)
 {
     if (path.isEmpty())
         return;
-    appendPathToCairoContext(context, path.platformPath()->context());
+    appendPathToCairoContext(context, path.cairoPath());
 }
 
 void appendRegionToCairoContext(cairo_t* to, const cairo_region_t* region)
@@ -202,7 +201,7 @@ cairo_operator_t toCairoOperator(CompositeOperator op, BlendMode blendOp)
 }
 
 void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSize& imageSize, const FloatRect& tileRect,
-                               const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t op, const FloatRect& destRect)
+    const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t op, InterpolationQuality imageInterpolationQuality, const FloatRect& destRect)
 {
     // Avoid NaN
     if (!std::isfinite(phase.x()) || !std::isfinite(phase.y()))
@@ -221,6 +220,21 @@ void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSiz
     }
 
     cairo_pattern_t* pattern = cairo_pattern_create_for_surface(image);
+    switch (imageInterpolationQuality) {
+    case InterpolationQuality::DoNotInterpolate:
+    case InterpolationQuality::Low:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_FAST);
+        break;
+    case InterpolationQuality::Default:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_BILINEAR);
+        break;
+    case InterpolationQuality::Medium:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_GOOD);
+        break;
+    case InterpolationQuality::High:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_BEST);
+        break;
+    }
     cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
 
     // Due to a limitation in pixman, cairo cannot handle transformation matrices with values bigger than 32768. If the value is
@@ -299,11 +313,11 @@ void copyRectFromCairoSurfaceToContext(cairo_surface_t* from, cairo_t* to, const
     cairo_fill(to);
 }
 
-void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& sourceOffset, const IntRect& rect, const IntSize& destOffset, cairo_operator_t cairoOperator)
+void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& sourceOffset, const IntRect& rect, const IntSize& destOffset)
 {
     RefPtr<cairo_t> context = adoptRef(cairo_create(to));
     cairo_translate(context.get(), destOffset.width(), destOffset.height());
-    cairo_set_operator(context.get(), cairoOperator);
+    cairo_set_operator(context.get(), CAIRO_OPERATOR_SOURCE);
     copyRectFromCairoSurfaceToContext(from, context.get(), sourceOffset, rect);
 }
 

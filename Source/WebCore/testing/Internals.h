@@ -236,6 +236,11 @@ public:
     Node* parentTreeScope(Node&);
 
     String visiblePlaceholder(Element&);
+    void setCanShowPlaceholder(Element&, bool);
+
+    Element* insertTextPlaceholder(int width, int height);
+    void removeTextPlaceholder(Element&);
+
     void selectColorInColorChooser(HTMLInputElement&, const String& colorValue);
     ExceptionOr<Vector<String>> formControlStateOfPreviousHistoryItem();
     ExceptionOr<void> setFormControlStateOfPreviousHistoryItem(const Vector<String>&);
@@ -299,8 +304,8 @@ public:
 
     ExceptionOr<void> setDelegatesScrolling(bool enabled);
 
-    ExceptionOr<int> lastSpellCheckRequestSequence();
-    ExceptionOr<int> lastSpellCheckProcessedSequence();
+    ExceptionOr<uint64_t> lastSpellCheckRequestSequence();
+    ExceptionOr<uint64_t> lastSpellCheckProcessedSequence();
 
     Vector<String> userPreferredLanguages() const;
     void setUserPreferredLanguages(const Vector<String>&);
@@ -422,6 +427,8 @@ public:
     uint64_t documentIdentifier(const Document&) const;
     bool isDocumentAlive(uint64_t documentIdentifier) const;
 
+    uint64_t storageAreaMapCount() const;
+
     uint64_t elementIdentifier(Element&) const;
     uint64_t frameIdentifier(const Document&) const;
     uint64_t pageIdentifier(const Document&) const;
@@ -507,6 +514,7 @@ public:
     ExceptionOr<void> setCompositingPolicyOverride(Optional<CompositingPolicy>);
     ExceptionOr<Optional<CompositingPolicy>> compositingPolicyOverride() const;
 
+    void updateLayoutAndStyleForAllFrames();
     ExceptionOr<void> updateLayoutIgnorePendingStylesheetsAndRunPostLayoutTasks(Node*);
     unsigned layoutCount() const;
 
@@ -514,6 +522,7 @@ public:
     Ref<SerializedScriptValue> deserializeBuffer(ArrayBuffer&) const;
 
     bool isFromCurrentWorld(JSC::JSValue) const;
+    JSC::JSValue evaluateInWorldIgnoringException(const String& name, const String& source);
 
     void setUsesOverlayScrollbars(bool);
     void setUsesMockScrollAnimator(bool);
@@ -846,7 +855,7 @@ public:
             : name(cookie.name)
             , value(cookie.value)
             , domain(cookie.domain)
-            , expires(cookie.expires)
+            , expires(cookie.expires.valueOr(0))
             , isHttpOnly(cookie.httpOnly)
             , isSecure(cookie.secure)
             , isSession(cookie.session)
@@ -869,6 +878,7 @@ public:
     void testDictionaryLogging();
 
     void setXHRMaximumIntervalForUserGestureForwarding(XMLHttpRequest&, double);
+    void setTransientActivationDuration(double seconds);
 
     void setIsPlayingToAutomotiveHeadUnit(bool);
     
@@ -922,6 +932,24 @@ public:
     String highlightPseudoElementColor(const String& highlightName, Element&);
 
     String windowLocationHost(DOMWindow&);
+
+    String systemColorForCSSValue(const String& cssValue, bool useDarkModeAppearance, bool useElevatedUserInterfaceLevel);
+
+    bool systemHasBattery() const;
+
+    int readPreferenceInteger(const String& domain, const String& key);
+    String encodedPreferenceValue(const String& domain, const String& key);
+
+    String mediaMIMETypeForExtension(const String& extension);
+
+    String getUTIFromMIMEType(const String& mimeType);
+    String getUTIFromTag(const String& tagClass, const String& tag, const String& conformingToUTI);
+
+    bool supportsPictureInPicture();
+
+    String focusRingColor();
+
+    bool isRemoteUIAppForAccessibility();
 
 private:
     explicit Internals(Document&);

@@ -39,7 +39,7 @@ class AccessCase;
 class CodeBlock;
 class StructureStubInfo;
 
-class InByIdStatus {
+class InByIdStatus final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum State {
@@ -113,7 +113,7 @@ public:
 
 private:
 #if ENABLE(DFG_JIT)
-    static InByIdStatus computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, StructureStubInfo*, UniquedStringImpl* uid);
+    static InByIdStatus computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, VM&, StructureStubInfo*, UniquedStringImpl* uid);
 #endif
     bool appendVariant(const InByIdVariant&);
 

@@ -60,6 +60,7 @@ typedef struct _CARenderContext CARenderContext;
 
 @interface CAContext ()
 + (NSArray *)allContexts;
++ (CAContext *)currentContext;
 + (CAContext *)localContext;
 + (CAContext *)remoteContextWithOptions:(NSDictionary *)dict;
 #if PLATFORM(MAC)
@@ -141,6 +142,7 @@ typedef enum {
 @interface CATransaction ()
 + (void)addCommitHandler:(void(^)(void))block forPhase:(CATransactionPhase)phase;
 + (CATransactionPhase)currentPhase;
++ (void)synchronize;
 @end
 
 @interface CALayerHost : CALayer

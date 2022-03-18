@@ -43,7 +43,7 @@ namespace WebCore {
 
 static inline void releaseUint8Vector(void *array, const void*)
 {
-    adoptMallocPtr(static_cast<uint8_t*>(array));
+    WTF::VectorMalloc::free(array);
 }
 
 RefPtr<MediaSampleAVFObjC> MediaSampleAVFObjC::createImageSample(Vector<uint8_t>&& array, unsigned long width, unsigned long height)
@@ -79,12 +79,10 @@ RefPtr<MediaSampleAVFObjC> MediaSampleAVFObjC::createImageSample(Vector<uint8_t>
 
 MediaTime MediaSampleAVFObjC::presentationTime() const
 {
-    return PAL::toMediaTime(CMSampleBufferGetPresentationTimeStamp(m_sample.get()));
-}
-
-MediaTime MediaSampleAVFObjC::outputPresentationTime() const
-{
-    return PAL::toMediaTime(CMSampleBufferGetOutputPresentationTimeStamp(m_sample.get()));
+    auto timeStamp = CMSampleBufferGetOutputPresentationTimeStamp(m_sample.get());
+    if (CMTIME_IS_INVALID(timeStamp))
+        timeStamp = CMSampleBufferGetPresentationTimeStamp(m_sample.get());
+    return PAL::toMediaTime(timeStamp);
 }
 
 MediaTime MediaSampleAVFObjC::decodeTime() const
@@ -94,12 +92,10 @@ MediaTime MediaSampleAVFObjC::decodeTime() const
 
 MediaTime MediaSampleAVFObjC::duration() const
 {
-    return PAL::toMediaTime(CMSampleBufferGetDuration(m_sample.get()));
-}
-
-MediaTime MediaSampleAVFObjC::outputDuration() const
-{
-    return PAL::toMediaTime(CMSampleBufferGetOutputDuration(m_sample.get()));
+    auto duration = CMSampleBufferGetOutputDuration(m_sample.get());
+    if (CMTIME_IS_INVALID(duration))
+        duration = CMSampleBufferGetDuration(m_sample.get());
+    return PAL::toMediaTime(duration);
 }
 
 size_t MediaSampleAVFObjC::sizeInBytes() const
@@ -172,7 +168,7 @@ FloatSize MediaSampleAVFObjC::presentationSize() const
 
 void MediaSampleAVFObjC::dump(PrintStream& out) const
 {
-    out.print("{PTS(", presentationTime(), "), OPTS(", outputPresentationTime(), "), DTS(", decodeTime(), "), duration(", duration(), "), flags(", (int)flags(), "), presentationSize(", presentationSize().width(), "x", presentationSize().height(), ")}");
+    out.print("{PTS(", presentationTime(), "), DTS(", decodeTime(), "), duration(", duration(), "), flags(", (int)flags(), "), presentationSize(", presentationSize().width(), "x", presentationSize().height(), ")}");
 }
 
 void MediaSampleAVFObjC::offsetTimestampsBy(const MediaTime& offset)
@@ -311,12 +307,20 @@ RefPtr<JSC::Uint8ClampedArray> MediaSampleAVFObjC::getRGBAImageData() const
 #endif
 }
 
+void MediaSampleAVFObjC::setAsDisplayImmediately(MediaSample& sample)
+{
+    CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sample.platformSample().sample.cmSampleBuffer, true);
+    for (CFIndex i = 0; i < CFArrayGetCount(attachmentsArray); ++i) {
+        CFMutableDictionaryRef attachments = checked_cf_cast<CFMutableDictionaryRef>(CFArrayGetValueAtIndex(attachmentsArray, i));
+        CFDictionarySetValue(attachments, kCMSampleAttachmentKey_DisplayImmediately, kCFBooleanTrue);
+    }
+}
+
 String MediaSampleAVFObjC::toJSONString() const
 {
     auto object = JSON::Object::create();
 
     object->setObject("pts"_s, presentationTime().toJSONObject());
-    object->setObject("opts"_s, outputPresentationTime().toJSONObject());
     object->setObject("dts"_s, decodeTime().toJSONObject());
     object->setObject("duration"_s, duration().toJSONObject());
     object->setInteger("flags"_s, static_cast<unsigned>(flags()));

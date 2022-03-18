@@ -43,13 +43,12 @@
 #include "ImageBuffer.h"
 #include "Pattern.h"
 #include "PlatformContextCairo.h"
-#include "PlatformPathCairo.h"
 #include "ShadowBlur.h"
 
 namespace WebCore {
 
 void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBuffer& glyphBuffer,
-    unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
+    unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
     if (!font.platformData().size())
         return;
@@ -65,7 +64,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         for (size_t i = 0; i < numGlyphs; ++i) {
             glyphs[i] = { glyphsData[i], xOffset, yOffset };
             xOffset += advances[i].width();
-            yOffset -= advances[i].height();
+            yOffset += advances[i].height();
         }
     }
 
@@ -76,22 +75,23 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     auto& state = context.state();
     Cairo::drawGlyphs(*context.platformContext(), Cairo::FillSource(state), Cairo::StrokeSource(state),
         Cairo::ShadowState(state), point, scaledFont, syntheticBoldOffset, glyphs, xOffset,
-        state.textDrawingMode, state.strokeThickness, state.shadowOffset, state.shadowColor);
+        state.textDrawingMode, state.strokeThickness, state.shadowOffset, state.shadowColor,
+        fontSmoothingMode);
 }
 
 Path Font::platformPathForGlyph(Glyph glyph) const
 {
     Path path;
-    path.ensurePlatformPath();
+    cairo_t* cr = path.ensureCairoPath();
 
     cairo_glyph_t cairoGlyph = { glyph, 0, 0 };
-    cairo_set_scaled_font(path.platformPath()->context(), platformData().scaledFont());
-    cairo_glyph_path(path.platformPath()->context(), &cairoGlyph, 1);
+    cairo_set_scaled_font(cr, platformData().scaledFont());
+    cairo_glyph_path(cr, &cairoGlyph, 1);
 
     float syntheticBoldOffset = this->syntheticBoldOffset();
     if (syntheticBoldOffset) {
-        cairo_translate(path.platformPath()->context(), syntheticBoldOffset, 0);
-        cairo_glyph_path(path.platformPath()->context(), &cairoGlyph, 1);
+        cairo_translate(cr, syntheticBoldOffset, 0);
+        cairo_glyph_path(cr, &cairoGlyph, 1);
     }
     return path;
 }

@@ -58,7 +58,6 @@ public:
 
     Ref<WebCore::FrameNetworkingContext> createNetworkingContext() override;
 
-    void frameLoaderDestroyed() override;
     void makeRepresentation(WebCore::DocumentLoader*) override;
     void forceLayoutForNonHTML() override;
 
@@ -92,7 +91,7 @@ public:
     void dispatchWillClose() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const WebCore::StringWithDirection&) override;
-    void dispatchDidCommitLoad(Optional<WebCore::HasInsecureContent>) override;
+    void dispatchDidCommitLoad(Optional<WebCore::HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>) override;
     void dispatchDidFailProvisionalLoad(const WebCore::ResourceError&, WebCore::WillContinueLoading) override;
     void dispatchDidFailLoad(const WebCore::ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
@@ -137,18 +136,18 @@ public:
     void didRunInsecureContent(WebCore::SecurityOrigin&, const URL&) override;
     void didDetectXSS(const URL&, bool didBlockEntirePage) override;
 
-    WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) override;
-    WebCore::ResourceError blockedError(const WebCore::ResourceRequest&) override;
-    WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceRequest&) override;
-    WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&) override;
-    WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&) override;
-    WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) override;
-    WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&) override;
-    WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&) override;
+    WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) const override;
+    WebCore::ResourceError blockedError(const WebCore::ResourceRequest&) const override;
+    WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceRequest&) const override;
+    WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&) const override;
+    WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&) const override;
+    WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) const override;
+    WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&) const override;
+    WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&) const override;
 
-    bool shouldFallBack(const WebCore::ResourceError&) override;
+    bool shouldFallBack(const WebCore::ResourceError&) const override;
 
-    WTF::String userAgent(const URL&) override;
+    WTF::String userAgent(const URL&) const override;
 
     Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) override;
     void updateCachedDocumentLoader(WebCore::DocumentLoader&) override { }

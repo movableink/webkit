@@ -29,10 +29,12 @@
 #import "APIAttachment.h"
 #import "APIUIClient.h"
 #import "DataDetectionResult.h"
+#import "InsertTextOptions.h"
 #import "LoadParameters.h"
 #import "PageClient.h"
 #import "SafeBrowsingSPI.h"
 #import "SafeBrowsingWarning.h"
+#import "SharedBufferDataReference.h"
 #import "WebPageMessages.h"
 #import "WebProcessProxy.h"
 #import "WebsiteDataStore.h"
@@ -42,6 +44,10 @@
 #import <WebCore/ValidationBubble.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/cf/TypeCastsCF.h>
+
+#if USE(DICTATION_ALTERNATIVES)
+#import <WebCore/TextAlternativeWithRange.h>
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -160,6 +166,7 @@ void WebPageProxy::startDrag(const DragItem& dragItem, const ShareableBitmap::Ha
     pageClient().startDrag(dragItem, dragImageHandle);
 }
 
+// FIXME: Move these functions to WebPageProxyIOS.mm.
 #if PLATFORM(IOS_FAMILY)
 
 void WebPageProxy::setPromisedDataForImage(const String&, const SharedMemory::Handle&, uint64_t, const String&, const String&, const String&, const String&, const String&, const SharedMemory::Handle&, uint64_t)
@@ -183,13 +190,12 @@ void WebPageProxy::setDragCaretRect(const IntRect& dragCaretRect)
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-void WebPageProxy::platformRegisterAttachment(Ref<API::Attachment>&& attachment, const String& preferredFileName, const IPC::DataReference& dataReference)
+void WebPageProxy::platformRegisterAttachment(Ref<API::Attachment>&& attachment, const String& preferredFileName, const IPC::SharedBufferDataReference& dataReference)
 {
     if (dataReference.isEmpty())
         return;
 
-    auto buffer = SharedBuffer::create(dataReference.data(), dataReference.size());
-    auto fileWrapper = adoptNS([pageClient().allocFileWrapperInstance() initRegularFileWithContents:buffer->createNSData().autorelease()]);
+    auto fileWrapper = adoptNS([pageClient().allocFileWrapperInstance() initRegularFileWithContents:dataReference.buffer()->createNSData().autorelease()]);
     [fileWrapper setPreferredFilename:preferredFileName];
     attachment->setFileWrapper(fileWrapper.get());
 }
@@ -225,6 +231,36 @@ void WebPageProxy::performDictionaryLookupOfCurrentSelection()
     
     process().send(Messages::WebPage::PerformDictionaryLookupOfCurrentSelection(), m_webPageID);
 }
+
+void WebPageProxy::insertDictatedTextAsync(const String& text, const EditingRange& replacementRange, const Vector<TextAlternativeWithRange>& dictationAlternativesWithRange, bool registerUndoGroup)
+{
+#if USE(DICTATION_ALTERNATIVES)
+    if (!hasRunningProcess())
+        return;
+
+    Vector<DictationAlternative> dictationAlternatives;
+    for (const auto& alternativeWithRange : dictationAlternativesWithRange) {
+        uint64_t dictationContext = pageClient().addDictationAlternatives(alternativeWithRange.alternatives);
+        if (dictationContext)
+            dictationAlternatives.append(DictationAlternative(alternativeWithRange.range.location, alternativeWithRange.range.length, dictationContext));
+    }
+
+    if (dictationAlternatives.isEmpty()) {
+        InsertTextOptions options;
+        options.registerUndoGroup = registerUndoGroup;
+
+        insertTextAsync(text, replacementRange, WTFMove(options));
+        return;
+    }
+
+    process().send(Messages::WebPage::InsertDictatedTextAsync { text, replacementRange, dictationAlternatives, registerUndoGroup }, m_webPageID);
+#else
+    InsertTextOptions options;
+    options.registerUndoGroup = registerUndoGroup;
+
+    insertTextAsync(text, replacementRange, WTFMove(options));
+#endif
+}
     
 #if ENABLE(APPLE_PAY)
 
@@ -235,17 +271,17 @@ IPC::Connection* WebPageProxy::paymentCoordinatorConnection(const WebPaymentCoor
 
 const String& WebPageProxy::paymentCoordinatorBoundInterfaceIdentifier(const WebPaymentCoordinatorProxy&)
 {
-    return websiteDataStore().boundInterfaceIdentifier();
+    return websiteDataStore().configuration().boundInterfaceIdentifier();
 }
 
 const String& WebPageProxy::paymentCoordinatorSourceApplicationBundleIdentifier(const WebPaymentCoordinatorProxy&)
 {
-    return websiteDataStore().sourceApplicationBundleIdentifier();
+    return websiteDataStore().configuration().sourceApplicationBundleIdentifier();
 }
 
 const String& WebPageProxy::paymentCoordinatorSourceApplicationSecondaryIdentifier(const WebPaymentCoordinatorProxy&)
 {
-    return websiteDataStore().sourceApplicationSecondaryIdentifier();
+    return websiteDataStore().configuration().sourceApplicationSecondaryIdentifier();
 }
 
 void WebPageProxy::paymentCoordinatorAddMessageReceiver(WebPaymentCoordinatorProxy&, const IPC::StringReference& messageReceiverName, IPC::MessageReceiver& messageReceiver)
@@ -307,6 +343,16 @@ void WebPageProxy::didCreateContextForVisibilityPropagation(LayerHostingContextI
     m_contextIDForVisibilityPropagation = contextID;
     pageClient().didCreateContextForVisibilityPropagation(contextID);
 }
+
+void WebPageProxy::didCreateContextInGPUProcessForVisibilityPropagation(LayerHostingContextID contextID)
+{
+    pageClient().didCreateContextInGPUProcessForVisibilityPropagation(contextID);
+}
 #endif
+
+void WebPageProxy::grantAccessToPreferenceService()
+{
+    process().unblockPreferenceServiceIfNeeded();
+}
 
 } // namespace WebKit

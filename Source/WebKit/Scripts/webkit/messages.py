@@ -27,6 +27,7 @@ import sys
 from webkit import parser
 
 WANTS_CONNECTION_ATTRIBUTE = 'WantsConnection'
+WANTS_DISPATCH_MESSAGE_ATTRIBUTE = 'WantsDispatchMessage'
 LEGACY_RECEIVER_ATTRIBUTE = 'LegacyReceiver'
 NOT_REFCOUNTED_RECEIVER_ATTRIBUTE = 'NotRefCounted'
 SYNCHRONOUS_ATTRIBUTE = 'Synchronous'
@@ -195,7 +196,7 @@ def forward_declaration(namespace, kind_and_type):
 def forward_declarations_for_namespace(namespace, kind_and_types):
     result = []
     result.append('namespace %s {\n' % namespace)
-    result += ['%s;\n' % forward_declaration(namespace, x) for x in kind_and_types]
+    result += ['%s;\n' % forward_declaration(namespace, x) for x in sorted(kind_and_types)]
     result.append('}\n')
     return ''.join(result)
 
@@ -203,14 +204,19 @@ def forward_declarations_for_namespace(namespace, kind_and_types):
 def types_that_cannot_be_forward_declared():
     return frozenset([
         'MachSendRight',
+        'MediaTime',
         'String',
+        'WebCore::ColorSpace',
         'WebCore::DocumentIdentifier',
+        'WebCore::DocumentOrWorkerIdentifier',
         'WebCore::FetchIdentifier',
         'WebCore::FrameIdentifier',
         'WebCore::LibWebRTCSocketIdentifier',
         'WebCore::PageIdentifier',
         'WebCore::PointerID',
         'WebCore::ProcessIdentifier',
+        'WebCore::RealtimeMediaSourceIdentifier',
+        'WebCore::RenderingMode',
         'WebCore::ServiceWorkerIdentifier',
         'WebCore::ServiceWorkerJobIdentifier',
         'WebCore::ServiceWorkerOrClientData',
@@ -218,21 +224,42 @@ def types_that_cannot_be_forward_declared():
         'WebCore::ServiceWorkerRegistrationIdentifier',
         'WebCore::SWServerConnectionIdentifier',
         'WebKit::ActivityStateChangeID',
+        'WebKit::AudioMediaStreamTrackRendererIdentifier',
+        'WebKit::ContentWorldIdentifier',
+        'WebKit::ImageBufferBackendHandle',
+        'WebKit::ImageBufferFlushIdentifier',
+        'WebKit::ImageBufferIdentifier',
         'WebKit::LayerHostingContextID',
+        'WebKit::LibWebRTCResolverIdentifier',
+        'WebKit::MDNSRegisterIdentifier',
         'WebKit::MediaPlayerPrivateRemoteIdentifier',
+        'WebKit::MediaRecorderIdentifier',
+        'WebKit::RemoteAudioDestinationIdentifier',
+        'WebKit::RemoteAudioSessionIdentifier',
+        'WebKit::RemoteCDMIdentifier',
+        'WebKit::RemoteCDMInstanceIdentifier',
+        'WebKit::RemoteCDMInstanceSessionIdentifier',
+        'WebKit::RemoteLegacyCDMIdentifier',
+        'WebKit::RemoteLegacyCDMSessionIdentifier',
         'WebKit::RemoteMediaResourceIdentifier',
+        'WebKit::RenderingBackendIdentifier',
         'WebKit::RTCDecoderIdentifier',
+        'WebKit::RTCEncoderIdentifier',
+        'WebKit::SampleBufferDisplayLayerIdentifier',
         'WebKit::StorageAreaIdentifier',
         'WebKit::StorageAreaImplIdentifier',
         'WebKit::StorageNamespaceIdentifier',
+        'WebKit::TrackPrivateRemoteIdentifier',
         'WebKit::TransactionID',
         'WebKit::UserContentControllerIdentifier',
         'WebKit::WebPageProxyIdentifier',
+        'WebKit::WebSocketIdentifier',
     ])
 
 
 def conditions_for_header(header):
     conditions = {
+        '"InputMethodState.h"': ["PLATFORM(GTK)", "PLATFORM(WPE)"],
         '"LayerHostingContext.h"': ["PLATFORM(COCOA)", ],
     }
     if not header in conditions:
@@ -253,6 +280,7 @@ def forward_declarations_and_headers(receiver):
 
     non_template_wtf_types = frozenset([
         'MachSendRight',
+        'MediaType',
         'String',
     ])
 
@@ -287,7 +315,7 @@ def forward_declarations_and_headers(receiver):
     for header in sorted(headers):
         conditions = conditions_for_header(header)
         if conditions and not None in conditions:
-            header_include = '#if %s\n' % ' || '.join(set(conditions))
+            header_include = '#if %s\n' % ' || '.join(sorted(set(conditions)))
             header_include += '#include %s\n' % header
             header_include += '#endif\n'
             header_includes.append(header_include)
@@ -306,6 +334,7 @@ def forward_declarations_and_headers_for_replies(receiver):
 
     non_template_wtf_types = frozenset([
         'MachSendRight',
+        'MediaTime',
         'String',
     ])
 
@@ -344,7 +373,7 @@ def forward_declarations_and_headers_for_replies(receiver):
     for header in sorted(headers):
         conditions = conditions_for_header(header)
         if conditions and not None in conditions:
-            header_include = '#if %s\n' % ' || '.join(set(conditions))
+            header_include = '#if %s\n' % ' || '.join(sorted(set(conditions)))
             header_include += '#include %s\n' % header
             header_include += '#endif\n'
             header_includes.append(header_include)
@@ -470,6 +499,7 @@ def class_template_headers(template_string):
 
     class_template_types = {
         'WebCore::RectEdges': {'headers': ['<WebCore/RectEdges.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
+        'Expected': {'headers': ['<wtf/Expected.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'HashMap': {'headers': ['<wtf/HashMap.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'HashSet': {'headers': ['<wtf/HashSet.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
         'Optional': {'headers': ['<wtf/Optional.h>'], 'argument_coder_headers': ['"ArgumentCoders.h"']},
@@ -535,6 +565,7 @@ def headers_for_type(type):
         'JSC::MessageSource': ['<JavaScriptCore/ConsoleTypes.h>'],
         'Inspector::InspectorTargetType': ['<JavaScriptCore/InspectorTarget.h>'],
         'Inspector::FrontendChannel::ConnectionType': ['<JavaScriptCore/InspectorFrontendChannel.h>'],
+        'MediaTime': ['<wtf/MediaTime.h>'],
         'MonotonicTime': ['<wtf/MonotonicTime.h>'],
         'Seconds': ['<wtf/Seconds.h>'],
         'WallTime': ['<wtf/WallTime.h>'],
@@ -542,6 +573,7 @@ def headers_for_type(type):
         'PAL::SessionID': ['<pal/SessionID.h>'],
         'WebCore::AutoplayEventFlags': ['<WebCore/AutoplayEvent.h>'],
         'WebCore::DOMPasteAccessResponse': ['<WebCore/DOMPasteAccess.h>'],
+        'WebCore::DocumentOrWorkerIdentifier': ['<WebCore/ServiceWorkerTypes.h>'],
         'WebKit::DocumentEditingContextRequest': ['"DocumentEditingContext.h"'],
         'WebCore::DragHandlingMethod': ['<WebCore/DragActions.h>'],
         'WebCore::ExceptionDetails': ['<WebCore/JSDOMExceptionHandling.h>'],
@@ -549,6 +581,7 @@ def headers_for_type(type):
         'WebCore::ShareDataWithParsedURL': ['<WebCore/ShareData.h>'],
         'WebCore::FontChanges': ['<WebCore/FontAttributeChanges.h>'],
         'WebCore::FrameLoadType': ['<WebCore/FrameLoaderTypes.h>'],
+        'WebCore::GenericCueData': ['<WebCore/InbandGenericCue.h>'],
         'WebCore::GrammarDetail': ['<WebCore/TextCheckerClient.h>'],
         'WebCore::HasInsecureContent': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::Highlight': ['<WebCore/InspectorOverlay.h>'],
@@ -557,6 +590,7 @@ def headers_for_type(type):
         'WebCore::InputMode': ['<WebCore/InputMode.h>'],
         'WebCore::KeyframeValueList': ['<WebCore/GraphicsLayer.h>'],
         'WebCore::KeypressCommand': ['<WebCore/KeyboardEvent.h>'],
+        'WebCore::LegacyCDMSessionClient::MediaKeyErrorCode': ['<WebCore/LegacyCDMSession.h>'],
         'WebCore::LockBackForwardList': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::MessagePortChannelProvider::HasActivity': ['<WebCore/MessagePortChannelProvider.h>'],
         'WebCore::NetworkTransactionInformation': ['<WebCore/NetworkLoadInformation.h>'],
@@ -581,6 +615,7 @@ def headers_for_type(type):
         'WebCore::ServiceWorkerState': ['<WebCore/ServiceWorkerTypes.h>'],
         'WebCore::ShippingContactUpdate': ['<WebCore/ApplePaySessionPaymentRequest.h>'],
         'WebCore::ShippingMethodUpdate': ['<WebCore/ApplePaySessionPaymentRequest.h>'],
+        'WebCore::ShouldAskITP': ['<WebCore/NetworkStorageSession.h>'],
         'WebCore::ShouldNotifyWhenResolved': ['<WebCore/ServiceWorkerTypes.h>'],
         'WebCore::ShouldSample': ['<WebCore/DiagnosticLoggingClient.h>'],
         'WebCore::StorageAccessPromptWasShown': ['<WebCore/DocumentStorageAccess.h>'],
@@ -593,24 +628,31 @@ def headers_for_type(type):
         'WebCore::TextIndicatorData': ['<WebCore/TextIndicator.h>'],
         'WebCore::ThirdPartyCookieBlockingMode': ['<WebCore/NetworkStorageSession.h>'],
         'WebCore::FirstPartyWebsiteDataRemovalMode': ['<WebCore/NetworkStorageSession.h>'],
+        'WebCore::UsedLegacyTLS': ['<WebCore/ResourceResponseBase.h>'],
         'WebCore::ViewportAttributes': ['<WebCore/ViewportArguments.h>'],
         'WebCore::WillContinueLoading': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::SelectionRect': ['"EditorState.h"'],
         'WebKit::ActivityStateChangeID': ['"DrawingAreaInfo.h"'],
         'WebKit::BackForwardListItemState': ['"SessionState.h"'],
+        'WebKit::ContentWorldIdentifier' : ['"ContentWorldShared.h"'],
         'WebKit::LayerHostingContextID': ['"LayerHostingContext.h"'],
         'WebKit::LayerHostingMode': ['"LayerTreeContext.h"'],
         'WebKit::PageState': ['"SessionState.h"'],
+        'WebKit::RespectSelectionAnchor': ['"GestureTypes.h"'],
         'WebKit::WebGestureEvent': ['"WebEvent.h"'],
         'WebKit::WebKeyboardEvent': ['"WebEvent.h"'],
         'WebKit::WebMouseEvent': ['"WebEvent.h"'],
         'WebKit::WebTouchEvent': ['"WebEvent.h"'],
         'WebKit::WebWheelEvent': ['"WebEvent.h"'],
         'WebCore::MediaEngineSupportParameters': ['<WebCore/MediaPlayer.h>'],
+        'WebCore::ISOWebVTTCue': ['<WebCore/ISOVTTCue.h>'],
+        'struct WebCore::Cookie': ['<WebCore/Cookie.h>'],
         'struct WebCore::ElementContext': ['<WebCore/ElementContext.h>'],
         'struct WebKit::WebUserScriptData': ['"WebUserContentControllerDataTypes.h"'],
         'struct WebKit::WebUserStyleSheetData': ['"WebUserContentControllerDataTypes.h"'],
         'struct WebKit::WebScriptMessageHandlerData': ['"WebUserContentControllerDataTypes.h"'],
+        'webrtc::WebKitEncodedFrameInfo': ['<webrtc/sdk/WebKit/WebKitEncoder.h>'],
+        'webrtc::WebKitRTPFragmentationHeader': ['<webrtc/sdk/WebKit/WebKitEncoder.h>'],
     }
 
     headers = []
@@ -697,7 +739,7 @@ def generate_message_handler(receiver):
     result.append('#include "%s.h"\n\n' % receiver.name)
     for header in sorted(header_conditions):
         if header_conditions[header] and not None in header_conditions[header]:
-            result.append('#if %s\n' % ' || '.join(set(header_conditions[header])))
+            result.append('#if %s\n' % ' || '.join(sorted(set(header_conditions[header]))))
             result += ['#include %s\n' % header]
             result.append('#endif\n')
         else:
@@ -757,13 +799,16 @@ def generate_message_handler(receiver):
         else:
             async_messages.append(message)
 
-    if async_messages:
+    if async_messages or receiver.has_attribute(WANTS_DISPATCH_MESSAGE_ATTRIBUTE):
         result.append('void %s::didReceive%sMessage(IPC::Connection& connection, IPC::Decoder& decoder)\n' % (receiver.name, receiver.name if receiver.has_attribute(LEGACY_RECEIVER_ATTRIBUTE) else ''))
         result.append('{\n')
         if not receiver.has_attribute(NOT_REFCOUNTED_RECEIVER_ATTRIBUTE):
             result.append('    auto protectedThis = makeRef(*this);\n')
 
         result += [async_message_statement(receiver, message) for message in async_messages]
+        if receiver.has_attribute(WANTS_DISPATCH_MESSAGE_ATTRIBUTE):
+            result.append('    if (dispatchMessage(connection, decoder))\n')
+            result.append('        return;\n')
         if (receiver.superclass):
             result.append('    %s::didReceiveMessage(connection, decoder);\n' % (receiver.superclass))
         else:
@@ -772,13 +817,16 @@ def generate_message_handler(receiver):
             result.append('    ASSERT_NOT_REACHED();\n')
         result.append('}\n')
 
-    if sync_messages:
+    if sync_messages or receiver.has_attribute(WANTS_DISPATCH_MESSAGE_ATTRIBUTE):
         result.append('\n')
         result.append('void %s::didReceiveSync%sMessage(IPC::Connection& connection, IPC::Decoder& decoder, std::unique_ptr<IPC::Encoder>& replyEncoder)\n' % (receiver.name, receiver.name if receiver.has_attribute(LEGACY_RECEIVER_ATTRIBUTE) else ''))
         result.append('{\n')
         if not receiver.has_attribute(NOT_REFCOUNTED_RECEIVER_ATTRIBUTE):
             result.append('    auto protectedThis = makeRef(*this);\n')
         result += [sync_message_statement(receiver, message) for message in sync_messages]
+        if receiver.has_attribute(WANTS_DISPATCH_MESSAGE_ATTRIBUTE):
+            result.append('    if (dispatchSyncMessage(connection, decoder, replyEncoder))\n')
+            result.append('        return;\n')
         result.append('    UNUSED_PARAM(connection);\n')
         result.append('    UNUSED_PARAM(decoder);\n')
         result.append('    UNUSED_PARAM(replyEncoder);\n')

@@ -847,6 +847,15 @@
          "benm"
       ]
    },
+   "Ben Nham" : {
+      "emails" : [
+         "nham@apple.com"
+      ],
+      "nicks" : [
+         "nham"
+      ],
+      "status" : "committer"
+   },
    "Ben Wells" : {
       "emails" : [
          "benwells@chromium.org"
@@ -1399,7 +1408,7 @@
          "dbates@webkit.org",
          "dabates@apple.com"
       ],
-      "expertise" : "XSSAuditor, Drag and Drop, Tools, Perl, svn-apply/unapply",
+      "expertise" : "Text Layout, Event Handling, Security, XSSAuditor, Drag and Drop, Basic types and data structures, Tools, General (probably a good backup on most topics even if not specifically an expert)",
       "nicks" : [
          "dydz"
       ],
@@ -2512,6 +2521,12 @@
          "jkjiang"
       ]
    },
+   "Jacob Uphoff" : {
+      "emails" : [
+         "jacob_uphoff@apple.com"
+      ],
+      "status" : "committer"
+   },
    "Jae Hyun Park" : {
       "emails" : [
          "jaepark@webkit.org",
@@ -2627,6 +2642,12 @@
       "nicks" : [
          "jarrednicholls"
       ]
+   },
+   "Jason Lawrence" : {
+      "emails" : [
+         "lawrence.j@apple.com"
+      ],
+      "status" : "committer"
    },
    "Jason Liu" : {
       "emails" : [
@@ -3524,13 +3545,15 @@
          "lvidacs"
       ]
    },
-   "Lauro Neto" : {
+   "Lauro Moura" : {
       "emails" : [
+         "lmoura@igalia.com",
          "lauro.neto@openbossa.org"
       ],
       "nicks" : [
          "lmoura"
-      ]
+      ],
+      "status" : "committer"
    },
    "Leandro Gracia Gil" : {
       "emails" : [
@@ -4258,10 +4281,11 @@
          "noam@webkit.org",
          "noam.rosenthal@nokia.com"
       ],
-      "expertise" : "TextureMapper, graphics for the Qt port",
+      "expertise" : "TextureMapper, coordinated graphics, images",
       "nicks" : [
          "noamr"
-      ]
+      ],
+      "status" : "reviewer"
    },
    "Noel Gordon" : {
       "emails" : [
@@ -4372,6 +4396,15 @@
       "nicks" : [
          "podivilov"
       ]
+   },
+   "Peng Liu" : {
+      "emails" : [
+         "peng.liu6@apple.com"
+      ],
+      "nicks" : [
+         "peng"
+      ],
+      "status" : "committer"
    },
    "Per Arne Vollan" : {
       "emails" : [

@@ -149,14 +149,15 @@ public:
     MonotonicTime mostRecentUserInteractionTime() const;
 
     bool allowsPlaybackControlsForAutoplayingAudio() const;
-    bool allowsNowPlayingControlsVisibility() const override;
 
     static bool isMediaElementSessionMediaType(MediaType type)
     {
-        return type == Video
-            || type == Audio
-            || type == VideoAudio;
+        return type == MediaType::Video
+            || type == MediaType::Audio
+            || type == MediaType::VideoAudio;
     }
+
+    Optional<NowPlayingInfo> nowPlayingInfo() const final;
 
 #if !RELEASE_LOG_DISABLED
     const void* logIdentifier() const final { return m_logIdentifier; }

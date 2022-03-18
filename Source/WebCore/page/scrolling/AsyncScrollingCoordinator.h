@@ -66,7 +66,7 @@ public:
     WEBCORE_EXPORT void updateIsMonitoringWheelEventsForFrameView(const FrameView&) override;
 
     void reportExposedUnfilledArea(MonotonicTime, unsigned unfilledArea);
-    void reportSynchronousScrollingReasonsChanged(MonotonicTime, SynchronousScrollingReasons);
+    void reportSynchronousScrollingReasonsChanged(MonotonicTime, OptionSet<SynchronousScrollingReason>);
 
 protected:
     WEBCORE_EXPORT AsyncScrollingCoordinator(Page*);
@@ -98,7 +98,7 @@ private:
     WEBCORE_EXPORT void frameViewVisualViewportChanged(FrameView&) override;
     WEBCORE_EXPORT void frameViewEventTrackingRegionsChanged(FrameView&) override;
 
-    WEBCORE_EXPORT bool requestScrollPositionUpdate(ScrollableArea&, const IntPoint&) override;
+    WEBCORE_EXPORT bool requestScrollPositionUpdate(ScrollableArea&, const IntPoint&, ScrollType, ScrollClamping) override;
 
     WEBCORE_EXPORT void applyScrollingTreeLayerPositions() override;
 
@@ -114,7 +114,6 @@ private:
 
     WEBCORE_EXPORT void setNodeLayers(ScrollingNodeID, const NodeLayers&) override;
 
-    WEBCORE_EXPORT void setRectRelativeToParentNode(ScrollingNodeID, const LayoutRect&) override;
     WEBCORE_EXPORT void setScrollingNodeScrollableAreaGeometry(ScrollingNodeID, ScrollableArea&) override;
     WEBCORE_EXPORT void setFrameScrollingNodeState(ScrollingNodeID, const FrameView&) override;
     WEBCORE_EXPORT void setViewportConstraintedNodeConstraints(ScrollingNodeID, const ViewportConstraints&) override;
@@ -134,7 +133,7 @@ private:
     WEBCORE_EXPORT void reconcileViewportConstrainedLayerPositions(ScrollingNodeID, const LayoutRect& viewportRect, ScrollingLayerPositionAction) override;
     WEBCORE_EXPORT void scrollableAreaScrollbarLayerDidChange(ScrollableArea&, ScrollbarOrientation) override;
 
-    WEBCORE_EXPORT void setSynchronousScrollingReasons(FrameView&, SynchronousScrollingReasons) final;
+    WEBCORE_EXPORT void setSynchronousScrollingReasons(ScrollingNodeID, OptionSet<SynchronousScrollingReason>) final;
 
     virtual void scheduleTreeStateCommit() = 0;
 
@@ -175,6 +174,29 @@ private:
 
     bool m_eventTrackingRegionsDirty { false };
 };
+
+#if ENABLE(SCROLLING_THREAD)
+class LayerTreeHitTestLocker {
+public:
+    LayerTreeHitTestLocker(ScrollingCoordinator* scrollingCoordinator)
+    {
+        if (is<AsyncScrollingCoordinator>(scrollingCoordinator)) {
+            m_scrollingTree = downcast<AsyncScrollingCoordinator>(*scrollingCoordinator).scrollingTree();
+            if (m_scrollingTree)
+                m_scrollingTree->lockLayersForHitTesting();
+        }
+    }
+    
+    ~LayerTreeHitTestLocker()
+    {
+        if (m_scrollingTree)
+            m_scrollingTree->unlockLayersForHitTesting();
+    }
+
+private:
+    RefPtr<ScrollingTree> m_scrollingTree;
+};
+#endif
 
 } // namespace WebCore
 

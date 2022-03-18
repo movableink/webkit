@@ -30,7 +30,7 @@
 #include "BytecodeGenerator.h"
 #include "CallFrame.h"
 #include "CheckpointOSRExitSideState.h"
-#include "CommonSlowPaths.h"
+#include "CommonSlowPathsInlines.h"
 #include "Error.h"
 #include "ErrorHandlingScope.h"
 #include "EvalCodeBlock.h"
@@ -379,8 +379,7 @@ inline bool jitCompileAndSetHeuristics(VM& vm, CodeBlock* codeBlock, BytecodeInd
 
     if (!codeBlock->checkIfJITThresholdReached()) {
         CODEBLOCK_LOG_EVENT(codeBlock, "delayJITCompile", ("threshold not reached, counter = ", codeBlock->llintExecuteCounter()));
-        if (Options::verboseOSR())
-            dataLogF("    JIT threshold should be lifted.\n");
+        dataLogLnIf(Options::verboseOSR(), "    JIT threshold should be lifted.");
         return false;
     }
     
@@ -388,8 +387,7 @@ inline bool jitCompileAndSetHeuristics(VM& vm, CodeBlock* codeBlock, BytecodeInd
     
     switch (codeBlock->jitType()) {
     case JITType::BaselineJIT: {
-        if (Options::verboseOSR())
-            dataLogF("    Code was already compiled.\n");
+        dataLogLnIf(Options::verboseOSR(), "    Code was already compiled.");
         codeBlock->jitSoon();
         return true;
     }
@@ -406,11 +404,9 @@ inline bool jitCompileAndSetHeuristics(VM& vm, CodeBlock* codeBlock, BytecodeInd
 
 static SlowPathReturnType entryOSR(CodeBlock* codeBlock, const char *name, EntryKind kind)
 {
-    if (Options::verboseOSR()) {
-        dataLog(
-            *codeBlock, ": Entered ", name, " with executeCounter = ",
-            codeBlock->llintExecuteCounter(), "\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        *codeBlock, ": Entered ", name, " with executeCounter = ",
+        codeBlock->llintExecuteCounter());
     
     if (!shouldJIT(codeBlock)) {
         codeBlock->dontJITAnytimeSoon();
@@ -472,11 +468,9 @@ LLINT_SLOW_PATH_DECL(loop_osr)
     UNUSED_PARAM(globalObject);
 
 #if ENABLE(JIT)
-    if (Options::verboseOSR()) {
-        dataLog(
+    dataLogLnIf(Options::verboseOSR(),
             *codeBlock, ": Entered loop_osr with executeCounter = ",
-            codeBlock->llintExecuteCounter(), "\n");
-    }
+            codeBlock->llintExecuteCounter());
     
     auto loopOSREntryBytecodeIndex = BytecodeIndex(codeBlock->bytecodeOffset(pc));
 
@@ -514,11 +508,9 @@ LLINT_SLOW_PATH_DECL(replace)
     UNUSED_PARAM(globalObject);
 
 #if ENABLE(JIT)
-    if (Options::verboseOSR()) {
-        dataLog(
-            *codeBlock, ": Entered replace with executeCounter = ",
-            codeBlock->llintExecuteCounter(), "\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        *codeBlock, ": Entered replace with executeCounter = ",
+        codeBlock->llintExecuteCounter());
     
     if (shouldJIT(codeBlock))
         jitCompileAndSetHeuristics(vm, codeBlock);
@@ -845,6 +837,8 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_id)
     
     JSValue baseValue = getOperand(callFrame, bytecode.m_base);
     PutPropertySlot slot(baseValue, codeBlock->isStrictMode(), codeBlock->putByIdContext());
+
+    Structure* oldStructure = baseValue.isCell() ? baseValue.asCell()->structure(vm) : nullptr;
     if (bytecode.m_flags & PutByIdIsDirect)
         CommonSlowPaths::putDirectWithReify(vm, globalObject, asObject(baseValue), ident, getOperand(callFrame, bytecode.m_value), slot);
     else
@@ -853,15 +847,15 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_id)
     
     if (!LLINT_ALWAYS_ACCESS_SLOW
         && baseValue.isCell()
-        && slot.isCacheablePut()) {
-
+        && slot.isCacheablePut()
+        && oldStructure->propertyAccessesAreCacheable()) {
         {
             StructureID oldStructureID = metadata.m_oldStructureID;
             if (oldStructureID) {
                 Structure* a = vm.heap.structureIDTable().get(oldStructureID);
                 Structure* b = baseValue.asCell()->structure(vm);
                 if (slot.type() == PutPropertySlot::NewProperty)
-                    b = b->previousID();
+                    b = b->previousID(vm);
 
                 if (Structure::shouldConvertToPolyProto(a, b)) {
                     a->rareData()->sharedPolyProtoWatchpoint()->invalidate(vm, StringFireDetail("Detected poly proto opportunity."));
@@ -877,34 +871,44 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_id)
         metadata.m_structureChain.clear();
         
         JSCell* baseCell = baseValue.asCell();
-        Structure* structure = baseCell->structure(vm);
+        Structure* newStructure = baseCell->structure(vm);
         
-        if (!structure->isUncacheableDictionary() && !structure->typeInfo().prohibitsPropertyCaching() && baseCell == slot.base()) {
+        if (newStructure->propertyAccessesAreCacheable() && baseCell == slot.base()) {
             if (slot.type() == PutPropertySlot::NewProperty) {
                 GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm.heap);
-                if (!structure->isDictionary() && structure->previousID()->outOfLineCapacity() == structure->outOfLineCapacity()) {
-                    ASSERT(structure->previousID()->transitionWatchpointSetHasBeenInvalidated());
+                if (!newStructure->isDictionary() && newStructure->previousID(vm)->outOfLineCapacity() == newStructure->outOfLineCapacity()) {
+                    ASSERT(oldStructure == newStructure->previousID(vm));
+                    if (oldStructure == newStructure->previousID(vm)) {
+                        ASSERT(oldStructure->transitionWatchpointSetHasBeenInvalidated());
 
-                    bool sawPolyProto = false;
-                    auto result = normalizePrototypeChain(globalObject, baseCell, sawPolyProto);
-                    if (result != InvalidPrototypeChain && !sawPolyProto) {
-                        ASSERT(structure->previousID()->isObject());
-                        metadata.m_oldStructureID = structure->previousID()->id();
-                        metadata.m_offset = slot.cachedOffset();
-                        metadata.m_newStructureID = structure->id();
-                        if (!(bytecode.m_flags & PutByIdIsDirect)) {
-                            StructureChain* chain = structure->prototypeChain(globalObject, asObject(baseCell));
-                            ASSERT(chain);
-                            metadata.m_structureChain.set(vm, codeBlock, chain);
+                        bool sawPolyProto = false;
+                        auto result = normalizePrototypeChain(globalObject, baseCell, sawPolyProto);
+                        if (result != InvalidPrototypeChain && !sawPolyProto) {
+                            ASSERT(oldStructure->isObject());
+                            metadata.m_oldStructureID = oldStructure->id();
+                            metadata.m_offset = slot.cachedOffset();
+                            metadata.m_newStructureID = newStructure->id();
+                            if (!(bytecode.m_flags & PutByIdIsDirect)) {
+                                StructureChain* chain = newStructure->prototypeChain(globalObject, asObject(baseCell));
+                                ASSERT(chain);
+                                metadata.m_structureChain.set(vm, codeBlock, chain);
+                            }
+                            vm.heap.writeBarrier(codeBlock);
                         }
-                        vm.heap.writeBarrier(codeBlock);
                     }
                 }
             } else {
-                structure->didCachePropertyReplacement(vm, slot.cachedOffset());
+                // This assert helps catch bugs if we accidentally forget to disable caching
+                // when we transition then store to an existing property. This is common among
+                // paths that reify lazy properties. If we reify a lazy property and forget
+                // to disable caching, we may come down this path. The Replace IC does not
+                // know how to model these types of structure transitions (or any structure
+                // transition for that matter).
+                RELEASE_ASSERT(newStructure == oldStructure);
+                newStructure->didCachePropertyReplacement(vm, slot.cachedOffset());
                 {
                     ConcurrentJSLocker locker(codeBlock->m_lock);
-                    metadata.m_oldStructureID = structure->id();
+                    metadata.m_oldStructureID = newStructure->id();
                     metadata.m_offset = slot.cachedOffset();
                 }
                 vm.heap.writeBarrier(codeBlock);
@@ -921,7 +925,7 @@ LLINT_SLOW_PATH_DECL(slow_path_del_by_id)
     auto bytecode = pc->as<OpDelById>();
     JSObject* baseObject = getOperand(callFrame, bytecode.m_base).toObject(globalObject);
     LLINT_CHECK_EXCEPTION();
-    bool couldDelete = baseObject->methodTable(vm)->deleteProperty(baseObject, globalObject, codeBlock->identifier(bytecode.m_property));
+    bool couldDelete = JSCell::deleteProperty(baseObject, globalObject, codeBlock->identifier(bytecode.m_property));
     LLINT_CHECK_EXCEPTION();
     if (!couldDelete && codeBlock->isStrictMode())
         LLINT_THROW(createTypeError(globalObject, UnableToDeletePropertyError));
@@ -1104,7 +1108,7 @@ LLINT_SLOW_PATH_DECL(slow_path_del_by_val)
         LLINT_CHECK_EXCEPTION();
         auto property = subscript.toPropertyKey(globalObject);
         LLINT_CHECK_EXCEPTION();
-        couldDelete = baseObject->methodTable(vm)->deleteProperty(baseObject, globalObject, property);
+        couldDelete = JSCell::deleteProperty(baseObject, globalObject, property);
     }
     LLINT_CHECK_EXCEPTION();
 
@@ -1910,11 +1914,7 @@ LLINT_SLOW_PATH_DECL(slow_path_log_shadow_chicken_tail)
     JSValue thisValue = getNonConstantOperand(callFrame, bytecode.m_thisValue);
     JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     
-#if USE(JSVALUE64)
     CallSiteIndex callSiteIndex(BytecodeIndex(codeBlock->bytecodeOffset(pc)));
-#else
-    CallSiteIndex callSiteIndex(*pc);
-#endif
 
     ShadowChicken* shadowChicken = vm.shadowChicken();
     RELEASE_ASSERT(shadowChicken);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #import "WebDataSourceInternal.h"
 #import "WebDocumentLoaderMac.h"
 #import "WebDynamicScrollBarsView.h"
+#import "WebEditorClient.h"
 #import "WebElementDictionary.h"
 #import "WebFrameLoaderClient.h"
 #import "WebFrameViewInternal.h"
@@ -65,6 +66,7 @@
 #import <WebCore/CachedResourceLoader.h>
 #import <WebCore/Chrome.h>
 #import <WebCore/ColorMac.h>
+#import <WebCore/CompositionHighlight.h>
 #import <WebCore/DatabaseManager.h>
 #import <WebCore/DocumentFragment.h>
 #import <WebCore/DocumentLoader.h>
@@ -77,6 +79,7 @@
 #import <WebCore/FrameLoadRequest.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameLoaderStateMachine.h>
+#import <WebCore/FrameSelection.h>
 #import <WebCore/FrameTree.h>
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/HTMLFrameOwnerElement.h>
@@ -97,6 +100,7 @@
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SecurityOrigin.h>
+#import <WebCore/SimpleRange.h>
 #import <WebCore/SmartReplace.h>
 #import <WebCore/StyleProperties.h>
 #import <WebCore/SubframeLoader.h>
@@ -111,7 +115,6 @@
 #import "WebResource.h"
 #import "WebUIKitDelegate.h"
 #import <WebCore/Document.h>
-#import <WebCore/EditorClient.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/Font.h>
 #import <WebCore/FrameSelection.h>
@@ -291,7 +294,7 @@ WebView *kit(WebCore::Page* page)
 
 WebView *getWebView(WebFrame *webFrame)
 {
-    auto* coreFrame = core(webFrame);
+    auto coreFrame = core(webFrame);
     if (!coreFrame)
         return nil;
     return kit(coreFrame->page());
@@ -302,7 +305,7 @@ WebView *getWebView(WebFrame *webFrame)
     WebView *webView = kit(page);
 
     WebFrame *frame = [[self alloc] _initWithWebFrameView:frameView webView:webView];
-    auto coreFrame = WebCore::Frame::create(page, ownerElement, new WebFrameLoaderClient(frame));
+    auto coreFrame = WebCore::Frame::create(page, ownerElement, makeUniqueRef<WebFrameLoaderClient>(frame));
     [frame release];
     frame->_private->coreFrame = coreFrame.ptr();
 
@@ -325,7 +328,7 @@ WebView *getWebView(WebFrame *webFrame)
 
     WebFrame *frame = [[self alloc] _initWithWebFrameView:frameView webView:webView];
     frame->_private->coreFrame = &page->mainFrame();
-    static_cast<WebFrameLoaderClient&>(page->mainFrame().loader().client()).setWebFrame(frame);
+    static_cast<WebFrameLoaderClient&>(page->mainFrame().loader().client()).setWebFrame(*frame);
     [frame release];
 
     page->mainFrame().tree().setName(name);
@@ -353,7 +356,7 @@ static NSURL *createUniqueWebDataURL();
     
     WebFrame *frame = [[self alloc] _initWithWebFrameView:frameView webView:webView];
     frame->_private->coreFrame = &page->mainFrame();
-    static_cast<WebFrameLoaderClient&>(page->mainFrame().loader().client()).setWebFrame(frame);
+    static_cast<WebFrameLoaderClient&>(page->mainFrame().loader().client()).setWebFrame(*frame);
     [frame release];
 
     frame->_private->coreFrame->initWithSimpleHTMLDocument(style, createUniqueWebDataURL());
@@ -431,8 +434,8 @@ static NSURL *createUniqueWebDataURL();
     CGColorRef backgroundColor = [webView backgroundColor];
 #endif
 
-    auto* coreFrame = _private->coreFrame;
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+    auto coreFrame = _private->coreFrame;
+    for (auto frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         // Don't call setDrawsBackground:YES here because it may be NO because of a load
         // in progress; WebFrameLoaderClient keeps it set to NO during the load process.
         WebFrame *webFrame = kit(frame);
@@ -469,8 +472,8 @@ static NSURL *createUniqueWebDataURL();
 
 - (void)_unmarkAllBadGrammar
 {
-    auto* coreFrame = _private->coreFrame;
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+    auto coreFrame = _private->coreFrame;
+    for (auto frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         if (auto* document = frame->document())
             document->markers().removeMarkers(WebCore::DocumentMarker::Grammar);
     }
@@ -479,8 +482,8 @@ static NSURL *createUniqueWebDataURL();
 - (void)_unmarkAllMisspellings
 {
 #if !PLATFORM(IOS_FAMILY)
-    auto* coreFrame = _private->coreFrame;
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+    auto coreFrame = _private->coreFrame;
+    for (auto frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         if (auto* document = frame->document())
             document->markers().removeMarkers(WebCore::DocumentMarker::Spelling);
     }
@@ -493,7 +496,7 @@ static NSURL *createUniqueWebDataURL();
 
     // optimization for common case to avoid creating potentially large selection string
     if ([documentView isKindOfClass:[WebHTMLView class]])
-        if (auto* coreFrame = _private->coreFrame)
+        if (auto coreFrame = _private->coreFrame)
             return coreFrame->selection().isRange();
 
     if ([documentView conformsToProtocol:@protocol(WebDocumentText)])
@@ -509,13 +512,13 @@ static NSURL *createUniqueWebDataURL();
         [documentView deselectAll];
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 - (BOOL)_atMostOneFrameHasSelection
 {
     // FIXME: 4186050 is one known case that makes this debug check fail.
     BOOL found = NO;
-    auto* coreFrame = _private->coreFrame;
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+    auto coreFrame = _private->coreFrame;
+    for (auto frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         if ([kit(frame) _hasSelection]) {
             if (found)
                 return NO;
@@ -524,12 +527,12 @@ static NSURL *createUniqueWebDataURL();
     }
     return YES;
 }
-#endif
+#endif // ASSERT_ENABLED
 
 - (WebFrame *)_findFrameWithSelection
 {
-    auto* coreFrame = _private->coreFrame;
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+    auto coreFrame = _private->coreFrame;
+    for (auto frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         WebFrame *webFrame = kit(frame);
         if ([webFrame _hasSelection])
             return webFrame;
@@ -765,7 +768,7 @@ static NSURL *createUniqueWebDataURL();
             startNode->renderer()->scrollRectToVisible(WebCore::enclosingIntRect(rangeRect), insideFixed, { WebCore::SelectionRevealMode::Reveal, WebCore::ScrollAlignment::alignToEdgeIfNeeded, WebCore::ScrollAlignment::alignToEdgeIfNeeded, WebCore::ShouldAllowCrossOriginScrolling::Yes});
             layer->setAdjustForIOSCaretWhenScrolling(false);
 
-            auto* coreFrame = core(self);
+            auto coreFrame = core(self);
             if (coreFrame) {
                 auto& frameSelection = coreFrame->selection();
                 frameSelection.setCaretRectNeedsUpdate();
@@ -804,8 +807,8 @@ static NSURL *createUniqueWebDataURL();
     if (!range)
         return NSMakeRange(NSNotFound, 0);
 
-    size_t location;
-    size_t length;
+    size_t location = 0;
+    size_t length = 0;
     if (!WebCore::TextIterator::getLocationAndLengthFromRange(_private->coreFrame->selection().rootEditableElementOrDocumentElement(), range, location, length))
         return NSMakeRange(NSNotFound, 0);
 
@@ -870,7 +873,7 @@ static NSURL *createUniqueWebDataURL();
 
 - (DOMDocumentFragment *)_documentFragmentWithMarkupString:(NSString *)markupString baseURLString:(NSString *)baseURLString
 {
-    auto* frame = _private->coreFrame;
+    auto frame = _private->coreFrame;
     if (!frame)
         return nil;
 
@@ -883,7 +886,7 @@ static NSURL *createUniqueWebDataURL();
 
 - (DOMDocumentFragment *)_documentFragmentWithNodesAsParagraphs:(NSArray *)nodes
 {
-    auto* frame = _private->coreFrame;
+    auto frame = _private->coreFrame;
     if (!frame)
         return nil;
 
@@ -970,7 +973,7 @@ static NSURL *createUniqueWebDataURL();
 
 - (BOOL)_canProvideDocumentSource
 {
-    auto* frame = _private->coreFrame;
+    auto frame = _private->coreFrame;
     String mimeType = frame->document()->loader()->writer().mimeType();
     auto* pluginData = frame->page() ? &frame->page()->pluginData() : 0;
 
@@ -1006,7 +1009,7 @@ static NSURL *createUniqueWebDataURL();
 // FIXME: This exists only as a convenience for Safari, consider moving there.
 - (BOOL)_isDescendantOfFrame:(WebFrame *)ancestor
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     return coreFrame && coreFrame->tree().isDescendantOf(core(ancestor));
 }
 
@@ -1171,7 +1174,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 #if ENABLE(NETSCAPE_PLUGIN_API)
 - (void)_recursive_resumeNullEventsForAllNetscapePlugins
 {
-    auto* coreFrame = core(self);
+    auto coreFrame = core(self);
     for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         NSView <WebDocumentView> *documentView = [[kit(frame) frameView] documentView];
         if ([documentView isKindOfClass:[WebHTMLView class]])
@@ -1181,7 +1184,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (void)_recursive_pauseNullEventsForAllNetscapePlugins
 {
-    auto* coreFrame = core(self);
+    auto coreFrame = core(self);
     for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         NSView <WebDocumentView> *documentView = [[kit(frame) frameView] documentView];
         if ([documentView isKindOfClass:[WebHTMLView class]])
@@ -1200,7 +1203,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 - (void)setTimeoutsPaused:(BOOL)flag
 {
     if ([self _webHTMLDocumentView]) {
-        if (auto* coreFrame = _private->coreFrame)
+        if (auto coreFrame = _private->coreFrame)
             coreFrame->setTimersPaused(flag);
     }
 }
@@ -1220,7 +1223,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 - (void)prepareForPause
 {
     if ([self _webHTMLDocumentView]) {
-        if (auto* coreFrame = _private->coreFrame)
+        if (auto coreFrame = _private->coreFrame)
             coreFrame->dispatchPageHideEventBeforePause();
     }
 }
@@ -1228,7 +1231,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 - (void)resumeFromPause
 {
     if ([self _webHTMLDocumentView]) {
-        if (auto* coreFrame = _private->coreFrame)
+        if (auto coreFrame = _private->coreFrame)
             coreFrame->dispatchPageShowEventBeforeResume();
     }
 }
@@ -1430,6 +1433,24 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     frame->selection().setCaretColor(qColor);
 }
 
+- (CGColorRef)caretColor
+{
+    auto* frame = core(self);
+    if (!frame)
+        return nil;
+    auto* document = frame->document();
+    if (!document)
+        return nil;
+    auto* focusedElement = document->focusedElement();
+    if (!focusedElement)
+        return nil;
+    auto* renderer = focusedElement->renderer();
+    if (!renderer)
+        return nil;
+    auto color = WebCore::CaretBase::computeCaretColor(renderer->style(), renderer->element());
+    return color.isValid() ? cachedCGColor(color) : nil;
+}
+
 - (NSView *)documentView
 {
     WebCore::Frame *frame = core(self);
@@ -1446,14 +1467,18 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (BOOL)isTelephoneNumberParsingAllowed
 {
-    auto* document = core(self)->document();
-    return document->isTelephoneNumberParsingAllowed();
+    WebCore::Frame *frame = core(self);
+    if (!frame || !frame->document())
+        return false;
+    return frame->document()->isTelephoneNumberParsingAllowed();
 }
 
 - (BOOL)isTelephoneNumberParsingEnabled
 {
-    auto* document = core(self)->document();
-    return document->isTelephoneNumberParsingEnabled();
+    WebCore::Frame *frame = core(self);
+    if (!frame || !frame->document())
+        return false;
+    return frame->document()->isTelephoneNumberParsingEnabled();
 }
 
 - (DOMRange *)selectedDOMRange
@@ -1465,23 +1490,27 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)affinity closeTyping:(BOOL)closeTyping
 {
-    WebCore::Frame *frame = core(self);
+    [self setSelectedDOMRange:range affinity:affinity closeTyping:closeTyping userTriggered:NO];
+}
 
-    // Ensure the view becomes first responder.
-    // This does not happen automatically on iOS because we don't forward
-    // all the click events to WebKit.
-    if (auto* frameView = frame->view()) {
-        if (NSView *documentView = frameView->documentView()) {
-            auto* page = frame->page();
-            if (!page)
-                return;
-            page->chrome().focusNSView(documentView);
-        }
-    }
+- (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)affinity closeTyping:(BOOL)closeTyping userTriggered:(BOOL)userTriggered
+{
+    using namespace WebCore;
 
-    frame->selection().setSelectedRange(core(range), (WebCore::EAffinity)affinity, closeTyping ? WebCore::FrameSelection::ShouldCloseTyping::Yes : WebCore::FrameSelection::ShouldCloseTyping::No);
+    auto& frame = *core(self);
+    if (!frame.page())
+        return;
+
+    // Ensure the view becomes first responder. This does not happen automatically on iOS because
+    // we don't forward all the click events to WebKit.
+    if (NSView *documentView = frame.view()->documentView())
+        frame.page()->chrome().focusNSView(documentView);
+
+    auto coreCloseTyping = closeTyping ? FrameSelection::ShouldCloseTyping::Yes : FrameSelection::ShouldCloseTyping::No;
+    auto coreUserTriggered = userTriggered ? UserTriggered : NotUserTriggered;
+    frame.selection().setSelectedRange(core(range), core(affinity), coreCloseTyping, coreUserTriggered);
     if (!closeTyping)
-        frame->editor().ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping();
+        frame.editor().ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping();
 }
 
 - (NSSelectionAffinity)selectionAffinity
@@ -1641,7 +1670,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     
     Vector<WebCore::CompositionUnderline> underlines;
     frame->page()->chrome().client().suppressFormNotifications();
-    frame->editor().setComposition(text, underlines, newSelRange.location, NSMaxRange(newSelRange));
+    frame->editor().setComposition(text, underlines, { }, newSelRange.location, NSMaxRange(newSelRange));
     frame->page()->chrome().client().restoreFormNotifications();
 }
 
@@ -1652,7 +1681,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
         return;
         
     Vector<WebCore::CompositionUnderline> underlines;
-    frame->editor().setComposition(text, underlines, 0, [text length]);
+    frame->editor().setComposition(text, underlines, { }, 0, [text length]);
 }
 
 - (void)confirmMarkedText:(NSString *)text
@@ -1907,7 +1936,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     if (![self _webHTMLDocumentView])
         return;
     
-    auto* coreFrame = core(self);
+    auto coreFrame = core(self);
     for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         WebCore::Document* doc = frame->document();
         if (!doc || !doc->renderView())
@@ -2114,7 +2143,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (JSGlobalContextRef)_globalContextForScriptWorld:(WebScriptWorld *)world
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return 0;
     auto* coreWorld = core(world);
@@ -2187,7 +2216,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (NSString*)_layerTreeAsText
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return @"";
 
@@ -2230,7 +2259,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (void)_clearOpener
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (coreFrame)
         coreFrame->loader().setOpener(0);
 }
@@ -2304,7 +2333,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (BOOL)focusedNodeHasContent
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
    
     WebCore::Element* root;
     const auto& selection = coreFrame->selection().selection();
@@ -2326,7 +2355,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (void)_dispatchDidReceiveTitle:(NSString *)title
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return;
     coreFrame->loader().client().dispatchDidReceiveTitle({ title, WebCore::TextDirection::LTR });
@@ -2336,7 +2365,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (JSValueRef)jsWrapperForNode:(DOMNode *)node inScriptWorld:(WebScriptWorld *)world
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return 0;
 
@@ -2352,10 +2381,13 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (NSDictionary *)elementAtPoint:(NSPoint)point
 {
-    auto* coreFrame = _private->coreFrame;
+    using namespace WebCore;
+
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
-    return [[[WebElementDictionary alloc] initWithHitTestResult:coreFrame->eventHandler().hitTestResultAtPoint(WebCore::IntPoint(point), WebCore::HitTestRequest::ReadOnly | WebCore::HitTestRequest::Active | WebCore::HitTestRequest::IgnoreClipping | WebCore::HitTestRequest::DisallowUserAgentShadowContent | WebCore::HitTestRequest::AllowChildFrameContent)] autorelease];
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+    return [[[WebElementDictionary alloc] initWithHitTestResult:coreFrame->eventHandler().hitTestResultAtPoint(WebCore::IntPoint(point), hitType)] autorelease];
 }
 
 - (NSURL *)_unreachableURL
@@ -2390,7 +2422,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
 - (NSString *)name
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
     return coreFrame->tree().uniqueName();
@@ -2421,7 +2453,7 @@ static bool needsMicrosoftMessengerDOMDocumentWorkaround()
     if (needsMicrosoftMessengerDOMDocumentWorkaround() && !pthread_main_np())
         return nil;
 
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
     
@@ -2444,7 +2476,7 @@ static bool needsMicrosoftMessengerDOMDocumentWorkaround()
 
 - (DOMHTMLElement *)frameElement
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
     return kit(coreFrame->ownerElement());
@@ -2452,19 +2484,19 @@ static bool needsMicrosoftMessengerDOMDocumentWorkaround()
 
 - (WebDataSource *)provisionalDataSource
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     return coreFrame ? dataSource(coreFrame->loader().provisionalDocumentLoader()) : nil;
 }
 
 - (WebDataSource *)dataSource
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     return coreFrame && coreFrame->loader().frameHasLoaded() ? [self _dataSource] : nil;
 }
 
 - (void)loadRequest:(NSURLRequest *)request
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return;
 
@@ -2578,7 +2610,7 @@ static NSURL *createUniqueWebDataURL()
 
 - (WebFrame *)findFrameNamed:(NSString *)name
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
     return kit(coreFrame->tree().find(name, *coreFrame));
@@ -2586,7 +2618,7 @@ static NSURL *createUniqueWebDataURL()
 
 - (WebFrame *)parentFrame
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
     return [[kit(coreFrame->tree().parent()) retain] autorelease];
@@ -2594,7 +2626,7 @@ static NSURL *createUniqueWebDataURL()
 
 - (NSArray *)childFrames
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return [NSArray array];
     NSMutableArray *children = [NSMutableArray arrayWithCapacity:coreFrame->tree().childCount()];
@@ -2605,7 +2637,7 @@ static NSURL *createUniqueWebDataURL()
 
 - (WebScriptObject *)windowObject
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return 0;
     return coreFrame->script().windowScriptObject();
@@ -2613,7 +2645,7 @@ static NSURL *createUniqueWebDataURL()
 
 - (JSGlobalContextRef)globalContext
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return 0;
     return toGlobalRef(coreFrame->script().globalObject(WebCore::mainThreadNormalWorld()));
@@ -2622,7 +2654,7 @@ static NSURL *createUniqueWebDataURL()
 #if JSC_OBJC_API_ENABLED
 - (JSContext *)javaScriptContext
 {
-    auto* coreFrame = _private->coreFrame;
+    auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return 0;
     return coreFrame->script().javaScriptContext();

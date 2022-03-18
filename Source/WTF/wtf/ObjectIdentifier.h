@@ -44,12 +44,19 @@ template<typename T> class ObjectIdentifier : private ObjectIdentifierBase {
 public:
     static ObjectIdentifier generate()
     {
+        RELEASE_ASSERT(!m_generationProtected);
         return ObjectIdentifier { generateIdentifierInternal() };
     }
 
     static ObjectIdentifier generateThreadSafe()
     {
+        RELEASE_ASSERT(!m_generationProtected);
         return ObjectIdentifier { generateThreadSafeIdentifierInternal() };
+    }
+
+    static void enableGenerationProtection()
+    {
+        m_generationProtected = true;
     }
 
     ObjectIdentifier() = default;
@@ -89,6 +96,18 @@ public:
         return String::number(m_identifier);
     }
 
+    struct MarkableTraits {
+        static bool isEmptyValue(ObjectIdentifier identifier)
+        {
+            return !identifier.m_identifier;
+        }
+
+        static constexpr ObjectIdentifier emptyValue()
+        {
+            return ObjectIdentifier();
+        }
+    };
+
 private:
     template<typename U> friend ObjectIdentifier<U> makeObjectIdentifier(uint64_t);
     friend struct HashTraits<ObjectIdentifier>;
@@ -97,12 +116,13 @@ private:
     static uint64_t hashTableDeletedValue() { return std::numeric_limits<uint64_t>::max(); }
     static bool isValidIdentifier(uint64_t identifier) { return identifier && identifier != hashTableDeletedValue(); }
 
-    explicit ObjectIdentifier(uint64_t identifier)
+    explicit constexpr ObjectIdentifier(uint64_t identifier)
         : m_identifier(identifier)
     {
     }
 
     uint64_t m_identifier { 0 };
+    inline static bool m_generationProtected { false };
 };
 
 template<typename T> inline ObjectIdentifier<T> makeObjectIdentifier(uint64_t identifier)

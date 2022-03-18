@@ -196,12 +196,15 @@ void ScopeRuleSets::collectFeatures() const
 
     m_classInvalidationRuleSets.clear();
     m_attributeInvalidationRuleSets.clear();
+    m_pseudoClassInvalidationRuleSets.clear();
+
     m_cachedHasComplexSelectorsForStyleAttribute = WTF::nullopt;
 
     m_features.shrinkToFit();
 }
 
-static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const AtomString& key, HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>>& ruleSetMap, const HashMap<AtomString, std::unique_ptr<Vector<RuleFeature>>>& ruleFeatures)
+template<typename KeyType, typename RuleFeatureType, typename Hash, typename HashTraits>
+static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& key, HashMap<KeyType, std::unique_ptr<Vector<InvalidationRuleSet>>, Hash, HashTraits>& ruleSetMap, const HashMap<KeyType, std::unique_ptr<Vector<RuleFeatureType>>, Hash, HashTraits>& ruleFeatures)
 {
     return ruleSetMap.ensure(key, [&] () -> std::unique_ptr<Vector<InvalidationRuleSet>> {
         auto* features = ruleFeatures.get(key);
@@ -216,8 +219,10 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const AtomString&
             if (!ruleSet)
                 ruleSet = RuleSet::create();
             ruleSet->addRule(*feature.styleRule, feature.selectorIndex, feature.selectorListIndex);
-            if (feature.invalidationSelector)
-                invalidationSelectorArray[arrayIndex].append(feature.invalidationSelector);
+            if constexpr (std::is_same<RuleFeatureType, RuleFeatureWithInvalidationSelector>::value) {
+                if (feature.invalidationSelector)
+                    invalidationSelectorArray[arrayIndex].append(feature.invalidationSelector);
+            }
         }
         auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
         for (unsigned i = 0; i < matchElementArray.size(); ++i) {
@@ -236,6 +241,11 @@ const Vector<InvalidationRuleSet>* ScopeRuleSets::classInvalidationRuleSets(cons
 const Vector<InvalidationRuleSet>* ScopeRuleSets::attributeInvalidationRuleSets(const AtomString& attributeName) const
 {
     return ensureInvalidationRuleSets(attributeName, m_attributeInvalidationRuleSets, m_features.attributeRules);
+}
+
+const Vector<InvalidationRuleSet>* ScopeRuleSets::pseudoClassInvalidationRuleSets(CSSSelector::PseudoClassType pseudoClass) const
+{
+    return ensureInvalidationRuleSets(pseudoClass, m_pseudoClassInvalidationRuleSets, m_features.pseudoClassRules);
 }
 
 bool ScopeRuleSets::hasComplexSelectorsForStyleAttribute() const

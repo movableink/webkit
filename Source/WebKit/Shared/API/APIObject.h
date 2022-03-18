@@ -71,6 +71,7 @@ public:
         ProtectionSpace,
         RenderLayer,
         RenderObject,
+        ResourceLoadInfo,
         SecurityOrigin,
         SessionState,
         SerializedScriptValue,
@@ -109,6 +110,7 @@ public:
         ContentRuleList,
         ContentRuleListAction,
         ContentRuleListStore,
+        ContentWorld,
 #if PLATFORM(IOS_FAMILY)
         ContextMenuElementInfo,
 #endif
@@ -123,6 +125,7 @@ public:
         Frame,
         FrameInfo,
         FramePolicyListener,
+        FrameTreeNode,
         FullScreenManager,
         GeolocationManager,
         GeolocationPermissionRequest,
@@ -163,7 +166,6 @@ public:
         TextChecker,
         URLSchemeTask,
         UserContentController,
-        UserContentWorld,
         UserInitiatedAction,
         UserMediaPermissionCheck,
         UserMediaPermissionRequest,
@@ -182,6 +184,7 @@ public:
 #endif
 
 #if ENABLE(WEB_AUTHN)
+        WebAuthenticationAssertionResponse,
         WebAuthenticationPanel,
 #endif
 

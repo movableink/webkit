@@ -37,6 +37,7 @@
 
 #define ASSERT_JIT_OFFSET(actual, expected) ASSERT_WITH_MESSAGE(actual == expected, "JIT Offset \"%s\" should be %d, not %d.\n", #expected, static_cast<int>(expected), static_cast<int>(actual));
 
+#include "ByValInfo.h"
 #include "CodeBlock.h"
 #include "CommonSlowPaths.h"
 #include "JITDisassembler.h"
@@ -67,6 +68,10 @@ namespace JSC {
     struct OperandTypes;
     struct SimpleJumpTable;
     struct StringJumpTable;
+
+    struct OpPutByVal;
+    struct OpPutByValDirect;
+    struct OpPutToScope;
 
     struct CallRecord {
         MacroAssembler::Call from;
@@ -333,9 +338,6 @@ namespace JSC {
         void compileOpEqJumpSlow(Vector<SlowCaseEntry>::iterator&, CompileOpEqType, int jumpTarget);
         bool isOperandConstantDouble(VirtualRegister);
         
-        void emitLoadDouble(VirtualRegister, FPRegisterID value);
-        void emitLoadInt32ToDouble(VirtualRegister, FPRegisterID value);
-
         enum WriteBarrierMode { UnconditionalWriteBarrier, ShouldFilterBase, ShouldFilterValue, ShouldFilterBaseAndValue };
         // value register in write barrier is used before any scratch registers
         // so may safely be the same as either of the scratch registers.
@@ -411,8 +413,9 @@ namespace JSC {
         double getOperandConstantDouble(VirtualRegister src);
 
 #if USE(JSVALUE32_64)
-        bool getOperandConstantInt(VirtualRegister op1, VirtualRegister op2, int& op, int32_t& constant);
+        bool getOperandConstantInt(VirtualRegister op1, VirtualRegister op2, VirtualRegister& op, int32_t& constant);
 
+        void emitLoadDouble(VirtualRegister, FPRegisterID value);
         void emitLoadTag(VirtualRegister, RegisterID tag);
         void emitLoadPayload(VirtualRegister, RegisterID payload);
 
@@ -498,7 +501,9 @@ namespace JSC {
         void emit_op_identity_with_profile(const Instruction*);
         void emit_op_debug(const Instruction*);
         void emit_op_del_by_id(const Instruction*);
+        void emitSlow_op_del_by_id(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emit_op_del_by_val(const Instruction*);
+        void emitSlow_op_del_by_val(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emit_op_div(const Instruction*);
         void emit_op_end(const Instruction*);
         void emit_op_enter(const Instruction*);
@@ -614,6 +619,7 @@ namespace JSC {
         void emit_op_put_internal_field(const Instruction*);
         void emit_op_log_shadow_chicken_prologue(const Instruction*);
         void emit_op_log_shadow_chicken_tail(const Instruction*);
+        void emit_op_to_property_key(const Instruction*);
 
         void emitSlow_op_add(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_call(const Instruction*, Vector<SlowCaseEntry>::iterator&);
@@ -910,6 +916,8 @@ namespace JSC {
         Vector<JITGetByIdWithThisGenerator> m_getByIdsWithThis;
         Vector<JITPutByIdGenerator> m_putByIds;
         Vector<JITInByIdGenerator> m_inByIds;
+        Vector<JITDelByIdGenerator> m_delByIds;
+        Vector<JITDelByValGenerator> m_delByVals;
         Vector<JITInstanceOfGenerator> m_instanceOfs;
         Vector<ByValCompilationInfo> m_byValCompilationInfo;
         Vector<CallCompilationInfo> m_callCompilationInfo;
@@ -931,9 +939,12 @@ namespace JSC {
         unsigned m_getByIdWithThisIndex { UINT_MAX };
         unsigned m_putByIdIndex { UINT_MAX };
         unsigned m_inByIdIndex { UINT_MAX };
+        unsigned m_delByValIndex { UINT_MAX };
+        unsigned m_delByIdIndex { UINT_MAX };
         unsigned m_instanceOfIndex { UINT_MAX };
         unsigned m_byValInstructionIndex { UINT_MAX };
         unsigned m_callLinkInfoIndex { UINT_MAX };
+        unsigned m_bytecodeCountHavingSlowCase { 0 };
         
         Label m_arityCheck;
         std::unique_ptr<LinkBuffer> m_linkBuffer;

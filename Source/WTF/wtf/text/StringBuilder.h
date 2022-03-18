@@ -228,11 +228,6 @@ public:
     WTF_EXPORT_PRIVATE void appendNumber(float);
     WTF_EXPORT_PRIVATE void appendNumber(double);
 
-    WTF_EXPORT_PRIVATE void appendFixedPrecisionNumber(float, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
-    WTF_EXPORT_PRIVATE void appendFixedPrecisionNumber(double, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
-    WTF_EXPORT_PRIVATE void appendFixedWidthNumber(float, unsigned decimalPlaces);
-    WTF_EXPORT_PRIVATE void appendFixedWidthNumber(double, unsigned decimalPlaces);
-
     template<typename... StringTypes> void append(StringTypes...);
 
     String toString()
@@ -375,7 +370,7 @@ private:
     static_assert(String::MaxLength == std::numeric_limits<int32_t>::max(), "");
     Checked<int32_t, ConditionalCrashOnOverflow> m_length;
     bool m_is8Bit { true };
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     mutable bool m_isReified { false };
 #endif
 };

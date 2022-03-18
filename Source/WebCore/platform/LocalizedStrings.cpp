@@ -1137,7 +1137,7 @@ String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 #elif USE(GLIB)
     return formatLocalizedString(WEB_UI_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), localizedApplicationName.utf8().data());
 #else
-    return String::fromUTF8("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
+    return WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
 #endif
 }
 
@@ -1206,6 +1206,23 @@ String datePickerYearLabelTitle()
 String unacceptableTLSCertificate()
 {
     return WEB_UI_STRING("Unacceptable TLS certificate", "Unacceptable TLS certificate error");
+}
+#endif
+
+#if ENABLE(WEB_AUTHN)
+String genericTouchIDPromptTitle()
+{
+    return WEB_UI_STRING("Touch ID to sign into this website.", "Use Touch ID to sign into this website");
+}
+
+String makeCredentialTouchIDPromptTitle(const String& domain)
+{
+    return formatLocalizedString(WEB_UI_CFSTRING("Touch ID to allow signing into “%@” with Touch ID.", "Allow using Touch ID to sign into the specified website on this device"), domain.createCFString().get());
+}
+
+String biometricFallbackPromptTitle()
+{
+    return WEB_UI_STRING("Enter passcode to sign into this website.", "Use passcode as a fallback to sign into this website");
 }
 #endif
 

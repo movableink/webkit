@@ -68,7 +68,22 @@ WKWebsiteDataStoreRef WKWebsiteDataStoreCreateWithConfiguration(WKWebsiteDataSto
 
 void WKWebsiteDataStoreSetResourceLoadStatisticsEnabled(WKWebsiteDataStoreRef dataStoreRef, bool enable)
 {
-    WebKit::toImpl(dataStoreRef)->setResourceLoadStatisticsEnabled(enable);
+    auto* websiteDataStore = WebKit::toImpl(dataStoreRef);
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    websiteDataStore->useExplicitITPState();
+#endif
+    websiteDataStore->setResourceLoadStatisticsEnabled(enable);
+}
+
+void WKWebsiteDataStoreIsStatisticsEphemeral(WKWebsiteDataStoreRef dataStoreRef, void* context, WKWebsiteDataStoreStatisticsEphemeralFunction completionHandler)
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    WebKit::toImpl(dataStoreRef)->isResourceLoadStatisticsEphemeral([context, completionHandler](bool isEphemeral) {
+        completionHandler(isEphemeral, context);
+    });
+#else
+    completionHandler(false, context);
+#endif
 }
 
 bool WKWebsiteDataStoreGetResourceLoadStatisticsEnabled(WKWebsiteDataStoreRef dataStoreRef)
@@ -527,6 +542,13 @@ void WKWebsiteDataStoreStatisticsHasIsolatedSession(WKWebsiteDataStoreRef dataSt
 #endif
 }
 
+void WKWebsiteDataStoreHasAppBoundSession(WKWebsiteDataStoreRef dataStoreRef, void* context, WKWebsiteDataStoreHasAppBoundSessionFunction callback)
+{
+    WebKit::toImpl(dataStoreRef)->hasAppBoundSession([context, callback](bool hasAppBoundSession) {
+        callback(hasAppBoundSession, context);
+    });
+}
+
 void WKWebsiteDataStoreSetResourceLoadStatisticsShouldDowngradeReferrerForTesting(WKWebsiteDataStoreRef dataStoreRef, bool enabled, void* context, WKWebsiteDataStoreSetResourceLoadStatisticsShouldDowngradeReferrerForTestingFunction completionHandler)
 {
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
@@ -665,16 +687,6 @@ void WKWebsiteDataStoreGetFetchCacheSizeForOrigin(WKWebsiteDataStoreRef dataStor
     });
 }
 
-WKStringRef WKWebsiteDataStoreCopyServiceWorkerRegistrationDirectory(WKWebsiteDataStoreRef dataStoreRef)
-{
-    return WebKit::toCopiedAPI(WebKit::toImpl(dataStoreRef)->serviceWorkerRegistrationDirectory());
-}
-
-void WKWebsiteDataStoreSetServiceWorkerRegistrationDirectory(WKWebsiteDataStoreRef dataStoreRef, WKStringRef serviceWorkerRegistrationDirectory)
-{
-    WebKit::toImpl(dataStoreRef)->setServiceWorkerRegistrationDirectory(WebKit::toImpl(serviceWorkerRegistrationDirectory)->string());
-}
-
 void WKWebsiteDataStoreSetPerOriginStorageQuota(WKWebsiteDataStoreRef, uint64_t)
 {
 }
@@ -705,4 +717,18 @@ void WKWebsiteDataStoreResetQuota(WKWebsiteDataStoreRef dataStoreRef, void* cont
         if (callback)
             callback(context);
     });
+}
+
+void WKWebsiteDataStoreSetInAppBrowserPrivacyEnabled(WKWebsiteDataStoreRef dataStoreRef, bool enabled, void* context, WKWebsiteDataStoreSetInAppBrowserPrivacyEnabledFunction completionHandler)
+{
+    WebKit::toImpl(dataStoreRef)->setInAppBrowserPrivacyEnabled(enabled, [context, completionHandler] {
+        completionHandler(context);
+    });
+}
+
+void WKWebsiteDataStoreReinitializeAppBoundDomains(WKWebsiteDataStoreRef dataStoreRef)
+{
+#if PLATFORM(COCOA)
+    WebKit::toImpl(dataStoreRef)->reinitializeAppBoundDomains();
+#endif
 }

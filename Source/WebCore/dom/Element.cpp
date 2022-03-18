@@ -4,7 +4,7 @@
  *           (C) 2001 Peter Kelly (pmk@post.com)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *           (C) 2007 Eric Seidel (eric@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -46,6 +46,7 @@
 #include "DocumentSharedObjectPool.h"
 #include "DocumentTimeline.h"
 #include "Editing.h"
+#include "ElementAnimationRareData.h"
 #include "ElementIterator.h"
 #include "ElementRareData.h"
 #include "EventDispatcher.h"
@@ -57,9 +58,9 @@
 #include "FrameSelection.h"
 #include "FrameView.h"
 #include "FullscreenManager.h"
+#include "GetAnimationsOptions.h"
 #include "HTMLBodyElement.h"
 #include "HTMLCanvasElement.h"
-#include "HTMLCollection.h"
 #include "HTMLDocument.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLLabelElement.h"
@@ -85,6 +86,7 @@
 #include "PointerCaptureController.h"
 #include "PointerEvent.h"
 #include "PointerLockController.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
@@ -305,8 +307,6 @@ static bool isForceEvent(const PlatformMouseEvent& platformEvent)
     return platformEvent.type() == PlatformEvent::MouseForceChanged || platformEvent.type() == PlatformEvent::MouseForceDown || platformEvent.type() == PlatformEvent::MouseForceUp;
 }
 
-#if ENABLE(POINTER_EVENTS)
-
 static bool isCompatibilityMouseEvent(const MouseEvent& mouseEvent)
 {
     // https://www.w3.org/TR/pointerevents/#compatibility-mapping-with-mouse-events
@@ -314,42 +314,31 @@ static bool isCompatibilityMouseEvent(const MouseEvent& mouseEvent)
     return type != eventNames().clickEvent && type != eventNames().mouseoverEvent && type != eventNames().mouseoutEvent && type != eventNames().mouseenterEvent && type != eventNames().mouseleaveEvent;
 }
 
-#endif
-
 enum class ShouldIgnoreMouseEvent : bool { No, Yes };
 static ShouldIgnoreMouseEvent dispatchPointerEventIfNeeded(Element& element, const MouseEvent& mouseEvent, const PlatformMouseEvent& platformEvent, bool& didNotSwallowEvent)
 {
-#if ENABLE(POINTER_EVENTS)
-    if (RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled()) {
-        if (auto* page = element.document().page()) {
-            auto& pointerCaptureController = page->pointerCaptureController();
+    if (auto* page = element.document().page()) {
+        auto& pointerCaptureController = page->pointerCaptureController();
 #if ENABLE(TOUCH_EVENTS)
-            if (platformEvent.pointerId() != mousePointerID && mouseEvent.type() != eventNames().clickEvent && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(platformEvent.pointerId()))
-                return ShouldIgnoreMouseEvent::Yes;
+        if (platformEvent.pointerId() != mousePointerID && mouseEvent.type() != eventNames().clickEvent && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(platformEvent.pointerId()))
+            return ShouldIgnoreMouseEvent::Yes;
 #else
-            UNUSED_PARAM(platformEvent);
+        UNUSED_PARAM(platformEvent);
 #endif
-            if (platformEvent.syntheticClickType() != NoTap)
-                return ShouldIgnoreMouseEvent::No;
+        if (platformEvent.syntheticClickType() != NoTap)
+            return ShouldIgnoreMouseEvent::No;
 
-            if (auto pointerEvent = pointerCaptureController.pointerEventForMouseEvent(mouseEvent)) {
-                pointerCaptureController.dispatchEvent(*pointerEvent, &element);
-                if (isCompatibilityMouseEvent(mouseEvent) && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(pointerEvent->pointerId()))
+        if (auto pointerEvent = pointerCaptureController.pointerEventForMouseEvent(mouseEvent)) {
+            pointerCaptureController.dispatchEvent(*pointerEvent, &element);
+            if (isCompatibilityMouseEvent(mouseEvent) && pointerCaptureController.preventsCompatibilityMouseEventsForIdentifier(pointerEvent->pointerId()))
+                return ShouldIgnoreMouseEvent::Yes;
+            if (pointerEvent->defaultPrevented() || pointerEvent->defaultHandled()) {
+                didNotSwallowEvent = false;
+                if (pointerEvent->type() == eventNames().pointerdownEvent)
                     return ShouldIgnoreMouseEvent::Yes;
-                if (pointerEvent->defaultPrevented() || pointerEvent->defaultHandled()) {
-                    didNotSwallowEvent = false;
-                    if (pointerEvent->type() == eventNames().pointerdownEvent)
-                        return ShouldIgnoreMouseEvent::Yes;
-                }
             }
         }
     }
-#else
-    UNUSED_PARAM(element);
-    UNUSED_PARAM(mouseEvent);
-    UNUSED_PARAM(platformEvent);
-    UNUSED_PARAM(didNotSwallowEvent);
-#endif
 
     return ShouldIgnoreMouseEvent::No;
 }
@@ -607,23 +596,13 @@ bool Element::isFocusable() const
         return false;
 
     if (!renderer()) {
-        // If the node is in a display:none tree it might say it needs style recalc but
-        // the whole document is actually up to date.
-        // FIXME: We should be able to assert !needsStyleRecalc() || !document().childNeedsStyleRecalc()
-        // but it hits too frequently on websites like Gmail and Microsoft Exchange.
-
         // Elements in canvas fallback content are not rendered, but they are allowed to be
         // focusable as long as their canvas is displayed and visible.
         if (auto* canvas = ancestorsOfType<HTMLCanvasElement>(*this).first())
-            return canvas->renderer() && canvas->renderer()->style().visibility() == Visibility::Visible;
+            return canvas->isVisibleWithoutResolvingFullStyle();
     }
 
-    // FIXME: Even if we are not visible, we might have a child that is visible.
-    // Hyatt wants to fix that some day with a "has visible content" flag or the like.
-    if (!renderer() || renderer()->style().visibility() != Visibility::Visible)
-        return false;
-
-    return true;
+    return isVisibleWithoutResolvingFullStyle();
 }
 
 bool Element::isUserActionElementInActiveChain() const
@@ -650,21 +629,25 @@ bool Element::isUserActionElementHovered() const
     return document().userActionElements().isHovered(*this);
 }
 
+bool Element::isUserActionElementDragged() const
+{
+    ASSERT(isUserActionElement());
+    return document().userActionElements().isBeingDragged(*this);
+}
+
 void Element::setActive(bool flag, bool pause)
 {
     if (flag == active())
         return;
-
-    document().userActionElements().setActive(*this, flag);
-
-    auto* renderStyle = renderOrDisplayContentsStyle();
-    bool reactsToPress = (renderStyle && renderStyle->affectedByActive()) || styleAffectedByActive();
-    if (reactsToPress)
-        invalidateStyleForSubtree();
+    {
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassActive);
+        document().userActionElements().setActive(*this, flag);
+    }
 
     if (!renderer())
         return;
 
+    bool reactsToPress = false;
     if (renderer()->style().hasAppearance() && renderer()->theme().stateChanged(*renderer(), ControlStates::PressedState))
         reactsToPress = true;
 
@@ -703,9 +686,11 @@ void Element::setFocus(bool flag)
 {
     if (flag == focused())
         return;
-
-    document().userActionElements().setFocused(*this, flag);
-    invalidateStyleForSubtree();
+    {
+        Style::PseudoClassChangeInvalidation focusStyleInvalidation(*this, CSSSelector::PseudoClassFocus);
+        Style::PseudoClassChangeInvalidation directFocusStyleInvalidation(*this, CSSSelector::PseudoClassDirectFocus);
+        document().userActionElements().setFocused(*this, flag);
+    }
 
     // Shadow host with a slot that contain focused element is not considered focused.
     for (auto* root = containingShadowRoot(); root; root = root->host()->containingShadowRoot()) {
@@ -713,35 +698,40 @@ void Element::setFocus(bool flag)
         root->host()->invalidateStyle();
     }
 
-    for (Element* element = this; element; element = element->parentElementInComposedTree())
+    for (auto* element = this; element; element = element->parentElementInComposedTree())
         element->setHasFocusWithin(flag);
+}
+
+void Element::setHasFocusWithin(bool flag)
+{
+    if (hasFocusWithin() == flag)
+        return;
+    {
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassFocusWithin);
+        setFlag(flag, HasFocusWithin);
+    }
 }
 
 void Element::setHovered(bool flag)
 {
     if (flag == hovered())
         return;
-
-    document().userActionElements().setHovered(*this, flag);
-
-    auto* style = renderOrDisplayContentsStyle();
-    if (style && (style->affectedByHover() || childrenAffectedByHover()))
-        invalidateStyleForSubtree();
-
-    if (!renderer()) {
-        // When setting hover to false, the style needs to be recalc'd even when
-        // there's no renderer (imagine setting display:none in the :hover class,
-        // if a nil renderer would prevent this element from recalculating its
-        // style, it would never go back to its normal style and remain
-        // stuck in its hovered style).
-        if (!flag && !style)
-            invalidateStyleForSubtree();
-
-        return;
+    {
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassHover);
+        document().userActionElements().setHovered(*this, flag);
     }
 
-    if (style->hasAppearance())
+    if (auto* style = renderStyle(); style && style->hasAppearance())
         renderer()->theme().stateChanged(*renderer(), ControlStates::HoverState);
+}
+
+void Element::setBeingDragged(bool flag)
+{
+    if (flag == isBeingDragged())
+        return;
+
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassDrag);
+    document().userActionElements().setBeingDragged(*this, flag);
 }
 
 inline ScrollAlignment toScrollAlignmentForInlineDirection(Optional<ScrollLogicalPosition> position, WritingMode writingMode, bool isLTR)
@@ -840,7 +830,6 @@ void Element::scrollIntoView(Optional<Variant<bool, ScrollIntoViewOptions>>&& ar
     bool insideFixed;
     LayoutRect absoluteBounds = renderer()->absoluteAnchorRect(&insideFixed);
 
-    // FIXME(webkit.org/b/188043): Support ScrollBehavior.
     ScrollIntoViewOptions options;
     if (arg) {
         auto value = arg.value();
@@ -859,7 +848,8 @@ void Element::scrollIntoView(Optional<Variant<bool, ScrollIntoViewOptions>>&& ar
         SelectionRevealMode::Reveal,
         isHorizontal ? alignX : alignY,
         isHorizontal ? alignY : alignX,
-        ShouldAllowCrossOriginScrolling::No
+        ShouldAllowCrossOriginScrolling::No,
+        options.behavior.valueOr(ScrollBehavior::Auto)
     };
     renderer()->scrollRectToVisible(absoluteBounds, insideFixed, visibleOptions);
 }
@@ -920,7 +910,7 @@ void Element::scrollBy(const ScrollToOptions& options)
 
 void Element::scrollBy(double x, double y)
 {
-    scrollBy({ x, y });
+    scrollBy(ScrollToOptions(x, y));
 }
 
 void Element::scrollTo(const ScrollToOptions& options, ScrollClamping clamping)
@@ -942,7 +932,7 @@ void Element::scrollTo(const ScrollToOptions& options, ScrollClamping clamping)
         if (!window)
             return;
 
-        window->scrollTo(options);
+        window->scrollTo(options, clamping);
         return;
     }
 
@@ -956,13 +946,17 @@ void Element::scrollTo(const ScrollToOptions& options, ScrollClamping clamping)
         adjustForAbsoluteZoom(renderer->scrollLeft(), *renderer),
         adjustForAbsoluteZoom(renderer->scrollTop(), *renderer)
     );
-    renderer->setScrollLeft(clampToInteger(scrollToOptions.left.value() * renderer->style().effectiveZoom()), ScrollType::Programmatic, clamping);
-    renderer->setScrollTop(clampToInteger(scrollToOptions.top.value() * renderer->style().effectiveZoom()), ScrollType::Programmatic, clamping);
+    IntPoint scrollPosition(
+        clampToInteger(scrollToOptions.left.value() * renderer->style().effectiveZoom()),
+        clampToInteger(scrollToOptions.top.value() * renderer->style().effectiveZoom())
+    );
+    bool animated = useSmoothScrolling(scrollToOptions.behavior.valueOr(ScrollBehavior::Auto), this);
+    renderer->setScrollPosition(scrollPosition, ScrollType::Programmatic, clamping, animated);
 }
 
 void Element::scrollTo(double x, double y)
 {
-    scrollTo({ x, y });
+    scrollTo(ScrollToOptions(x, y));
 }
 
 void Element::scrollByUnits(int units, ScrollGranularity granularity)
@@ -1296,13 +1290,20 @@ void Element::setScrollLeft(int newLeft)
     document().updateLayoutIgnorePendingStylesheets();
 
     if (document().scrollingElement() == this) {
-        if (auto* frame = documentFrameWithNonNullView())
-            frame->view()->setScrollPosition(IntPoint(static_cast<int>(newLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), frame->view()->scrollY()));
+        if (auto* frame = documentFrameWithNonNullView()) {
+            // FIXME: Should we use document()->scrollingElement()?
+            // See https://bugs.webkit.org/show_bug.cgi?id=205059
+            bool animated = useSmoothScrolling(ScrollBehavior::Auto, document().documentElement());
+            IntPoint position(static_cast<int>(newLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), frame->view()->scrollY());
+            frame->view()->setScrollPosition(position, ScrollClamping::Clamped, animated);
+        }
         return;
     }
 
     if (auto* renderer = renderBox()) {
-        renderer->setScrollLeft(static_cast<int>(newLeft * renderer->style().effectiveZoom()), ScrollType::Programmatic);
+        int clampedLeft = clampToInteger(newLeft * renderer->style().effectiveZoom());
+        bool animated = useSmoothScrolling(ScrollBehavior::Auto, this);
+        renderer->setScrollLeft(clampedLeft, ScrollType::Programmatic, ScrollClamping::Clamped, animated);
         if (auto* scrollableArea = renderer->layer())
             scrollableArea->setScrollShouldClearLatchedState(true);
     }
@@ -1313,13 +1314,20 @@ void Element::setScrollTop(int newTop)
     document().updateLayoutIgnorePendingStylesheets();
 
     if (document().scrollingElement() == this) {
-        if (auto* frame = documentFrameWithNonNullView())
-            frame->view()->setScrollPosition(IntPoint(frame->view()->scrollX(), static_cast<int>(newTop * frame->pageZoomFactor() * frame->frameScaleFactor())));
+        if (auto* frame = documentFrameWithNonNullView()) {
+            // FIXME: Should we use document()->scrollingElement()?
+            // See https://bugs.webkit.org/show_bug.cgi?id=205059
+            bool animated = useSmoothScrolling(ScrollBehavior::Auto, document().documentElement());
+            IntPoint position(frame->view()->scrollX(), static_cast<int>(newTop * frame->pageZoomFactor() * frame->frameScaleFactor()));
+            frame->view()->setScrollPosition(position, ScrollClamping::Clamped, animated);
+        }
         return;
     }
 
     if (auto* renderer = renderBox()) {
-        renderer->setScrollTop(static_cast<int>(newTop * renderer->style().effectiveZoom()), ScrollType::Programmatic);
+        int clampedTop = clampToInteger(newTop * renderer->style().effectiveZoom());
+        bool animated = useSmoothScrolling(ScrollBehavior::Auto, this);
+        renderer->setScrollTop(clampedTop, ScrollType::Programmatic, ScrollClamping::Clamped, animated);
         if (auto* scrollableArea = renderer->layer())
             scrollableArea->setScrollShouldClearLatchedState(true);
     }
@@ -1893,10 +1901,8 @@ URL Element::absoluteLinkURL() const
 
 bool Element::allowsDoubleTapGesture() const
 {
-#if ENABLE(POINTER_EVENTS)
     if (renderStyle() && renderStyle()->touchActions() != TouchAction::Auto)
         return false;
-#endif
 
     Element* parent = parentElement();
     return !parent || parent->allowsDoubleTapGesture();
@@ -2057,7 +2063,7 @@ void Element::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
         CustomElementReactionQueue::enqueueAdoptedCallbackIfNeeded(*this, oldDocument, newDocument);
 
 #if ENABLE(INTERSECTION_OBSERVER)
-    if (auto* observerData = intersectionObserverData()) {
+    if (auto* observerData = intersectionObserverDataIfExists()) {
         for (const auto& observer : observerData->observers) {
             if (observer->hasObservationTargets()) {
                 oldDocument.removeIntersectionObserver(*observer);
@@ -2114,7 +2120,7 @@ const AtomString& Element::imageSourceURL() const
 
 bool Element::rendererIsNeeded(const RenderStyle& style)
 {
-    return style.display() != DisplayType::None && style.display() != DisplayType::Contents;
+    return rendererIsEverNeeded() && style.display() != DisplayType::None && style.display() != DisplayType::Contents;
 }
 
 RenderPtr<RenderElement> Element::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
@@ -2191,10 +2197,8 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
     if (document().page())
         document().page()->pointerLockController().elementRemoved(*this);
 #endif
-#if ENABLE(POINTER_EVENTS)
-    if (document().page() && RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled())
+    if (document().page())
         document().page()->pointerCaptureController().elementWasRemoved(*this);
-#endif
 
     setSavedLayerScrollPosition(ScrollPosition());
 
@@ -2253,6 +2257,7 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
     RefPtr<Frame> frame = document().frame();
     if (auto* timeline = document().existingTimeline())
         timeline->elementWasRemoved(*this);
+
     if (frame)
         frame->animation().cancelAnimations(*this);
 
@@ -2279,6 +2284,7 @@ void Element::addShadowRoot(Ref<ShadowRoot>&& newShadowRoot)
 
     ShadowRoot& shadowRoot = newShadowRoot;
     {
+        WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         if (renderer())
             RenderTreeUpdater::tearDownRenderers(*this);
@@ -2288,7 +2294,7 @@ void Element::addShadowRoot(Ref<ShadowRoot>&& newShadowRoot)
         shadowRoot.setHost(this);
         shadowRoot.setParentTreeScope(treeScope());
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         ASSERT(notifyChildNodeInserted(*this, shadowRoot).isEmpty());
 #else
         notifyChildNodeInserted(*this, shadowRoot);
@@ -2965,7 +2971,10 @@ void Element::focus(bool restorePreviousSelection, FocusDirection direction)
     }
 
     RefPtr<Element> newTarget = this;
-    if (document->haveStylesheetsLoaded())
+
+    // If we don't have renderer yet, isFocusable will compute it without style update.
+    // FIXME: Expand it to avoid style update in all cases.
+    if (renderer() && document->haveStylesheetsLoaded())
         document->updateStyleIfNeeded();
 
     if (&newTarget->document() != document.ptr())
@@ -3270,7 +3279,7 @@ const RenderStyle* Element::renderOrDisplayContentsStyle() const
     return nullptr;
 }
 
-const RenderStyle& Element::resolveComputedStyle()
+const RenderStyle* Element::resolveComputedStyle(ResolveComputedStyleMode mode)
 {
     ASSERT(isConnected());
     ASSERT(!existingComputedStyle());
@@ -3279,8 +3288,7 @@ const RenderStyle& Element::resolveComputedStyle()
     const RenderStyle* computedStyle = nullptr;
 
     // Collect ancestors until we find one that has style.
-    auto composedAncestors = composedTreeAncestors(*this);
-    for (auto& ancestor : composedAncestors) {
+    for (auto& ancestor : composedTreeAncestors(*this)) {
         if (auto* existingStyle = ancestor.existingComputedStyle()) {
             computedStyle = existingStyle;
             break;
@@ -3294,9 +3302,57 @@ const RenderStyle& Element::resolveComputedStyle()
         computedStyle = style.get();
         ElementRareData& rareData = element->ensureElementRareData();
         rareData.setComputedStyle(WTFMove(style));
+
+        if (mode == ResolveComputedStyleMode::RenderedOnly && computedStyle->display() == DisplayType::None)
+            return nullptr;
     }
 
-    return *computedStyle;
+    return computedStyle;
+}
+
+bool Element::hasValidStyle() const
+{
+    if (!document().needsStyleRecalc())
+        return true;
+
+    if (document().hasPendingFullStyleRebuild())
+        return false;
+    
+    for (auto& element : lineageOfType<Element>(*this)) {
+        if (element.styleValidity() != Style::Validity::Valid)
+            return false;
+    }
+    return true;
+}
+
+bool Element::isVisibleWithoutResolvingFullStyle() const
+{
+    if (renderStyle() || hasValidStyle())
+        return renderStyle() && renderStyle()->visibility() == Visibility::Visible;
+
+    // Compute style in yet unstyled subtree.
+    auto* style = existingComputedStyle();
+    if (!style)
+        style = const_cast<Element&>(*this).resolveComputedStyle(ResolveComputedStyleMode::RenderedOnly);
+
+    if (!style)
+        return false;
+
+    if (style->display() == DisplayType::None || style->display() == DisplayType::Contents)
+        return false;
+
+    if (style->visibility() != Visibility::Visible)
+        return false;
+
+    for (auto& element : composedTreeAncestors(const_cast<Element&>(*this))) {
+        auto* style = element.existingComputedStyle();
+        if (!style)
+            style = element.resolveComputedStyle(ResolveComputedStyleMode::RenderedOnly);
+        if (!style || style->display() == DisplayType::None)
+            return false;
+    }
+
+    return true;
 }
 
 const RenderStyle& Element::resolvePseudoElementStyle(PseudoId pseudoElementSpecifier)
@@ -3329,7 +3385,7 @@ const RenderStyle* Element::computedStyle(PseudoId pseudoElementSpecifier)
 
     auto* style = existingComputedStyle();
     if (!style)
-        style = &resolveComputedStyle();
+        style = resolveComputedStyle();
 
     if (pseudoElementSpecifier != PseudoId::None) {
         if (auto* cachedPseudoStyle = style->getCachedPseudoStyle(pseudoElementSpecifier))
@@ -3360,11 +3416,8 @@ void Element::setChildIndex(unsigned index)
 
 bool Element::hasFlagsSetDuringStylingOfChildren() const
 {
-    return styleAffectedByActive()
-        || childrenAffectedByHover()
-        || childrenAffectedByFirstChildRules()
+    return childrenAffectedByFirstChildRules()
         || childrenAffectedByLastChildRules()
-        || childrenAffectedByDrag()
         || childrenAffectedByForwardPositionalRules()
         || descendantsAffectedByForwardPositionalRules()
         || childrenAffectedByBackwardPositionalRules()
@@ -3380,26 +3433,14 @@ unsigned Element::rareDataChildIndex() const
 
 AtomString Element::computeInheritedLanguage() const
 {
-    if (const ElementData* elementData = this->elementData()) {
-        if (const Attribute* attribute = elementData->findLanguageAttribute())
-            return attribute->value();
-    }
-
     // The language property is inherited, so we iterate over the parents to find the first language.
-    const Node* currentNode = this;
-    while ((currentNode = currentNode->parentNode())) {
-        if (is<Element>(*currentNode)) {
-            if (const ElementData* elementData = downcast<Element>(*currentNode).elementData()) {
-                if (const Attribute* attribute = elementData->findLanguageAttribute())
-                    return attribute->value();
-            }
-        } else if (is<Document>(*currentNode)) {
-            // checking the MIME content-language
-            return downcast<Document>(*currentNode).contentLanguage();
+    for (auto& element : lineageOfType<Element>(*this)) {
+        if (auto* elementData = element.elementData()) {
+            if (auto* attribute = elementData->findLanguageAttribute())
+                return attribute->value();
         }
     }
-
-    return nullAtom();
+    return document().contentLanguage();
 }
 
 Locale& Element::locale() const
@@ -3551,7 +3592,7 @@ DatasetDOMStringMap& Element::dataset()
 
 URL Element::getURLAttribute(const QualifiedName& name) const
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (elementData()) {
         if (const Attribute* attribute = findAttributeByName(name))
             ASSERT(isURLAttribute(*attribute));
@@ -3562,7 +3603,7 @@ URL Element::getURLAttribute(const QualifiedName& name) const
 
 URL Element::getNonEmptyURLAttribute(const QualifiedName& name) const
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (elementData()) {
         if (const Attribute* attribute = findAttributeByName(name))
             ASSERT(isURLAttribute(*attribute));
@@ -3640,8 +3681,6 @@ void Element::setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(boo
 
 #endif
 
-#if ENABLE(POINTER_EVENTS)
-
 ExceptionOr<void> Element::setPointerCapture(int32_t pointerId)
 {
     if (document().page())
@@ -3663,8 +3702,6 @@ bool Element::hasPointerCapture(int32_t pointerId)
     return false;
 }
 
-#endif
-
 #if ENABLE(POINTER_LOCK)
 
 void Element::requestPointerLock()
@@ -3679,16 +3716,20 @@ void Element::requestPointerLock()
 
 void Element::disconnectFromIntersectionObservers()
 {
-    auto* observerData = intersectionObserverData();
+    auto* observerData = intersectionObserverDataIfExists();
     if (!observerData)
         return;
 
-    for (const auto& registration : observerData->registrations)
-        registration.observer->targetDestroyed(*this);
+    for (const auto& registration : observerData->registrations) {
+        if (registration.observer)
+            registration.observer->targetDestroyed(*this);
+    }
     observerData->registrations.clear();
 
-    for (const auto& observer : observerData->observers)
-        observer->rootDestroyed();
+    for (const auto& observer : observerData->observers) {
+        if (observer)
+            observer->rootDestroyed();
+    }
     observerData->observers.clear();
 }
 
@@ -3700,43 +3741,95 @@ IntersectionObserverData& Element::ensureIntersectionObserverData()
     return *rareData.intersectionObserverData();
 }
 
-IntersectionObserverData* Element::intersectionObserverData()
+IntersectionObserverData* Element::intersectionObserverDataIfExists()
 {
     return hasRareData() ? elementRareData()->intersectionObserverData() : nullptr;
 }
 
 #endif
 
+ElementAnimationRareData* Element::animationRareData() const
+{
+    return hasRareData() ? elementRareData()->elementAnimationRareData() : nullptr;
+}
+
+ElementAnimationRareData& Element::ensureAnimationRareData()
+{
+    return ensureElementRareData().ensureAnimationRareData();
+}
+
+KeyframeEffectStack* Element::keyframeEffectStack() const
+{
+    if (auto* animationData = animationRareData())
+        return animationData->keyframeEffectStack();
+    return nullptr;
+}
+
 KeyframeEffectStack& Element::ensureKeyframeEffectStack()
 {
-    auto& rareData = ensureElementRareData();
-    if (!rareData.keyframeEffectStack())
-        rareData.setKeyframeEffectStack(makeUnique<KeyframeEffectStack>());
-    return *rareData.keyframeEffectStack();
+    return ensureAnimationRareData().ensureKeyframeEffectStack();
 }
 
 bool Element::hasKeyframeEffects() const
 {
-    if (!hasRareData())
-        return false;
-
-    auto* keyframeEffectStack = elementRareData()->keyframeEffectStack();
-    return keyframeEffectStack && keyframeEffectStack->hasEffects();
+    if (auto* animationData = animationRareData()) {
+        if (auto* keyframeEffectStack = animationData->keyframeEffectStack())
+            return keyframeEffectStack->hasEffects();
+    }
+    return false;
 }
 
-bool Element::applyKeyframeEffects(RenderStyle& targetStyle)
+OptionSet<AnimationImpact> Element::applyKeyframeEffects(RenderStyle& targetStyle)
 {
-    bool hasNonAcceleratedAnimationProperty = false;
+    OptionSet<AnimationImpact> impact;
 
     for (const auto& effect : ensureKeyframeEffectStack().sortedEffects()) {
         ASSERT(effect->animation());
         effect->animation()->resolve(targetStyle);
 
-        if (!hasNonAcceleratedAnimationProperty && !effect->isAccelerated())
-            hasNonAcceleratedAnimationProperty = true;
+        if (effect->isRunningAccelerated() || effect->isAboutToRunAccelerated())
+            impact.add(AnimationImpact::RequiresRecomposite);
+
+        if (effect->triggersStackingContext())
+            impact.add(AnimationImpact::ForcesStackingContext);
     }
 
-    return !hasNonAcceleratedAnimationProperty;
+    return impact;
+}
+
+AnimationCollection& Element::webAnimations()
+{
+    return ensureAnimationRareData().webAnimations();
+}
+
+AnimationCollection& Element::cssAnimations()
+{
+    return ensureAnimationRareData().cssAnimations();
+}
+
+AnimationCollection& Element::transitions()
+{
+    return ensureAnimationRareData().transitions();
+}
+
+CSSAnimationCollection& Element::animationsCreatedByMarkup()
+{
+    return ensureAnimationRareData().animationsCreatedByMarkup();
+}
+
+void Element::setAnimationsCreatedByMarkup(CSSAnimationCollection&& animations)
+{
+    ensureAnimationRareData().setAnimationsCreatedByMarkup(WTFMove(animations));
+}
+
+PropertyToTransitionMap& Element::completedTransitionByProperty()
+{
+    return ensureAnimationRareData().completedTransitionByProperty();
+}
+
+PropertyToTransitionMap& Element::runningTransitionsByProperty()
+{
+    return ensureAnimationRareData().runningTransitionsByProperty();
 }
 
 #if ENABLE(RESIZE_OBSERVER)
@@ -3781,7 +3874,7 @@ bool Element::isSpellCheckingEnabled() const
     return true;
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 bool Element::fastAttributeLookupAllowed(const QualifiedName& name) const
 {
     if (name == HTMLNames::styleAttr)
@@ -4044,7 +4137,6 @@ void Element::resetComputedStyle()
 void Element::resetStyleRelations()
 {
     // FIXME: Make this code more consistent.
-    clearFlag(StyleAffectedByFocusWithinFlag);
     clearStyleFlags();
     if (!hasRareData())
         return;
@@ -4375,9 +4467,26 @@ ExceptionOr<Ref<WebAnimation>> Element::animate(JSC::JSGlobalObject& lexicalGlob
     return animation;
 }
 
-Vector<RefPtr<WebAnimation>> Element::getAnimations()
+Vector<RefPtr<WebAnimation>> Element::getAnimations(Optional<GetAnimationsOptions> options)
 {
-    // FIXME: Filter and order the list as specified (webkit.org/b/179535).
+    // If we are to return animations in the subtree, we can get all of the document's animations and filter
+    // animations targeting that are not registered on this element, one of its pseudo elements or a child's
+    // pseudo element.
+    if (options && options->subtree) {
+        Vector<RefPtr<WebAnimation>> animations;
+        for (auto& animation : document().getAnimations()) {
+            auto* effect = animation->effect();
+            ASSERT(is<KeyframeEffect>(animation->effect()));
+            auto* target = downcast<KeyframeEffect>(*effect).target();
+            ASSERT(target);
+            if (is<PseudoElement>(target)) {
+                if (contains(downcast<PseudoElement>(*target).hostElement()))
+                    animations.append(animation);
+            } else if (contains(target))
+                animations.append(animation);
+        }
+        return animations;
+    }
 
     // For the list of animations to be current, we need to account for any pending CSS changes,
     // such as updates to CSS Animations and CSS Transitions.

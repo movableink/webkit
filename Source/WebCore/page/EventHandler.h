@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -157,15 +157,13 @@ public:
     WEBCORE_EXPORT void dispatchFakeMouseMoveEventSoon();
     void dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad&);
 
-    WEBCORE_EXPORT HitTestResult hitTestResultAtPoint(const LayoutPoint&, HitTestRequest::HitTestRequestType, const LayoutSize& padding = LayoutSize()) const;
+    WEBCORE_EXPORT HitTestResult hitTestResultAtPoint(const LayoutPoint&, OptionSet<HitTestRequest::RequestType>, const LayoutSize& padding = LayoutSize()) const;
 
     bool mousePressed() const { return m_mousePressed; }
     Node* mousePressNode() const { return m_mousePressNode.get(); }
 
     WEBCORE_EXPORT void setCapturingMouseEventsElement(Element*);
-#if ENABLE(POINTER_EVENTS)
     void pointerCaptureElementDidChange(Element*);
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
     struct DragTargetResponse {
@@ -225,6 +223,7 @@ public:
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
     using TouchArray = Vector<RefPtr<Touch>>;
     using EventTargetTouchMap = HashMap<EventTarget*, TouchArray*>;
+    using EventTargetTouchArrayMap = HashMap<Ref<EventTarget>, std::unique_ptr<TouchArray>>;
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS) || ENABLE(MAC_GESTURE_EVENTS)
@@ -239,6 +238,7 @@ public:
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     bool dispatchTouchEvent(const PlatformTouchEvent&, const AtomString&, const EventTargetTouchMap&, float, float);
+    bool dispatchTouchEvent(const PlatformTouchEvent&, const AtomString&, const EventTargetTouchArrayMap&, float, float);
     bool dispatchSimulatedTouchEvent(IntPoint location);
     Frame* touchEventTargetSubframe() const { return m_touchEventTargetSubframe.get(); }
     const TouchArray& touches() const { return m_touches; }
@@ -448,7 +448,8 @@ private:
 #if ENABLE(DRAG_SUPPORT)
     void clearDragState();
 
-    void dispatchDragSrcEvent(const AtomString& eventType, const PlatformMouseEvent&);
+    static bool shouldDispatchEventsToDragSourceElement();
+    void dispatchEventToDragSourceElement(const AtomString& eventType, const PlatformMouseEvent&);
     bool dispatchDragStartEventOnSourceElement(DataTransfer&);
 
     bool dragHysteresisExceeded(const FloatPoint&) const;
@@ -524,6 +525,8 @@ private:
     void clearLatchedState();
 
     bool shouldSendMouseEventsToInactiveWindows() const;
+
+    bool canMouseDownStartSelect(const MouseEventWithHitTestResults&);
 
     Frame& m_frame;
 
@@ -614,9 +617,7 @@ private:
     IntPoint m_mouseDownPos; // In our view's coords.
     WallTime m_mouseDownTimestamp;
     PlatformMouseEvent m_mouseDown;
-#if ENABLE(POINTER_EVENTS)
     PlatformMouseEvent m_lastPlatformMouseEvent;
-#endif
 
 #if PLATFORM(COCOA)
     NSView *m_mouseDownView { nullptr };
@@ -639,7 +640,7 @@ private:
     unsigned touchIdentifierForMouseEvents { 0 };
 #endif
 
-#if ENABLE(POINTER_EVENTS) && ENABLE(IOS_TOUCH_EVENTS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     unsigned m_touchIdentifierForPrimaryTouch { 0 };
 #endif
 
@@ -649,8 +650,9 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     bool m_shouldAllowMouseDownToStartDrag { false };
-    IntPoint m_targetAutoscrollPositionInWindow;
     bool m_isAutoscrolling { false };
+    IntPoint m_targetAutoscrollPositionInUnscrolledRootViewCoordinates;
+    Optional<IntPoint> m_initialTargetAutoscrollPositionInUnscrolledRootViewCoordinates;
 #endif
 
 #if ENABLE(CURSOR_VISIBILITY)

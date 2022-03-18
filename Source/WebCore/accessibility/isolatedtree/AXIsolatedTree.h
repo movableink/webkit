@@ -27,7 +27,7 @@
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
-#include "AXIsolatedTreeNode.h"
+#include "AccessibilityObjectInterface.h"
 #include "PageIdentifier.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -35,7 +35,11 @@
 
 namespace WebCore {
 
+class AXIsolatedObject;
+class AXObjectCache;
 class Page;
+
+typedef unsigned AXIsolatedTreeID;
 
 class AXIsolatedTree : public ThreadSafeRefCounted<AXIsolatedTree> {
     WTF_MAKE_NONCOPYABLE(AXIsolatedTree); WTF_MAKE_FAST_ALLOCATED;
@@ -44,7 +48,9 @@ public:
     static Ref<AXIsolatedTree> create();
     virtual ~AXIsolatedTree();
 
-    WEBCORE_EXPORT static Ref<AXIsolatedTree> createTreeForPageID(PageIdentifier);
+    static Ref<AXIsolatedTree> createTreeForPageID(PageIdentifier);
+    static void removeTreeForPageID(PageIdentifier);
+
     WEBCORE_EXPORT static RefPtr<AXIsolatedTree> treeForPageID(PageIdentifier);
     WEBCORE_EXPORT static RefPtr<AXIsolatedTree> treeForID(AXIsolatedTreeID);
     AXObjectCache* axObjectCache() const { return m_axObjectCache; }
@@ -54,16 +60,31 @@ public:
     WEBCORE_EXPORT RefPtr<AXIsolatedObject> focusedUIElement();
     RefPtr<AXIsolatedObject> nodeForID(AXID) const;
     static RefPtr<AXIsolatedObject> nodeInTreeForID(AXIsolatedTreeID, AXID);
+    Vector<RefPtr<AXCoreObject>> objectsForIDs(Vector<AXID>) const;
+
+    struct NodeChange {
+        Ref<AXIsolatedObject> m_isolatedObject;
+        RetainPtr<AccessibilityObjectWrapper> m_wrapper;
+        NodeChange(AXIsolatedObject&, AccessibilityObjectWrapper*);
+        NodeChange(const NodeChange&);
+    };
 
     // Call on main thread
-    void appendNodeChanges(Vector<Ref<AXIsolatedObject>>&);
+    void appendNodeChanges(const Vector<NodeChange>&);
+    // Removes the given node and all its descendants.
     void removeNode(AXID);
 
+    // Both setRootNode and setFocusedNode must be called only during the
+    // generation of the IsolatedTree.
+    // The focused node needs to be set during the generation because a request
+    // for it can come in before pending changes are applied. For focused node
+    // updates, use setFocusNodeID.
     void setRootNode(Ref<AXIsolatedObject>&);
+    void setFocusedNode(AXID);
     void setFocusedNodeID(AXID);
-    
+
     // Call on AX thread
-    WEBCORE_EXPORT void applyPendingChanges();
+    void applyPendingChanges();
 
     AXIsolatedTreeID treeIdentifier() const { return m_treeID; }
 
@@ -79,7 +100,7 @@ private:
     HashMap<AXID, Ref<AXIsolatedObject>> m_readerThreadNodeMap;
 
     // Written to by main thread under lock, accessed and applied by AX thread.
-    Vector<Ref<AXIsolatedObject>> m_pendingAppends;
+    Vector<NodeChange> m_pendingAppends;
     Vector<AXID> m_pendingRemovals;
     AXID m_pendingFocusedNodeID;
     Lock m_changeLogLock;

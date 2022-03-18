@@ -30,6 +30,7 @@
 #include "MessageReceiver.h"
 #include "MessageSender.h"
 #include "ServiceWorkerFetchTask.h"
+#include <WebCore/ExceptionOr.h>
 #include <WebCore/FetchIdentifier.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <WebCore/SWServer.h>
@@ -39,6 +40,11 @@
 
 namespace IPC {
 class FormDataReference;
+
+template<> struct AsyncReplyError<WebCore::ExceptionOr<bool>> {
+    static WebCore::ExceptionOr<bool> create() { return WebCore::Exception { WebCore::TypeError, "Internal error"_s }; }
+};
+
 }
 
 namespace WebCore {
@@ -69,6 +75,7 @@ public:
     PAL::SessionID sessionID() const;
 
     std::unique_ptr<ServiceWorkerFetchTask> createFetchTask(NetworkResourceLoader&, const WebCore::ResourceRequest&);
+    void fetchTaskTimedOut(WebCore::ServiceWorkerIdentifier);
 
 private:
     // Implement SWServer::Connection (Messages to the client WebProcess)
@@ -85,6 +92,9 @@ private:
     void registrationReady(uint64_t registrationReadyRequestIdentifier, WebCore::ServiceWorkerRegistrationData&&) final;
 
     void scheduleJobInServer(WebCore::ServiceWorkerJobData&&);
+
+    using UnregisterJobResult = Expected<bool, WebCore::ExceptionData>;
+    void scheduleUnregisterJobInServer(WebCore::ServiceWorkerJobIdentifier, WebCore::ServiceWorkerRegistrationIdentifier, WebCore::DocumentOrWorkerIdentifier, CompletionHandler<void(UnregisterJobResult&&)>&&);
 
     void startFetch(ServiceWorkerFetchTask&, WebCore::SWServerWorker&);
 
@@ -109,6 +119,8 @@ private:
     void postMessageToServiceWorker(WebCore::ServiceWorkerIdentifier destination, WebCore::MessageWithMessagePorts&&, const WebCore::ServiceWorkerOrClientIdentifier& source);
     void controlClient(WebCore::ServiceWorkerClientIdentifier, WebCore::SWServerRegistration&, const WebCore::ResourceRequest&);
 
+    URL clientURLFromIdentifier(WebCore::DocumentOrWorkerIdentifier);
+
     IPC::Connection* messageSenderConnection() const final { return m_contentConnection.ptr(); }
     uint64_t messageSenderDestinationID() const final { return 0; }
     
@@ -117,6 +129,7 @@ private:
     Ref<IPC::Connection> m_contentConnection;
     Ref<NetworkProcess> m_networkProcess;
     HashMap<WebCore::ServiceWorkerClientIdentifier, WebCore::ClientOrigin> m_clientOrigins;
+    HashMap<WebCore::ServiceWorkerJobIdentifier, CompletionHandler<void(UnregisterJobResult&&)>> m_unregisterJobs;
     bool m_isThrottleable { true };
 };
 

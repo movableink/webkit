@@ -102,11 +102,11 @@ RenderObject::SetLayoutNeededForbiddenScope::~SetLayoutNeededForbiddenScope()
 
 struct SameSizeAsRenderObject {
     virtual ~SameSizeAsRenderObject() = default; // Allocate vtable pointer.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool weakPtrFactorWasConstructedOnMainThread;
 #endif
     void* pointers[5];
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     unsigned m_debugBitfields : 2;
 #endif
     unsigned m_bitfields;
@@ -127,7 +127,7 @@ RenderObject::RenderObject(Node& node)
     , m_parent(nullptr)
     , m_previous(nullptr)
     , m_next(nullptr)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_hasAXObject(false)
     , m_setNeedsLayoutForbidden(false)
 #endif
@@ -143,8 +143,8 @@ RenderObject::RenderObject(Node& node)
 RenderObject::~RenderObject()
 {
     view().didDestroyRenderer();
-#ifndef NDEBUG
     ASSERT(!m_hasAXObject);
+#ifndef NDEBUG
     renderObjectCounter.decrement();
 #endif
     ASSERT(!hasRareData());
@@ -494,7 +494,7 @@ void RenderObject::clearNeedsLayout()
     setNeedsPositionedMovementLayoutBit(false);
     if (is<RenderElement>(*this))
         downcast<RenderElement>(*this).setAncestorLineBoxDirty(false);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     checkBlockPositionedObjectsNeedLayout();
 #endif
 }
@@ -567,7 +567,7 @@ void RenderObject::markContainingBlocksForLayout(ScheduleRelayout scheduleRelayo
         scheduleRelayoutForSubtree(*ancestor);
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 void RenderObject::checkBlockPositionedObjectsNeedLayout()
 {
     ASSERT(!needsLayout());
@@ -575,7 +575,7 @@ void RenderObject::checkBlockPositionedObjectsNeedLayout()
     if (is<RenderBlock>(*this))
         downcast<RenderBlock>(*this).checkPositionedObjectsNeedLayout();
 }
-#endif
+#endif // ASSERT_ENABLED
 
 void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBehavior markParents)
 {
@@ -1450,10 +1450,10 @@ RenderElement* RenderObject::container(const RenderLayerModelObject* repaintCont
 
 bool RenderObject::isSelectionBorder() const
 {
-    SelectionState st = selectionState();
-    return st == SelectionStart
-        || st == SelectionEnd
-        || st == SelectionBoth
+    HighlightState st = selectionState();
+    return st == HighlightState::Start
+        || st == HighlightState::End
+        || st == HighlightState::Both
         || view().selection().start() == this
         || view().selection().end() == this;
 }
@@ -1522,22 +1522,6 @@ Position RenderObject::positionForPoint(const LayoutPoint& point)
 VisiblePosition RenderObject::positionForPoint(const LayoutPoint&, const RenderFragmentContainer*)
 {
     return createVisiblePosition(caretMinOffset(), DOWNSTREAM);
-}
-
-void RenderObject::updateDragState(bool dragOn)
-{
-    bool valueChanged = (dragOn != isDragging());
-    setIsDragging(dragOn);
-
-    if (!is<RenderElement>(*this))
-        return;
-    auto& renderElement = downcast<RenderElement>(*this);
-
-    if (valueChanged && renderElement.element() && (style().affectedByDrag() || renderElement.element()->childrenAffectedByDrag()))
-        renderElement.element()->invalidateStyleForSubtree();
-
-    for (auto& child : childrenOfType<RenderObject>(renderElement))
-        child.updateDragState(dragOn);
 }
 
 bool RenderObject::isComposited() const
@@ -1837,9 +1821,11 @@ RenderFragmentedFlow* RenderObject::locateEnclosingFragmentedFlow() const
 void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const BoxSide& side, Color& color)
 {
     ASSERT(style == BorderStyle::Inset || style == BorderStyle::Outset);
+
     // This values were derived empirically.
-    const RGBA32 baseDarkColor = 0xFF202020;
-    const RGBA32 baseLightColor = 0xFFEBEBEB;
+    constexpr SimpleColor baseDarkColor { 0xFF202020 };
+    constexpr SimpleColor baseLightColor { 0xFFEBEBEB };
+
     enum Operation { Darken, Lighten };
 
     Operation operation = (side == BSTop || side == BSLeft) == (style == BorderStyle::Inset) ? Darken : Lighten;
@@ -1852,12 +1838,6 @@ void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const Box
         if (differenceSquared(color, Color::white) > differenceSquared(baseLightColor, Color::white))
             color = color.light();
     }
-}
-
-void RenderObject::setIsDragging(bool isDragging)
-{
-    if (isDragging || hasRareData())
-        ensureRareData().setIsDragging(isDragging);
 }
 
 void RenderObject::setHasReflection(bool hasReflection)

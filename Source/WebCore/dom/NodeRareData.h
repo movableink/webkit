@@ -38,9 +38,10 @@ class RadioNodeList;
 
 template<typename ListType> struct NodeListTypeIdentifier;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
 class NodeListsNodeData {
     WTF_MAKE_NONCOPYABLE(NodeListsNodeData);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
 public:
     NodeListsNodeData() = default;
 
@@ -237,15 +238,16 @@ public:
     NodeMutationObserverData() { }
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
 class NodeRareData {
-    WTF_MAKE_NONCOPYABLE(NodeRareData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(NodeRareData);
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
 public:
 #if defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS
     enum class UseType : uint16_t {
         ConnectedFrameCount = 1 << 0,
         NodeList = 1 << 1,
         MutationObserver = 1 << 2,
-
         TabIndex = 1 << 3,
         MinimumSize = 1 << 4,
         ScrollingPosition = 1 << 5,
@@ -257,6 +259,7 @@ public:
         AttributeMap = 1 << 11,
         InteractionObserver = 1 << 12,
         PseudoElements = 1 << 13,
+        Animations = 1 << 14,
     };
 #endif
 

@@ -161,7 +161,8 @@ bool WebAssemblyFunction::useTagRegisters() const
 
 RegisterSet WebAssemblyFunction::calleeSaves() const
 {
-    return Wasm::PinnedRegisterInfo::get().toSave(instance()->memoryMode());
+    // Pessimistically save callee saves in BoundsChecking mode since the LLInt always bounds checks
+    return Wasm::PinnedRegisterInfo::get().toSave(Wasm::MemoryMode::BoundsChecking);
 }
 
 RegisterAtOffsetList WebAssemblyFunction::usedCalleeSaveRegisters() const
@@ -173,7 +174,7 @@ ptrdiff_t WebAssemblyFunction::previousInstanceOffset() const
 {
     ptrdiff_t result = calleeSaves().numberOfSetRegisters() * sizeof(CPURegister);
     result = -result - sizeof(CPURegister);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     ptrdiff_t minOffset = 1;
     for (const RegisterAtOffset& regAtOffset : usedCalleeSaveRegisters()) {
         ptrdiff_t offset = regAtOffset.offset();
@@ -274,7 +275,7 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
 
             stackLimitGPRIsClobbered = true;
             jit.emitLoadStructure(vm, scratchGPR, scratchGPR, stackLimitGPR);
-            jit.loadPtr(CCallHelpers::Address(scratchGPR, Structure::classInfoOffset()), scratchGPR);
+            jit.emitLoadClassInfoFromStructure(scratchGPR, scratchGPR);
 
             static_assert(std::is_final<WebAssemblyFunction>::value, "We do not check for subtypes below");
             static_assert(std::is_final<WebAssemblyWrapperFunction>::value, "We do not check for subtypes below");

@@ -225,6 +225,8 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
         input->focus();
         input->select();
 #if !PLATFORM(IOS_FAMILY)
+        document().updateStyleIfNeeded();
+
         if (auto* renderer = input->renderer()) {
             auto& searchFieldRenderer = downcast<RenderSearchField>(*renderer);
             if (searchFieldRenderer.popupIsVisible())
@@ -252,6 +254,8 @@ bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
 inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
+    setHasCustomStyleResolveCallbacks();
+
     setPseudo(AtomString("-webkit-search-cancel-button", AtomString::ConstructFromLiteral));
 #if !PLATFORM(IOS_FAMILY)
     setAttributeWithoutSynchronization(aria_labelAttr, AXSearchFieldCancelButtonText());
@@ -262,6 +266,14 @@ inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& 
 Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)
 {
     return adoptRef(*new SearchFieldCancelButtonElement(document));
+}
+
+Optional<Style::ElementStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+{
+    auto elementStyle = resolveStyle(&parentStyle);
+    auto& inputElement = downcast<HTMLInputElement>(*shadowHost());
+    elementStyle.renderStyle->setVisibility(elementStyle.renderStyle->visibility() == Visibility::Hidden || inputElement.value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
+    return elementStyle;
 }
 
 void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)

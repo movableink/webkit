@@ -89,6 +89,7 @@ private:
     CaptureDevice::DeviceType deviceType() const final { return CaptureDevice::DeviceType::Microphone; }
 
     void initializeToStartProducingData();
+    void audioUnitWillStart();
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "CoreAudioCaptureSource"; }
@@ -115,13 +116,7 @@ public:
     void devicesChanged(const Vector<CaptureDevice>&);
 
 #if PLATFORM(IOS_FAMILY)
-    void setCoreAudioActiveSource(CoreAudioCaptureSource& source) { setActiveSource(source); }
-    void unsetCoreAudioActiveSource(CoreAudioCaptureSource& source) { unsetActiveSource(source); }
-    CoreAudioCaptureSource* coreAudioActiveSource() { return static_cast<CoreAudioCaptureSource*>(activeSource()); }
-
     void setAudioCapturePageState(bool interrupted, bool pageMuted) final;
-#else
-    CoreAudioCaptureSource* coreAudioActiveSource() { return nullptr; }
 #endif
 
 private:

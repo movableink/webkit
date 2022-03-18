@@ -71,7 +71,7 @@ bool ScrollingTree::shouldHandleWheelEventSynchronously(const PlatformWheelEvent
         // Event regions are affected by page scale, so no need to map through scale.
         bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(names.wheelEvent, roundedPosition) == TrackingType::Synchronous
             || m_treeState.eventTrackingRegions.trackingTypeForPoint(names.mousewheelEvent, roundedPosition) == TrackingType::Synchronous;
-        LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::shouldHandleWheelEventSynchronously: wheelEvent at " << wheelEvent.position() << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
+        LOG_WITH_STREAM(Scrolling, stream << "\n\nScrollingTree::shouldHandleWheelEventSynchronously: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
 
         if (isSynchronousDispatchRegion)
             return true;
@@ -111,7 +111,8 @@ ScrollingEventResult ScrollingTree::handleWheelEvent(const PlatformWheelEvent& w
 
     if (m_rootNode) {
         FloatPoint position = wheelEvent.position();
-        ScrollingTreeNode* node = m_rootNode->scrollingNodeForPoint(LayoutPoint(position));
+        position.move(m_rootNode->viewToContentsOffset(m_treeState.mainFrameScrollPosition));
+        auto node = scrollingNodeForPoint(position);
 
         LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::handleWheelEvent found node " << (node ? node->scrollingNodeID() : 0) << " for point " << position << "\n");
 
@@ -126,6 +127,12 @@ ScrollingEventResult ScrollingTree::handleWheelEvent(const PlatformWheelEvent& w
         }
     }
     return ScrollingEventResult::DidNotHandleEvent;
+}
+
+RefPtr<ScrollingTreeNode> ScrollingTree::scrollingNodeForPoint(FloatPoint)
+{
+    ASSERT(asyncFrameOrOverflowScrollingEnabled());
+    return m_rootNode;
 }
 
 void ScrollingTree::mainFrameViewportChangedViaDelegatedScrolling(const FloatPoint& scrollPosition, const FloatRect& layoutViewport, double)
@@ -476,14 +483,38 @@ String ScrollingTree::scrollingTreeAsText(ScrollingStateTreeAsTextBehavior behav
             m_rootNode->dump(ts, behavior | ScrollingStateTreeAsTextBehaviorIncludeLayerPositions);
         }
         
-        if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs && !m_overflowRelatedNodesMap.isEmpty()) {
-            TextStream::GroupScope scope(ts);
-            ts << "overflow related nodes";
-            {
-                TextStream::IndentScope indentScope(ts);
-                for (auto& it : m_overflowRelatedNodesMap)
-                    ts << "\n" << indent << it.key << " -> " << it.value;
+        if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs) {
+            if (!m_overflowRelatedNodesMap.isEmpty()) {
+                TextStream::GroupScope scope(ts);
+                ts << "overflow related nodes";
+                {
+                    TextStream::IndentScope indentScope(ts);
+                    for (auto& it : m_overflowRelatedNodesMap)
+                        ts << "\n" << indent << it.key << " -> " << it.value;
+                }
             }
+
+#if ENABLE(SCROLLING_THREAD)
+            if (!m_activeOverflowScrollProxyNodes.isEmpty()) {
+                TextStream::GroupScope scope(ts);
+                ts << "overflow scroll proxy nodes";
+                {
+                    TextStream::IndentScope indentScope(ts);
+                    for (auto& node : m_activeOverflowScrollProxyNodes)
+                        ts << "\n" << indent << node->scrollingNodeID();
+                }
+            }
+
+            if (!m_activePositionedNodes.isEmpty()) {
+                TextStream::GroupScope scope(ts);
+                ts << "active positioned nodes";
+                {
+                    TextStream::IndentScope indentScope(ts);
+                    for (const auto& node : m_activePositionedNodes)
+                        ts << "\n" << indent << node->scrollingNodeID();
+                }
+            }
+#endif // ENABLE(SCROLLING_THREAD)
         }
     }
     return ts.release();

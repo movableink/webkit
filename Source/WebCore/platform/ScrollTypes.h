@@ -28,6 +28,10 @@
 #include <cstdint>
 #include <wtf/Assertions.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 enum class ScrollType : uint8_t {
@@ -49,9 +53,11 @@ enum ScrollLogicalDirection : uint8_t {
     ScrollInlineDirectionForward
 };
 
-enum class ScrollPositionClamp : uint8_t {
-    None,
-    ToContentEdges,
+// FIXME: Add another status InNativeAnimation to indicate native scrolling is in progress.
+// See: https://bugs.webkit.org/show_bug.cgi?id=204936
+enum class ScrollBehaviorStatus : uint8_t {
+    NotInAnimation,
+    InNonNativeAnimation,
 };
 
 inline ScrollDirection logicalToPhysical(ScrollLogicalDirection direction, bool isVertical, bool isFlipped)
@@ -228,5 +234,8 @@ enum class ScrollPositioningBehavior : uint8_t {
 using ScrollbarControlState = unsigned;
 using ScrollbarControlPartMask = unsigned;
 using ScrollingNodeID = uint64_t;
+
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollClamping);
 
 } // namespace WebCore

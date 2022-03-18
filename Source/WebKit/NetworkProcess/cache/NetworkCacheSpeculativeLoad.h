@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
+#if ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION) || ENABLE(NETWORK_CACHE_STALE_WHILE_REVALIDATE)
 
 #include "NetworkCache.h"
 #include "NetworkCacheEntry.h"
@@ -51,6 +51,8 @@ public:
 
     const WebCore::ResourceRequest& originalRequest() const { return m_originalRequest; }
 
+    void cancel();
+
 private:
     // NetworkLoadClient.
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override { }
@@ -65,7 +67,6 @@ private:
     void didComplete();
 
     Ref<Cache> m_cache;
-    GlobalFrameID m_globalFrameID;
     RevalidationCompletionHandler m_completionHandler;
     WebCore::ResourceRequest m_originalRequest;
 
@@ -83,4 +84,4 @@ bool requestsHeadersMatch(const WebCore::ResourceRequest& speculativeValidationR
 } // namespace NetworkCache
 } // namespace WebKit
 
-#endif // ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION)
+#endif // ENABLE(NETWORK_CACHE_SPECULATIVE_REVALIDATION) || ENABLE(NETWORK_CACHE_STALE_WHILE_REVALIDATE)

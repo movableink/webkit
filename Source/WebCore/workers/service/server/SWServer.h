@@ -29,6 +29,7 @@
 
 #include "ClientOrigin.h"
 #include "DocumentIdentifier.h"
+#include "ExceptionOr.h"
 #include "SWServerWorker.h"
 #include "SecurityOriginData.h"
 #include "ServiceWorkerClientData.h"
@@ -125,7 +126,7 @@ public:
     };
 
     using SoftUpdateCallback = Function<void(ServiceWorkerJobData&& jobData, bool shouldRefreshCache, ResourceRequest&&, CompletionHandler<void(const ServiceWorkerFetchResult&)>&&)>;
-    using CreateContextConnectionCallback = Function<void(const WebCore::RegistrableDomain&)>;
+    using CreateContextConnectionCallback = Function<void(const WebCore::RegistrableDomain&, CompletionHandler<void()>&&)>;
     WEBCORE_EXPORT SWServer(UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, SoftUpdateCallback&&, CreateContextConnectionCallback&&);
 
     WEBCORE_EXPORT ~SWServer();
@@ -143,6 +144,8 @@ public:
     WEBCORE_EXPORT Vector<ServiceWorkerRegistrationData> getRegistrations(const SecurityOriginData& topOrigin, const URL& clientURL);
 
     WEBCORE_EXPORT void scheduleJob(ServiceWorkerJobData&&);
+    WEBCORE_EXPORT void scheduleUnregisterJob(ServiceWorkerJobDataIdentifier, SWServerRegistration&, DocumentOrWorkerIdentifier, URL&&);
+
     void rejectJob(const ServiceWorkerJobData&, const ExceptionData&);
     void resolveRegistrationJob(const ServiceWorkerJobData&, const ServiceWorkerRegistrationData&, ShouldNotifyWhenResolved);
     void resolveUnregistrationJob(const ServiceWorkerJobData&, const ServiceWorkerRegistrationKey&, bool unregistrationResult);
@@ -155,7 +158,7 @@ public:
     void fireActivateEvent(SWServerWorker&);
 
     WEBCORE_EXPORT SWServerWorker* workerByID(ServiceWorkerIdentifier) const;
-    Optional<ServiceWorkerClientData> serviceWorkerClientWithOriginByID(const ClientOrigin&, const ServiceWorkerClientIdentifier&) const;
+    WEBCORE_EXPORT Optional<ServiceWorkerClientData> serviceWorkerClientWithOriginByID(const ClientOrigin&, const ServiceWorkerClientIdentifier&) const;
     String serviceWorkerClientUserAgent(const ClientOrigin&) const;
     WEBCORE_EXPORT SWServerWorker* activeWorkerFromRegistrationID(ServiceWorkerRegistrationIdentifier);
 
@@ -176,7 +179,7 @@ public:
     void didFinishActivation(SWServerWorker&);
     void workerContextTerminated(SWServerWorker&);
     void matchAll(SWServerWorker&, const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&);
-    void claim(SWServerWorker&);
+    Optional<ExceptionData> claim(SWServerWorker&);
 
     WEBCORE_EXPORT static HashSet<SWServer*>& allServers();
 
@@ -209,6 +212,8 @@ public:
     WEBCORE_EXPORT void whenImportIsCompleted(CompletionHandler<void()>&&);
 
     void softUpdate(SWServerRegistration&);
+
+    WEBCORE_EXPORT void handleLowMemoryWarning();
 
 private:
     void scriptFetchFinished(const ServiceWorkerFetchResult&);

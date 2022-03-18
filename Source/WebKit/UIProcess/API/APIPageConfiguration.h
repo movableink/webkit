@@ -27,8 +27,10 @@
 
 #include "APIObject.h"
 #include "WebPreferencesStore.h"
+#include "WebViewCategory.h"
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
+#include <wtf/HashSet.h>
 
 #if PLATFORM(IOS_FAMILY)
 OBJC_PROTOCOL(_UIClickInteractionDriving);
@@ -89,11 +91,10 @@ public:
     WebsitePolicies* defaultWebsitePolicies() const;
     void setDefaultWebsitePolicies(WebsitePolicies*);
 
-    bool treatsSHA1SignedCertificatesAsInsecure() { return m_treatsSHA1SignedCertificatesAsInsecure; }
-    void setTreatsSHA1SignedCertificatesAsInsecure(bool treatsSHA1SignedCertificatesAsInsecure) { m_treatsSHA1SignedCertificatesAsInsecure = treatsSHA1SignedCertificatesAsInsecure; } 
-
 #if PLATFORM(IOS_FAMILY)
-    bool alwaysRunsAtForegroundPriority() { return m_alwaysRunsAtForegroundPriority; }
+    bool clientNavigationsRunAtForegroundPriority() const { return m_clientNavigationsRunAtForegroundPriority; }
+    void setClientNavigationsRunAtForegroundPriority(bool value) { m_clientNavigationsRunAtForegroundPriority = value; }
+    bool alwaysRunsAtForegroundPriority() const { return m_alwaysRunsAtForegroundPriority; }
     void setAlwaysRunsAtForegroundPriority(bool alwaysRunsAtForegroundPriority) { m_alwaysRunsAtForegroundPriority = alwaysRunsAtForegroundPriority; }
     
     bool canShowWhileLocked() const { return m_canShowWhileLocked; }
@@ -134,6 +135,21 @@ public:
     void setURLSchemeHandlerForURLScheme(Ref<WebKit::WebURLSchemeHandler>&&, const WTF::String&);
     const HashMap<WTF::String, Ref<WebKit::WebURLSchemeHandler>>& urlSchemeHandlers() { return m_urlSchemeHandlers; }
 
+    const Vector<WTF::String>& corsDisablingPatterns() const { return m_corsDisablingPatterns; }
+    void setCORSDisablingPatterns(Vector<WTF::String>&& patterns) { m_corsDisablingPatterns = WTFMove(patterns); }
+
+    bool crossOriginAccessControlCheckEnabled() const { return m_crossOriginAccessControlCheckEnabled; }
+    void setCrossOriginAccessControlCheckEnabled(bool enabled) { m_crossOriginAccessControlCheckEnabled = enabled; }
+
+    const WTF::String& processDisplayName() const { return m_processDisplayName; }
+    void setProcessDisplayName(const WTF::String& name) { m_processDisplayName = name; }
+
+    WebKit::WebViewCategory webViewCategory() const { return m_webViewCategory; }
+    void setWebViewCategory(WebKit::WebViewCategory category) { m_webViewCategory = category; }
+
+    bool ignoresAppBoundDomains() const { return m_ignoresAppBoundDomains; }
+    void setIgnoresAppBoundDomains(bool shouldIgnore) { m_ignoresAppBoundDomains = shouldIgnore; }
+    
 private:
 
     RefPtr<WebKit::WebProcessPool> m_processPool;
@@ -147,8 +163,8 @@ private:
     RefPtr<WebKit::WebsiteDataStore> m_websiteDataStore;
     RefPtr<WebsitePolicies> m_defaultWebsitePolicies;
 
-    bool m_treatsSHA1SignedCertificatesAsInsecure { true };
 #if PLATFORM(IOS_FAMILY)
+    bool m_clientNavigationsRunAtForegroundPriority { false };
     bool m_alwaysRunsAtForegroundPriority { false };
     bool m_canShowWhileLocked { false };
     RetainPtr<_UIClickInteractionDriving> m_clickInteractionDriverForTesting;
@@ -170,6 +186,11 @@ private:
 #endif
 
     HashMap<WTF::String, Ref<WebKit::WebURLSchemeHandler>> m_urlSchemeHandlers;
+    Vector<WTF::String> m_corsDisablingPatterns;
+    bool m_crossOriginAccessControlCheckEnabled { true };
+    WTF::String m_processDisplayName;
+    WebKit::WebViewCategory m_webViewCategory { WebKit::WebViewCategory::AppBoundDomain };
+    bool m_ignoresAppBoundDomains { false };
 };
 
 } // namespace API

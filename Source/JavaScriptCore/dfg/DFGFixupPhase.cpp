@@ -1391,6 +1391,38 @@ private:
             break;
         }
 
+        case ToPropertyKey: {
+            if (node->child1()->shouldSpeculateString()) {
+                fixEdge<StringUse>(node->child1());
+                node->convertToIdentity();
+
+                return;
+            }
+
+            if (node->child1()->shouldSpeculateSymbol()) {
+                fixEdge<SymbolUse>(node->child1());
+                node->convertToIdentity();
+                return;
+            }
+
+            if (node->child1()->shouldSpeculateStringObject()
+                && m_graph.canOptimizeStringObjectAccess(node->origin.semantic)) {
+                addCheckStructureForOriginalStringObjectUse(StringObjectUse, node->origin, node->child1().node());
+                fixEdge<StringObjectUse>(node->child1());
+                node->convertToToString();
+                return;
+            }
+
+            if (node->child1()->shouldSpeculateStringOrStringObject()
+                && m_graph.canOptimizeStringObjectAccess(node->origin.semantic)) {
+                addCheckStructureForOriginalStringObjectUse(StringOrStringObjectUse, node->origin, node->child1().node());
+                fixEdge<StringOrStringObjectUse>(node->child1());
+                node->convertToToString();
+                return;
+            }
+            break;
+        }
+
         case ToNumber: {
             fixupToNumber(node);
             break;
@@ -1583,6 +1615,22 @@ private:
         case GetByIdDirectFlush: {
             if (node->child1()->shouldSpeculateCell())
                 fixEdge<CellUse>(node->child1());
+            break;
+        }
+
+        case DeleteByVal: {
+#if USE(JSVALUE64)
+            if (node->child2()->shouldSpeculateCell())
+                fixEdge<CellUse>(node->child2());
+#endif
+            FALLTHROUGH;
+        }
+
+        case DeleteById: {
+#if USE(JSVALUE64)
+            if (node->child1()->shouldSpeculateCell())
+                fixEdge<CellUse>(node->child1());
+#endif
             break;
         }
 
@@ -1869,6 +1917,12 @@ private:
             break;
         }
 
+        case CheckNeutered:
+        case CheckArray: {
+            fixEdge<CellUse>(node->child1());
+            break;
+        }
+
         case Phi:
         case Upsilon:
         case EntrySwitch:
@@ -1877,7 +1931,6 @@ private:
         case CheckTierUpInLoop:
         case CheckTierUpAtReturn:
         case CheckTierUpAndOSREnter:
-        case CheckArray:
         case CheckInBounds:
         case ConstantStoragePointer:
         case DoubleAsInt32:
@@ -1893,6 +1946,7 @@ private:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
         case PhantomNewAsyncFunction:
+        case PhantomNewArrayIterator:
         case PhantomCreateActivation:
         case PhantomDirectArguments:
         case PhantomCreateRest:
@@ -1907,8 +1961,10 @@ private:
         case PutHint:
         case CheckStructureImmediate:
         case CheckStructureOrEmpty:
+        case CheckArrayOrEmpty:
         case MaterializeNewObject:
         case MaterializeCreateActivation:
+        case MaterializeNewInternalFieldObject:
         case PutStack:
         case KillStack:
         case GetStack:
@@ -2438,9 +2494,7 @@ private:
             break;
         }
 
-
-
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         // Have these no-op cases here to ensure that nobody forgets to add handlers for new opcodes.
         case SetArgumentDefinitely:
         case SetArgumentMaybe:
@@ -2478,9 +2532,8 @@ private:
         case NewPromise:
         case NewGenerator:
         case NewAsyncGenerator:
+        case NewArrayIterator:
         case NewRegexp:
-        case DeleteById:
-        case DeleteByVal:
         case IsTypedArrayView:
         case IsEmpty:
         case IsUndefined:
@@ -2530,10 +2583,10 @@ private:
         case InvalidationPoint:
         case CreateArgumentsButterfly:
             break;
-#else
+#else // not ASSERT_ENABLED
         default:
             break;
-#endif
+#endif // not ASSERT_ENABLED
         }
     }
 

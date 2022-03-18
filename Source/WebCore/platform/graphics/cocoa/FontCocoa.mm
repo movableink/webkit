@@ -32,6 +32,7 @@
 #import "FontCache.h"
 #import "FontCascade.h"
 #import "FontDescription.h"
+#import "LocaleCocoa.h"
 #import "OpenTypeCG.h"
 #import "SharedBuffer.h"
 #import <CoreText/CoreText.h>
@@ -543,6 +544,29 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleF
     return createDerivativeFont(scaledFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique());
 }
 
+void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningIndex, bool enableKerning, bool requiresShaping, const AtomString& locale) const
+{
+    // FIXME: Implement GlyphBuffer initial advance.
+    CTFontTransformOptions options = (enableKerning ? kCTFontTransformApplyPositioning : 0) | (requiresShaping ? kCTFontTransformApplyShaping : 0);
+#if USE(CTFONTTRANSFORMGLYPHSWITHLANGUAGE)
+    auto handler = ^(CFRange range, CGGlyph** newGlyphsPointer, CGSize** newAdvancesPointer) {
+        range.location = std::min(std::max(range.location, static_cast<CFIndex>(0)), static_cast<CFIndex>(glyphBuffer.size()));
+        if (range.length < 0) {
+            range.length = std::min(range.location, -range.length);
+            range.location = range.location - range.length;
+            glyphBuffer.remove(beginningIndex + range.location, range.length);
+        } else
+            glyphBuffer.makeHole(beginningIndex + range.location, range.length, this);
+        *newGlyphsPointer = glyphBuffer.glyphs(beginningIndex);
+        *newAdvancesPointer = glyphBuffer.advances(beginningIndex);
+    };
+    CTFontTransformGlyphsWithLanguage(m_platformData.ctFont(), glyphBuffer.glyphs(beginningIndex), reinterpret_cast<CGSize*>(glyphBuffer.advances(beginningIndex)), glyphBuffer.size() - beginningIndex, options, LocaleCocoa::canonicalLanguageIdentifierFromString(locale).string().createCFString().get(), handler);
+#else
+    UNUSED_PARAM(locale);
+    CTFontTransformGlyphs(m_platformData.ctFont(), glyphBuffer.glyphs(beginningIndex), reinterpret_cast<CGSize*>(glyphBuffer.advances(beginningIndex)), glyphBuffer.size() - beginningIndex, options);
+#endif
+}
+
 static int extractNumber(CFNumberRef number)
 {
     int result = 0;
@@ -618,9 +642,9 @@ Path Font::platformPathForGlyph(Glyph glyph) const
         CGPathAddPath(newPath.get(), nullptr, result.get());
         auto translation = CGAffineTransformMakeTranslation(syntheticBoldOffset, 0);
         CGPathAddPath(newPath.get(), &translation, result.get());
-        return newPath;
+        return { WTFMove(newPath) };
     }
-    return adoptCF(CGPathCreateMutableCopy(result.get()));
+    return { adoptCF(CGPathCreateMutableCopy(result.get())) };
 }
 
 bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variation) const

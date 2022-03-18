@@ -199,23 +199,33 @@ bool JSModuleNamespaceObject::putByIndex(JSCell*, JSGlobalObject* globalObject, 
     return false;
 }
 
-bool JSModuleNamespaceObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+bool JSModuleNamespaceObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-delete-p
     JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
     if (propertyName.isSymbol())
-        return JSObject::deleteProperty(thisObject, globalObject, propertyName);
+        return JSObject::deleteProperty(thisObject, globalObject, propertyName, slot);
 
     return !thisObject->m_exports.contains(propertyName.uid());
 }
 
 void JSModuleNamespaceObject::getOwnPropertyNames(JSObject* cell, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
-    // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-ownpropertykeys
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-ownpropertykeys
     JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
-    for (const auto& name : thisObject->m_names)
+    for (const auto& name : thisObject->m_names) {
+        if (!mode.includeDontEnumProperties()) {
+            // Perform [[GetOwnProperty]] to throw ReferenceError if binding is uninitialized.
+            PropertySlot slot(cell, PropertySlot::InternalMethodType::GetOwnProperty);
+            thisObject->getOwnPropertySlotCommon(globalObject, name.impl(), slot);
+            RETURN_IF_EXCEPTION(scope, void());
+        }
         propertyNames.add(name.impl());
-    return JSObject::getOwnPropertyNames(thisObject, globalObject, propertyNames, mode);
+    }
+    JSObject::getOwnPropertyNames(thisObject, globalObject, propertyNames, mode);
 }
 
 bool JSModuleNamespaceObject::defineOwnProperty(JSObject*, JSGlobalObject* globalObject, PropertyName, const PropertyDescriptor&, bool shouldThrow)

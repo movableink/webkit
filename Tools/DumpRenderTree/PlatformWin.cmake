@@ -61,6 +61,8 @@ list(APPEND TestNetscapePlugIn_LIBRARIES
 )
 
 list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
+    # FIXME: Remove this when cleaning up dependencies https://bugs.webkit.org/show_bug.cgi?id=196734
+    ${PAL_FRAMEWORK_HEADERS_DIR}
     win
     TestNetscapePlugIn
     TestNetscapePlugIn/ForwardingHeaders
@@ -84,7 +86,9 @@ set(DumpRenderTree_LIBRARIES
 if (${WTF_PLATFORM_WIN_CAIRO})
     list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
         cairo
-        ${CAIRO_INCLUDE_DIRS}
+    )
+    list(APPEND DumpRenderTreeLib_LIBRARIES
+        Cairo::Cairo
     )
     list(APPEND DumpRenderTreeLib_SOURCES
         cairo/PixelDumpSupportCairo.cpp

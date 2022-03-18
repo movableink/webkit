@@ -42,6 +42,7 @@
 #include "SharedBuffer.h"
 #include <CoreGraphics/CGContext.h>
 #include <CoreGraphics/CGPDFDocument.h>
+#include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RAMSize.h>
 #include <wtf/RetainPtr.h>
@@ -253,8 +254,8 @@ void PDFDocumentImage::updateCachedImageIfNeeded(GraphicsContext& context, const
     m_cachedSourceRect = srcRect;
     ++m_cachingCountForTesting;
 
-    IntSize internalSize = m_cachedImageBuffer->internalSize();
-    decodedSizeChanged(internalSize.unclampedArea() * 4);
+    IntSize backendSize = m_cachedImageBuffer->backendSize();
+    decodedSizeChanged(backendSize.unclampedArea() * 4);
 }
 
 ImageDrawResult PDFDocumentImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& options)

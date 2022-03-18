@@ -2495,11 +2495,8 @@
         "image-orientation": {
             "inherited": true,
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_IMAGE_ORIENTATION"
-            },
-            "status": {
-                "status": "under consideration",
-                "enabled-by-default": false
+                "initial": "initialImageOrientation",
+                "converter": "ImageOrientation"
             },
             "specification": {
                 "category": "css-images",
@@ -3555,6 +3552,16 @@
             "specification": {
                 "category": "svg",
                 "url": "https://www.w3.org/TR/SVG/shapes.html"
+            }
+        },
+        "scroll-behavior": {
+            "values": [
+                "auto",
+                "smooth"
+            ],
+            "specification": {
+                "category": "cssom-view",
+                "url": "https://drafts.csswg.org/cssom-view/#propdef-scroll-behavior"
             }
         },
         "shape-rendering": {
@@ -6484,6 +6491,22 @@
                 "url": "https://www.w3.org/TR/css-ui-4/#propdef-user-select"
             }
         },
+        "scroll-behavior": {
+            "values": [
+                "auto",
+                "smooth"
+            ],
+            "codegen-properties": {
+                "converter": "SmoothScrolling",
+                "name-for-methods": "UseSmoothScrolling"
+            },
+            "status": {
+                "status": "experimental"
+            },
+            "specification": {
+                "url": "https://drafts.csswg.org/cssom-view/#propdef-scroll-behavior"
+            }
+        },
         "scroll-padding": {
             "codegen-properties": {
                 "enable-if": "ENABLE_CSS_SCROLL_SNAP",
@@ -6830,46 +6853,6 @@
                 "url": "https://www.w3.org/TR/css-shapes/#propdef-shape-image-threshold"
             }
         },
-        "max-zoom": {
-            "codegen-properties": {
-                "skip-builder": true,
-                "enable-if": "ENABLE_CSS_DEVICE_ADAPTATION"
-            },
-            "specification": {
-                "category": "css-device-adapt",
-                "url": "https://www.w3.org/TR/css-device-adapt-1/#descdef-viewport-max-zoom"
-            }
-        },
-        "min-zoom": {
-            "codegen-properties": {
-                "skip-builder": true,
-                "enable-if": "ENABLE_CSS_DEVICE_ADAPTATION"
-            },
-            "specification": {
-                "category": "css-device-adapt",
-                "url": "https://www.w3.org/TR/css-device-adapt-1/#descdef-viewport-min-zoom"
-            }
-        },
-        "orientation": {
-            "codegen-properties": {
-                "skip-builder": true,
-                "enable-if": "ENABLE_CSS_DEVICE_ADAPTATION"
-            },
-            "specification": {
-                "category": "css-device-adapt",
-                "url": "https://www.w3.org/TR/css-device-adapt-1/#descdef-viewport-orientation"
-            }
-        },
-        "user-zoom": {
-            "codegen-properties": {
-                "skip-builder": true,
-                "enable-if": "ENABLE_CSS_DEVICE_ADAPTATION"
-            },
-            "specification": {
-                "category": "css-device-adapt",
-                "url": "https://www.w3.org/TR/css-device-adapt-1/#descdef-viewport-user-zoom"
-            }
-        },
         "-webkit-tap-highlight-color": {
             "inherited": true,
             "codegen-properties": {
@@ -6902,7 +6885,6 @@
             ],
             "codegen-properties": {
                 "name-for-methods": "TouchActions",
-                "enable-if": "ENABLE_POINTER_EVENTS",
                 "converter": "TouchAction"
             },
             "specification": {

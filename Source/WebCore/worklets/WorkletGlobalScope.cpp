@@ -104,11 +104,6 @@ EventLoopTaskGroup& WorkletGlobalScope::eventLoop()
     return *m_defaultTaskGroup;
 }
 
-String WorkletGlobalScope::origin() const
-{
-    return m_topOrigin->toString();
-}
-
 String WorkletGlobalScope::userAgent(const URL& url) const
 {
     if (!m_document)
@@ -136,7 +131,7 @@ void WorkletGlobalScope::disableWebAssembly(const String& errorMessage)
     m_script->disableWebAssembly(errorMessage);
 }
 
-URL WorkletGlobalScope::completeURL(const String& url) const
+URL WorkletGlobalScope::completeURL(const String& url, ForceUTF8) const
 {
     if (url.isNull())
         return URL();
@@ -169,6 +164,11 @@ void WorkletGlobalScope::addMessage(MessageSource source, MessageLevel level, co
     if (!m_document || isJSExecutionForbidden())
         return;
     m_document->addMessage(source, level, messageText, sourceURL, lineNumber, columnNumber, WTFMove(callStack), nullptr, requestIdentifier);
+}
+
+ReferrerPolicy WorkletGlobalScope::referrerPolicy() const
+{
+    return ReferrerPolicy::NoReferrer;
 }
 
 } // namespace WebCore

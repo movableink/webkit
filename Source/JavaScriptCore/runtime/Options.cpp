@@ -42,6 +42,7 @@
 #include <wtf/DataLog.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/Optional.h>
+#include <wtf/OSLogPrintStream.h>
 #include <wtf/PointerPreparations.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
@@ -613,6 +614,14 @@ void Options::initialize()
                 handleSignalsWithMach();
 #endif
 
+#if OS(DARWIN)
+            if (Options::useOSLog()) {
+                WTF::setDataFile(OSLogPrintStream::open("com.apple.JavaScriptCore", "DataLog", OS_LOG_TYPE_INFO));
+                // Make sure no one jumped here for nefarious reasons...
+                RELEASE_ASSERT(useOSLog());
+            }
+#endif
+
 #if ASAN_ENABLED && OS(LINUX) && ENABLE(WEBASSEMBLY_FAST_MEMORY)
             if (Options::useWebAssemblyFastMemory()) {
                 const char* asanOptions = getenv("ASAN_OPTIONS");
@@ -949,6 +958,10 @@ void Options::ensureOptionsAreCoherent()
         coherent = false;
         dataLog("INCOHERENT OPTIONS: at least one of useLLInt or useJIT must be true\n");
     }
+    if (useWebAssembly() && !(useWasmLLInt() || useBBQJIT())) {
+        coherent = false;
+        dataLog("INCOHERENT OPTIONS: at least one of useWasmLLInt or useBBQJIT must be true\n");
+    }
     if (!coherent)
         CRASH();
 }
@@ -1007,7 +1020,7 @@ void OptionReader::Option::dump(StringBuilder& builder) const
         builder.appendNumber(m_size);
         break;
     case Options::Type::Double:
-        builder.appendFixedPrecisionNumber(m_double);
+        builder.append(m_double);
         break;
     case Options::Type::Int32:
         builder.appendNumber(m_int32);

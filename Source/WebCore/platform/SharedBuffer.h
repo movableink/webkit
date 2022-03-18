@@ -129,7 +129,12 @@ public:
         WEBCORE_EXPORT const char* data() const;
         WEBCORE_EXPORT size_t size() const;
 
-        static Ref<DataSegment> create(Vector<char>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
+        static Ref<DataSegment> create(Vector<char>&& data)
+        {
+            data.shrinkToFit();
+            return adoptRef(*new DataSegment(WTFMove(data)));
+        }
+
 #if USE(CF)
         static Ref<DataSegment> create(RetainPtr<CFDataRef>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
@@ -198,6 +203,8 @@ public:
     // begin and end take O(1) time, this takes O(log(N)) time.
     SharedBufferDataView getSomeData(size_t position) const;
 
+    String toHexString() const;
+
     void hintMemoryNotNeededSoon() const;
 
     WTF::Persistence::Decoder decoder() const;
@@ -231,7 +238,7 @@ private:
     size_t m_size { 0 };
     mutable DataSegmentVector m_segments;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     mutable bool m_hasBeenCombinedIntoOneSegment { false };
     bool internallyConsistent() const;
 #endif

@@ -29,6 +29,9 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "Logging.h"
+#if ENABLE(SCROLLING_THREAD)
+#include "ScrollingStateFrameScrollingNode.h"
+#endif
 #include "ScrollingStateScrollingNode.h"
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
@@ -68,9 +71,6 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
             m_currentScrollPosition = m_lastCommittedScrollPosition;
     }
 
-    if (state.hasChangedProperty(ScrollingStateScrollingNode::ParentRelativeScrollableRect))
-        m_parentRelativeScrollableRect = state.parentRelativeScrollableRect();
-
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollOrigin))
         m_scrollOrigin = state.scrollOrigin();
 
@@ -97,6 +97,11 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollableAreaParams))
         m_scrollableAreaParameters = state.scrollableAreaParameters();
 
+#if ENABLE(SCROLLING_THREAD)
+    if (state.hasChangedProperty(ScrollingStateFrameScrollingNode::ReasonsForSynchronousScrolling))
+        m_synchronousScrollingReasons = state.synchronousScrollingReasons();
+#endif
+
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollContainerLayer))
         m_scrollContainerLayer = state.scrollContainerLayer();
 
@@ -107,8 +112,10 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
 void ScrollingTreeScrollingNode::commitStateAfterChildren(const ScrollingStateNode& stateNode)
 {
     const ScrollingStateScrollingNode& scrollingStateNode = downcast<ScrollingStateScrollingNode>(stateNode);
-    if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition))
-        scrollingTree().scrollingTreeNodeRequestsScroll(scrollingNodeID(), scrollingStateNode.requestedScrollPosition(), scrollingStateNode.requestedScrollPositionRepresentsProgrammaticScroll());
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition)) {
+        const auto& requestedScrollData = scrollingStateNode.requestedScrollData();
+        scrollingTree().scrollingTreeNodeRequestsScroll(scrollingNodeID(), requestedScrollData.scrollPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
+    }
 
     m_isFirstCommit = false;
 }
@@ -144,20 +151,20 @@ bool ScrollingTreeScrollingNode::scrollLimitReached(const PlatformWheelEvent& wh
     return newScrollPosition == oldScrollPosition;
 }
 
-FloatPoint ScrollingTreeScrollingNode::adjustedScrollPosition(const FloatPoint& scrollPosition, ScrollPositionClamp clamp) const
+FloatPoint ScrollingTreeScrollingNode::adjustedScrollPosition(const FloatPoint& scrollPosition, ScrollClamping clamping) const
 {
-    if (clamp == ScrollPositionClamp::ToContentEdges)
+    if (clamping == ScrollClamping::Clamped)
         return clampScrollPosition(scrollPosition);
 
     return scrollPosition;
 }
 
-void ScrollingTreeScrollingNode::scrollBy(const FloatSize& delta, ScrollPositionClamp clamp)
+void ScrollingTreeScrollingNode::scrollBy(const FloatSize& delta, ScrollClamping clamp)
 {
     scrollTo(currentScrollPosition() + delta, ScrollType::User, clamp);
 }
 
-void ScrollingTreeScrollingNode::scrollTo(const FloatPoint& position, ScrollType scrollType, ScrollPositionClamp clamp)
+void ScrollingTreeScrollingNode::scrollTo(const FloatPoint& position, ScrollType scrollType, ScrollClamping clamp)
 {
     if (position == m_currentScrollPosition)
         return;
@@ -200,7 +207,7 @@ void ScrollingTreeScrollingNode::wasScrolledByDelegatedScrolling(const FloatPoin
     if (!scrollPositionChanged && scrollingLayerPositionAction != ScrollingLayerPositionAction::Set)
         return;
 
-    m_currentScrollPosition = adjustedScrollPosition(position, ScrollPositionClamp::None);
+    m_currentScrollPosition = adjustedScrollPosition(position, ScrollClamping::Unclamped);
     updateViewportForCurrentScrollPosition(overrideLayoutViewport);
 
     repositionRelatedLayers();
@@ -208,27 +215,6 @@ void ScrollingTreeScrollingNode::wasScrolledByDelegatedScrolling(const FloatPoin
     scrollingTree().notifyRelatedNodesAfterScrollPositionChange(*this);
     scrollingTree().scrollingTreeNodeDidScroll(*this, scrollingLayerPositionAction);
     scrollingTree().didScrollByDelegatedScrolling();
-}
-
-LayoutPoint ScrollingTreeScrollingNode::parentToLocalPoint(LayoutPoint point) const
-{
-    return point - toLayoutSize(parentRelativeScrollableRect().location());
-}
-
-LayoutPoint ScrollingTreeScrollingNode::localToContentsPoint(LayoutPoint point) const
-{
-    return point + LayoutPoint(currentScrollPosition());
-}
-
-ScrollingTreeScrollingNode* ScrollingTreeScrollingNode::scrollingNodeForPoint(LayoutPoint parentPoint) const
-{
-    if (auto* node = ScrollingTreeNode::scrollingNodeForPoint(parentPoint))
-        return node;
-
-    if (parentRelativeScrollableRect().contains(parentPoint))
-        return const_cast<ScrollingTreeScrollingNode*>(this);
-
-    return nullptr;
 }
 
 void ScrollingTreeScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
@@ -241,9 +227,6 @@ void ScrollingTreeScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTr
     if (m_reachableContentsSize != m_totalContentsSize)
         ts.dumpProperty("reachable content size", m_reachableContentsSize);
     ts.dumpProperty("last committed scroll position", m_lastCommittedScrollPosition);
-
-    if (!m_parentRelativeScrollableRect.isEmpty())
-        ts.dumpProperty("parent relative scrollable rect", m_parentRelativeScrollableRect);
 
     if (m_scrollOrigin != IntPoint())
         ts.dumpProperty("scroll origin", m_scrollOrigin);
@@ -264,6 +247,11 @@ void ScrollingTreeScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTr
 #endif
 
     ts.dumpProperty("scrollable area parameters", m_scrollableAreaParameters);
+
+#if ENABLE(SCROLLING_THREAD)
+    if (!m_synchronousScrollingReasons.isEmpty())
+        ts.dumpProperty("synchronous scrolling reasons", ScrollingCoordinator::synchronousScrollingReasonsAsText(m_synchronousScrollingReasons));
+#endif
 }
 
 } // namespace WebCore

@@ -1,3 +1,313 @@
+2020-03-15  Michael Catanzaro  <mcatanzaro@gnome.org>
+
+        [ANGLE] Source/ThirdParty/ANGLE/src/common/utilities.cpp:10: warning: ignoring #pragma clang diagnostic [-Wunknown-pragmas]
+        https://bugs.webkit.org/show_bug.cgi?id=209014
+
+        Reviewed by Darin Adler.
+
+        Silence compiler warning.
+
+        * changes.diff:
+        * src/common/utilities.cpp:
+
+2020-03-15  Michael Catanzaro  <mcatanzaro@gnome.org>
+
+        [ANGLE] Source/ThirdParty/ANGLE/src/libANGLE/Display.h:221:73: warning: implicitly-declared ‘egl::AttributeMap& egl::AttributeMap::operator=(const egl::AttributeMap&)’ is deprecated [-Wdeprecated-copy]
+        https://bugs.webkit.org/show_bug.cgi?id=209015
+
+        Reviewed by Darin Adler.
+
+        Suppress compiler warning. If this were WebKit code, I might take the time to fix it, but
+        with third-party code it's probably best to just turn off warnings that upstream is not
+        using.
+
+        * CMakeLists.txt:
+
+2020-03-02  Alan Coon  <alancoon@apple.com>
+
+        Add new Mac target numbers
+        https://bugs.webkit.org/show_bug.cgi?id=208398
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/Version.xcconfig:
+        * Configurations/WebKitTargetConditionals.xcconfig:
+
+2020-02-12  Michael Catanzaro  <mcatanzaro@gnome.org>
+
+        Multiple GCC 10 build failures in ANGLE
+        https://bugs.webkit.org/show_bug.cgi?id=207365
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        * changes.diff: Updated.
+        * include/platform/Platform.h: Add missing #include to get size_t.
+        * src/common/PackedEnums.h: Remove problematic const_casts.
+
+2020-02-12  Dean Jackson  <dino@apple.com>
+
+        ANGLE has unused bison and glmark2 code
+        https://bugs.webkit.org/show_bug.cgi?id=207597
+        rdar://59361460
+
+        Reviewed by Maciej Stachowiak.
+
+        Remove some unused files.
+
+        * changes.diff:
+        * src/tests/perf_tests/glmark2Benchmark.cpp: Removed.
+        * third_party/glmark2/BUILD.gn: Removed.
+        * third_party/glmark2/README.angle: Removed.
+        * tools/flex-bison/README.md: Removed.
+        * tools/flex-bison/linux/bison.sha1: Removed.
+        * tools/flex-bison/linux/flex.sha1: Removed.
+        * tools/flex-bison/third_party/.gitattributes: Removed.
+        * tools/flex-bison/third_party/m4sugar/LICENSE: Removed.
+        * tools/flex-bison/third_party/m4sugar/README.chromium: Removed.
+        * tools/flex-bison/third_party/m4sugar/foreach.m4: Removed.
+        * tools/flex-bison/third_party/m4sugar/m4sugar.m4: Removed.
+        * tools/flex-bison/third_party/skeletons/LICENSE: Removed.
+        * tools/flex-bison/third_party/skeletons/README.chromium: Removed.
+        * tools/flex-bison/third_party/skeletons/bison.m4: Removed.
+        * tools/flex-bison/third_party/skeletons/c-like.m4: Removed.
+        * tools/flex-bison/third_party/skeletons/c.m4: Removed.
+        * tools/flex-bison/third_party/skeletons/yacc.c: Removed.
+        * tools/flex-bison/update_flex_bison_binaries.py: Removed.
+        * tools/flex-bison/windows/bison.exe.sha1: Removed.
+        * tools/flex-bison/windows/flex.exe.sha1: Removed.
+        * tools/flex-bison/windows/m4.exe.sha1: Removed.
+        * tools/flex-bison/windows/msys-2.0.dll.sha1: Removed.
+        * tools/flex-bison/windows/msys-iconv-2.dll.sha1: Removed.
+        * tools/flex-bison/windows/msys-intl-8.dll.sha1: Removed.
+
+2020-02-09  Keith Rollin  <krollin@apple.com>
+
+        Re-enable LTO for ARM builds
+        https://bugs.webkit.org/show_bug.cgi?id=207402
+        <rdar://problem/49190767>
+
+        Reviewed by Sam Weinig.
+
+        Bug 190758 re-enabled LTO for Production builds for x86-family CPUs.
+        Enabling it for ARM was left out due to a compiler issue. That issue
+        has been fixed, and so now we can re-enable LTO for ARM.
+
+        * Configurations/Base.xcconfig:
+
+2020-02-07  Kenneth Russell  <kbr@chromium.org>
+
+        Try adding glBindFramebuffer flush workaround to ANGLE as remedy for flaky WebGL tests
+        https://bugs.webkit.org/show_bug.cgi?id=206625
+
+        Reviewed by Dean Jackson.
+
+        * include/platform/FeaturesGL.h:
+        * src/libANGLE/renderer/gl/StateManagerGL.cpp:
+        (rx::StateManagerGL::bindFramebuffer):
+        * src/libANGLE/renderer/gl/renderergl_utils.cpp:
+        (rx::nativegl_gl::InitializeFeatures):
+
+2020-02-05  Dean Jackson  <dino@apple.com>
+
+        Fix MacCatalyst build.
+
+        * src/libANGLE/validationEGL.cpp:
+        (egl::ValidateCreatePbufferFromClientBuffer):
+
+2020-02-04  James Darpinian  <jdarpinian@chromium.org>
+
+        Update ANGLE
+        https://bugs.webkit.org/show_bug.cgi?id=206318
+
+        Several important changes to fix layout test failures and timeouts in this update.
+        - Made expensive validation non-default in debug mode to reduce timeouts.
+        - Optimize disabling ARB_texture_rectangle to make shader compilation much faster.
+        - Flush before texture deletion to work around Mac Intel driver bug.
+
+        Reviewed by Dean Jackson.
+
+        * ANGLE.plist: update commit hash
+        * ANGLE.xcodeproj/project.pbxproj: Add/remove files
+        * Compiler.cmake: Translated from compiler.gni
+        * GLESv2.cmake: Translated from libGLESv2.gni
+        * changes.diff: Now lists all changes from upstream.
+        * update-angle.sh: Diff command was wrong.
+        * Plus a whole lot of changes from upstream.
+
+2020-01-30  James Darpinian  <jdarpinian@chromium.org>
+
+        Update ANGLE
+        https://bugs.webkit.org/show_bug.cgi?id=206318
+
+        Take two!
+
+        Several important changes to fix layout test failures and timeouts in this update.
+        - Made expensive validation non-default in debug mode to reduce timeouts.
+        - Optimize disabling ARB_texture_rectangle to make shader compilation much faster.
+        - Flush before texture deletion to work around Mac Intel driver bug.
+
+        Reviewed by Dean Jackson.
+
+        * ANGLE.plist: update commit hash
+        * ANGLE.xcodeproj/project.pbxproj: Add/remove files
+        * Compiler.cmake: Translated from compiler.gni
+        * GLESv2.cmake: Translated from libGLESv2.gni
+        * changes.diff: Now lists all changes from upstream.
+        * update-angle.sh: Diff command was wrong.
+        * Plus a whole lot of changes from upstream.
+
+2020-01-22  James Darpinian  <jdarpinian@chromium.org>
+
+        Update ANGLE
+        https://bugs.webkit.org/show_bug.cgi?id=206318
+
+        Several important changes to fix layout test failures and timeouts in this update.
+        - Made expensive validation non-default in debug mode to reduce timeouts.
+        - Optimize disabling ARB_texture_rectangle to make shader compilation much faster.
+        - Flush before texture deletion to work around Mac Intel driver bug.
+
+        Reviewed by Dean Jackson.
+
+        * ANGLE.plist: update commit hash
+        * ANGLE.xcodeproj/project.pbxproj: Add/remove files
+        * Compiler.cmake: Translated from compiler.gni
+        * GLESv2.cmake: Translated from libGLESv2.gni
+        * changes.diff: Now lists all changes from upstream.
+        * update-angle.sh: Diff command was wrong.
+        * Plus a whole lot of changes from upstream.
+
+2020-01-22  James Darpinian  <jdarpinian@chromium.org>
+
+        REGRESSION (r253926): webgl/1.0.3/conformance/rendering/many-draw-calls.html is much slower, times out in debug
+        https://bugs.webkit.org/show_bug.cgi?id=205668
+
+        Disable asserts when compiling ANGLE in release mode by defining
+        NDEBUG.
+
+        Reviewed by Dean Jackson.
+
+        * Configurations/ANGLE.xcconfig:
+
+2020-01-14  Dean Jackson  <dino@apple.com>
+
+        Build ANGLE as a dynamic library
+        https://bugs.webkit.org/show_bug.cgi?id=204708
+        rdar://57349384
+
+        Rolling this out for the 2nd time.
+
+        - it caused issues with the shared dyld cache, because the
+        cache doesn't know to include the libary until it already
+        exists in the build
+        - probably related to the above, we saw some performance
+        regressions directly related to this change
+
+        * ANGLE.xcodeproj/project.pbxproj:
+        * Configurations/ANGLE.xcconfig:
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * include/CMakeLists.txt:
+        * include/GLSLANG/ShaderLang.h:
+        * include/GLSLANG/ShaderVars.h:
+        * src/libANGLE/renderer/gl/cgl/DisplayCGL.mm:
+        (rx::DisplayCGL::isValidNativeWindow const):
+        * src/libANGLE/renderer/gl/cgl/WindowSurfaceCGL.mm:
+        (rx::WindowSurfaceCGL::WindowSurfaceCGL):
+        (rx::WindowSurfaceCGL::~WindowSurfaceCGL):
+        * src/libANGLE/renderer/gl/eagl/DisplayEAGL.mm:
+        (rx::DisplayEAGL::terminate):
+        (rx::DisplayEAGL::isValidNativeWindow const):
+        (rx::WorkerContextEAGL::~WorkerContextEAGL):
+        * src/libANGLE/renderer/gl/eagl/WindowSurfaceEAGL.mm:
+        (rx::WindowSurfaceEAGL::WindowSurfaceEAGL):
+        (rx::WindowSurfaceEAGL::~WindowSurfaceEAGL):
+
+2020-01-14  Kenneth Russell  <kbr@chromium.org>
+
+        Need workaround for crash in Intel OpenGL driver related to texture copying feedback loops
+        https://bugs.webkit.org/show_bug.cgi?id=205843
+
+        Remove ANGLE workaround introduced in bug 205707, as it was
+        discovered to be incomplete, and was never upstreamed. The correct
+        workaround will be integrated in the next ANGLE roll.
+
+        Reviewed by Dean Jackson.
+
+        * include/platform/FeaturesGL.h:
+        * src/libANGLE/renderer/gl/StateManagerGL.cpp:
+        (rx::StateManagerGL::bindFramebuffer):
+        * src/libANGLE/renderer/gl/renderergl_utils.cpp:
+        (rx::nativegl_gl::InitializeFeatures):
+
+2020-01-08  Kenneth Russell  <kbr@chromium.org>
+
+        Remove some #ifdefs related to iOS port of ANGLE
+        https://bugs.webkit.org/show_bug.cgi?id=205781
+
+        Since the port to the iOS Simulator in
+        https://bugs.webkit.org/show_bug.cgi?id=205618 , these #ifdefs
+        should no longer be needed.
+
+        Reviewed by Dean Jackson.
+
+        * src/common/PackedEnums.cpp:
+        (egl_gl::EGLTextureTargetToTextureType):
+        * src/libANGLE/validationES2.cpp:
+        (gl::ValidateFramebufferTexture2D):
+
+2020-01-05  Kenneth Russell  <kbr@chromium.org>
+
+        REGRESSION (r253926): Flaky crashes on webgl/1.0.3/conformance/textures/texture-copying-feedback-loops.html and webgl/2.0.0/conformance/textures/misc/texture-copying-feedback-loops.html
+        https://bugs.webkit.org/show_bug.cgi?id=205707
+
+        Work around bugs in Intel's graphics driver where operations can
+        be incorrectly reordered across glBindFramebuffer calls by
+        flushing before/after these calls. Conclusively addresses this
+        crash; may also address other layout test flakiness seen when
+        switching to ANGLE backend for WebGL.
+
+        Reviewed by Dean Jackson.
+
+        * include/platform/FeaturesGL.h:
+        * src/libANGLE/renderer/gl/StateManagerGL.cpp:
+        (rx::StateManagerGL::bindFramebuffer):
+        * src/libANGLE/renderer/gl/renderergl_utils.cpp:
+        (rx::nativegl_gl::InitializeFeatures):
+
+2020-01-04  Kenneth Russell  <kbr@chromium.org>
+
+        Add support for iOS Simulator to ANGLE backend for WebGL
+        https://bugs.webkit.org/show_bug.cgi?id=205618
+
+        Extend EGL_ANGLE_iosurface_client_buffer extension to require use
+        of TEXTURE_2D target on iOS, and to provide read/write usage hints
+        for the pbuffer created from the IOSurface.
+
+        Emulate missing [EAGLContext texImageIOSurface:...] via texture
+        upload in eglBindTexImage and readback in eglReleaseTexImage.
+
+        These changes will be upstreamed in
+        https://bugs.chromium.org/p/angleproject/issues/detail?id=4256 .
+
+        Reviewed by Dean Jackson.
+
+        * extensions/EGL_ANGLE_iosurface_client_buffer.txt:
+        * include/EGL/eglext_angle.h:
+        * src/libANGLE/renderer/gl/eagl/DisplayEAGL.mm:
+        (rx::DisplayEAGL::initialize):
+        * src/libANGLE/renderer/gl/eagl/IOSurfaceSurfaceEAGL.h:
+        * src/libANGLE/renderer/gl/eagl/IOSurfaceSurfaceEAGL.mm:
+        (rx::IOSurfaceSurfaceEAGL::IOSurfaceSurfaceEAGL):
+        (rx::IOSurfaceSurfaceEAGL::bindTexImage):
+        (rx::IOSurfaceSurfaceEAGL::releaseTexImage):
+        (rx::IOSurfaceSurfaceEAGL::validateAttributes):
+        (rx::IOSurfaceSurfaceEAGL::createDefaultFramebuffer):
+        (rx::IOSurfaceSurfaceEAGL::getIOSurfaceLockOptions const):
+        * src/libANGLE/validationEGL.cpp:
+        (egl::ValidateCreatePbufferFromClientBuffer):
+
 2019-12-25  Dean Jackson  <dino@apple.com>
 
         [WebGL] Enable ANGLE by default for Cocoa platforms (except simulator)

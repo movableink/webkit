@@ -56,6 +56,7 @@
 #include "FrameView.h"
 #include "FrameViewLayoutContext.h"
 #include "LayoutState.h"
+#include "LayoutTreeBuilder.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -301,7 +302,10 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
     if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled()) {
         if (!m_document.view() || !m_document.view()->layoutContext().layoutTreeContent())
             return;
-        if (auto* layoutBox = m_document.view()->layoutContext().layoutTreeContent()->layoutBoxForRenderer(renderer))
+        auto& layoutContext = m_document.view()->layoutContext();
+        if (minimalStyleDifference >= StyleDifference::LayoutPositionedMovementOnly || renderer.needsLayout())
+            layoutContext.invalidateLayoutState();
+        if (auto* layoutBox = layoutContext.layoutTreeContent()->layoutBoxForRenderer(renderer))
             layoutBox->updateStyle(renderer.style());
     }
 #endif
@@ -396,7 +400,7 @@ void RenderTreeUpdater::createRenderer(Element& element, RenderStyle&& style)
     }
 #endif
 
-    m_builder.attach(insertionPosition, WTFMove(newRenderer));
+    m_builder.attach(insertionPosition.parent(), WTFMove(newRenderer), insertionPosition.nextSibling());
 
     auto* textManipulationController = m_document.textManipulationControllerIfExists();
     if (UNLIKELY(textManipulationController))
@@ -474,14 +478,14 @@ void RenderTreeUpdater::createTextRenderer(Text& textNode, const Style::TextUpda
         auto newDisplayContentsAnonymousWrapper = WebCore::createRenderer<RenderInline>(textNode.document(), RenderStyle::clone(**textUpdate->inheritedDisplayContentsStyle));
         newDisplayContentsAnonymousWrapper->initializeStyle();
         auto& displayContentsAnonymousWrapper = *newDisplayContentsAnonymousWrapper;
-        m_builder.attach(renderTreePosition, WTFMove(newDisplayContentsAnonymousWrapper));
+        m_builder.attach(renderTreePosition.parent(), WTFMove(newDisplayContentsAnonymousWrapper), renderTreePosition.nextSibling());
 
         textRenderer->setInlineWrapperForDisplayContents(&displayContentsAnonymousWrapper);
         m_builder.attach(displayContentsAnonymousWrapper, WTFMove(textRenderer));
         return;
     }
 
-    m_builder.attach(renderTreePosition, WTFMove(textRenderer));
+    m_builder.attach(renderTreePosition.parent(), WTFMove(textRenderer), renderTreePosition.nextSibling());
 }
 
 void RenderTreeUpdater::updateTextRenderer(Text& text, const Style::TextUpdate* textUpdate)
@@ -560,14 +564,25 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
         while (teardownStack.size() > depth) {
             auto& element = *teardownStack.takeLast();
 
-            if (teardownType == TeardownType::Full || teardownType == TeardownType::RendererUpdateCancelingAnimations) {
+            // Make sure we don't leave any renderers behind in nodes outside the composed tree.
+            if (element.shadowRoot())
+                tearDownLeftoverShadowHostChildren(element, builder);
+
+            switch (teardownType) {
+            case TeardownType::Full:
+            case TeardownType::RendererUpdateCancelingAnimations:
                 if (timeline) {
                     if (document.renderTreeBeingDestroyed())
-                        timeline->elementWasRemoved(element);
+                        timeline->willDestroyRendererForElement(element);
                     else if (teardownType == TeardownType::RendererUpdateCancelingAnimations)
                         timeline->cancelDeclarativeAnimationsForElement(element);
                 }
                 animationController.cancelAnimations(element);
+                break;
+            case TeardownType::RendererUpdate:
+                if (timeline)
+                    timeline->willChangeRendererForElement(element);
+                break;
             }
 
             if (teardownType == TeardownType::Full)
@@ -580,10 +595,6 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
                 builder.destroyAndCleanUpAnonymousWrappers(*renderer);
                 element.setRenderer(nullptr);
             }
-
-            // Make sure we don't leave any renderers behind in nodes outside the composed tree.
-            if (element.shadowRoot())
-                tearDownLeftoverShadowHostChildren(element, builder);
 
             if (element.hasCustomStyleResolveCallbacks())
                 element.didDetachRenderers();

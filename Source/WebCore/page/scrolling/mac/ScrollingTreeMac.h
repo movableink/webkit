@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
+#if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
 #include "ThreadedScrollingTree.h"
 
@@ -39,8 +39,16 @@ private:
     explicit ScrollingTreeMac(AsyncScrollingCoordinator&);
 
     Ref<ScrollingTreeNode> createScrollingTreeNode(ScrollingNodeType, ScrollingNodeID) final;
+
+    RefPtr<ScrollingTreeNode> scrollingNodeForPoint(FloatPoint) final;
+
+    void lockLayersForHitTesting() final;
+    void unlockLayersForHitTesting() final;
+
+    // This lock protects the CALayer/PlatformCALayer tree.
+    Lock m_layerHitTestMutex;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
+#endif // ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)

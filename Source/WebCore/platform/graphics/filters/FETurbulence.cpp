@@ -27,7 +27,7 @@
 #include "FETurbulence.h"
 
 #include "Filter.h"
-#include <JavaScriptCore/Uint8ClampedArray.h>
+#include "ImageData.h"
 #include <wtf/MathExtras.h>
 #include <wtf/ParallelJobs.h>
 #include <wtf/text/TextStream.h>
@@ -154,7 +154,7 @@ void FETurbulence::initPaint(PaintingData& paintingData)
                 gradient[0] = static_cast<float>((paintingData.random() % (2 * s_blockSize)) - s_blockSize) / s_blockSize;
                 gradient[1] = static_cast<float>((paintingData.random() % (2 * s_blockSize)) - s_blockSize) / s_blockSize;
             } while (!gradient[0] && !gradient[1]);
-            normalizationFactor = sqrtf(gradient[0] * gradient[0] + gradient[1] * gradient[1]);
+            normalizationFactor = std::hypot(gradient[0], gradient[1]);
             gradient[0] /= normalizationFactor;
             gradient[1] /= normalizationFactor;
         }
@@ -395,7 +395,8 @@ void FETurbulence::fillRegionWorker(FillRegionParameters* parameters)
 
 void FETurbulence::platformApplySoftware()
 {
-    Uint8ClampedArray* pixelArray = createUnmultipliedImageResult();
+    auto* resultImage = createUnmultipliedImageResult();
+    auto* pixelArray = resultImage ? resultImage->data() : nullptr;
     if (!pixelArray)
         return;
 

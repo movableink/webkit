@@ -159,7 +159,7 @@ void updateImageBacking(TextureMapperLayer& layer,
     Nicosia::ImageBackingTextureMapperImpl::Update& update)
 {
     if (!update.isVisible) {
-        layer.setBackingStore(nullptr);
+        layer.setContentsLayer(nullptr);
         return;
     }
 

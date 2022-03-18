@@ -108,6 +108,10 @@ typedef void (^CFCachedURLResponseCallBackBlock)(CFCachedURLResponseRef);
 
 #if defined(__OBJC__)
 
+@interface NSURLSessionTask ()
+@property (readonly, retain) NSURLSessionTaskMetrics* _incompleteTaskMetrics;
+@end
+
 @interface NSURLCache ()
 - (CFURLCacheRef)_CFURLCache;
 @end
@@ -127,7 +131,7 @@ typedef void (^CFCachedURLResponseCallBackBlock)(CFCachedURLResponseRef);
 @interface NSHTTPCookieStorage ()
 - (id)_initWithIdentifier:(NSString *)identifier private:(bool)isPrivate;
 - (void)_getCookiesForURL:(NSURL *)url mainDocumentURL:(NSURL *)mainDocumentURL partition:(NSString *)partition completionHandler:(void (^)(NSArray *))completionHandler;
-- (void)_getCookiesForURL:(NSURL *)url mainDocumentURL:(NSURL *)mainDocumentURL partition:(NSString *)partition policyProperties:(NSDictionary*)props completionHandler:(void (^)(NSArray *))completionHandler;
+- (void)_getCookiesForURL:(NSURL *)url mainDocumentURL:(NSURL *)mainDocumentURL partition:(NSString *)partition policyProperties:(NSDictionary*)props completionHandler:(void (NS_NOESCAPE ^)(NSArray *))completionHandler;
 - (void)_setCookies:(NSArray *)cookies forURL:(NSURL *)URL mainDocumentURL:(NSURL *)mainDocumentURL policyProperties:(NSDictionary*) props;
 - (void)removeCookiesSinceDate:(NSDate *)date;
 - (id)_initWithCFHTTPCookieStorage:(CFHTTPCookieStorageRef)cfStorage;
@@ -203,6 +207,9 @@ typedef NS_ENUM(NSInteger, NSURLSessionCompanionProxyPreference) {
 #if HAVE(ALLOWS_SENSITIVE_LOGGING)
 @property BOOL _allowsSensitiveLogging;
 #endif
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+@property (nullable, retain) _NSHTTPAlternativeServicesStorage *_alternativeServicesStorage;
+#endif
 @end
 
 @interface NSURLSessionTask ()
@@ -213,7 +220,7 @@ typedef NS_ENUM(NSInteger, NSURLSessionCompanionProxyPreference) {
 @property (nullable, readwrite, retain) NSURL *_siteForCookies;
 @property (readwrite) BOOL _isTopLevelNavigation;
 #endif
-#if PLATFORM(MAC) || (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
+#if PLATFORM(COCOA) && !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
 @property (nonatomic, assign) BOOL _preconnect;
 #endif
 @end
@@ -242,6 +249,28 @@ typedef NS_ENUM(NSInteger, NSURLSessionCompanionProxyPreference) {
 + (void)_disableAppSSO;
 #endif
 @end
+
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+
+@interface _NSHTTPAlternativeServiceEntry : NSObject <NSCopying>
+@property (readwrite, nonatomic, retain) NSString *host;
+@property (readwrite, nonatomic, assign) NSInteger port;
+@end
+
+@interface _NSHTTPAlternativeServicesFilter : NSObject <NSCopying>
++ (instancetype)emptyFilter;
+@end
+
+@interface _NSHTTPAlternativeServicesStorage : NSObject
+@property (readonly, nonatomic) NSURL *path;
++ (instancetype)sharedPersistentStore;
+- (instancetype)initPersistentStoreWithURL:(nullable NSURL *)path;
+- (NSArray<_NSHTTPAlternativeServiceEntry *> *)HTTPServiceEntriesWithFilter:(_NSHTTPAlternativeServicesFilter *)filter;
+- (void)removeHTTPAlternativeServiceEntriesWithRegistrableDomain:(NSString *)domain;
+- (void)removeHTTPAlternativeServiceEntriesCreatedAfterDate:(NSDate *)date;
+@end
+
+#endif // HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
 
 extern NSString * const NSURLAuthenticationMethodOAuth;
 
@@ -282,10 +311,7 @@ extern const CFStringRef _kCFURLCachePartitionKey;
 extern const CFStringRef _kCFURLConnectionPropertyShouldSniff;
 extern const CFStringRef _kCFURLStorageSessionIsPrivate;
 extern const CFStringRef kCFStreamSocketSecurityLevelTLSv1_2;
-
-#if HAVE(CFNETWORK_WITH_CONTENT_ENCODING_SNIFFING_OVERRIDE)
 extern const CFStringRef kCFURLRequestContentDecoderSkipURLCheck;
-#endif
 
 CFHTTPCookieStorageRef _CFHTTPCookieStorageGetDefault(CFAllocatorRef);
 CFHTTPCookieStorageRef CFHTTPCookieStorageCreateFromFile(CFAllocatorRef, CFURLRef, CFHTTPCookieStorageRef);
@@ -390,6 +416,13 @@ WTF_EXTERN_C_END
 
 @interface NSHTTPCookieStorage ()
 + (void)_setSharedHTTPCookieStorage:(NSHTTPCookieStorage *)storage;
+- (void)_setSubscribedDomainsForCookieChanges:(NSSet<NSString*>* __nullable)domainList;
+- (NSArray* __nullable)_getCookiesForDomain:(NSString*)domain;
+- (void)_setCookiesChangedHandler:(void(^__nullable)(NSArray<NSHTTPCookie*>* addedCookies, NSString* domainForChangedCookie))cookiesChangedHandler onQueue:(dispatch_queue_t __nullable)queue;
+- (void)_setCookiesRemovedHandler:(void(^__nullable)(NSArray<NSHTTPCookie*>* __nullable removedCookies, NSString* __nullable domainForRemovedCookies, bool removeAllCookies))cookiesRemovedHandler onQueue:(dispatch_queue_t __nullable)queue;
+// FIXME: The following 2 should be removed are only kept to ensure smooth transition to the new _setCookiesChangedHandler / _setCookiesRemovedHandler SPI.
+- (void)_setCookiesAddedHandler:(void(^__nullable)(NSArray<NSHTTPCookie*>* addedCookies, NSURL* __nullable urlForAddedCookies))cookiesAddedHandler onQueue:(dispatch_queue_t __nullable)queue;
+- (void)_setCookiesDeletedHandler:(void(^__nullable)(NSArray<NSHTTPCookie*>* __nullable deletedCookies, bool deletedAllCookies))cookiesDeletedHandler onQueue:(dispatch_queue_t __nullable)queue;
 @end
 
 @interface NSURLResponse ()
@@ -403,6 +436,7 @@ WTF_EXTERN_C_END
 
 @interface NSURLSessionTask ()
 - (void)_setExplicitCookieStorage:(CFHTTPCookieStorageRef)storage;
+@property (readonly) SSLProtocol _TLSNegotiatedProtocolVersion;
 @end
 
 #endif // defined(__OBJC__)

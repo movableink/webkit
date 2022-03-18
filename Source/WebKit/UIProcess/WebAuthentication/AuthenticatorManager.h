@@ -81,6 +81,9 @@ private:
     void respondReceived(Respond&&) final;
     void downgrade(Authenticator* id, Ref<Authenticator>&& downgradedAuthenticator) final;
     void authenticatorStatusUpdated(WebAuthenticationStatus) final;
+    void requestPin(uint64_t retries, CompletionHandler<void(const WTF::String&)>&&) final;
+    void selectAssertionResponse(const HashSet<Ref<WebCore::AuthenticatorAssertionResponse>>&, WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&&) final;
+    void decidePolicyForLocalAuthenticator(CompletionHandler<void(LocalAuthenticatorPolicy)>&&) final;
 
     // Overriden by MockAuthenticatorManager.
     virtual UniqueRef<AuthenticatorTransportService> createService(WebCore::AuthenticatorTransport, AuthenticatorTransportService::Observer&) const;
@@ -94,6 +97,7 @@ private:
     void runPanel();
     void restartDiscovery();
     TransportSet getTransports() const;
+    void dispatchPanelClientCall(Function<void(const API::WebAuthenticationPanel&)>&&) const;
 
     // Request: We only allow one request per time. A new request will cancel any pending ones.
     WebAuthenticationRequestData m_pendingRequestData;

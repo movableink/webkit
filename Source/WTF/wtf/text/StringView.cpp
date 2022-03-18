@@ -308,7 +308,7 @@ void StringView::invalidate(const StringImpl& stringToBeDestroyed)
 {
     UnderlyingString* underlyingString;
     {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        auto locker = holdLock(underlyingStringsMutex);
         underlyingString = underlyingStrings().take(&stringToBeDestroyed);
         if (!underlyingString)
             return;
@@ -325,7 +325,7 @@ bool StringView::underlyingStringIsValid() const
 void StringView::adoptUnderlyingString(UnderlyingString* underlyingString)
 {
     if (m_underlyingString) {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        auto locker = holdLock(underlyingStringsMutex);
         if (!--m_underlyingString->refCount) {
             if (m_underlyingString->isValid) {
                 underlyingStrings().remove(&m_underlyingString->string);
@@ -342,7 +342,7 @@ void StringView::setUnderlyingString(const StringImpl* string)
     if (!string)
         underlyingString = nullptr;
     else {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        auto locker = holdLock(underlyingStringsMutex);
         auto result = underlyingStrings().add(string, nullptr);
         if (result.isNewEntry)
             result.iterator->value = new UnderlyingString(*string);
@@ -356,8 +356,14 @@ void StringView::setUnderlyingString(const StringImpl* string)
 void StringView::setUnderlyingString(const StringView& otherString)
 {
     UnderlyingString* underlyingString = otherString.m_underlyingString;
-    if (underlyingString)
+    if (underlyingString) {
+        // It's safe to inc the refCount here without locking underlyingStringsMutex
+        // because UnderlyingString::refCount is a std::atomic_uint, and we're
+        // guaranteed that the StringView we're copying it from will at least
+        // have 1 ref on it, thereby keeping it alive regardless of what other
+        // threads may be doing.
         ++underlyingString->refCount;
+    }
     adoptUnderlyingString(underlyingString);
 }
 

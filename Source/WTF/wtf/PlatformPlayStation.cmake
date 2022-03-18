@@ -15,12 +15,13 @@ list(APPEND WTF_SOURCES
     text/unix/TextBreakIteratorInternalICUUnix.cpp
 
     unix/CPUTimeUnix.cpp
-    unix/LanguageUnix.cpp
 )
 
 list(APPEND WTF_LIBRARIES
-    ${CMAKE_THREAD_LIBS_INIT}
-
     ${C_STD_LIBRARY}
     ${KERNEL_LIBRARY}
+    Threads::Threads
 )
+
+# bmalloc is compiled as an OBJECT library so it is statically linked
+list(APPEND WTF_PRIVATE_DEFINITIONS STATICALLY_LINKED_WITH_bmalloc)

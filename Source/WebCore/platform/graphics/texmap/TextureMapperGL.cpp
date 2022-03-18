@@ -26,7 +26,7 @@
 
 #include "BitmapTextureGL.h"
 #include "BitmapTexturePool.h"
-#include "Extensions3D.h"
+#include "ExtensionsGL.h"
 #include "FilterOperations.h"
 #include "FloatQuad.h"
 #include "GLContext.h"
@@ -766,7 +766,7 @@ void TextureMapperGL::drawEdgeTriangles(TextureMapperShaderProgram& program)
     };
 #undef SIDE_TRIANGLE_DATA
 
-    GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GC3Dfloat) * 48, unitRectSideTriangles);
+    GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GCGLfloat) * 48, unitRectSideTriangles);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(program.vertexLocation(), 4, GL_FLOAT, false, 0, 0);
     glDrawArrays(GL_TRIANGLES, 0, 12);
@@ -818,7 +818,12 @@ void TextureMapperGL::drawTexturedQuadWithProgram(TextureMapperShaderProgram& pr
     glUseProgram(program.programID());
 
     bool repeatWrap = wrapMode() == RepeatWrap && m_contextAttributes.supportsNPOTTextures;
-    GLenum target = flags & ShouldUseARBTextureRect ? GLenum(GL_TEXTURE_RECTANGLE_ARB) : GLenum(GL_TEXTURE_2D);
+    GLenum target;
+    if (flags & ShouldUseExternalOESTextureRect)
+        target = GLenum(GL_TEXTURE_EXTERNAL_OES);
+    else
+        target = flags & ShouldUseARBTextureRect ? GLenum(GL_TEXTURE_RECTANGLE_ARB) : GLenum(GL_TEXTURE_2D);
+
     for (unsigned i = 0; i < texturesAndSamplers.size(); ++i) {
         auto& textureAndSampler = texturesAndSamplers[i];
 
@@ -1004,6 +1009,13 @@ Ref<BitmapTexture> TextureMapperGL::createTexture(GLint internalFormat)
 std::unique_ptr<TextureMapper> TextureMapper::platformCreateAccelerated()
 {
     return makeUnique<TextureMapperGL>();
+}
+
+void TextureMapperGL::drawTextureExternalOES(GLuint texture, Flags flags, const IntSize& size, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)
+{
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(TextureMapperShaderProgram::Option::TextureExternalOES);
+    drawTexturedQuadWithProgram(program.get(), { { texture, program->externalOESTextureLocation() } },
+        flags | TextureMapperGL::ShouldUseExternalOESTextureRect, size, targetRect, modelViewMatrix, opacity);
 }
 
 };

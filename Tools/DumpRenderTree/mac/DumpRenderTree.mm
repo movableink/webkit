@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2020 Apple Inc. All rights reserved.
  *           (C) 2007 Graham Dennis (graham.dennis@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -89,6 +89,7 @@
 #import <WebKit/WebPreferencesPrivate.h>
 #import <WebKit/WebResourceLoadDelegate.h>
 #import <WebKit/WebStorageManagerPrivate.h>
+#import <WebKit/WebView.h>
 #import <WebKit/WebViewPrivate.h>
 #import <getopt.h>
 #import <wtf/Assertions.h>
@@ -864,6 +865,7 @@ static void enableExperimentalFeatures(WebPreferences* preferences)
     [preferences setFetchAPIKeepAliveEnabled:YES];
     [preferences setWebAnimationsEnabled:YES];
     [preferences setWebAnimationsCompositeOperationsEnabled:YES];
+    [preferences setWebAnimationsMutableTimelinesEnabled:YES];
     [preferences setWebGL2Enabled:YES];
     // FIXME: AsyncFrameScrollingEnabled
     [preferences setCacheAPIEnabled:NO];
@@ -882,6 +884,8 @@ static void enableExperimentalFeatures(WebPreferences* preferences)
     [preferences setReferrerPolicyAttributeEnabled:YES];
     [preferences setLinkPreloadResponsiveImagesEnabled:YES];
     [preferences setCSSShadowPartsEnabled:YES];
+    [preferences setAspectRatioOfImgFromWidthAndHeightEnabled:YES];
+    [preferences setCSSOMViewSmoothScrollingEnabled:YES];
 }
 
 // Called before each test.
@@ -1006,6 +1010,8 @@ static void resetWebPreferencesToConsistentValues()
 
     preferences.selectionAcrossShadowBoundariesEnabled = YES;
 
+    [preferences setWebSQLEnabled:YES];
+
     [WebPreferences _clearNetworkLoaderSession];
     [WebPreferences _setCurrentNetworkLoaderSessionCookieAcceptPolicy:NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain];
 }
@@ -1029,11 +1035,15 @@ static void setWebPreferencesForTestOptions(const TestOptions& options)
     preferences.CSSLogicalEnabled = options.enableCSSLogical;
     preferences.adClickAttributionEnabled = options.adClickAttributionEnabled;
     preferences.resizeObserverEnabled = options.enableResizeObserver;
+    preferences.CSSOMViewSmoothScrollingEnabled = options.enableCSSOMViewSmoothScrolling;
     preferences.coreMathMLEnabled = options.enableCoreMathML;
     preferences.requestIdleCallbackEnabled = options.enableRequestIdleCallback;
     preferences.asyncClipboardAPIEnabled = options.enableAsyncClipboardAPI;
     preferences.privateBrowsingEnabled = options.useEphemeralSession;
     preferences.usesPageCache = options.enableBackForwardCache;
+    preferences.layoutFormattingContextIntegrationEnabled = options.layoutFormattingContextIntegrationEnabled;
+    preferences.aspectRatioOfImgFromWidthAndHeightEnabled = options.enableAspectRatioOfImgFromWidthAndHeight;
+    preferences.allowTopNavigationToDataURLs = options.allowTopNavigationToDataURLs;
 }
 
 // Called once on DumpRenderTree startup.
@@ -1060,6 +1070,7 @@ static void setDefaultsToConsistentValuesForTesting()
         WebKitFullScreenEnabledPreferenceKey: @YES,
         WebKitAllowsInlineMediaPlaybackPreferenceKey: @YES,
         WebKitInlineMediaPlaybackRequiresPlaysInlineAttributeKey: @NO,
+        @"WebKitLinkedOnOrAfterEverything": @YES,
         @"UseWebKitWebInspector": @YES,
 #if !PLATFORM(IOS_FAMILY)
         @"NSPreferredSpellServerLanguage": @"en_US",
@@ -1721,6 +1732,7 @@ static void updateDisplay()
     [gDrtWindow layoutTilesNow];
     [webView _flushCompositingChanges];
 #else
+    [webView _forceRepaintForTesting];
     if ([webView _isUsingAcceleratedCompositing])
         [webView display];
     else

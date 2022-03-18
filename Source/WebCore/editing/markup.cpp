@@ -75,7 +75,6 @@
 #include "SocketProvider.h"
 #include "StyleProperties.h"
 #include "TextIterator.h"
-#include "TypedElementDescendantIterator.h"
 #include "VisibleSelection.h"
 #include "VisibleUnits.h"
 #include <wtf/StdLibExtras.h>
@@ -181,6 +180,7 @@ std::unique_ptr<Page> createPageForSanitizingWebContent()
     auto page = makeUnique<Page>(WTFMove(pageConfiguration));
     page->settings().setMediaEnabled(false);
     page->settings().setScriptEnabled(false);
+    page->settings().setParserScriptingFlagPolicy(SettingsBase::ParserScriptingFlagPolicy::Enabled);
     page->settings().setPluginsEnabled(false);
     page->settings().setAcceleratedCompositingEnabled(false);
 

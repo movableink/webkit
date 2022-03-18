@@ -28,20 +28,37 @@
 
 #if HAVE(NETWORK_FRAMEWORK)
 
+#import "Utilities.h"
+#import <wtf/BlockPtr.h>
+#import <wtf/CompletionHandler.h>
+#import <wtf/RetainPtr.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/WTFString.h>
 
 namespace TestWebKitAPI {
 
-HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses)
-    : m_requestResponseMap([](std::initializer_list<std::pair<String, HTTPServer::HTTPResponse>> list) {
+HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol)
+    : m_protocol(protocol)
+    , m_requestResponseMap([](std::initializer_list<std::pair<String, HTTPServer::HTTPResponse>> list) {
         HashMap<String, HTTPServer::HTTPResponse> map;
         for (auto& pair : list)
             map.add(pair.first, pair.second);
         return map;
     }(responses))
 {
-    auto parameters = adoptNS(nw_parameters_create_secure_tcp(NW_PARAMETERS_DISABLE_PROTOCOL, NW_PARAMETERS_DEFAULT_CONFIGURATION));
+    auto configureTLS = protocol == Protocol::Http ? NW_PARAMETERS_DISABLE_PROTOCOL : ^(nw_protocol_options_t protocolOptions) {
+#if HAVE(TLS_PROTOCOL_VERSION_T)
+        auto options = adoptNS(nw_tls_copy_sec_protocol_options(protocolOptions));
+        auto identity = adoptNS(sec_identity_create(testIdentity().get()));
+        sec_protocol_options_set_local_identity(options.get(), identity.get());
+        if (protocol == Protocol::HttpsWithLegacyTLS)
+            sec_protocol_options_set_max_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+#else
+        UNUSED_PARAM(protocolOptions);
+        ASSERT(protocol != Protocol::HttpsWithLegacyTLS);
+#endif
+    };
+    auto parameters = adoptNS(nw_parameters_create_secure_tcp(configureTLS, NW_PARAMETERS_DEFAULT_CONFIGURATION));
     m_listener = adoptNS(nw_listener_create(parameters.get()));
     nw_listener_set_queue(m_listener.get(), dispatch_get_main_queue());
     nw_listener_set_new_connection_handler(m_listener.get(), ^(nw_connection_t connection) {
@@ -49,7 +66,26 @@ HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> re
         nw_connection_start(connection);
         respondToRequests(connection);
     });
+    __block bool ready = false;
+    nw_listener_set_state_changed_handler(m_listener.get(), ^(nw_listener_state_t state, nw_error_t error) {
+        ASSERT_UNUSED(error, !error);
+        if (state == nw_listener_state_ready)
+            ready = true;
+    });
     nw_listener_start(m_listener.get());
+    Util::run(&ready);
+}
+
+static String statusText(unsigned statusCode)
+{
+    switch (statusCode) {
+    case 200:
+        return "OK"_s;
+    case 301:
+        return "Moved Permanently"_s;
+    }
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 void HTTPServer::respondToRequests(nw_connection_t connection)
@@ -62,39 +98,67 @@ void HTTPServer::respondToRequests(nw_connection_t connection)
             request.append(static_cast<const char*>(buffer), size);
             return true;
         });
-        request.append(0);
+        request.append('\0');
 
-        const char* pathPrefix = "GET ";
+        const char* getPathPrefix = "GET ";
+        const char* postPathPrefix = "POST ";
         const char* pathSuffix = " HTTP/1.1\r\n";
         const char* pathEnd = strstr(request.data(), pathSuffix);
         ASSERT_WITH_MESSAGE(pathEnd, "HTTPServer assumes request is HTTP 1.1");
-        ASSERT_WITH_MESSAGE(!memcmp(request.data(), pathPrefix, strlen(pathPrefix)), "HTTPServer assumes request is GET");
-        ASSERT_WITH_MESSAGE(strstr(request.data(), "\r\n\r\n"), "HTTPServer assumes entire HTTP request is received at once");
-        size_t pathLength = pathEnd - request.data() - strlen(pathPrefix);
-        String path(request.data() + strlen(pathPrefix), pathLength);
+        const char* doubleNewline = strstr(request.data(), "\r\n\r\n");
+        ASSERT_WITH_MESSAGE(doubleNewline, "HTTPServer assumes entire HTTP request is received at once");
+        size_t pathPrefixLength = 0;
+        if (!memcmp(request.data(), getPathPrefix, strlen(getPathPrefix)))
+            pathPrefixLength = strlen(getPathPrefix);
+        else if (!memcmp(request.data(), postPathPrefix, strlen(postPathPrefix)))
+            pathPrefixLength = strlen(postPathPrefix);
+        ASSERT_WITH_MESSAGE(pathPrefixLength, "HTTPServer assumes request is GET or POST");
+        size_t pathLength = pathEnd - request.data() - pathPrefixLength;
+        String path(request.data() + pathPrefixLength, pathLength);
         ASSERT_WITH_MESSAGE(m_requestResponseMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().data());
-        
-        auto response = m_requestResponseMap.get(path);
-        StringBuilder responseBuilder;
-        responseBuilder.append("HTTP/1.1 200 OK\r\nContent-Length: ");
-        responseBuilder.appendNumber(response.body.length());
-        responseBuilder.append("\r\n");
-        for (auto& pair : response.headerFields) {
-            responseBuilder.append(pair.key);
-            responseBuilder.append(": ");
-            responseBuilder.append(pair.value);
+
+        CompletionHandler<void()> sendResponse = [this, connection = retainPtr(connection), context = retainPtr(context), path = WTFMove(path)] {
+            auto response = m_requestResponseMap.get(path);
+            StringBuilder responseBuilder;
+            responseBuilder.append("HTTP/1.1 ");
+            responseBuilder.appendNumber(response.statusCode);
+            responseBuilder.append(' ');
+            responseBuilder.append(statusText(response.statusCode));
+            responseBuilder.append("\r\nContent-Length: ");
+            responseBuilder.appendNumber(response.body.length());
             responseBuilder.append("\r\n");
+            for (auto& pair : response.headerFields) {
+                responseBuilder.append(pair.key);
+                responseBuilder.append(": ");
+                responseBuilder.append(pair.value);
+                responseBuilder.append("\r\n");
+            }
+            responseBuilder.append("\r\n");
+            responseBuilder.append(response.body);
+            auto responseBodyAndHeader = responseBuilder.toString().releaseImpl();
+            auto responseData = adoptNS(dispatch_data_create(responseBodyAndHeader->characters8(), responseBodyAndHeader->length(), dispatch_get_main_queue(), ^{
+                (void)responseBodyAndHeader;
+            }));
+            nw_connection_send(connection.get(), responseData.get(), context.get(), true, ^(nw_error_t error) {
+                ASSERT(!error);
+                respondToRequests(connection.get());
+            });
+        };
+
+        if (auto* contentLengthBegin = strstr(request.data(), "Content-Length")) {
+            size_t contentLength = atoi(contentLengthBegin + strlen("Content-Length: "));
+            size_t headerLength = doubleNewline - request.data() + strlen("\r\n\r\n");
+            constexpr size_t nullTerminationLength = 1;
+            if (request.size() - nullTerminationLength - headerLength < contentLength) {
+                nw_connection_receive(connection, 1, std::numeric_limits<uint32_t>::max(), makeBlockPtr([sendResponse = WTFMove(sendResponse)] (dispatch_data_t content, nw_content_context_t context, bool complete, nw_error_t error) mutable {
+                    if (error || !content)
+                        return;
+                    sendResponse();
+                }).get());
+                return;
+            }
         }
-        responseBuilder.append("\r\n");
-        responseBuilder.append(response.body);
-        auto responseBodyAndHeader = responseBuilder.toString().releaseImpl();
-        auto responseData = adoptNS(dispatch_data_create(responseBodyAndHeader->characters8(), responseBodyAndHeader->length(), dispatch_get_main_queue(), ^{
-            (void)responseBodyAndHeader;
-        }));
-        nw_connection_send(connection, responseData.get(), context, true, ^(nw_error_t error) {
-            ASSERT(!error);
-            respondToRequests(connection);
-        });
+        sendResponse();
     });
 }
 
@@ -105,7 +169,17 @@ uint16_t HTTPServer::port() const
 
 NSURLRequest *HTTPServer::request() const
 {
-    return [NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"http://127.0.0.1:%d/", port()]]];
+    NSString *format;
+    switch (m_protocol) {
+    case Protocol::Http:
+        format = @"http://127.0.0.1:%d/";
+        break;
+    case Protocol::Https:
+    case Protocol::HttpsWithLegacyTLS:
+        format = @"https://127.0.0.1:%d/";
+        break;
+    }
+    return [NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:format, port()]]];
 }
 
 } // namespace TestWebKitAPI

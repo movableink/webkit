@@ -11,6 +11,7 @@ WebKitTableOfContents::init();
 
 class WebKitTableOfContents {
 
+    private static $supported_post_types = array('page', 'web_inspector_page');
     private static $editing = false;
     private static $toc = array();
     private static $attr_regex = '\{((?:[ ]*[#.][-_:a-zA-Z0-9]+){1,})[ ]*\}';
@@ -32,7 +33,8 @@ class WebKitTableOfContents {
     }
 
     public static function renderMarkup() {
-        if ( ! is_page() ) return;
+        if (!in_array(get_post_type(), self::$supported_post_types))
+            return;
 
         if ( empty(self::$toc) || ! self::hasIndex() )
             return;
@@ -72,8 +74,7 @@ class WebKitTableOfContents {
     }
 
     public function wp_insert_post_data( $post_data, $record ) {
-
-        if ( ! in_array($post_data['post_type'], array('page')) )
+        if (!in_array($post_data['post_type'], self::$supported_post_types))
             return $post_data;
 
         $post_data['post_content'] = self::parse($post_data['post_content']);
@@ -102,6 +103,7 @@ class WebKitTableOfContents {
 
     public static function index( $matches ) {
         list($marked, $level, $heading) = $matches;
+        $heading = strip_tags($heading);
         $anchor = sanitize_title_with_dashes($heading);
         self::$toc[ "$level::$anchor" ] = $heading;
         return sprintf('<h%2$d><a name="%1$s"></a>%3$s</h%2$d>', $anchor, $level, $heading);

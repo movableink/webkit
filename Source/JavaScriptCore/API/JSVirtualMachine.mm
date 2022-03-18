@@ -70,13 +70,13 @@ static NSMapTable *wrapperCache()
 
 + (void)addWrapper:(JSVirtualMachine *)wrapper forJSContextGroupRef:(JSContextGroupRef)group
 {
-    std::lock_guard<Lock> lock(wrapperCacheMutex);
+    auto locker = holdLock(wrapperCacheMutex);
     NSMapInsert(wrapperCache(), group, (__bridge void*)wrapper);
 }
 
 + (JSVirtualMachine *)wrapperForJSContextGroupRef:(JSContextGroupRef)group
 {
-    std::lock_guard<Lock> lock(wrapperCacheMutex);
+    auto locker = holdLock(wrapperCacheMutex);
     return (__bridge JSVirtualMachine *)NSMapGet(wrapperCache(), group);
 }
 
@@ -298,14 +298,15 @@ JSContextGroupRef getGroupFromVirtualMachine(JSVirtualMachine *virtualMachine)
 
 #endif // ENABLE(DFG_JIT)
 
-- (JSC::VM&)vm
+- (JSContextGroupRef)JSContextGroupRef
 {
-    return *toJS(m_group);
+    return m_group;
 }
 
 - (BOOL)isWebThreadAware
 {
-    return [self vm].apiLock().isWebThreadAware();
+    JSC::VM* vm = toJS(m_group);
+    return vm->apiLock().isWebThreadAware();
 }
 
 + (void)setCrashOnVMCreation:(BOOL)shouldCrash

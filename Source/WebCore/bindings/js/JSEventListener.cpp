@@ -51,11 +51,13 @@ JSEventListener::JSEventListener(JSObject* function, JSObject* wrapper, bool isA
     , m_isAttribute(isAttribute)
     , m_isolatedWorld(isolatedWorld)
 {
-    if (wrapper) {
-        JSC::Heap::heap(wrapper)->writeBarrier(wrapper, function);
+    if (function) {
+        ASSERT(wrapper);
+        JSC::VM& vm = m_isolatedWorld->vm();
         m_jsFunction = JSC::Weak<JSC::JSObject>(function);
-    } else
-        ASSERT(!function);
+        vm.heap.writeBarrier(wrapper, function);
+        m_isInitialized = true;
+    }
 }
 
 JSEventListener::~JSEventListener() = default;
@@ -80,7 +82,7 @@ JSObject* JSEventListener::initializeJSFunction(ScriptExecutionContext&) const
 
 void JSEventListener::visitJSFunction(SlotVisitor& visitor)
 {
-    // If m_wrapper is null, then m_jsFunction is zombied, and should never be accessed.
+    // If m_wrapper is null, we are not keeping m_jsFunction alive.
     if (!m_wrapper)
         return;
 
@@ -220,6 +222,21 @@ bool JSEventListener::operator==(const EventListener& listener) const
         return false;
     auto& other = downcast<JSEventListener>(listener);
     return m_jsFunction == other.m_jsFunction && m_isAttribute == other.m_isAttribute;
+}
+
+String JSEventListener::functionName() const
+{
+    if (!m_wrapper || !m_jsFunction)
+        return { };
+
+    auto& vm = isolatedWorld().vm();
+    JSC::JSLockHolder lock(vm);
+
+    auto* handlerFunction = JSC::jsDynamicCast<JSC::JSFunction*>(vm, m_jsFunction.get());
+    if (!handlerFunction)
+        return { };
+
+    return handlerFunction->name(vm);
 }
 
 static inline JSC::JSValue eventHandlerAttribute(EventListener* abstractListener, ScriptExecutionContext& context)

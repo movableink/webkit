@@ -73,6 +73,7 @@ class LLIntOffsetsExtractor;
 class MachineThreads;
 class MarkStackArray;
 class MarkStackMergingConstraint;
+class MarkedJSValueRefArray;
 class BlockDirectory;
 class MarkedArgumentBuffer;
 class MarkingConstraint;
@@ -96,11 +97,7 @@ class SpeculativeJIT;
 class Worklist;
 }
 
-#if !ASSERT_DISABLED
-#define ENABLE_DFG_DOES_GC_VALIDATION 1
-#else
-#define ENABLE_DFG_DOES_GC_VALIDATION 0
-#endif
+#define ENABLE_DFG_DOES_GC_VALIDATION ASSERT_ENABLED
 constexpr bool validateDFGDoesGC = ENABLE_DFG_DOES_GC_VALIDATION;
 
 typedef HashCountedSet<JSCell*> ProtectCountSet;
@@ -244,6 +241,7 @@ public:
     JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> objectTypeCounts();
 
     HashSet<MarkedArgumentBuffer*>& markListSet();
+    void addMarkedJSValueRefArray(MarkedJSValueRefArray*);
     
     template<typename Functor> void forEachProtectedCell(const Functor&);
     template<typename Functor> void forEachCodeBlock(const Functor&);
@@ -621,6 +619,7 @@ private:
 
     ProtectCountSet m_protectedValues;
     std::unique_ptr<HashSet<MarkedArgumentBuffer*>> m_markListSet;
+    SentinelLinkedList<MarkedJSValueRefArray, BasicRawSentinelNode<MarkedJSValueRefArray>> m_markedJSValueRefArrays;
 
     std::unique_ptr<MachineThreads> m_machineThreads;
     

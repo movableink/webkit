@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,8 +47,13 @@
 #endif
 
 #if USE(SOUP)
-#include "HTTPCookieAcceptPolicy.h"
+#include <WebCore/HTTPCookieAcceptPolicy.h>
 #include <WebCore/SoupNetworkProxySettings.h>
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+#include <WebCore/RenderThemeIOS.h>
+#include <WebCore/UTTypeRecordSwizzler.h>
 #endif
 
 namespace API {
@@ -84,10 +89,6 @@ struct WebProcessCreationParameters {
 #endif
 #if ENABLE(MEDIA_STREAM)
     SandboxExtension::Handle audioCaptureExtensionHandle;
-    bool shouldCaptureAudioInUIProcess { false };
-    bool shouldCaptureAudioInGPUProcess { false };
-    bool shouldCaptureVideoInUIProcess { false };
-    bool shouldCaptureDisplayInUIProcess { false };
 #endif
 
     String webCoreLoggingChannels;
@@ -124,6 +125,7 @@ struct WebProcessCreationParameters {
     bool fullKeyboardAccessEnabled { false };
     bool memoryCacheDisabled { false };
     bool attrStyleEnabled { false };
+    bool useGPUProcessForMedia { false };
 
 #if ENABLE(SERVICE_CONTROLS)
     bool hasImageServices { false };
@@ -201,16 +203,37 @@ struct WebProcessCreationParameters {
 #if PLATFORM(IOS)
     Optional<SandboxExtension::Handle> compilerServiceExtensionHandle;
     Optional<SandboxExtension::Handle> contentFilterExtensionHandle;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
     Optional<SandboxExtension::Handle> diagnosticsExtensionHandle;
+    SandboxExtension::HandleArray dynamicMachExtensionHandles;
 #endif
 
 #if PLATFORM(COCOA)
     Optional<SandboxExtension::Handle> neHelperExtensionHandle;
     Optional<SandboxExtension::Handle> neSessionManagerExtensionHandle;
+    bool systemHasBattery { false };
+    Optional<HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>> mimeTypesMap;
+    HashMap<String, String> mapUTIFromMIMEType;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     bool currentUserInterfaceIdiomIsPad { false };
+    bool supportsPictureInPicture { false };
+    WebCore::RenderThemeIOS::CSSValueToSystemColorMap cssValueToSystemColorMap;
+    WebCore::Color focusRingColor;
+    String localizedDeviceModel;
+#if USE(UTTYPE_SWIZZLER)
+    Vector<WebCore::UTTypeItem> vectorOfUTTypeItem;
+#endif
+#endif
+
+#if PLATFORM(COCOA)
+    SandboxExtension::HandleArray mediaExtensionHandles; // FIXME(207716): Remove when GPU process is complete.
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    Optional<SandboxExtension::Handle> preferencesExtensionHandle;
+#endif
 #endif
 };
 

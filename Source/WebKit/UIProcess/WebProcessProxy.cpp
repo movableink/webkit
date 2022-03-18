@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,7 @@
 #include "WebsiteData.h"
 #include "WebsiteDataFetchOption.h"
 #include <WebCore/DiagnosticLoggingKeys.h>
+#include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/PrewarmInformation.h>
 #include <WebCore/PublicSuffix.h>
 #include <WebCore/SuddenTermination.h>
@@ -159,7 +160,21 @@ private:
     void addMessageReceiver(IPC::StringReference messageReceiverName, IPC::MessageReceiver& receiver) final { m_process.addMessageReceiver(messageReceiverName, receiver); }
     void removeMessageReceiver(IPC::StringReference messageReceiverName) final { m_process.removeMessageReceiver(messageReceiverName); }
     IPC::Connection& connection() final { return *m_process.connection(); }
+    Logger& logger() final
+    {
+        if (!m_logger) {
+            m_logger = Logger::create(this);
+            m_logger->setEnabled(this, m_process.sessionID().isAlwaysOnLoggingAllowed());
+        }
+        return *m_logger;
+    }
+    bool willStartCapture(CaptureDevice::DeviceType) const final
+    {
+        // FIXME: We should validate this is granted.
+        return true;
+    }
 
+    RefPtr<Logger> m_logger;
     WebProcessProxy& m_process;
 };
 #endif
@@ -252,12 +267,17 @@ void WebProcessProxy::setWebsiteDataStore(WebsiteDataStore& dataStore)
     send(Messages::WebProcess::SetWebsiteDataStoreParameters(processPool().webProcessDataStoreParameters(*this, dataStore)), 0);
 }
 
+bool WebProcessProxy::isDummyProcessProxy() const
+{
+    return m_websiteDataStore && processPool().dummyProcessProxy(m_websiteDataStore->sessionID()) == this;
+}
+
 void WebProcessProxy::updateRegistrationWithDataStore()
 {
     if (!m_websiteDataStore)
         return;
     
-    bool shouldBeRegistered = processPool().dummyProcessProxy() != this && (pageCount() || provisionalPageCount());
+    bool shouldBeRegistered = pageCount() || provisionalPageCount();
     if (shouldBeRegistered)
         m_websiteDataStore->registerProcess(*this);
     else
@@ -432,6 +452,11 @@ void WebProcessProxy::notifyPageStatisticsTelemetryFinished(API::Object* message
 {
     for (auto& page : globalPageMap())
         page.value->postMessageToInjectedBundle("ResourceLoadStatisticsTelemetryFinished", messageBody);
+}
+
+void WebProcessProxy::setShouldBlockThirdPartyCookiesForTesting(ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode, CompletionHandler<void()>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::WebProcess::SetShouldBlockThirdPartyCookiesForTesting(thirdPartyCookieBlockingMode), WTFMove(completionHandler));
 }
 #endif
 
@@ -683,7 +708,9 @@ void WebProcessProxy::getPlugins(bool refresh, CompletionHandler<void(Vector<Plu
 #if ENABLE(NETSCAPE_PLUGIN_API)
 void WebProcessProxy::getPluginProcessConnection(uint64_t pluginProcessToken, Messages::WebProcessProxy::GetPluginProcessConnection::DelayedReply&& reply)
 {
-    PluginProcessManager::singleton().getPluginProcessConnection(pluginProcessToken, WTFMove(reply));
+    MESSAGE_CHECK(HashSet<uint64_t>::isValidValue(pluginProcessToken));
+    bool success = PluginProcessManager::singleton().getPluginProcessConnection(pluginProcessToken, WTFMove(reply));
+    MESSAGE_CHECK(success);
 }
 #endif
 
@@ -696,6 +723,12 @@ void WebProcessProxy::getNetworkProcessConnection(Messages::WebProcessProxy::Get
 void WebProcessProxy::getGPUProcessConnection(Messages::WebProcessProxy::GetGPUProcessConnection::DelayedReply&& reply)
 {
     m_processPool->getGPUProcessConnection(*this, WTFMove(reply));
+}
+
+void WebProcessProxy::gpuProcessCrashed()
+{
+    for (auto& page : copyToVectorOf<RefPtr<WebPageProxy>>(m_pageMap.values()))
+        page->gpuProcessCrashed();
 }
 #endif
 
@@ -801,11 +834,11 @@ void WebProcessProxy::processDidTerminateOrFailedToLaunch()
 
 void WebProcessProxy::didReceiveInvalidMessage(IPC::Connection& connection, IPC::StringReference messageReceiverName, IPC::StringReference messageName)
 {
-    WTFLogAlways("Received an invalid message \"%s.%s\" from the web process.\n", messageReceiverName.toString().data(), messageName.toString().data());
+    logInvalidMessage(connection, messageReceiverName, messageName);
 
     WebProcessPool::didReceiveInvalidMessage(messageReceiverName, messageName);
 
-    // Terminate the WebProcess.
+    // Terminate the WebContent process.
     terminate();
 
     // Since we've invalidated the connection we'll never get a IPC::Connection::Client::didClose
@@ -831,6 +864,7 @@ void WebProcessProxy::didBecomeUnresponsive()
     // If the web process becomes unresponsive and only runs service workers, kill it ourselves since there are no native clients to do it.
     if (isRunningServiceWorkers() && m_pageMap.isEmpty()) {
         RELEASE_LOG_ERROR(PerformanceLogging, "%p - WebProcessProxy::didBecomeUnresponsive() Terminating service worker-only web process with pid %d because it is unresponsive", this, processIdentifier());
+        disableServiceWorkers();
         terminate();
     }
 }
@@ -857,13 +891,37 @@ void WebProcessProxy::didChangeIsResponsive()
 
 bool WebProcessProxy::mayBecomeUnresponsive()
 {
-    return !platformIsBeingDebugged();
+#if !defined(NDEBUG) || ASAN_ENABLED
+    // Disable responsiveness checks in slow builds to avoid false positives.
+    return false;
+#else
+    if (platformIsBeingDebugged())
+        return false;
+
+    static bool isLibgmallocEnabled = [] {
+        char* variable = getenv("DYLD_INSERT_LIBRARIES");
+        if (!variable)
+            return false;
+        if (!strstr(variable, "libgmalloc"))
+            return false;
+        return true;
+    }();
+    if (isLibgmallocEnabled)
+        return false;
+
+    return true;
+#endif
+
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    enableRemoteInspectorIfNeeded();
+#endif
 }
 
 void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connection::Identifier connectionIdentifier)
 {
     RELEASE_ASSERT(isMainThreadOrCheckDisabled());
 
+    auto protectedThis = makeRef(*this);
     AuxiliaryProcessProxy::didFinishLaunching(launcher, connectionIdentifier);
 
     if (!IPC::Connection::identifierIsValid(connectionIdentifier)) {
@@ -883,9 +941,16 @@ void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
         if (xpc_connection_t xpcConnection = connection()->xpcConnection())
             m_throttler.didConnectToProcess(xpc_connection_get_pid(xpcConnection));
     }
+#endif
 
+#if PLATFORM(COCOA)
     unblockAccessibilityServerIfNeeded();
 #endif
+
+    if (m_shouldStartResponsivenessTimerWhenLaunched) {
+        auto useLazyStop = *std::exchange(m_shouldStartResponsivenessTimerWhenLaunched, WTF::nullopt);
+        startResponsivenessTimer(useLazyStop);
+    }
 }
 
 WebFrameProxy* WebProcessProxy::webFrame(FrameIdentifier frameID) const
@@ -977,7 +1042,7 @@ bool WebProcessProxy::canBeAddedToWebProcessCache() const
 
 void WebProcessProxy::maybeShutDown()
 {
-    if (processPool().dummyProcessProxy() == this && m_pageMap.isEmpty()) {
+    if (isDummyProcessProxy() && m_pageMap.isEmpty()) {
         ASSERT(state() == State::Terminated);
         m_processPool->disconnectProcess(this);
         return;
@@ -1085,7 +1150,7 @@ void WebProcessProxy::requestTermination(ProcessTerminationReason reason)
         return;
 
     auto protectedThis = makeRef(*this);
-    RELEASE_LOG_IF(isReleaseLoggingAllowed(), Process, "%p - WebProcessProxy::requestTermination - reason %d", this, reason);
+    RELEASE_LOG_ERROR_IF(isReleaseLoggingAllowed(), Process, "%p - WebProcessProxy::requestTermination - PID %d - reason %d", this, processIdentifier(), reason);
 
     AuxiliaryProcessProxy::terminate();
 
@@ -1114,6 +1179,19 @@ bool WebProcessProxy::isReleaseLoggingAllowed() const
 void WebProcessProxy::stopResponsivenessTimer()
 {
     responsivenessTimer().stop();
+}
+
+void WebProcessProxy::startResponsivenessTimer(UseLazyStop useLazyStop)
+{
+    if (isLaunching()) {
+        m_shouldStartResponsivenessTimerWhenLaunched = useLazyStop;
+        return;
+    }
+
+    if (useLazyStop == UseLazyStop::Yes)
+        responsivenessTimer().startWithLazyStop();
+    else
+        responsivenessTimer().start();
 }
 
 void WebProcessProxy::enableSuddenTermination()
@@ -1336,7 +1414,7 @@ void WebProcessProxy::isResponsive(CompletionHandler<void(bool isWebProcessRespo
     if (callback)
         m_isResponsiveCallbacks.append(WTFMove(callback));
 
-    responsivenessTimer().start();
+    startResponsivenessTimer();
     send(Messages::WebProcess::MainThreadPing(), 0);
 }
 
@@ -1458,6 +1536,7 @@ const HashSet<String>& WebProcessProxy::platformPathsWithAssumedReadAccess()
 
 void WebProcessProxy::didCollectPrewarmInformation(const WebCore::RegistrableDomain& domain, const WebCore::PrewarmInformation& prewarmInformation)
 {
+    MESSAGE_CHECK(!domain.isEmpty());
     processPool().didCollectPrewarmInformation(domain, prewarmInformation);
 }
 
@@ -1562,9 +1641,12 @@ void WebProcessProxy::endBackgroundActivityForFullscreenInput()
 #endif
 
 #if ENABLE(SERVICE_WORKER)
-void WebProcessProxy::establishServiceWorkerContext(const WebPreferencesStore& store)
+void WebProcessProxy::establishServiceWorkerContext(const WebPreferencesStore& store, CompletionHandler<void()>&& completionHandler)
 {
-    send(Messages::WebProcess::EstablishWorkerContextConnectionToNetworkProcess { processPool().defaultPageGroup().pageGroupID(), m_serviceWorkerInformation->serviceWorkerPageProxyID, m_serviceWorkerInformation->serviceWorkerPageID, store, *m_registrableDomain, m_serviceWorkerInformation->initializationData }, 0);
+    sendWithAsyncReply(Messages::WebProcess::EstablishWorkerContextConnectionToNetworkProcess { processPool().defaultPageGroup().pageGroupID(), m_serviceWorkerInformation->serviceWorkerPageProxyID, m_serviceWorkerInformation->serviceWorkerPageID, store, *m_registrableDomain, m_serviceWorkerInformation->initializationData }, [activity = m_throttler.backgroundActivity("Establish Service Worker"_s), completionHandler = WTFMove(completionHandler)]() mutable {
+        RELEASE_LOG(Loading, "WebProcessProxy::establishServiceWorkerContext finished");
+        completionHandler();
+    }, 0);
 }
 
 void WebProcessProxy::setServiceWorkerUserAgent(const String& userAgent)
@@ -1641,6 +1723,7 @@ void WebProcessProxy::disableServiceWorkers()
         return;
 
     m_serviceWorkerInformation = { };
+    updateBackgroundResponsivenessTimer();
 
 #if ENABLE(SERVICE_WORKER)
     processPool().removeFromServiceWorkerProcesses(*this);
@@ -1684,10 +1767,19 @@ void WebProcessProxy::enableServiceWorkers(const Optional<UserContentControllerI
         nullptr,
         { }
     };
+    updateBackgroundResponsivenessTimer();
 #if ENABLE(SERVICE_WORKER)
     updateServiceWorkerProcessAssertion();
 #endif
 }
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+void WebProcessProxy::didCreateContextInGPUProcessForVisibilityPropagation(LayerHostingContextID contextID)
+{
+    for (auto& page : copyToVectorOf<RefPtr<WebPageProxy>>(m_pageMap.values()))
+        page->didCreateContextInGPUProcessForVisibilityPropagation(contextID);
+}
+#endif
 
 } // namespace WebKit
 

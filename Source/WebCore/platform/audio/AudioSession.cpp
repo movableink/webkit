@@ -33,10 +33,25 @@
 
 namespace WebCore {
 
+static UniqueRef<AudioSession>& sharedAudioSession()
+{
+    static NeverDestroyed<UniqueRef<AudioSession>> session = AudioSession::create();
+    return session.get();
+}
+
+UniqueRef<AudioSession> AudioSession::create()
+{
+    return makeUniqueRef<AudioSession>();
+}
+
 AudioSession& AudioSession::sharedSession()
 {
-    static NeverDestroyed<AudioSession> session;
-    return session;
+    return sharedAudioSession();
+}
+
+void AudioSession::setSharedSession(UniqueRef<AudioSession>&& session)
+{
+    sharedAudioSession() = WTFMove(session);
 }
 
 bool AudioSession::tryToSetActive(bool active)
@@ -47,6 +62,24 @@ bool AudioSession::tryToSetActive(bool active)
     m_active = active;
     return true;
 }
+
+#if !PLATFORM(IOS_FAMILY)
+void AudioSession::addInterruptionObserver(InterruptionObserver&)
+{
+}
+
+void AudioSession::removeInterruptionObserver(InterruptionObserver&)
+{
+}
+
+void AudioSession::beginInterruption()
+{
+}
+
+void AudioSession::endInterruption(MayResume)
+{
+}
+#endif
 
 #if !PLATFORM(COCOA)
 class AudioSessionPrivate {

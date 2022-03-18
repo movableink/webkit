@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2011-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -28,20 +28,15 @@
 #include "File.h"
 #include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameTree.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLAttachmentElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
-#include "HTMLMediaElement.h"
-#include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLPlugInImageElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
-#include "HitTestLocation.h"
 #include "PseudoElement.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
@@ -59,29 +54,29 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HitTestResult::HitTestResult()
-    : m_isOverWidget(false)
-{
-}
+HitTestResult::HitTestResult() = default;
 
 HitTestResult::HitTestResult(const LayoutPoint& point)
     : m_hitTestLocation(point)
     , m_pointInInnerNodeFrame(point)
-    , m_isOverWidget(false)
+{
+}
+
+HitTestResult::HitTestResult(const LayoutRect& rect)
+    : m_hitTestLocation { rect }
+    , m_pointInInnerNodeFrame { rect.center() }
 {
 }
 
 HitTestResult::HitTestResult(const LayoutPoint& centerPoint, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding)
     : m_hitTestLocation(centerPoint, topPadding, rightPadding, bottomPadding, leftPadding)
     , m_pointInInnerNodeFrame(centerPoint)
-    , m_isOverWidget(false)
 {
 }
 
 HitTestResult::HitTestResult(const HitTestLocation& other)
     : m_hitTestLocation(other)
     , m_pointInInnerNodeFrame(m_hitTestLocation.point())
-    , m_isOverWidget(false)
 {
 }
 
@@ -620,7 +615,8 @@ bool HitTestResult::isContentEditable() const
     return m_innerNonSharedNode->hasEditableStyle();
 }
 
-HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const LayoutRect& rect)
+template<typename RectType>
+inline HitTestProgress HitTestResult::addNodeToListBasedTestResultCommon(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const RectType& rect)
 {
     // If it is not a list-based hit test, this method has to be no-op.
     if (!request.resultIsElementList()) {
@@ -643,27 +639,14 @@ HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const Hi
     return regionFilled ? HitTestProgress::Stop : HitTestProgress::Continue;
 }
 
+HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const LayoutRect& rect)
+{
+    return addNodeToListBasedTestResultCommon(node, request, locationInContainer, rect);
+}
+
 HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const FloatRect& rect)
 {
-    // If it is not a list-based hit test, this method has to be no-op.
-    if (!request.resultIsElementList()) {
-        ASSERT(!isRectBasedTest());
-        return HitTestProgress::Stop;
-    }
-
-    if (!node)
-        return HitTestProgress::Continue;
-
-    if (request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
-        node = node->document().ancestorNodeInThisScope(node);
-
-    mutableListBasedTestResult().add(node);
-
-    if (request.includesAllElementsUnderPoint())
-        return HitTestProgress::Continue;
-
-    bool regionFilled = rect.contains(locationInContainer.boundingBox());
-    return regionFilled ? HitTestProgress::Stop : HitTestProgress::Continue;
+    return addNodeToListBasedTestResultCommon(node, request, locationInContainer, rect);
 }
 
 void HitTestResult::append(const HitTestResult& other, const HitTestRequest& request)

@@ -31,6 +31,7 @@
 #include "WebsiteDataStore.h"
 #include <WebCore/Cookie.h>
 #include <WebCore/CookieStorage.h>
+#include <WebCore/HTTPCookieAcceptPolicy.h>
 #include <WebCore/NetworkStorageSession.h>
 
 using namespace WebKit;
@@ -71,6 +72,18 @@ void HTTPCookieStore::cookies(CompletionHandler<void(const Vector<WebCore::Cooki
     auto* cookieManager = pool->supplement<WebKit::WebCookieManagerProxy>();
     cookieManager->getAllCookies(m_owningDataStore->sessionID(), [pool = WTFMove(pool), completionHandler = WTFMove(completionHandler)] (const Vector<WebCore::Cookie>& cookies) mutable {
         completionHandler(cookies);
+    });
+}
+
+void HTTPCookieStore::cookiesForURL(WTF::URL&& url, CompletionHandler<void(Vector<WebCore::Cookie>&&)>&& completionHandler)
+{
+    auto* pool = m_owningDataStore->processPoolForCookieStorageOperations();
+    if (!pool)
+        return completionHandler({ });
+
+    auto* cookieManager = pool->supplement<WebKit::WebCookieManagerProxy>();
+    cookieManager->getCookies(m_owningDataStore->sessionID(), url, [completionHandler = WTFMove(completionHandler)] (Vector<WebCore::Cookie>&& cookies) mutable {
+        completionHandler(WTFMove(cookies));
     });
 }
 
@@ -133,7 +146,7 @@ void HTTPCookieStore::deleteAllCookies(CompletionHandler<void()>&& completionHan
     RunLoop::main().dispatch(WTFMove(completionHandler));
 }
 
-void HTTPCookieStore::setHTTPCookieAcceptPolicy(WebKit::HTTPCookieAcceptPolicy policy, CompletionHandler<void()>&& completionHandler)
+void HTTPCookieStore::setHTTPCookieAcceptPolicy(WebCore::HTTPCookieAcceptPolicy policy, CompletionHandler<void()>&& completionHandler)
 {
     auto* pool = m_owningDataStore->processPoolForCookieStorageOperations();
     if (!pool) {
@@ -279,7 +292,7 @@ void HTTPCookieStore::deleteCookieFromDefaultUIProcessCookieStore(const WebCore:
 void HTTPCookieStore::startObservingChangesToDefaultUIProcessCookieStore(Function<void()>&&) { }
 void HTTPCookieStore::stopObservingChangesToDefaultUIProcessCookieStore() { }
 void HTTPCookieStore::deleteCookiesInDefaultUIProcessCookieStore() { }
-void HTTPCookieStore::setHTTPCookieAcceptPolicyInDefaultUIProcessCookieStore(WebKit::HTTPCookieAcceptPolicy) { }
+void HTTPCookieStore::setHTTPCookieAcceptPolicyInDefaultUIProcessCookieStore(WebCore::HTTPCookieAcceptPolicy) { }
 #endif
     
 } // namespace API

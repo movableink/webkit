@@ -34,7 +34,9 @@
 #import "HitTestResult.h"
 #import "MediaPlayerPrivate.h"
 #import "Range.h"
+#import "UTIUtilities.h"
 #import <AVFoundation/AVPlayer.h>
+#import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <wtf/cocoa/NSURLExtras.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -67,7 +69,8 @@ ExceptionOr<RefPtr<Range>> Internals::rangeForDictionaryLookupAtLocation(int x, 
 
     document->updateLayoutIgnorePendingStylesheets();
 
-    HitTestResult result = document->frame()->mainFrame().eventHandler().hitTestResultAtPoint(IntPoint(x, y), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent);
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+    HitTestResult result = document->frame()->mainFrame().eventHandler().hitTestResultAtPoint(IntPoint(x, y), hitType);
     RefPtr<Range> range;
     std::tie(range, std::ignore) = DictionaryLookup::rangeAtHitTestResult(result);
     return WTFMove(range);
@@ -87,5 +90,35 @@ double Internals::privatePlayerVolume(const HTMLMediaElement& element)
     return [player volume];
 }
 #endif
+
+String Internals::encodedPreferenceValue(const String& domain, const String& key)
+{
+    auto userDefaults = adoptNS([[NSUserDefaults alloc] initWithSuiteName: domain]);
+    id value = [userDefaults.get() objectForKey:key];
+    NSError *e = nil;
+    auto data = adoptNS([NSKeyedArchiver archivedDataWithRootObject:value requiringSecureCoding:YES error:&e]);
+    ASSERT(!e);
+    auto encodedString = [data base64EncodedStringWithOptions:0];
+    return encodedString;
+}
+
+String Internals::getUTIFromMIMEType(const String& mimeType)
+{
+    return UTIFromMIMEType(mimeType);
+}
+
+String Internals::getUTIFromTag(const String& tagClass, const String& tag, const String& conformingToUTI)
+{
+    return UTIFromTag(tagClass, tag, conformingToUTI);
+}
+
+bool Internals::isRemoteUIAppForAccessibility()
+{
+#if PLATFORM(MAC)
+    return [NSAccessibilityRemoteUIElement isRemoteUIApp];
+#else
+    return false;
+#endif
+}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,15 +32,19 @@
 #include "ProcessLauncher.h"
 #include "ProcessThrottler.h"
 #include "ProcessThrottlerClient.h"
-#include "TransactionID.h"
 #include "WebPageProxyIdentifier.h"
 #include "WebProcessProxyMessagesReplies.h"
 #include <memory>
-#include <wtf/Deque.h>
+#include <pal/SessionID.h>
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+#include "LayerHostingContext.h"
+#endif
 
 namespace WebKit {
 
 class WebProcessProxy;
+class WebsiteDataStore;
 struct GPUProcessCreationParameters;
 
 class GPUProcessProxy final : public AuxiliaryProcessProxy, private ProcessThrottlerClient, public CanMakeWeakPtr<GPUProcessProxy> {
@@ -49,6 +53,7 @@ class GPUProcessProxy final : public AuxiliaryProcessProxy, private ProcessThrot
     friend LazyNeverDestroyed<GPUProcessProxy>;
 public:
     static GPUProcessProxy& singleton();
+    static GPUProcessProxy* singletonIfCreated() { return m_singleton; }
 
     void getGPUProcessConnection(WebProcessProxy&, Messages::WebProcessProxy::GetGPUProcessConnectionDelayedReply&&);
 
@@ -57,12 +62,28 @@ public:
 
     // ProcessThrottlerClient
     void sendProcessDidResume() final { }
-    
+
+#if ENABLE(MEDIA_STREAM)
+    void setUseMockCaptureDevices(bool);
+    void setOrientationForMediaCapture(uint64_t orientation);
+    void updateCaptureAccess(bool allowAudioCapture, bool allowVideoCapture, bool allowDisplayCapture, WebCore::ProcessIdentifier, CompletionHandler<void()>&&);
+#endif
+
+    void removeSession(PAL::SessionID);
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    LayerHostingContextID contextIDForVisibilityPropagation() const;
+#endif
+
 private:
     explicit GPUProcessProxy();
     ~GPUProcessProxy();
 
+    void addSession(const WebsiteDataStore&);
+
     // AuxiliaryProcessProxy
+    ASCIILiteral processName() const final { return "GPU"_s; }
+
     void getLaunchOptions(ProcessLauncher::LaunchOptions&) override;
     void connectionWillOpen(IPC::Connection&) override;
     void processWillShutDown(IPC::Connection&) override;
@@ -80,8 +101,15 @@ private:
     void openGPUProcessConnection(ConnectionRequestIdentifier, WebProcessProxy&);
 
     // IPC::Connection::Client
+    void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
     void didClose(IPC::Connection&) override;
     void didReceiveInvalidMessage(IPC::Connection&, IPC::StringReference messageReceiverName, IPC::StringReference messageName) override;
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    void didCreateContextForVisibilityPropagation(LayerHostingContextID);
+#endif
+
+    static GPUProcessProxy* m_singleton;
 
     struct ConnectionRequest {
         WeakPtr<WebProcessProxy> webProcess;
@@ -92,6 +120,16 @@ private:
 
     ProcessThrottler m_throttler;
     ProcessThrottler::ActivityVariant m_activityFromWebProcesses;
+#if ENABLE(MEDIA_STREAM)
+    bool m_useMockCaptureDevices { false };
+    uint64_t m_orientation { 0 };
+#endif
+    HashSet<PAL::SessionID> m_sessionIDs;
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    LayerHostingContextID m_contextIDForVisibilityPropagation { 0 };
+    Vector<WeakPtr<WebProcessProxy>> m_processesPendingVisibilityPropagationNotification;
+#endif
 };
 
 } // namespace WebKit

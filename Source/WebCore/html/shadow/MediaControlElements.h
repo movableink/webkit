@@ -31,6 +31,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "GenericTaskQueue.h"
 #include "MediaControlElementTypes.h"
 #include "TextTrackRepresentation.h"
 #include <wtf/LoggerHelper.h>
@@ -482,40 +483,48 @@ public:
 
     enum class ForceUpdate { Yes, No };
     void updateSizes(ForceUpdate force = ForceUpdate::No);
-
     void updateDisplay();
+
+    void updateTextTrackRepresentationImageIfNeeded();
+
     void enteredFullscreen();
     void exitedFullscreen();
 
 private:
-    void updateTimerFired();
+    explicit MediaControlTextTrackContainerElement(Document&);
+
+    // Element
+    RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
+
+    // TextTrackRepresentationClient
+    RefPtr<Image> createTextTrackRepresentationImage() override;
+    void textTrackRepresentationBoundsChanged(const IntRect&) override;
+
+    void updateTextTrackRepresentationIfNeeded();
+    void clearTextTrackRepresentation();
+
+    bool updateVideoDisplaySize();
     void updateActiveCuesFontSize();
     void updateTextStrokeStyle();
     void processActiveVTTCue(VTTCue&);
+    void updateTextTrackStyle();
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
     const void* logIdentifier() const final;
     WTFLogChannel& logChannel() const final;
     const char* logClassName() const final { return "MediaControlTextTrackContainerElement"; }
+    mutable RefPtr<Logger> m_logger;
+    mutable const void* m_logIdentifier { nullptr };
 #endif
 
-    explicit MediaControlTextTrackContainerElement(Document&);
-
-    RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-
-    RefPtr<Image> createTextTrackRepresentationImage() override;
-    void textTrackRepresentationBoundsChanged(const IntRect&) override;
-    void updateTextTrackRepresentation();
-    void clearTextTrackRepresentation();
-    void updateStyleForTextTrackRepresentation();
     std::unique_ptr<TextTrackRepresentation> m_textTrackRepresentation;
 
-    Timer m_updateTimer;
+    GenericTaskQueue<Timer> m_taskQueue;
     IntRect m_videoDisplaySize;
-    int m_fontSize;
-    bool m_fontSizeIsImportant;
-    bool m_updateTextTrackRepresentationStyle;
+    int m_fontSize { 0 };
+    bool m_fontSizeIsImportant { false };
+    bool m_needsGenerateTextTrackRepresentation { false };
 };
 
 #endif

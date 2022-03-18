@@ -238,6 +238,10 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer& layer)
 
 RenderLayerBacking::~RenderLayerBacking()
 {
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "~RenderLayerBacking: m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "~RenderLayerBacking: m_owningLayer is null (55699292)");
+#endif
     // Note that m_owningLayer->backing() is null here.
     updateAncestorClipping(false, nullptr);
     updateChildClippingStrategy(false);
@@ -258,6 +262,11 @@ RenderLayerBacking::~RenderLayerBacking()
 
 void RenderLayerBacking::willBeDestroyed()
 {
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::willBeDestroyed(): m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::willBeDestroyed(): m_owningLayer is null (55699292)");
+#endif
+
     ASSERT(m_owningLayer.backing() == this);
     compositor().removeFromScrollCoordinatedLayers(m_owningLayer);
 
@@ -699,6 +708,11 @@ static bool hasNonZeroTransformOrigin(const RenderObject& renderer)
 
 bool RenderLayerBacking::updateCompositedBounds()
 {
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::updateCompositedBounds(): m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::updateCompositedBounds(): m_owningLayer is null (55699292)");
+#endif
+
     LayoutRect layerBounds = m_owningLayer.calculateLayerBounds(&m_owningLayer, { }, RenderLayer::defaultCalculateLayerBoundsFlags() | RenderLayer::ExcludeHiddenDescendants | RenderLayer::DontConstrainForMask);
     // Clip to the size of the document or enclosing overflow-scroll layer.
     // If this or an ancestor is transformed, we can't currently compute the correct rect to intersect with.
@@ -790,6 +804,11 @@ void RenderLayerBacking::updateAfterWidgetResize()
 
 void RenderLayerBacking::updateAfterLayout(bool needsClippingUpdate, bool needsFullRepaint)
 {
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::updateAfterLayout(): m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::updateAfterLayout(): m_owningLayer is null (55699292)");
+#endif
+
     LOG(Compositing, "RenderLayerBacking %p updateAfterLayout (layer %p)", this, &m_owningLayer);
 
     // This is the main trigger for layout changing layer geometry, but we have to do the work again in updateBackingAndHierarchy()
@@ -954,6 +973,11 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
 
     if (layerConfigChanged)
         updatePaintingPhases();
+
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::updateConfiguration(): m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::updateConfiguration(): m_owningLayer is null (55699292)");
+#endif
 
     return layerConfigChanged;
 }
@@ -1432,6 +1456,11 @@ void RenderLayerBacking::updateAfterDescendants()
         m_scrollContainerLayer->setContentsVisible(renderer().style().visibility() == Visibility::Visible);
         m_scrollContainerLayer->setUserInteractionEnabled(renderer().style().pointerEvents() != PointerEvents::None);
     }
+
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::updateAfterDescendants(): m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::updateAfterDescendants(): m_owningLayer is null (55699292)");
+#endif
 }
 
 // FIXME: Avoid repaints when clip path changes.
@@ -1583,18 +1612,24 @@ void RenderLayerBacking::updateDrawsContent(PaintedContentsInfo& contentsInfo)
         m_backgroundLayer->setDrawsContent(m_backgroundLayerPaintsFixedRootBackground ? hasPaintedContent : contentsInfo.paintsBoxDecorations());
 }
 
+#if ENABLE(ASYNC_SCROLLING)
 void RenderLayerBacking::updateEventRegion()
 {
-#if PLATFORM(IOS_FAMILY)
     if (paintsIntoCompositedAncestor())
         return;
 
     bool hasTouchActionElements = false;
-#if ENABLE(POINTER_EVENTS)
+#if PLATFORM(IOS_FAMILY)
     hasTouchActionElements = renderer().document().mayHaveElementsWithNonAutoTouchAction();
 #endif
-    if (m_owningLayer.isRenderViewLayer() && !hasTouchActionElements)
-        return;
+    if (!hasTouchActionElements) {
+        if (m_owningLayer.isRenderViewLayer())
+            return;
+
+        auto& settings = renderer().settings();
+        if (!settings.asyncFrameScrollingEnabled() && !settings.asyncOverflowScrollingEnabled())
+            return;
+    }
 
     auto updateEventRegionForLayer = [&](GraphicsLayer& graphicsLayer) {
         GraphicsContext nullContext(nullptr);
@@ -1602,10 +1637,18 @@ void RenderLayerBacking::updateEventRegion()
         auto eventRegionContext = eventRegion.makeContext();
         auto layerOffset = graphicsLayer.scrollOffset() - roundedIntSize(graphicsLayer.offsetFromRenderer());
 
-        if (&graphicsLayer == m_scrolledContentsLayer && renderer().visibleToHitTesting()) {
-            // Initialize scrolled contents layer with layer-sized event region as it can all used for scrolling.
-            // This avoids generating unnecessarily complex event regions. We still need to to do the paint to capture touch-action regions.
-            eventRegionContext.unite(enclosingIntRect(FloatRect(-layerOffset, graphicsLayer.size())), RenderStyle::defaultStyle());
+        if (renderer().visibleToHitTesting()) {
+            if (&graphicsLayer == m_scrollContainerLayer) {
+                eventRegionContext.unite(enclosingIntRect(FloatRect({ }, graphicsLayer.size())), RenderStyle::defaultStyle());
+                graphicsLayer.setEventRegion(WTFMove(eventRegion));
+                return;
+            }
+
+            if (&graphicsLayer == m_scrolledContentsLayer) {
+                // Initialize scrolled contents layer with layer-sized event region as it can all used for scrolling.
+                // This avoids generating unnecessarily complex event regions. We still need to to do the paint to capture touch-action regions.
+                eventRegionContext.unite(enclosingIntRect(FloatRect(-layerOffset, graphicsLayer.size())), RenderStyle::defaultStyle());
+            }
         }
 
         auto dirtyRect = enclosingIntRect(FloatRect(FloatPoint(graphicsLayer.offsetFromRenderer()), graphicsLayer.size()));
@@ -1618,10 +1661,13 @@ void RenderLayerBacking::updateEventRegion()
 
     updateEventRegionForLayer(*m_graphicsLayer);
 
+    if (m_scrollContainerLayer)
+        updateEventRegionForLayer(*m_scrollContainerLayer);
+
     if (m_scrolledContentsLayer)
         updateEventRegionForLayer(*m_scrolledContentsLayer);
-#endif
 }
+#endif
 
 bool RenderLayerBacking::updateAncestorClippingStack(Vector<CompositedClipData>&& clippingData)
 {
@@ -2013,6 +2059,11 @@ void RenderLayerBacking::detachFromScrollingCoordinator(OptionSet<ScrollCoordina
         LOG_WITH_STREAM(Compositing, stream << "Detaching Scrolling node " << m_scrollingNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_scrollingNodeID);
         m_scrollingNodeID = 0;
+        
+#if ENABLE(SCROLLING_THREAD)
+        if (m_scrollContainerLayer)
+            m_scrollContainerLayer->setScrollingNodeID(0);
+#endif
     }
 
     if (roles.contains(ScrollCoordinationRole::ScrollingProxy) && m_ancestorClippingStack) {
@@ -2036,6 +2087,38 @@ void RenderLayerBacking::detachFromScrollingCoordinator(OptionSet<ScrollCoordina
         LOG_WITH_STREAM(Compositing, stream << "Detaching Positioned node " << m_positioningNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_positioningNodeID);
         m_positioningNodeID = 0;
+#if ENABLE(SCROLLING_THREAD)
+        m_graphicsLayer->setScrollingNodeID(0);
+#endif
+    }
+}
+
+void RenderLayerBacking::setScrollingNodeIDForRole(ScrollingNodeID nodeID, ScrollCoordinationRole role)
+{
+    switch (role) {
+    case ScrollCoordinationRole::Scrolling:
+        m_scrollingNodeID = nodeID;
+#if ENABLE(SCROLLING_THREAD)
+        if (m_scrollContainerLayer)
+            m_scrollContainerLayer->setScrollingNodeID(m_scrollingNodeID);
+#endif
+        break;
+    case ScrollCoordinationRole::ScrollingProxy:
+        // These nodeIDs are stored in m_ancestorClippingStack.
+        ASSERT_NOT_REACHED();
+        break;
+    case ScrollCoordinationRole::FrameHosting:
+        m_frameHostingNodeID = nodeID;
+        break;
+    case ScrollCoordinationRole::ViewportConstrained:
+        m_viewportConstrainedNodeID = nodeID;
+        break;
+    case ScrollCoordinationRole::Positioning:
+        m_positioningNodeID = nodeID;
+#if ENABLE(SCROLLING_THREAD)
+        m_graphicsLayer->setScrollingNodeID(m_positioningNodeID);
+#endif
+        break;
     }
 }
 
@@ -2107,7 +2190,7 @@ static bool canDirectlyCompositeBackgroundBackgroundImage(const RenderStyle& sty
 
     // FIXME: support gradients with isGeneratedImage.
     auto* styleImage = fillLayer.image();
-    if (!styleImage->isCachedImage())
+    if (!styleImage->hasCachedImage())
         return false;
 
     auto* image = styleImage->cachedImage()->image();
@@ -2383,7 +2466,7 @@ static LayerTraversal traverseVisibleNonCompositedDescendantLayers(RenderLayer& 
     // FIXME: We shouldn't be called with a stale z-order lists. See bug 85512.
     parent.updateLayerListsIfNeeded();
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     LayerListMutationDetector mutationChecker(parent);
 #endif
 
@@ -2795,6 +2878,11 @@ void RenderLayerBacking::paintIntoLayer(const GraphicsLayer* graphicsLayer, Grap
     const IntRect& paintDirtyRect, // In the coords of rootLayer.
     OptionSet<PaintBehavior> paintBehavior, EventRegionContext* eventRegionContext)
 {
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::paintIntoLayer(): m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::paintIntoLayer(): m_owningLayer is null (55699292)");
+#endif
+
     if ((paintsIntoWindow() || paintsIntoCompositedAncestor()) && graphicsLayer->paintingPhase() != OptionSet<GraphicsLayerPaintingPhase>(GraphicsLayerPaintingPhase::ChildClippingMask)) {
 #if !PLATFORM(IOS_FAMILY) && !OS(WINDOWS)
         // FIXME: Looks like the CALayer tree is out of sync with the GraphicsLayer heirarchy
@@ -2865,6 +2953,11 @@ void RenderLayerBacking::paintIntoLayer(const GraphicsLayer* graphicsLayer, Grap
 
     if (!eventRegionContext)
         compositor().didPaintBacking(this);
+
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    RELEASE_ASSERT_WITH_MESSAGE(m_owningLayerBearTrap == BEAR_TRAP_VALUE, "RenderLayerBacking::paintIntoLayer() end: m_owningLayerBearTrap caught the bear (55699292)");
+    RELEASE_ASSERT_WITH_MESSAGE(&m_owningLayer, "RenderLayerBacking::paintIntoLayer() end: m_owningLayer is null (55699292)");
+#endif
 }
 
 OptionSet<RenderLayer::PaintLayerFlag> RenderLayerBacking::paintFlagsForLayer(const GraphicsLayer& graphicsLayer) const
@@ -2895,7 +2988,6 @@ OptionSet<RenderLayer::PaintLayerFlag> RenderLayerBacking::paintFlagsForLayer(co
     return paintFlags;
 }
 
-#if ENABLE(POINTER_EVENTS)
 static RefPtr<Pattern> patternForTouchAction(TouchAction touchAction, FloatSize contentOffset, GraphicsContext& destContext)
 {
     auto toIndex = [](TouchAction touchAction) -> unsigned {
@@ -2969,7 +3061,6 @@ static RefPtr<Pattern> patternForTouchAction(TouchAction touchAction, FloatSize 
 
     return fillPattern;
 }
-#endif // ENABLE(POINTER_EVENTS)
 
 void RenderLayerBacking::paintDebugOverlays(const GraphicsLayer* graphicsLayer, GraphicsContext& context)
 {
@@ -2984,12 +3075,11 @@ void RenderLayerBacking::paintDebugOverlays(const GraphicsLayer* graphicsLayer, 
 
     // The interactive part.
     auto& eventRegion = graphicsLayer->eventRegion();
-    Color regionColor(0, 0, 0, 5);
+    Color regionColor(0, 0, 255, 50);
     context.setFillColor(regionColor);
     for (auto rect : eventRegion.region().rects())
         context.fillRect(rect);
 
-#if ENABLE(POINTER_EVENTS)
     const TouchAction touchActionList[] = {
         TouchAction::None,
         TouchAction::Manipulation,
@@ -3011,7 +3101,6 @@ void RenderLayerBacking::paintDebugOverlays(const GraphicsLayer* graphicsLayer, 
         for (auto rect : actionRegion->rects())
             context.fillRect(rect);
     }
-#endif // ENABLE(POINTER_EVENTS)
 }
 
 // Up-call from compositing layer drawing callback.
@@ -3252,8 +3341,10 @@ bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& anim
         didAnimate = true;
 #endif
 
-    if (didAnimate)
+    if (didAnimate) {
         m_owningLayer.setNeedsPostLayoutCompositingUpdate();
+        m_owningLayer.setNeedsCompositingGeometryUpdate();
+    }
 
     return didAnimate;
 }
@@ -3272,6 +3363,7 @@ void RenderLayerBacking::animationFinished(const String& animationName)
 {
     m_graphicsLayer->removeAnimation(animationName);
     m_owningLayer.setNeedsPostLayoutCompositingUpdate();
+    m_owningLayer.setNeedsCompositingGeometryUpdate();
 }
 
 bool RenderLayerBacking::startTransition(double timeOffset, CSSPropertyID property, const RenderStyle* fromStyle, const RenderStyle* toStyle)
@@ -3363,14 +3455,15 @@ void RenderLayerBacking::transitionFinished(CSSPropertyID property)
 
 void RenderLayerBacking::notifyAnimationStarted(const GraphicsLayer*, const String&, MonotonicTime time)
 {
-    renderer().animation().notifyAnimationStarted(renderer(), time);
+    if (!RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled())
+        renderer().animation().notifyAnimationStarted(renderer(), time);
 }
 
-void RenderLayerBacking::notifyFlushRequired(const GraphicsLayer* layer)
+void RenderLayerBacking::notifyFlushRequired(const GraphicsLayer*)
 {
     if (renderer().renderTreeBeingDestroyed())
         return;
-    compositor().scheduleLayerFlush(layer->canThrottleLayerFlush());
+    compositor().scheduleRenderingUpdate();
 }
 
 void RenderLayerBacking::notifyFlushBeforeDisplayRefresh(const GraphicsLayer* layer)

@@ -158,14 +158,14 @@ PASS EventTarget interface: existence and properties of interface prototype obje
 PASS EventTarget interface: operation addEventListener(DOMString, EventListener, [object Object],[object Object]) 
 PASS EventTarget interface: operation removeEventListener(DOMString, EventListener, [object Object],[object Object]) 
 PASS EventTarget interface: operation dispatchEvent(Event) 
-FAIL EventTarget must be primary interface of new EventTarget() assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL Stringification of new EventTarget() assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL EventTarget interface: new EventTarget() must inherit property "addEventListener(DOMString, EventListener, [object Object],[object Object])" with the proper type assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL EventTarget interface: calling addEventListener(DOMString, EventListener, [object Object],[object Object]) on new EventTarget() with too few arguments must throw TypeError assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL EventTarget interface: new EventTarget() must inherit property "removeEventListener(DOMString, EventListener, [object Object],[object Object])" with the proper type assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL EventTarget interface: calling removeEventListener(DOMString, EventListener, [object Object],[object Object]) on new EventTarget() with too few arguments must throw TypeError assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL EventTarget interface: new EventTarget() must inherit property "dispatchEvent(Event)" with the proper type assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
-FAIL EventTarget interface: calling dispatchEvent(Event) on new EventTarget() with too few arguments must throw TypeError assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: function is not a constructor (evaluating 'new EventTarget()')"
+PASS EventTarget must be primary interface of new EventTarget() 
+PASS Stringification of new EventTarget() 
+PASS EventTarget interface: new EventTarget() must inherit property "addEventListener(DOMString, EventListener, [object Object],[object Object])" with the proper type 
+PASS EventTarget interface: calling addEventListener(DOMString, EventListener, [object Object],[object Object]) on new EventTarget() with too few arguments must throw TypeError 
+PASS EventTarget interface: new EventTarget() must inherit property "removeEventListener(DOMString, EventListener, [object Object],[object Object])" with the proper type 
+PASS EventTarget interface: calling removeEventListener(DOMString, EventListener, [object Object],[object Object]) on new EventTarget() with too few arguments must throw TypeError 
+PASS EventTarget interface: new EventTarget() must inherit property "dispatchEvent(Event)" with the proper type 
+PASS EventTarget interface: calling dispatchEvent(Event) on new EventTarget() with too few arguments must throw TypeError 
 PASS EventListener interface: existence and properties of interface object 
 PASS EventListener interface: existence and properties of interface prototype object 
 PASS EventListener interface: existence and properties of interface prototype object's "constructor" property 
@@ -335,7 +335,6 @@ PASS Document interface: existence and properties of interface prototype object'
 PASS Document interface: attribute implementation 
 PASS Document interface: attribute URL 
 PASS Document interface: attribute documentURI 
-PASS Document interface: attribute origin 
 PASS Document interface: attribute compatMode 
 PASS Document interface: attribute characterSet 
 PASS Document interface: attribute charset 
@@ -378,7 +377,6 @@ PASS Stringification of new Document()
 PASS Document interface: new Document() must inherit property "implementation" with the proper type 
 PASS Document interface: new Document() must inherit property "URL" with the proper type 
 PASS Document interface: new Document() must inherit property "documentURI" with the proper type 
-PASS Document interface: new Document() must inherit property "origin" with the proper type 
 PASS Document interface: new Document() must inherit property "compatMode" with the proper type 
 PASS Document interface: new Document() must inherit property "characterSet" with the proper type 
 PASS Document interface: new Document() must inherit property "charset" with the proper type 
@@ -517,7 +515,6 @@ PASS Stringification of xmlDoc
 PASS Document interface: xmlDoc must inherit property "implementation" with the proper type 
 PASS Document interface: xmlDoc must inherit property "URL" with the proper type 
 PASS Document interface: xmlDoc must inherit property "documentURI" with the proper type 
-PASS Document interface: xmlDoc must inherit property "origin" with the proper type 
 PASS Document interface: xmlDoc must inherit property "compatMode" with the proper type 
 PASS Document interface: xmlDoc must inherit property "characterSet" with the proper type 
 PASS Document interface: xmlDoc must inherit property "charset" with the proper type 
@@ -1794,7 +1791,7 @@ PASS XPathResult interface: attribute singleNodeValue
 PASS XPathResult interface: attribute invalidIteratorState 
 PASS XPathResult interface: attribute snapshotLength 
 PASS XPathResult interface: operation iterateNext() 
-FAIL XPathResult interface: operation snapshotItem(unsigned long) assert_equals: property has wrong .length expected 1 but got 0
+PASS XPathResult interface: operation snapshotItem(unsigned long) 
 PASS XPathResult must be primary interface of document.evaluate("//*", document.body) 
 PASS Stringification of document.evaluate("//*", document.body) 
 PASS XPathResult interface: document.evaluate("//*", document.body) must inherit property "ANY_TYPE" with the proper type 
@@ -1840,16 +1837,14 @@ PASS XPathEvaluator interface: existence and properties of interface prototype o
 PASS XPathEvaluator interface: existence and properties of interface prototype object's "constructor" property 
 PASS XPathEvaluator interface: existence and properties of interface prototype object's @@unscopables property 
 PASS XPathEvaluator interface: operation createExpression(DOMString, XPathNSResolver) 
-FAIL XPathEvaluator interface: operation createNSResolver(Node) assert_equals: property has wrong .length expected 1 but got 0
+PASS XPathEvaluator interface: operation createNSResolver(Node) 
 PASS XPathEvaluator interface: operation evaluate(DOMString, Node, XPathNSResolver, unsigned short, XPathResult) 
 PASS XPathEvaluator must be primary interface of new XPathEvaluator() 
 PASS Stringification of new XPathEvaluator() 
 PASS XPathEvaluator interface: new XPathEvaluator() must inherit property "createExpression(DOMString, XPathNSResolver)" with the proper type 
 PASS XPathEvaluator interface: calling createExpression(DOMString, XPathNSResolver) on new XPathEvaluator() with too few arguments must throw TypeError 
 PASS XPathEvaluator interface: new XPathEvaluator() must inherit property "createNSResolver(Node)" with the proper type 
-FAIL XPathEvaluator interface: calling createNSResolver(Node) on new XPathEvaluator() with too few arguments must throw TypeError assert_throws: Called with 0 arguments function "function () {
-            fn.apply(obj, args);
-        }" did not throw
+PASS XPathEvaluator interface: calling createNSResolver(Node) on new XPathEvaluator() with too few arguments must throw TypeError 
 PASS XPathEvaluator interface: new XPathEvaluator() must inherit property "evaluate(DOMString, Node, XPathNSResolver, unsigned short, XPathResult)" with the proper type 
 PASS XPathEvaluator interface: calling evaluate(DOMString, Node, XPathNSResolver, unsigned short, XPathResult) on new XPathEvaluator() with too few arguments must throw TypeError 
 PASS Window interface: attribute event 

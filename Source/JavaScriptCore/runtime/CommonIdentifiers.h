@@ -97,6 +97,7 @@
     macro(displayName) \
     macro(done) \
     macro(dotAll) \
+    macro(entries) \
     macro(enumerable) \
     macro(era) \
     macro(eval) \
@@ -136,6 +137,7 @@
     macro(isWatchpoint) \
     macro(jettisonReason) \
     macro(join) \
+    macro(keys) \
     macro(lastIndex) \
     macro(length) \
     macro(line) \
@@ -197,6 +199,7 @@
     macro(unicode) \
     macro(usage) \
     macro(value) \
+    macro(values) \
     macro(valueOf) \
     macro(weekday) \
     macro(writable) \
@@ -315,9 +318,6 @@ namespace JSC {
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
-
-        SymbolImpl* lookUpPrivateName(const Identifier&) const;
-        Identifier getPublicName(VM&, SymbolImpl*) const;
 
         // Callers of this method should make sure that identifiers given to this method 
         // survive the lifetime of CommonIdentifiers and related VM.

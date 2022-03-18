@@ -62,6 +62,7 @@ class JSGlobalObjectInspectorController;
 namespace JSC {
 class ArrayConstructor;
 class ArrayPrototype;
+class ArrayIteratorPrototype;
 class AsyncIteratorPrototype;
 class AsyncFunctionPrototype;
 class AsyncGeneratorPrototype;
@@ -321,6 +322,7 @@ public:
     WriteBarrier<GeneratorFunctionPrototype> m_generatorFunctionPrototype;
     WriteBarrier<GeneratorPrototype> m_generatorPrototype;
     WriteBarrier<AsyncGeneratorPrototype> m_asyncGeneratorPrototype;
+    WriteBarrier<ArrayIteratorPrototype> m_arrayIteratorPrototype;
 
     LazyProperty<JSGlobalObject, Structure> m_debuggerScopeStructure;
     LazyProperty<JSGlobalObject, Structure> m_withScopeStructure;
@@ -375,6 +377,7 @@ public:
     WriteBarrier<Structure> m_generatorFunctionStructure;
     WriteBarrier<Structure> m_generatorStructure;
     WriteBarrier<Structure> m_asyncGeneratorStructure;
+    WriteBarrier<Structure> m_arrayIteratorStructure;
     LazyProperty<JSGlobalObject, Structure> m_iteratorResultObjectStructure;
     WriteBarrier<Structure> m_regExpMatchesArrayStructure;
     LazyProperty<JSGlobalObject, Structure> m_moduleRecordStructure;
@@ -431,13 +434,6 @@ public:
     std::unique_ptr<Inspector::JSGlobalObjectInspectorController> m_inspectorController;
     std::unique_ptr<JSGlobalObjectDebuggable> m_inspectorDebuggable;
 #endif
-
-#if ENABLE(INTL)
-    HashSet<String> m_intlCollatorAvailableLocales;
-    HashSet<String> m_intlDateTimeFormatAvailableLocales;
-    HashSet<String> m_intlNumberFormatAvailableLocales;
-    HashSet<String> m_intlPluralRulesAvailableLocales;
-#endif // ENABLE(INTL)
 
     RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
     RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
@@ -511,7 +507,7 @@ public:
     ConsoleClient* m_consoleClient { nullptr };
     Optional<unsigned> m_stackTraceLimit;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     const JSGlobalObject* m_globalObjectAtDebuggerEntry { nullptr };
 #endif
 
@@ -652,6 +648,7 @@ public:
     GeneratorFunctionPrototype* generatorFunctionPrototype() const { return m_generatorFunctionPrototype.get(); }
     GeneratorPrototype* generatorPrototype() const { return m_generatorPrototype.get(); }
     AsyncFunctionPrototype* asyncFunctionPrototype() const { return m_asyncFunctionPrototype.get(); }
+    ArrayIteratorPrototype* arrayIteratorPrototype() const { return m_arrayIteratorPrototype.get(); }
     JSObject* mapPrototype() const { return m_mapStructure.prototype(this); }
     // Workaround for the name conflict between JSCell::setPrototype.
     JSObject* jsSetPrototype() const { return m_setStructure.prototype(this); }
@@ -759,6 +756,7 @@ public:
     Structure* generatorFunctionStructure() const { return m_generatorFunctionStructure.get(); }
     Structure* asyncFunctionStructure() const { return m_asyncFunctionStructure.get(); }
     Structure* asyncGeneratorFunctionStructure() const { return m_asyncGeneratorFunctionStructure.get(); }
+    Structure* arrayIteratorStructure() const { return m_arrayIteratorStructure.get(); }    
     Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
     Structure* iteratorResultObjectStructure() const { return m_iteratorResultObjectStructure.get(this); }
     Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
@@ -792,13 +790,6 @@ public:
     Inspector::JSGlobalObjectInspectorController& inspectorController() const { return *m_inspectorController.get(); }
     JSGlobalObjectDebuggable& inspectorDebuggable() { return *m_inspectorDebuggable.get(); }
 #endif
-
-#if ENABLE(INTL)
-    const HashSet<String>& intlCollatorAvailableLocales();
-    const HashSet<String>& intlDateTimeFormatAvailableLocales();
-    const HashSet<String>& intlNumberFormatAvailableLocales();
-    const HashSet<String>& intlPluralRulesAvailableLocales();
-#endif // ENABLE(INTL)
 
     void bumpGlobalLexicalBindingEpoch(VM&);
     unsigned globalLexicalBindingEpoch() const { return m_globalLexicalBindingEpoch; }
@@ -963,7 +954,7 @@ public:
         m_webAssemblyDisabledErrorMessage = errorMessage;
     }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     const JSGlobalObject* globalObjectAtDebuggerEntry() const { return m_globalObjectAtDebuggerEntry; }
     void setGlobalObjectAtDebuggerEntry(const JSGlobalObject* globalObject) { m_globalObjectAtDebuggerEntry = globalObject; }
 #endif

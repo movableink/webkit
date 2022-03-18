@@ -31,9 +31,13 @@
     width: 24px;
 }
 
+.navigation-bar .item.radio.button:focus {
+    outline-offset: -1px;
+}
+
 .navigation-bar .item.radio.button.text-only {
     position: relative;
-    padding: 2px 4px 4px;
+    padding: 2px 6px 4px;
     border: none;
     z-index: 0;
 }

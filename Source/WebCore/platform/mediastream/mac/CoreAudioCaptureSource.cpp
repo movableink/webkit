@@ -602,7 +602,7 @@ CaptureSourceOrError CoreAudioCaptureSource::create(String&& deviceID, String&& 
 #if PLATFORM(MAC)
     auto device = CoreAudioCaptureDeviceManager::singleton().coreAudioDeviceWithUID(deviceID);
     if (!device)
-        return { };
+        return { "No CoreAudioCaptureSource device"_s };
 
     auto source = adoptRef(*new CoreAudioCaptureSource(WTFMove(deviceID), String { device->label() }, WTFMove(hashSalt), device->deviceID()));
 #elif PLATFORM(IOS_FAMILY)
@@ -719,19 +719,11 @@ void CoreAudioCaptureSource::initializeToStartProducingData()
 
 CoreAudioCaptureSource::~CoreAudioCaptureSource()
 {
-#if PLATFORM(IOS_FAMILY)
-    CoreAudioCaptureSourceFactory::singleton().unsetCoreAudioActiveSource(*this);
-#endif
-
     unit().removeClient(*this);
 }
 
 void CoreAudioCaptureSource::startProducingData()
 {
-#if PLATFORM(IOS_FAMILY)
-    CoreAudioCaptureSourceFactory::singleton().setCoreAudioActiveSource(*this);
-#endif
-
     initializeToStartProducingData();
     unit().startProducingData();
 }
@@ -801,6 +793,13 @@ bool CoreAudioCaptureSource::interrupted() const
 void CoreAudioCaptureSource::delaySamples(Seconds seconds)
 {
     unit().delaySamples(seconds);
+}
+
+void CoreAudioCaptureSource::audioUnitWillStart()
+{
+    forEachObserver([](auto& observer) {
+        observer.audioUnitWillStart();
+    });
 }
 
 } // namespace WebCore

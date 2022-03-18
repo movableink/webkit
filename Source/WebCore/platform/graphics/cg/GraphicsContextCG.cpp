@@ -330,6 +330,13 @@ void GraphicsContext::drawNativeImage(const RetainPtr<CGImageRef>& image, const 
             subimageRect.setHeight(ceilf(subimageRect.height() + topPadding));
             adjustedDestRect.setHeight(subimageRect.height() / yScale);
 
+            // subimageRect is in logical coordinates. getSubimage() deals with none-oriented
+            // image. We need to convert subimageRect to physical image coordinates.
+            if (options.orientation() != ImageOrientation::None) {
+                if (auto transform = options.orientation().transformFromDefault(imageSize).inverse())
+                    subimageRect = transform.value().mapRect(subimageRect);
+            }
+
 #if CACHE_SUBIMAGES
             subImage = SubimageCacheWithTimer::getSubimage(subImage.get(), subimageRect);
 #else
@@ -440,7 +447,12 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const
     float adjustedX = phase.x() - destRect.x() + tileRect.x() * narrowPrecisionToFloat(patternTransform.a()); // We translated the context so that destRect.x() is the origin, so subtract it out.
     float adjustedY = destRect.height() - (phase.y() - destRect.y() + tileRect.y() * narrowPrecisionToFloat(patternTransform.d()) + scaledTileHeight);
 
-    auto tileImage = image.nativeImageForCurrentFrame();
+    NativeImagePtr tileImage;
+    if (options.orientation() == ImageOrientation::FromImage)
+        tileImage = image.nativeImageForCurrentFrameRespectingOrientation();
+    else
+        tileImage = image.nativeImageForCurrentFrame();
+
     float h = CGImageGetHeight(tileImage.get());
 
     RetainPtr<CGImageRef> subImage;
@@ -500,7 +512,7 @@ void GraphicsContext::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& de
     if (paintingDisabled())
         return;
 
-    FloatSize bufferDestinationSize = buffer.sizeForDestinationSize(destRect.size());
+    FloatSize bufferDestinationSize = destRect.size();
     RetainPtr<CGImageRef> image = buffer.copyNativeImage(DontCopyBackingStore);
 
     CGContextRef context = platformContext();
@@ -1539,8 +1551,8 @@ FloatRect GraphicsContext::roundToDevicePixels(const FloatRect& rect, RoundingMo
         return roundedIntRect(rect);
     }
 
-    float deviceScaleX = sqrtf(deviceMatrix.a * deviceMatrix.a + deviceMatrix.b * deviceMatrix.b);
-    float deviceScaleY = sqrtf(deviceMatrix.c * deviceMatrix.c + deviceMatrix.d * deviceMatrix.d);
+    float deviceScaleX = std::hypot(deviceMatrix.a, deviceMatrix.b);
+    float deviceScaleY = std::hypot(deviceMatrix.c, deviceMatrix.d);
 
     CGPoint deviceOrigin = CGPointMake(rect.x() * deviceScaleX, rect.y() * deviceScaleY);
     CGPoint deviceLowerRight = CGPointMake((rect.x() + rect.width()) * deviceScaleX,

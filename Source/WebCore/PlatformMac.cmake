@@ -19,7 +19,7 @@ find_library(QUARTZCORE_LIBRARY QuartzCore)
 find_library(SECURITY_LIBRARY Security)
 find_library(SYSTEMCONFIGURATION_LIBRARY SystemConfiguration)
 find_library(XML2_LIBRARY XML2)
-find_package(Sqlite REQUIRED)
+find_package(Sqlite3 REQUIRED)
 find_package(ZLIB REQUIRED)
 
 list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
@@ -45,10 +45,9 @@ list(APPEND WebCore_LIBRARIES
     ${QUARTZ_LIBRARY}
     ${QUARTZCORE_LIBRARY}
     ${SECURITY_LIBRARY}
-    ${SQLITE_LIBRARIES}
+    ${SQLITE3_LIBRARIES}
     ${SYSTEMCONFIGURATION_LIBRARY}
     ${XML2_LIBRARY}
-    ${ZLIB_LIBRARY}
 )
 
 add_definitions(-iframework ${APPLICATIONSERVICES_LIBRARY}/Versions/Current/Frameworks)
@@ -77,6 +76,7 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/remoteplayback"
     "${WEBCORE_DIR}/Modules/webauthn/apdu"
     "${WEBCORE_DIR}/Modules/webgpu/WHLSL/Metal"
+    "${WEBCORE_DIR}/accessibility/isolatedtree/mac"
     "${WEBCORE_DIR}/accessibility/mac"
     "${WEBCORE_DIR}/bridge/objc"
     "${WEBCORE_DIR}/crypto/mac"
@@ -149,6 +149,7 @@ list(APPEND WebCore_SOURCES
 
     Modules/webaudio/MediaStreamAudioSourceCocoa.cpp
 
+    accessibility/isolatedtree/mac/AXIsolatedObjectMac.mm
     accessibility/mac/AXObjectCacheMac.mm
     accessibility/mac/AccessibilityObjectMac.mm
     accessibility/mac/WebAccessibilityObjectWrapperMac.mm
@@ -156,9 +157,9 @@ list(APPEND WebCore_SOURCES
     dom/DataTransferMac.mm
     dom/SlotAssignment.cpp
 
+    editing/cocoa/AlternativeTextUIController.mm
     editing/cocoa/AutofillElements.cpp
 
-    editing/mac/AlternativeTextUIController.mm
     editing/mac/EditorMac.mm
     editing/mac/TextAlternativeWithRange.mm
     editing/mac/TextUndoInsertionMarkupMac.mm
@@ -180,7 +181,7 @@ list(APPEND WebCore_SOURCES
     page/scrolling/mac/ScrollingCoordinatorMac.mm
     page/scrolling/mac/ScrollingMomentumCalculatorMac.mm
     page/scrolling/mac/ScrollingTreeFrameScrollingNodeMac.mm
-    page/scrolling/mac/ScrollingTreeMac.cpp
+    page/scrolling/mac/ScrollingTreeMac.mm
 
     platform/CPUMonitor.cpp
     platform/LocalizedStrings.cpp
@@ -221,6 +222,7 @@ list(APPEND WebCore_SOURCES
     platform/cocoa/ScrollSnapAnimatorState.mm
     platform/cocoa/SearchPopupMenuCocoa.mm
     platform/cocoa/SharedBufferCocoa.mm
+    platform/cocoa/SystemBattery.mm
     platform/cocoa/SystemVersion.mm
     platform/cocoa/TelephoneNumberDetectorCocoa.cpp
     platform/cocoa/ThemeCocoa.mm
@@ -242,7 +244,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/avfoundation/CDMPrivateMediaSourceAVFObjC.mm
     platform/graphics/avfoundation/InbandMetadataTextTrackPrivateAVF.cpp
     platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp
-    platform/graphics/avfoundation/MediaPlaybackTargetMac.mm
+    platform/graphics/avfoundation/MediaPlaybackTargetCocoa.mm
     platform/graphics/avfoundation/MediaPlayerPrivateAVFoundation.cpp
     platform/graphics/avfoundation/MediaSelectionGroupAVFObjC.mm
 
@@ -286,11 +288,13 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cg/FloatRectCG.cpp
     platform/graphics/cg/FloatSizeCG.cpp
     platform/graphics/cg/GradientCG.cpp
-    platform/graphics/cg/GraphicsContext3DCG.cpp
+    platform/graphics/cg/GraphicsContextGLCG.cpp
     platform/graphics/cg/GraphicsContextCG.cpp
     platform/graphics/cg/IOSurfacePool.cpp
-    platform/graphics/cg/ImageBufferCG.cpp
-    platform/graphics/cg/ImageBufferDataCG.cpp
+    platform/graphics/cg/ImageBufferCGBackend.cpp
+    platform/graphics/cg/ImageBufferCGBitmapBackend.cpp
+    platform/graphics/cg/ImageBufferIOSurfaceBackend.cpp
+    platform/graphics/cg/ImageBufferUtilitiesCG.cpp
     platform/graphics/cg/ImageDecoderCG.cpp
     platform/graphics/cg/ImageSourceCGMac.mm
     platform/graphics/cg/IntPointCG.cpp
@@ -304,7 +308,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cg/TransformationMatrixCG.cpp
     platform/graphics/cg/UTIRegistry.cpp
 
-    platform/graphics/cocoa/GraphicsContext3DCocoa.mm
+    platform/graphics/cocoa/GraphicsContextGLOpenGLCocoa.mm
     platform/graphics/cocoa/GraphicsContextCocoa.mm
     platform/graphics/cocoa/FontCacheCoreText.cpp
     platform/graphics/cocoa/FontCascadeCocoa.mm
@@ -346,10 +350,10 @@ list(APPEND WebCore_SOURCES
     platform/graphics/mac/SimpleFontDataCoreText.cpp
     platform/graphics/mac/WebLayer.mm
 
-    platform/graphics/opengl/Extensions3DOpenGL.cpp
-    platform/graphics/opengl/Extensions3DOpenGLCommon.cpp
-    platform/graphics/opengl/GraphicsContext3DOpenGL.cpp
-    platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
+    platform/graphics/opengl/ExtensionsGLOpenGL.cpp
+    platform/graphics/opengl/ExtensionsGLOpenGLCommon.cpp
+    platform/graphics/opengl/GraphicsContextGLOpenGLBase.cpp
+    platform/graphics/opengl/GraphicsContextGLOpenGLCommon.cpp
     platform/graphics/opengl/TemporaryOpenGLSetting.cpp
 
     platform/graphics/opentype/OpenTypeCG.cpp
@@ -378,7 +382,7 @@ list(APPEND WebCore_SOURCES
     platform/mac/ScrollAnimatorMac.mm
     platform/mac/ScrollViewMac.mm
     platform/mac/ScrollbarThemeMac.mm
-    platform/mac/SerializedPlatformRepresentationMac.mm
+    platform/mac/SerializedPlatformDataCueMac.mm
     platform/mac/StringUtilities.mm
     platform/mac/SuddenTermination.mm
     platform/mac/ThemeMac.mm
@@ -427,9 +431,10 @@ list(APPEND WebCore_SOURCES
     platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
     platform/network/mac/WebCoreURLResponse.mm
 
+    platform/text/cocoa/LocaleCocoa.mm
+
     platform/text/cf/HyphenationCF.cpp
 
-    platform/text/mac/LocaleMac.mm
     platform/text/mac/TextBoundaries.mm
     platform/text/mac/TextCheckingMac.mm
     platform/text/mac/TextEncodingRegistryMac.mm
@@ -452,11 +457,28 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bridge/objc/WebScriptObject.h
     bridge/objc/WebScriptObjectPrivate.h
 
+    crypto/CryptoAlgorithmIdentifier.h
+    crypto/CryptoKey.h
+    crypto/CryptoKeyType.h
+    crypto/CryptoKeyUsage.h
+    crypto/CryptoKeyPair.h
+    crypto/CommonCryptoUtilities.h
+
+    crypto/keys/CryptoKeyHMAC.h
+    crypto/keys/CryptoAesKeyAlgorithm.h
+    crypto/keys/CryptoEcKeyAlgorithm.h
+    crypto/keys/CryptoHmacKeyAlgorithm.h
+    crypto/keys/CryptoKeyAES.h
+    crypto/keys/CryptoKeyAlgorithm.h
+    crypto/keys/CryptoRsaHashedKeyAlgorithm.h
+    crypto/keys/CryptoRsaKeyAlgorithm.h
+    crypto/keys/CryptoKeyEC.h
+
+    editing/cocoa/AlternativeTextUIController.h
     editing/cocoa/AutofillElements.h
     editing/cocoa/DataDetection.h
     editing/cocoa/HTMLConverter.h
 
-    editing/mac/AlternativeTextUIController.h
     editing/mac/DictionaryLookup.h
     editing/mac/TextAlternativeWithRange.h
     editing/mac/TextUndoInsertionMarkupMac.h
@@ -464,6 +486,12 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/archive/cf/LegacyWebArchive.h
 
     loader/mac/LoaderNSURLExtras.h
+
+    Modules/webauthn/AuthenticatorAssertionResponse.h
+    Modules/webauthn/AuthenticatorResponse.h
+    Modules/webauthn/AuthenticatorAttestationResponse.h
+
+    Modules/webauthn/fido/Pin.h
 
     page/mac/TextIndicatorWindow.h
     page/mac/WebCoreFrameView.h
@@ -480,6 +508,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.h
 
     platform/PictureInPictureSupport.h
+    platform/PlatformContentFilter.h
 
     platform/audio/cocoa/MediaSessionManagerCocoa.h
     platform/audio/cocoa/WebAudioBufferList.h
@@ -489,6 +518,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/cf/RunLoopObserver.h
 
+    platform/cocoa/NetworkExtensionContentFilter.h
     platform/cocoa/PlatformView.h
     platform/cocoa/PlaybackSessionInterface.h
     platform/cocoa/PlaybackSessionModel.h
@@ -496,6 +526,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/cocoa/ScrollController.h
     platform/cocoa/ScrollSnapAnimatorState.h
     platform/cocoa/SearchPopupMenuCocoa.h
+    platform/cocoa/SystemBattery.h
     platform/cocoa/SystemVersion.h
     platform/cocoa/VideoFullscreenChangeObserver.h
     platform/cocoa/VideoFullscreenModel.h
@@ -507,7 +538,9 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/gamepad/mac/HIDGamepad.h
     platform/gamepad/mac/HIDGamepadProvider.h
 
-    platform/graphics/avfoundation/MediaPlaybackTargetMac.h
+    platform/graphics/MIMETypeCache.h
+
+    platform/graphics/avfoundation/MediaPlaybackTargetCocoa.h
     platform/graphics/avfoundation/WebMediaSessionManagerMac.h
 
     platform/graphics/avfoundation/objc/AVAssetMIMETypeCache.h
@@ -525,7 +558,9 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/graphics/cg/GraphicsContextCG.h
     platform/graphics/cg/IOSurfacePool.h
-    platform/graphics/cg/ImageBufferDataCG.h
+    platform/graphics/cg/ImageBufferCGBackend.h
+    platform/graphics/cg/ImageBufferCGBitmapBackend.h
+    platform/graphics/cg/ImageBufferIOSurfaceBackend.h
     platform/graphics/cg/ImageBufferUtilitiesCG.h
     platform/graphics/cg/PDFDocumentImage.h
     platform/graphics/cg/UTIRegistry.h
@@ -561,6 +596,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mac/WebNSAttributedStringExtras.h
     platform/mac/WebPlaybackControlsManager.h
 
+    platform/mediastream/RealtimeMediaSourceIdentifier.h
+
     platform/mediastream/libwebrtc/LibWebRTCProviderCocoa.h
 
     platform/mediastream/mac/WebAudioSourceProviderAVFObjC.h
@@ -579,6 +616,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/network/cocoa/CookieStorageObserver.h
     platform/network/cocoa/CredentialCocoa.h
+    platform/network/cocoa/HTTPCookieAcceptPolicyCocoa.h
     platform/network/cocoa/ProtectionSpaceCocoa.h
     platform/network/cocoa/WebCoreNSURLSession.h
 

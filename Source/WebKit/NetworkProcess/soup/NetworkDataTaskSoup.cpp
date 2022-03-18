@@ -296,11 +296,22 @@ void NetworkDataTaskSoup::stopTimeout()
 void NetworkDataTaskSoup::sendRequestCallback(SoupRequest* soupRequest, GAsyncResult* result, NetworkDataTaskSoup* task)
 {
     RefPtr<NetworkDataTaskSoup> protectedThis = adoptRef(task);
+    if (soupRequest != task->m_soupRequest.get()) {
+        // This can happen when the request is cancelled and a new one is started before
+        // the previous async operation completed. This is common when forcing a redirection
+        // due to HSTS. We can simply ignore this old request.
+#if ASSERT_ENABLED
+        GUniqueOutPtr<GError> error;
+        GRefPtr<GInputStream> inputStream = adoptGRef(soup_request_send_finish(soupRequest, result, &error.outPtr()));
+        ASSERT(g_error_matches(error.get(), G_IO_ERROR, G_IO_ERROR_CANCELLED));
+#endif
+        return;
+    }
+
     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
         task->clearRequest();
         return;
     }
-    ASSERT(soupRequest == task->m_soupRequest.get());
 
     if (task->state() == State::Suspended) {
         ASSERT(!task->m_pendingResult);
@@ -356,18 +367,19 @@ void NetworkDataTaskSoup::dispatchDidReceiveResponse()
 {
     ASSERT(!m_response.isNull());
 
+    Box<NetworkLoadMetrics> timing = Box<NetworkLoadMetrics>::create();
+    timing->responseStart = m_networkLoadMetrics.responseStart;
+    timing->domainLookupStart = m_networkLoadMetrics.domainLookupStart;
+    timing->domainLookupEnd = m_networkLoadMetrics.domainLookupEnd;
+    timing->connectStart = m_networkLoadMetrics.connectStart;
+    timing->secureConnectionStart = m_networkLoadMetrics.secureConnectionStart;
+    timing->connectEnd = m_networkLoadMetrics.connectEnd;
+    timing->requestStart = m_networkLoadMetrics.requestStart;
+    timing->responseStart = m_networkLoadMetrics.responseStart;
     // FIXME: Remove this once nobody depends on deprecatedNetworkLoadMetrics.
-    NetworkLoadMetrics& deprecatedResponseMetrics = m_response.deprecatedNetworkLoadMetrics();
-    deprecatedResponseMetrics.responseStart = m_networkLoadMetrics.responseStart;
-    deprecatedResponseMetrics.domainLookupStart = m_networkLoadMetrics.domainLookupStart;
-    deprecatedResponseMetrics.domainLookupEnd = m_networkLoadMetrics.domainLookupEnd;
-    deprecatedResponseMetrics.connectStart = m_networkLoadMetrics.connectStart;
-    deprecatedResponseMetrics.secureConnectionStart = m_networkLoadMetrics.secureConnectionStart;
-    deprecatedResponseMetrics.connectEnd = m_networkLoadMetrics.connectEnd;
-    deprecatedResponseMetrics.requestStart = m_networkLoadMetrics.requestStart;
-    deprecatedResponseMetrics.responseStart = m_networkLoadMetrics.responseStart;
+    m_response.setDeprecatedNetworkLoadMetrics(WTFMove(timing));
 
-    didReceiveResponse(ResourceResponse(m_response), [this, protectedThis = makeRef(*this)](PolicyAction policyAction) {
+    didReceiveResponse(ResourceResponse(m_response), NegotiatedLegacyTLS::No, [this, protectedThis = makeRef(*this)](PolicyAction policyAction) {
         if (m_state == State::Canceling || m_state == State::Completed) {
             clearRequest();
             return;
@@ -520,7 +532,7 @@ void NetworkDataTaskSoup::authenticate(AuthenticationChallenge&& challenge)
 
 void NetworkDataTaskSoup::continueAuthenticate(AuthenticationChallenge&& challenge)
 {
-    m_client->didReceiveChallenge(AuthenticationChallenge(challenge), [this, protectedThis = makeRef(*this), challenge](AuthenticationChallengeDisposition disposition, const Credential& credential) {
+    m_client->didReceiveChallenge(AuthenticationChallenge(challenge), NegotiatedLegacyTLS::No, [this, protectedThis = makeRef(*this), challenge](AuthenticationChallengeDisposition disposition, const Credential& credential) {
         if (m_state == State::Canceling || m_state == State::Completed) {
             clearRequest();
             return;
@@ -664,6 +676,20 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
     m_lastHTTPMethod = request.httpMethod();
     request.removeCredentials();
 
+    if (isTopLevelNavigation()) {
+        request.setFirstPartyForCookies(request.url());
+#if SOUP_CHECK_VERSION(2, 69, 90)
+        soup_message_set_is_top_level_navigation(m_soupMessage.get(), true);
+#endif
+    }
+
+#if SOUP_CHECK_VERSION(2, 69, 90)
+    if (request.isSameSite()) {
+        GUniquePtr<SoupURI> requestURI = urlToSoupURI(request.url());
+        soup_message_set_site_for_cookies(m_soupMessage.get(), requestURI.get());
+    }
+#endif
+
     if (isCrossOrigin) {
         // The network layer might carry over some headers from the original request that
         // we want to strip here because the redirect is cross-origin.
@@ -688,7 +714,7 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
         if (request.url().protocolIsInHTTPFamily()) {
             if (isCrossOrigin) {
                 m_startTime = MonotonicTime::now();
-                m_networkLoadMetrics.reset();
+                m_networkLoadMetrics = { };
             }
 
             applyAuthenticationToRequest(request);
@@ -1130,7 +1156,7 @@ void NetworkDataTaskSoup::restartedCallback(SoupMessage* soupMessage, NetworkDat
 void NetworkDataTaskSoup::didRestart()
 {
     m_startTime = MonotonicTime::now();
-    m_networkLoadMetrics.reset();
+    m_networkLoadMetrics = { };
 }
 
 } // namespace WebKit

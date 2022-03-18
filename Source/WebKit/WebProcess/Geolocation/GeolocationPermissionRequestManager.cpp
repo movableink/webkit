@@ -28,6 +28,7 @@
 
 #if ENABLE(GEOLOCATION)
 
+#include "FrameInfoData.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebFrame.h"
 #include "WebPage.h"
@@ -59,7 +60,7 @@ void GeolocationPermissionRequestManager::startRequestForGeolocation(Geolocation
 
     ASSERT_WITH_MESSAGE(frame, "It is not well understood in which cases the Geolocation is alive after its frame goes away. If you hit this assertion, please add a test covering this case.");
     if (!frame) {
-        geolocation.setIsAllowed(false);
+        geolocation.setIsAllowed(false, { });
         return;
     }
 
@@ -71,9 +72,12 @@ void GeolocationPermissionRequestManager::startRequestForGeolocation(Geolocation
     WebFrame* webFrame = WebFrame::fromCoreFrame(*frame);
     ASSERT(webFrame);
 
-    SecurityOrigin& origin = frame->document()->securityOrigin();
+    m_page.send(Messages::WebPageProxy::RequestGeolocationPermissionForFrame(geolocationID, webFrame->info()));
+}
 
-    m_page.send(Messages::WebPageProxy::RequestGeolocationPermissionForFrame(geolocationID, webFrame->frameID(), origin.data().databaseIdentifier()));
+void GeolocationPermissionRequestManager::revokeAuthorizationToken(const String& authorizationToken)
+{
+    m_page.send(Messages::WebPageProxy::RevokeGeolocationAuthorizationToken(authorizationToken));
 }
 
 void GeolocationPermissionRequestManager::cancelRequestForGeolocation(Geolocation& geolocation)
@@ -84,14 +88,14 @@ void GeolocationPermissionRequestManager::cancelRequestForGeolocation(Geolocatio
     m_idToGeolocationMap.remove(geolocationID);
 }
 
-void GeolocationPermissionRequestManager::didReceiveGeolocationPermissionDecision(uint64_t geolocationID, bool allowed)
+void GeolocationPermissionRequestManager::didReceiveGeolocationPermissionDecision(uint64_t geolocationID, const String& authorizationToken)
 {
     Geolocation* geolocation = m_idToGeolocationMap.take(geolocationID);
     if (!geolocation)
         return;
     m_geolocationToIDMap.remove(geolocation);
 
-    geolocation->setIsAllowed(allowed);
+    geolocation->setIsAllowed(!authorizationToken.isNull(), authorizationToken);
 }
 
 } // namespace WebKit

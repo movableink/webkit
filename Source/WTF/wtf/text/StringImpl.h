@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -26,8 +26,10 @@
 #include <unicode/ustring.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/Expected.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Packed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/ASCIIFastPath.h>
@@ -164,8 +166,10 @@ protected:
 // Or we could say that "const" doesn't make sense at all and use "StringImpl&" and "StringImpl*" everywhere.
 // Right now we use a mix of both, which makes code more confusing and has no benefit.
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringImpl);
 class StringImpl : private StringImplShape {
-    WTF_MAKE_NONCOPYABLE(StringImpl); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(StringImpl);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StringImpl);
 
     friend class AtomStringImpl;
     friend class JSC::LLInt::Data;
@@ -189,8 +193,9 @@ public:
 
     static constexpr unsigned MaxLength = StringImplShape::MaxLength;
 
-    // The bottom 6 bits in the hash are flags.
-    static constexpr const unsigned s_flagCount = 6;
+    // The bottom 6 bits in the hash are flags, but reserve 8 bits since StringHash only has 24 bits anyway.
+    static constexpr const unsigned s_flagCount = 8;
+
 private:
     static constexpr const unsigned s_flagMask = (1u << s_flagCount) - 1;
     static_assert(s_flagCount <= StringHasher::flagCount, "StringHasher reserves enough bits for StringImpl flags");
@@ -217,8 +222,8 @@ private:
     explicit StringImpl(unsigned length);
 
     // Create a StringImpl adopting ownership of the provided buffer (BufferOwned).
-    StringImpl(MallocPtr<LChar>, unsigned length);
-    StringImpl(MallocPtr<UChar>, unsigned length);
+    template<typename Malloc> StringImpl(MallocPtr<LChar, Malloc>, unsigned length);
+    template<typename Malloc> StringImpl(MallocPtr<UChar, Malloc>, unsigned length);
     enum ConstructWithoutCopyingTag { ConstructWithoutCopying };
     StringImpl(const UChar*, unsigned length, ConstructWithoutCopyingTag);
     StringImpl(const LChar*, unsigned length, ConstructWithoutCopyingTag);
@@ -254,6 +259,8 @@ public:
     WTF_EXPORT_PRIVATE static Ref<StringImpl> createUninitialized(unsigned length, UChar*&);
     template<typename CharacterType> static RefPtr<StringImpl> tryCreateUninitialized(unsigned length, CharacterType*&);
 
+    WTF_EXPORT_PRIVATE static Ref<StringImpl> createStaticStringImpl(const char*, unsigned length);
+
     // Reallocate the StringImpl. The originalString must be only owned by the Ref,
     // and the buffer ownership must be BufferInternal. Just like the input pointer of realloc(),
     // the originalString can't be used after this function.
@@ -269,8 +276,8 @@ public:
     static constexpr unsigned maskStringKind() { return s_hashMaskStringKind; }
     static unsigned dataOffset() { return OBJECT_OFFSETOF(StringImpl, m_data8); }
 
-    template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
-    static Ref<StringImpl> adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity>&&);
+    template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+    static Ref<StringImpl> adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&&);
 
     WTF_EXPORT_PRIVATE static Ref<StringImpl> adopt(StringBuffer<UChar>&&);
     WTF_EXPORT_PRIVATE static Ref<StringImpl> adopt(StringBuffer<LChar>&&);
@@ -537,7 +544,28 @@ using StaticStringImpl = StringImpl::StaticStringImpl;
 
 static_assert(sizeof(StringImpl) == sizeof(StaticStringImpl), "");
 
-#if !ASSERT_DISABLED
+template<typename CharacterType>
+struct HashTranslatorCharBuffer {
+    const CharacterType* characters;
+    unsigned length;
+    unsigned hash;
+
+    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length)
+        : characters(characters)
+        , length(length)
+        , hash(StringHasher::computeHashAndMaskTop8Bits(characters, length))
+    {
+    }
+
+    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length, unsigned hash)
+        : characters(characters)
+        , length(length)
+        , hash(hash)
+    {
+    }
+};
+
+#if ASSERT_ENABLED
 
 // StringImpls created from StaticStringImpl will ASSERT in the generic ValueCheck<T>::checkConsistency
 // as they are not allocated by fastMalloc. We don't currently have any way to detect that case
@@ -546,7 +574,7 @@ template<> struct ValueCheck<StringImpl*> {
     static void checkConsistency(const StringImpl*) { }
 };
 
-#endif
+#endif // ASSERT_ENABLED
 
 WTF_EXPORT_PRIVATE bool equal(const StringImpl*, const StringImpl*);
 WTF_EXPORT_PRIVATE bool equal(const StringImpl*, const LChar*);
@@ -597,6 +625,9 @@ template<> struct DefaultHash<StringImpl*> {
 };
 template<> struct DefaultHash<RefPtr<StringImpl>> {
     typedef StringHash Hash;
+};
+template<> struct DefaultHash<PackedPtr<StringImpl>> {
+    using Hash = StringHash;
 };
 
 #define MAKE_STATIC_STRING_IMPL(characters) ([] { \
@@ -861,9 +892,17 @@ inline StringImpl::StringImpl(unsigned length)
     STRING_STATS_ADD_16BIT_STRING(m_length);
 }
 
-inline StringImpl::StringImpl(MallocPtr<LChar> characters, unsigned length)
-    : StringImplShape(s_refCountIncrement, length, characters.leakPtr(), s_hashFlag8BitBuffer | StringNormal | BufferOwned)
+template<typename Malloc>
+inline StringImpl::StringImpl(MallocPtr<LChar, Malloc> characters, unsigned length)
+    : StringImplShape(s_refCountIncrement, length, static_cast<const LChar*>(nullptr), s_hashFlag8BitBuffer | StringNormal | BufferOwned)
 {
+    if constexpr (std::is_same<Malloc, StringImplMalloc>::value)
+        m_data8 = characters.leakPtr();
+    else {
+        m_data8 = static_cast<const LChar*>(StringImplMalloc::malloc(length));
+        memcpy((void*)m_data8, characters.get(), length);
+    }
+
     ASSERT(m_data8);
     ASSERT(m_length);
 
@@ -888,9 +927,17 @@ inline StringImpl::StringImpl(const LChar* characters, unsigned length, Construc
     STRING_STATS_ADD_8BIT_STRING(m_length);
 }
 
-inline StringImpl::StringImpl(MallocPtr<UChar> characters, unsigned length)
-    : StringImplShape(s_refCountIncrement, length, characters.leakPtr(), StringNormal | BufferOwned)
+template<typename Malloc>
+inline StringImpl::StringImpl(MallocPtr<UChar, Malloc> characters, unsigned length)
+    : StringImplShape(s_refCountIncrement, length, static_cast<const UChar*>(nullptr), StringNormal | BufferOwned)
 {
+    if constexpr (std::is_same<Malloc, StringImplMalloc>::value)
+        m_data16 = characters.leakPtr();
+    else {
+        m_data16 = static_cast<const UChar*>(StringImplMalloc::malloc(length * sizeof(UChar)));
+        memcpy((void*)m_data16, characters.get(), length * sizeof(UChar));
+    }
+
     ASSERT(m_data16);
     ASSERT(m_length);
 
@@ -948,7 +995,7 @@ ALWAYS_INLINE Ref<StringImpl> StringImpl::createSubstringSharingImpl(StringImpl&
     auto* ownerRep = ((rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep);
 
     // We allocate a buffer that contains both the StringImpl struct as well as the pointer to the owner string.
-    auto* stringImpl = static_cast<StringImpl*>(fastMalloc(substringSize));
+    auto* stringImpl = static_cast<StringImpl*>(StringImplMalloc::malloc(substringSize));
     if (rep.is8Bit())
         return adoptRef(*new (NotNull, stringImpl) StringImpl(rep.m_data8 + offset, length, *ownerRep));
     return adoptRef(*new (NotNull, stringImpl) StringImpl(rep.m_data16 + offset, length, *ownerRep));
@@ -974,7 +1021,9 @@ template<typename CharacterType> ALWAYS_INLINE RefPtr<StringImpl> StringImpl::tr
         return nullptr;
     }
     StringImpl* result;
-    if (!tryFastMalloc(allocationSize<CharacterType>(length)).getValue(result)) {
+
+    result = (StringImpl*)StringImplMalloc::tryMalloc(allocationSize<CharacterType>(length));
+    if (!result) {
         output = nullptr;
         return nullptr;
     }
@@ -983,14 +1032,23 @@ template<typename CharacterType> ALWAYS_INLINE RefPtr<StringImpl> StringImpl::tr
     return constructInternal<CharacterType>(*result, length);
 }
 
-template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
-inline Ref<StringImpl> StringImpl::adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity>&& vector)
+template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+inline Ref<StringImpl> StringImpl::adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& vector)
 {
     if (size_t size = vector.size()) {
         ASSERT(vector.data());
         if (size > MaxLength)
             CRASH();
-        return adoptRef(*new StringImpl(vector.releaseBuffer(), size));
+
+        if constexpr (std::is_same<Malloc, StringImplMalloc>::value)
+            return adoptRef(*new StringImpl(vector.releaseBuffer(), size));
+        else {
+            // We have to copy between malloc zones.
+            auto vectorBuffer = vector.releaseBuffer();
+            auto stringImplBuffer = MallocPtr<CharacterType, StringImplMalloc>::malloc(size);
+            memcpy(stringImplBuffer.get(), vectorBuffer.get(), size);
+            return adoptRef(*new StringImpl(WTFMove(stringImplBuffer), size));
+        }
     }
     return *empty();
 }

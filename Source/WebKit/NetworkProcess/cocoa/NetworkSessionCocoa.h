@@ -45,6 +45,7 @@ OBJC_CLASS WKNetworkSessionWebSocketDelegate;
 
 namespace WebKit {
 
+enum class NegotiatedLegacyTLS : bool;
 class LegacyCustomProtocolManager;
 class NetworkSessionCocoa;
 
@@ -73,13 +74,12 @@ public:
     const String& sourceApplicationBundleIdentifier() const;
     const String& sourceApplicationSecondaryIdentifier() const;
 #if PLATFORM(IOS_FAMILY)
-    static void setCTDataConnectionServiceType(const String&);
     const String& dataConnectionServiceType() const;
 #endif
 
     static bool allowsSpecificHTTPSCertificateForHost(const WebCore::AuthenticationChallenge&);
 
-    void continueDidReceiveChallenge(SessionWrapper&, const WebCore::AuthenticationChallenge&, NetworkDataTaskCocoa::TaskIdentifier, NetworkDataTaskCocoa*, CompletionHandler<void(WebKit::AuthenticationChallengeDisposition, const WebCore::Credential&)>&&);
+    void continueDidReceiveChallenge(SessionWrapper&, const WebCore::AuthenticationChallenge&, NegotiatedLegacyTLS, NetworkDataTaskCocoa::TaskIdentifier, NetworkDataTaskCocoa*, CompletionHandler<void(WebKit::AuthenticationChallengeDisposition, const WebCore::Credential&)>&&);
 
     SessionWrapper& sessionWrapperForDownloads() { return m_sessionWithCredentialStorage; }
 
@@ -93,14 +93,23 @@ public:
     bool hasIsolatedSession(const WebCore::RegistrableDomain) const override;
     void clearIsolatedSessions() override;
 
-    SessionWrapper& sessionWrapperForTask(const WebCore::ResourceRequest&, WebCore::StoredCredentialsPolicy);
+    bool hasAppBoundSession() const override { return !!m_appBoundSession; }
 
+    SessionWrapper& sessionWrapperForTask(const WebCore::ResourceRequest&, WebCore::StoredCredentialsPolicy, NavigatingToAppBoundDomain);
+    void setInAppBrowserPrivacyEnabled(bool enabled) override { m_isInAppBrowserPrivacyEnabled = enabled; }
+    bool isInAppBrowserPrivacyEnabled() const { return m_isInAppBrowserPrivacyEnabled; }
+    
 private:
     void invalidateAndCancel() override;
     void clearCredentials() override;
     bool shouldLogCookieInformation() const override { return m_shouldLogCookieInformation; }
     Seconds loadThrottleLatency() const override { return m_loadThrottleLatency; }
     SessionWrapper& isolatedSession(WebCore::StoredCredentialsPolicy, const WebCore::RegistrableDomain);
+    SessionWrapper& appBoundSession(WebCore::StoredCredentialsPolicy);
+
+    Vector<WebCore::SecurityOriginData> hostNamesWithAlternativeServices() const override;
+    void deleteAlternativeServicesForHostNames(const Vector<String>&) override;
+    void clearAlternativeServices(WallTime) override;
 
 #if HAVE(NSURLSESSION_WEBSOCKET)
     std::unique_ptr<WebSocketTask> createWebSocketTask(NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol) final;
@@ -117,6 +126,7 @@ private:
     };
 
     HashMap<WebCore::RegistrableDomain, std::unique_ptr<IsolatedSession>> m_isolatedSessions;
+    std::unique_ptr<IsolatedSession> m_appBoundSession;
 
     SessionWrapper m_sessionWithCredentialStorage;
     SessionWrapper m_sessionWithoutCredentialStorage;
@@ -133,6 +143,7 @@ private:
     Seconds m_loadThrottleLatency;
     bool m_fastServerTrustEvaluationEnabled { false };
     String m_dataConnectionServiceType;
+    bool m_isInAppBrowserPrivacyEnabled { false };
 };
 
 } // namespace WebKit

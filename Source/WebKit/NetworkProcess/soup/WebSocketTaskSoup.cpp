@@ -29,6 +29,8 @@
 #include "DataReference.h"
 #include "NetworkSocketChannel.h"
 #include <WebCore/HTTPParsers.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
 #include <WebCore/WebSocketChannel.h>
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/StringBuilder.h>
@@ -37,6 +39,7 @@ namespace WebKit {
 
 WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, SoupSession* session, SoupMessage* msg, const String& protocol)
     : m_channel(channel)
+    , m_handshakeMessage(msg)
     , m_cancellable(adoptGRef(g_cancellable_new()))
 {
     auto protocolList = protocol.split(',');
@@ -47,6 +50,12 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, SoupSession* session
         for (auto& subprotocol : protocolList)
             protocols.get()[i++] = g_strdup(WebCore::stripLeadingAndTrailingHTTPSpaces(subprotocol).utf8().data());
     }
+
+    // Ensure a new connection is used for WebSockets.
+    // FIXME: this is done by libsoup since 2.69.1 and 2.68.4, so it can be removed when bumping the libsoup requirement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=203404
+    soup_message_set_flags(msg, static_cast<SoupMessageFlags>(soup_message_get_flags(msg) | SOUP_MESSAGE_NEW_CONNECTION));
+
     soup_session_websocket_connect_async(session, msg, nullptr, protocols.get(), m_cancellable.get(),
         [] (GObject* session, GAsyncResult* result, gpointer userData) {
             GUniqueOutPtr<GError> error;
@@ -59,6 +68,10 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, SoupSession* session
             else
                 task->didFail(String::fromUTF8(error->message));
         }, this);
+
+    WebCore::ResourceRequest request;
+    request.updateFromSoupMessage(msg);
+    m_channel.didSendHandshakeRequest(WTFMove(request));
 }
 
 WebSocketTask::~WebSocketTask()
@@ -103,6 +116,11 @@ void WebSocketTask::didConnect(GRefPtr<SoupWebsocketConnection>&& connection)
     g_signal_connect_swapped(m_connection.get(), "closed", reinterpret_cast<GCallback>(didCloseCallback), this);
 
     m_channel.didConnect(soup_websocket_connection_get_protocol(m_connection.get()), acceptedExtensions());
+
+    WebCore::ResourceResponse response;
+    response.updateFromSoupMessage(m_handshakeMessage.get());
+    m_channel.didReceiveHandshakeResponse(WTFMove(response));
+    m_handshakeMessage = nullptr;
 }
 
 void WebSocketTask::didReceiveMessageCallback(WebSocketTask* task, SoupWebsocketDataType dataType, GBytes* message)
@@ -137,6 +155,12 @@ void WebSocketTask::didFail(const String& errorMessage)
         return;
 
     m_receivedDidFail = true;
+    if (m_handshakeMessage) {
+        WebCore::ResourceResponse response;
+        response.updateFromSoupMessage(m_handshakeMessage.get());
+        m_channel.didReceiveHandshakeResponse(WTFMove(response));
+        m_handshakeMessage = nullptr;
+    }
     m_channel.didReceiveMessageError(errorMessage);
     if (!m_connection) {
         didClose(SOUP_WEBSOCKET_CLOSE_ABNORMAL, { });

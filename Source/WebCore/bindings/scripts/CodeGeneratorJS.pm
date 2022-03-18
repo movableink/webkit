@@ -3,7 +3,7 @@
 # Copyright (C) 2006 Anders Carlsson <andersca@mac.com>
 # Copyright (C) 2006, 2007 Samuel Weinig <sam@webkit.org>
 # Copyright (C) 2006 Alexey Proskuryakov <ap@webkit.org>
-# Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2006-2020 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
 # Copyright (C) Research In Motion Limited 2010. All rights reserved.
 # Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
@@ -1301,7 +1301,7 @@ sub GenerateDeleteProperty
     # This implements https://heycam.github.io/webidl/#legacy-platform-object-delete for the
     # for the deleteProperty override hook.
 
-    push(@$outputArray, "bool ${className}::deleteProperty(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName)\n");
+    push(@$outputArray, "bool ${className}::deleteProperty(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, DeletePropertySlot& slot)\n");
     push(@$outputArray, "{\n");
 
     push(@$outputArray, "    auto& thisObject = *jsCast<${className}*>(cell);\n");
@@ -1321,7 +1321,7 @@ sub GenerateDeleteProperty
 
     # FIXME: Instead of calling down JSObject::deleteProperty, perhaps we should implement
     # the remained of the algorithm ourselves.
-    push(@$outputArray, "    return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName);\n");
+    push(@$outputArray, "    return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName, slot);\n");
     push(@$outputArray, "}\n\n");
 }
 
@@ -2676,6 +2676,10 @@ sub GenerateHeader
         push(@headerContent, "    static void doPutPropertySecurityCheck(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyName, JSC::PutPropertySlot&);\n");
         $structureFlags{"JSC::HasPutPropertySecurityCheck"} = 1;
     }
+
+    if ($interface->extendedAttributes->{Plugin} || GetNamedSetterOperation($interface)) {
+        $structureFlags{"JSC::ProhibitsPropertyCaching"} = 1;
+    }
     
     if (InstanceOverridesGetOwnPropertyNames($interface)) {
         push(@headerContent, "    static void getOwnPropertyNames(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyNameArray&, JSC::EnumerationMode = JSC::EnumerationMode());\n");
@@ -2692,7 +2696,7 @@ sub GenerateHeader
     }
 
     if (InstanceOverridesDeleteProperty($interface)) {
-        push(@headerContent, "    static bool deleteProperty(JSC::JSCell*, JSC::JSGlobalObject*, JSC::PropertyName);\n");
+        push(@headerContent, "    static bool deleteProperty(JSC::JSCell*, JSC::JSGlobalObject*, JSC::PropertyName, JSC::DeletePropertySlot&);\n");
         push(@headerContent, "    static bool deletePropertyByIndex(JSC::JSCell*, JSC::JSGlobalObject*, unsigned);\n");
     }
 
@@ -2791,12 +2795,13 @@ sub GenerateHeader
         }
     }
 
-    # FIXME: We put this unconditionally to put all the WebCore JS wrappers in each IsoSubspace.
-    # https://bugs.webkit.org/show_bug.cgi?id=205107
-    if (IsDOMGlobalObject($interface)) {
-        push(@headerContent, "    template<typename, JSC::SubspaceAccess> static JSC::IsoSubspace* subspaceFor(JSC::VM& vm) { return subspaceForImpl(vm); }\n");
-        push(@headerContent, "    static JSC::IsoSubspace* subspaceForImpl(JSC::VM& vm);\n");
-    }
+    push(@headerContent, "    template<typename, JSC::SubspaceAccess mode> static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)\n");
+    push(@headerContent, "    {\n");
+    push(@headerContent, "        if constexpr (mode == JSC::SubspaceAccess::Concurrently)\n");
+    push(@headerContent, "            return nullptr;\n");
+    push(@headerContent, "        return subspaceForImpl(vm);\n");
+    push(@headerContent, "    }\n");
+    push(@headerContent, "    static JSC::IsoSubspace* subspaceForImpl(JSC::VM& vm);\n");
 
     # visit function
     if ($needsVisitChildren) {
@@ -2817,9 +2822,6 @@ sub GenerateHeader
             # program resumed since the last call to visitChildren or visitOutputConstraints. Since
             # this just calls visitAdditionalChildren, you usually don't have to worry about this.
             push(@headerContent, "    static void visitOutputConstraints(JSCell*, JSC::SlotVisitor&);\n");
-            if (!IsDOMGlobalObject($interface)) {
-                push(@headerContent, "    template<typename, JSC::SubspaceAccess> static JSC::CompleteSubspace* subspaceFor(JSC::VM& vm) { return outputConstraintSubspaceFor(vm); }\n");
-            }
         }
     }
 
@@ -3153,7 +3155,14 @@ sub GeneratePropertiesHashTable
         my $readWriteConditional = $attribute->extendedAttributes->{ConditionallyReadWrite};
         $readWriteConditionals->{$name} = $readWriteConditional if $readWriteConditional;
 
-        if (NeedsRuntimeCheck($interface, $attribute)) {
+        my $needsRuntimeCheck = NeedsRuntimeCheck($interface, $attribute);
+        my $needsRuntimeReadWriteCheck = $attribute->extendedAttributes->{RuntimeConditionallyReadWrite};
+        
+        if ($needsRuntimeCheck && $needsRuntimeReadWriteCheck) {
+            die "Being both runtime enabled and runtime conditionally read-write is not yet supported (used on the '${name}' attribute of '${interfaceName}').\n";
+        }
+
+        if ($needsRuntimeCheck || $needsRuntimeReadWriteCheck) {
             push(@$runtimeEnabledAttributes, $attribute);
         }
     }
@@ -3827,6 +3836,17 @@ sub GenerateRuntimeEnableConditionalString
         }
     }
 
+    if ($context->extendedAttributes->{RuntimeConditionallyReadWrite}) {
+        assert("Must specify value for RuntimeConditionallyReadWrite.") if $context->extendedAttributes->{RuntimeConditionallyReadWrite} eq "VALUE_IS_MISSING";
+
+        AddToImplIncludes("RuntimeEnabledFeatures.h");
+
+        my @flags = split(/&/, $context->extendedAttributes->{RuntimeConditionallyReadWrite});
+        foreach my $flag (@flags) {
+            push(@conjuncts, "RuntimeEnabledFeatures::sharedFeatures()." . ToMethodName($flag) . "Enabled()");
+        }
+    }
+
     if ($context->extendedAttributes->{EnabledForContext}) {
         assert("Must not specify value for EnabledForContext.") unless $context->extendedAttributes->{EnabledForContext} eq "VALUE_IS_MISSING";
         assert("EnabledForContext must be an interface or constructor attribute.") unless $codeGenerator->IsConstructorType($context->type);
@@ -4302,9 +4322,29 @@ sub GenerateImplementation
             push(@implContent, "        hasDisabledRuntimeProperties = true;\n");
             push(@implContent, "        auto propertyName = Identifier::fromString(vm, reinterpret_cast<const LChar*>(\"$name\"), strlen(\"$name\"));\n");
             push(@implContent, "        VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);\n");
-            push(@implContent, "        JSObject::deleteProperty(this, globalObject(), propertyName);\n");
+            push(@implContent, "        DeletePropertySlot slot;\n");
+            push(@implContent, "        JSObject::deleteProperty(this, globalObject(), propertyName, slot);\n");
             push(@implContent, "    }\n");
             push(@implContent, "#endif\n") if $conditionalString;
+        }
+
+        foreach my $attribute (@runtimeEnabledAttributes) {
+            if ($attribute->extendedAttributes->{RuntimeConditionallyReadWrite}) {
+                AddToImplIncludes("WebCoreJSClientData.h");
+                my $runtimeEnableConditionalString = GenerateRuntimeEnableConditionalString($interface, $attribute);
+
+                my $attributeName = $attribute->name;
+                my $getter = GetAttributeGetterName($interface, $className, $attribute);
+                my $setter = "nullptr";
+                my $jscAttributes = GetJSCAttributesForAttribute($interface, $attribute);
+
+                my $conditionalString = $codeGenerator->GenerateConditionalString($attribute);
+                push(@implContent, "#if ${conditionalString}\n") if $conditionalString;
+                push(@implContent, "    // Adding back attribute, but as readonly, after removing the read-write variant above. \n");
+                push(@implContent, "    if (!${runtimeEnableConditionalString})\n");
+                push(@implContent, "        putDirectCustomAccessor(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames()." . $attributeName . "PublicName(), CustomGetterSetter::create(vm, $getter, $setter), attributesForStructure($jscAttributes));\n");
+                push(@implContent, "#endif\n") if $conditionalString;
+            }
         }
 
         if (@runtimeEnabledProperties) {
@@ -4620,13 +4660,34 @@ sub GenerateImplementation
     GenerateIterableDefinition($interface) if $interface->iterable;
     GenerateSerializerDefinition($interface, $className) if $interface->serializable;
 
+    AddToImplIncludes("DOMIsoSubspaces.h");
+    AddToImplIncludes("WebCoreJSClientData.h");
+    AddToImplIncludes("<JavaScriptCore/JSDestructibleObjectHeapCellType.h>");
+    AddToImplIncludes("<JavaScriptCore/SubspaceInlines.h>");
+    push(@implContent, "JSC::IsoSubspace* ${className}::subspaceForImpl(JSC::VM& vm)\n");
+    push(@implContent, "{\n");
+    push(@implContent, "    auto& clientData = *static_cast<JSVMClientData*>(vm.clientData);\n");
+    push(@implContent, "    auto& spaces = clientData.subspaces();\n");
+    push(@implContent, "    if (auto* space = spaces.m_subspaceFor${interfaceName}.get())\n");
+    push(@implContent, "        return space;\n");
     if (IsDOMGlobalObject($interface)) {
-        AddToImplIncludes("WebCoreJSClientData.h");
-        push(@implContent, "JSC::IsoSubspace* ${className}::subspaceForImpl(JSC::VM& vm)\n");
-        push(@implContent, "{\n");
-        push(@implContent, "    return &static_cast<JSVMClientData*>(vm.clientData)->subspaceFor${className}();\n");
-        push(@implContent, "}\n\n");
+        push(@implContent, "    spaces.m_subspaceFor${interfaceName} = makeUnique<IsoSubspace> ISO_SUBSPACE_INIT(vm.heap, clientData.m_heapCellTypeFor${className}.get(), ${className});\n");
+    } else {
+        push(@implContent, "    static_assert(std::is_base_of_v<JSC::JSDestructibleObject, ${className}> || !${className}::needsDestruction);\n");
+        push(@implContent, "    if constexpr (std::is_base_of_v<JSC::JSDestructibleObject, ${className}>)\n");
+        push(@implContent, "        spaces.m_subspaceFor${interfaceName} = makeUnique<IsoSubspace> ISO_SUBSPACE_INIT(vm.heap, vm.destructibleObjectHeapCellType.get(), ${className});\n");
+        push(@implContent, "    else\n");
+        push(@implContent, "        spaces.m_subspaceFor${interfaceName} = makeUnique<IsoSubspace> ISO_SUBSPACE_INIT(vm.heap, vm.cellHeapCellType.get(), ${className});\n");
     }
+    push(@implContent, "    auto* space = spaces.m_subspaceFor${interfaceName}.get();\n");
+    push(@implContent, "IGNORE_WARNINGS_BEGIN(\"unreachable-code\")\n");
+    push(@implContent, "IGNORE_WARNINGS_BEGIN(\"tautological-compare\")\n");
+    push(@implContent, "    if (&${className}::visitOutputConstraints != &JSC::JSCell::visitOutputConstraints)\n");
+    push(@implContent, "        clientData.outputConstraintSpaces().append(space);\n");
+    push(@implContent, "IGNORE_WARNINGS_END\n");
+    push(@implContent, "IGNORE_WARNINGS_END\n");
+    push(@implContent, "    return space;\n");
+    push(@implContent, "}\n\n");
 
     if ($needsVisitChildren) {
         push(@implContent, "void ${className}::visitChildren(JSCell* cell, SlotVisitor& visitor)\n");
@@ -4840,11 +4901,11 @@ END
         push(@implContent, <<END) if $vtableNameGnu;
 
 #if ENABLE(BINDING_INTEGRITY)
-    void* actualVTablePointer = *(reinterpret_cast<void**>(impl.ptr()));
+    const void* actualVTablePointer = getVTablePointer(impl.ptr());
 #if PLATFORM(WIN)
-    void* expectedVTablePointer = WTF_PREPARE_VTBL_POINTER_FOR_INSPECTION(${vtableRefWin});
+    void* expectedVTablePointer = ${vtableRefWin};
 #else
-    void* expectedVTablePointer = WTF_PREPARE_VTBL_POINTER_FOR_INSPECTION(${vtableRefGnu});
+    void* expectedVTablePointer = ${vtableRefGnu};
 #endif
 
     // If this fails ${implType} does not have a vtable, so you need to add the
@@ -6441,10 +6502,58 @@ struct ${iteratorTraitsName} {
     using ValueType = ${iteratorTraitsValueType};
 };
 
-using ${iteratorName} = JSDOMIterator<${className}, ${iteratorTraitsName}>;
+using ${iteratorName}Base = JSDOMIteratorBase<${className}, ${iteratorTraitsName}>;
+class ${iteratorName} final : public ${iteratorName}Base {
+public:
+    using Base = ${iteratorName}Base;
+    DECLARE_INFO;
+
+    template<typename, JSC::SubspaceAccess mode> static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        if constexpr (mode == JSC::SubspaceAccess::Concurrently)
+            return nullptr;
+        auto& clientData = *static_cast<JSVMClientData*>(vm.clientData);
+        auto& spaces = clientData.subspaces();
+        if (auto* space = spaces.m_subspaceFor${iteratorName}.get())
+            return space;
+        static_assert(std::is_base_of_v<JSC::JSDestructibleObject, ${iteratorName}> || !${iteratorName}::needsDestruction);
+        if constexpr (std::is_base_of_v<JSC::JSDestructibleObject, ${iteratorName}>)
+            spaces.m_subspaceFor${iteratorName} = makeUnique<IsoSubspace> ISO_SUBSPACE_INIT(vm.heap, vm.destructibleObjectHeapCellType.get(), ${iteratorName});
+        else
+            spaces.m_subspaceFor${iteratorName} = makeUnique<IsoSubspace> ISO_SUBSPACE_INIT(vm.heap, vm.cellHeapCellType.get(), ${iteratorName});
+        auto* space = spaces.m_subspaceFor${iteratorName}.get();
+IGNORE_WARNINGS_BEGIN(\"unreachable-code\")
+IGNORE_WARNINGS_BEGIN(\"tautological-compare\")
+        if (&${iteratorName}::visitOutputConstraints != &JSC::JSCell::visitOutputConstraints)
+            clientData.outputConstraintSpaces().append(space);
+IGNORE_WARNINGS_END
+IGNORE_WARNINGS_END
+        return space;
+    }
+
+    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
+    {
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+    }
+
+    static ${iteratorName}* create(JSC::VM& vm, JSC::Structure* structure, ${className}& iteratedObject, IterationKind kind)
+    {
+        auto* instance = new (NotNull, JSC::allocateCell<${iteratorName}>(vm.heap)) ${iteratorName}(structure, iteratedObject, kind);
+        instance->finishCreation(vm);
+        return instance;
+    }
+
+private:
+    ${iteratorName}(JSC::Structure* structure, ${className}& iteratedObject, IterationKind kind)
+        : Base(structure, iteratedObject, kind)
+    {
+    }
+};
+
 using ${iteratorPrototypeName} = JSDOMIteratorPrototype<${className}, ${iteratorTraitsName}>;
 
 template<>
+const JSC::ClassInfo ${iteratorName}Base::s_info = { "${visibleInterfaceName} Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(${iteratorName}Base) };
 const JSC::ClassInfo ${iteratorName}::s_info = { "${visibleInterfaceName} Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(${iteratorName}) };
 
 template<>
@@ -6467,10 +6576,10 @@ static inline EncodedJSValue ${functionName}Caller(JSGlobalObject* lexicalGlobal
 
 END
         } else {
-            my $iterationKind = "KeyValue";
-            $iterationKind = "Key" if $propertyName eq "keys";
-            $iterationKind = "Value" if $propertyName eq "values";
-            $iterationKind = "Value" if $propertyName eq "entries" and not $interface->iterable->isKeyValue;
+            my $iterationKind = "Entries";
+            $iterationKind = "Keys" if $propertyName eq "keys";
+            $iterationKind = "Values" if $propertyName eq "values";
+            $iterationKind = "Values" if $propertyName eq "entries" and not $interface->iterable->isKeyValue;
 
             push(@implContent,  <<END);
 static inline EncodedJSValue ${functionName}Caller(JSGlobalObject*, CallFrame*, JS$interfaceName* thisObject, JSC::ThrowScope&)
@@ -7148,7 +7257,7 @@ sub GeneratePrototypeDeclaration
     my $prototypeClassName = "${className}Prototype";
 
     my %structureFlags = ();
-    push(@$outputArray, "class ${prototypeClassName} : public JSC::JSNonFinalObject {\n");
+    push(@$outputArray, "class ${prototypeClassName} final : public JSC::JSNonFinalObject {\n");
     push(@$outputArray, "public:\n");
     push(@$outputArray, "    using Base = JSC::JSNonFinalObject;\n");
 
@@ -7160,6 +7269,13 @@ sub GeneratePrototypeDeclaration
     push(@$outputArray, "    }\n\n");
 
     push(@$outputArray, "    DECLARE_INFO;\n");
+
+    push(@$outputArray, "    template<typename CellType, JSC::SubspaceAccess>\n");
+    push(@$outputArray, "    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)\n");
+    push(@$outputArray, "    {\n");
+    push(@$outputArray, "        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(${prototypeClassName}, Base);\n");
+    push(@$outputArray, "        return &vm.plainObjectSpace;\n");
+    push(@$outputArray, "    }\n");
 
     push(@$outputArray, "    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)\n");
     push(@$outputArray, "    {\n");
@@ -7292,7 +7408,6 @@ sub GenerateConstructorDefinition
             push(@$outputArray, "{\n");
             push(@$outputArray, "    VM& vm = lexicalGlobalObject->vm();\n");
             push(@$outputArray, "    auto throwScope = DECLARE_THROW_SCOPE(vm);\n");
-            push(@$outputArray, "    UNUSED_PARAM(throwScope);\n");
             push(@$outputArray, "    auto* castedThis = jsCast<${constructorClassName}*>(callFrame->jsCallee());\n");
             push(@$outputArray, "    ASSERT(castedThis);\n");
 
@@ -7313,6 +7428,7 @@ sub GenerateConstructorDefinition
             push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, encodedJSValue());\n") if $codeGenerator->ExtendedAttributeContains($interface->extendedAttributes->{ConstructorCallWith}, "ExecState");
 
             my $IDLType = GetIDLType($interface, $interface->type);
+            my $implType = GetImplClassName($interface);
 
             AddToImplIncludes("JSDOMConvertInterface.h");
 
@@ -7322,7 +7438,12 @@ sub GenerateConstructorDefinition
             push(@constructionConversionArguments, "throwScope") if $interface->extendedAttributes->{ConstructorMayThrowException};
             push(@constructionConversionArguments, "WTFMove(object)");
 
-            push(@$outputArray, "    return JSValue::encode(toJSNewlyCreated<${IDLType}>(" . join(", ", @constructionConversionArguments) . "));\n");
+            # FIXME: toJSNewlyCreated should return JSObject* instead of JSValue.
+            push(@$outputArray, "    auto jsValue = toJSNewlyCreated<${IDLType}>(" . join(", ", @constructionConversionArguments) . ");\n");
+            push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, { });\n") if $interface->extendedAttributes->{ConstructorMayThrowException};
+            push(@$outputArray, "    setSubclassStructureIfNeeded<${implType}>(lexicalGlobalObject, callFrame, asObject(jsValue));\n");
+            push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, { });\n");
+            push(@$outputArray, "    return JSValue::encode(jsValue);\n");
             push(@$outputArray, "}\n\n");
         }
     }
@@ -7466,7 +7587,8 @@ sub GenerateConstructorHelperMethods
         push(@$outputArray, "    if (!${runtimeEnableConditionalString}) {\n");
         push(@$outputArray, "        auto propertyName = Identifier::fromString(vm, reinterpret_cast<const LChar*>(\"$name\"), strlen(\"$name\"));\n");
         push(@$outputArray, "        VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);\n");
-        push(@$outputArray, "        JSObject::deleteProperty(this, &globalObject, propertyName);\n");
+        push(@$outputArray, "        DeletePropertySlot slot;\n");
+        push(@$outputArray, "        JSObject::deleteProperty(this, &globalObject, propertyName, slot);\n");
         push(@$outputArray, "    }\n");
         push(@$outputArray, "#endif\n") if $conditionalString;
     }

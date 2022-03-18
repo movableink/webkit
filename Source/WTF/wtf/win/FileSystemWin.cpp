@@ -151,8 +151,9 @@ static String getFinalPathName(const String& path)
     if (!isHandleValid(handle))
         return String();
 
-    Vector<UChar> buffer(MAX_PATH);
-    if (::GetFinalPathNameByHandleW(handle, wcharFrom(buffer.data()), buffer.size(), VOLUME_NAME_NT) >= MAX_PATH) {
+    // VOLUME_NAME_DOS can return a \\?\ prefixed path, so it can be longer than MAX_PATH
+    Vector<UChar> buffer(32768);
+    if (::GetFinalPathNameByHandleW(handle, wcharFrom(buffer.data()), buffer.size(), VOLUME_NAME_DOS) >= 32768) {
         closeFile(handle);
         return String();
     }
@@ -221,7 +222,7 @@ Optional<FileMetadata> fileMetadataFollowingSymlinks(const String& path)
 
 bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath)
 {
-    return !::CreateSymbolicLinkW(symbolicLinkPath.wideCharacters().data(), targetPath.wideCharacters().data(), 0);
+    return ::CreateSymbolicLinkW(symbolicLinkPath.wideCharacters().data(), targetPath.wideCharacters().data(), 0);
 }
 
 bool fileExists(const String& path)
@@ -316,8 +317,9 @@ String pathGetFileName(const String& path)
 String directoryName(const String& path)
 {
     String name = path.left(path.length() - pathGetFileName(path).length());
-    if (name.characterStartingAt(name.length() - 1) == '\\') {
-        // Remove any trailing "\".
+    if (name.characterStartingAt(name.length() - 1) == '\\'
+        || name.characterStartingAt(name.length() - 1) == '/') {
+        // Remove any trailing "\" or "/"
         name.truncate(name.length() - 1);
     }
     return name;
@@ -419,7 +421,7 @@ String openTemporaryFile(const String&, PlatformFileHandle& handle)
     return proposedPath;
 }
 
-PlatformFileHandle openFile(const String& path, FileOpenMode mode)
+PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
 {
     DWORD desiredAccess = 0;
     DWORD creationDisposition = 0;
@@ -434,9 +436,14 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode)
         desiredAccess = GENERIC_WRITE;
         creationDisposition = CREATE_ALWAYS;
         break;
-    default:
-        ASSERT_NOT_REACHED();
+    case FileOpenMode::ReadWrite:
+        desiredAccess = GENERIC_READ | GENERIC_WRITE;
+        creationDisposition = OPEN_ALWAYS;
+        break;
     }
+
+    if (failIfFileExists)
+        creationDisposition = CREATE_NEW;
 
     String destination = path;
     return CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, 0, creationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
@@ -547,9 +554,14 @@ Vector<String> listDirectory(const String& directory, const String& filter)
     return entries;
 }
 
-bool getVolumeFreeSpace(const String&, uint64_t&)
+bool getVolumeFreeSpace(const String& path, uint64_t& freeSpace)
 {
-    return false;
+    ULARGE_INTEGER freeBytesAvailableToCaller;
+    if (!GetDiskFreeSpaceExW(path.wideCharacters().data(), &freeBytesAvailableToCaller, nullptr, nullptr))
+        return false;
+
+    freeSpace = freeBytesAvailableToCaller.QuadPart;
+    return true;
 }
 
 Optional<int32_t> getFileDeviceId(const CString& fsFile)
@@ -601,15 +613,7 @@ bool unmapViewOfFile(void* buffer, size_t)
     return UnmapViewOfFile(buffer);
 }
 
-MappedFileData::MappedFileData(const String& filePath, MappedFileMode mode, bool& success)
-{
-    auto file = CreateFile(filePath.wideCharacters().data(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-
-    success = mapFileHandle(file, mode);
-    closeFile(file);
-}
-
-bool MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode)
+bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode)
 {
     if (!isHandleValid(handle))
         return false;
@@ -623,11 +627,28 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode)
         return true;
     }
 
-    auto mapping = CreateFileMapping(handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    DWORD pageProtection = PAGE_READONLY;
+    DWORD desiredAccess = FILE_MAP_READ;
+    switch (openMode) {
+    case FileOpenMode::Read:
+        pageProtection = PAGE_READONLY;
+        desiredAccess = FILE_MAP_READ;
+        break;
+    case FileOpenMode::Write:
+        pageProtection = PAGE_READWRITE;
+        desiredAccess = FILE_MAP_WRITE;
+        break;
+    case FileOpenMode::ReadWrite:
+        pageProtection = PAGE_READWRITE;
+        desiredAccess = FILE_MAP_WRITE | FILE_MAP_READ;
+        break;
+    }
+
+    auto mapping = CreateFileMapping(handle, nullptr, pageProtection, 0, 0, nullptr);
     if (!mapping)
         return false;
 
-    m_fileData = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, size);
+    m_fileData = MapViewOfFile(mapping, desiredAccess, 0, 0, size);
     CloseHandle(mapping);
     if (!m_fileData)
         return false;

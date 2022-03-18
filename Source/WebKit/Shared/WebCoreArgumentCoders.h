@@ -30,13 +30,16 @@
 #include <WebCore/ColorSpace.h>
 #include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/ImageData.h>
 #include <WebCore/IndexedDB.h>
 #include <WebCore/InputMode.h>
 #include <WebCore/MediaSelectionOption.h>
 #include <WebCore/NetworkLoadMetrics.h>
 #include <WebCore/NotificationDirection.h>
 #include <WebCore/RealtimeMediaSource.h>
+#include <WebCore/RenderingMode.h>
 #include <WebCore/ScrollSnapOffsetsInfo.h>
+#include <WebCore/SerializedPlatformDataCueValue.h>
 #include <WebCore/ServiceWorkerTypes.h>
 #include <WebCore/StoredCredentialsPolicy.h>
 #include <WebCore/WorkerType.h>
@@ -52,6 +55,11 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/WebCoreArgumentCodersAdditions.h>
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA)
+#include <WebCore/CDMInstance.h>
+#include <WebCore/CDMInstanceSession.h>
 #endif
 
 #if PLATFORM(COCOA)
@@ -80,6 +88,7 @@ class FloatRect;
 class FloatRoundedRect;
 class FloatSize;
 class FixedPositionViewportConstraints;
+class FontHandle;
 class HTTPHeaderMap;
 class ImageHandle;
 class IntPoint;
@@ -98,6 +107,7 @@ class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 class SecurityOrigin;
+class SharedBuffer;
 class SpringTimingFunction;
 class StepsTimingFunction;
 class StickyPositionViewportConstraints;
@@ -127,9 +137,7 @@ struct ResourceLoadStatistics;
 struct ScrollableAreaParameters;
 struct TextCheckingResult;
 struct TextIndicatorData;
-#if ENABLE(POINTER_EVENTS)
 struct TouchActionData;
-#endif
 struct VelocityData;
 struct ViewportAttributes;
 struct WindowFeatures;
@@ -147,6 +155,9 @@ class SelectionRect;
 struct Highlight;
 struct PasteboardImage;
 struct PasteboardWebContent;
+#endif
+
+#if ENABLE(META_VIEWPORT)
 struct ViewportArguments;
 #endif
 
@@ -215,12 +226,10 @@ template<> struct ArgumentCoder<WebCore::DOMCacheEngine::Record> {
     static Optional<WebCore::DOMCacheEngine::Record> decode(Decoder&);
 };
 
-#if ENABLE(POINTER_EVENTS)
 template<> struct ArgumentCoder<WebCore::TouchActionData> {
     static void encode(Encoder&, const WebCore::TouchActionData&);
     static Optional<WebCore::TouchActionData> decode(Decoder&);
 };
-#endif
 
 template<> struct ArgumentCoder<WebCore::EventTrackingRegions> {
     static void encode(Encoder&, const WebCore::EventTrackingRegions&);
@@ -294,13 +303,21 @@ template<> struct ArgumentCoder<WebCore::FloatQuad> {
     static void encode(Encoder&, const WebCore::FloatQuad&);
     static Optional<WebCore::FloatQuad> decode(Decoder&);
 };
+#endif // PLATFORM(IOS_FAMILY)
 
+#if ENABLE(META_VIEWPORT)
 template<> struct ArgumentCoder<WebCore::ViewportArguments> {
     static void encode(Encoder&, const WebCore::ViewportArguments&);
     static bool decode(Decoder&, WebCore::ViewportArguments&);
     static Optional<WebCore::ViewportArguments> decode(Decoder&);
 };
-#endif // PLATFORM(IOS_FAMILY)
+
+#endif
+
+template<> struct ArgumentCoder<WebCore::ViewportAttributes> {
+    static void encode(Encoder&, const WebCore::ViewportAttributes&);
+    static bool decode(Decoder&, WebCore::ViewportAttributes&);
+};
 
 template<> struct ArgumentCoder<WebCore::IntPoint> {
     static void encode(Encoder&, const WebCore::IntPoint&);
@@ -333,11 +350,6 @@ template<> struct ArgumentCoder<WebCore::LayoutPoint> {
 template<> struct ArgumentCoder<WebCore::Length> {
     static void encode(Encoder&, const WebCore::Length&);
     static bool decode(Decoder&, WebCore::Length&);
-};
-
-template<> struct ArgumentCoder<WebCore::ViewportAttributes> {
-    static void encode(Encoder&, const WebCore::ViewportAttributes&);
-    static bool decode(Decoder&, WebCore::ViewportAttributes&);
 };
 
 template<> struct ArgumentCoder<WebCore::VelocityData> {
@@ -377,6 +389,13 @@ template<> struct ArgumentCoder<WebCore::Credential> {
 template<> struct ArgumentCoder<WebCore::Cursor> {
     static void encode(Encoder&, const WebCore::Cursor&);
     static bool decode(Decoder&, WebCore::Cursor&);
+};
+
+template<> struct ArgumentCoder<WebCore::FontHandle> {
+    static void encode(Encoder&, const WebCore::FontHandle&);
+    static bool decode(Decoder&, WebCore::FontHandle&);
+    static void encodePlatformData(Encoder&, const WebCore::FontHandle&);
+    static bool decodePlatformData(Decoder&, WebCore::FontHandle&);
 };
 
 template<> struct ArgumentCoder<WebCore::ImageHandle> {
@@ -431,6 +450,26 @@ template<> struct ArgumentCoder<WTF::MachSendRight> {
 template<> struct ArgumentCoder<WebCore::KeypressCommand> {
     static void encode(Encoder&, const WebCore::KeypressCommand&);
     static Optional<WebCore::KeypressCommand> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<CGPoint> {
+    static void encode(Encoder&, CGPoint);
+    static Optional<CGPoint> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<CGSize> {
+    static void encode(Encoder&, CGSize);
+    static Optional<CGSize> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<CGRect> {
+    static void encode(Encoder&, CGRect);
+    static Optional<CGRect> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<CGAffineTransform> {
+    static void encode(Encoder&, CGAffineTransform);
+    static Optional<CGAffineTransform> decode(Decoder&);
 };
 #endif
 
@@ -785,6 +824,47 @@ template<> struct ArgumentCoder<WebCore::SerializedAttachmentData> {
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)
 
+#if ENABLE(VIDEO)
+template<> struct ArgumentCoder<WebCore::SerializedPlatformDataCueValue> {
+    static void encode(Encoder&, const WebCore::SerializedPlatformDataCueValue&);
+    static Optional<WebCore::SerializedPlatformDataCueValue> decode(Decoder&);
+    static void encodePlatformData(Encoder&, const WebCore::SerializedPlatformDataCueValue&);
+    static Optional<WebCore::SerializedPlatformDataCueValue> decodePlatformData(Decoder&, WebCore::SerializedPlatformDataCueValue::PlatformType);
+};
+#endif
+
+template<> struct ArgumentCoder<RefPtr<WebCore::SharedBuffer>> {
+    static void encode(Encoder&, const RefPtr<WebCore::SharedBuffer>&);
+    static Optional<RefPtr<WebCore::SharedBuffer>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<Ref<WebCore::SharedBuffer>> {
+    static void encode(Encoder&, const Ref<WebCore::SharedBuffer>&);
+    static Optional<Ref<WebCore::SharedBuffer>> decode(Decoder&);
+};
+
+#if ENABLE(ENCRYPTED_MEDIA)
+template<> struct ArgumentCoder<WebCore::CDMInstanceSession::Message> {
+    static void encode(Encoder&, const WebCore::CDMInstanceSession::Message&);
+    static Optional<WebCore::CDMInstanceSession::Message> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebCore::CDMInstanceSession::KeyStatusVector> {
+    static void encode(Encoder&, const WebCore::CDMInstanceSession::KeyStatusVector&);
+    static Optional<WebCore::CDMInstanceSession::KeyStatusVector> decode(Decoder&);
+};
+#endif
+
+template<> struct ArgumentCoder<RefPtr<WebCore::ImageData>> {
+    static void encode(Encoder&, const RefPtr<WebCore::ImageData>&);
+    static Optional<RefPtr<WebCore::ImageData>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<Ref<WebCore::ImageData>> {
+    static void encode(Encoder&, const Ref<WebCore::ImageData>&);
+    static Optional<Ref<WebCore::ImageData>> decode(Decoder&);
+};
+
 } // namespace IPC
 
 namespace WTF {
@@ -795,6 +875,18 @@ template<> struct EnumTraits<WebCore::ColorSpace> {
     WebCore::ColorSpace::SRGB,
     WebCore::ColorSpace::LinearRGB,
     WebCore::ColorSpace::DisplayP3
+    >;
+};
+
+template<> struct EnumTraits<WebCore::RenderingMode> {
+    using values = EnumValues<
+    WebCore::RenderingMode,
+    WebCore::RenderingMode::Accelerated,
+    WebCore::RenderingMode::Unaccelerated,
+    WebCore::RenderingMode::DisplayListAccelerated,
+    WebCore::RenderingMode::DisplayListUnaccelerated,
+    WebCore::RenderingMode::RemoteAccelerated,
+    WebCore::RenderingMode::RemoteUnaccelerated
     >;
 };
 
@@ -920,5 +1012,29 @@ template<> struct EnumTraits<WTFLogLevel> {
     WTFLogLevel::Debug
     >;
 };
+
+#if ENABLE(ENCRYPTED_MEDIA)
+template <> struct EnumTraits<WebCore::CDMInstanceSession::SessionLoadFailure> {
+    using values = EnumValues <
+    WebCore::CDMInstanceSession::SessionLoadFailure,
+    WebCore::CDMInstanceSession::SessionLoadFailure::None,
+    WebCore::CDMInstanceSession::SessionLoadFailure::NoSessionData,
+    WebCore::CDMInstanceSession::SessionLoadFailure::MismatchedSessionType,
+    WebCore::CDMInstanceSession::SessionLoadFailure::QuotaExceeded,
+    WebCore::CDMInstanceSession::SessionLoadFailure::Other
+    >;
+};
+
+template <> struct EnumTraits<WebCore::CDMInstance::HDCPStatus> {
+    using values = EnumValues <
+    WebCore::CDMInstance::HDCPStatus,
+    WebCore::CDMInstance::HDCPStatus::Unknown,
+    WebCore::CDMInstance::HDCPStatus::Valid,
+    WebCore::CDMInstance::HDCPStatus::OutputRestricted,
+    WebCore::CDMInstance::HDCPStatus::OutputDownscaled
+    >;
+};
+
+#endif
 
 } // namespace WTF

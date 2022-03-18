@@ -106,10 +106,10 @@ Ref<AccessibilityNodeObject> AccessibilityNodeObject::create(Node* node)
     return adoptRef(*new AccessibilityNodeObject(node));
 }
 
-void AccessibilityNodeObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
+void AccessibilityNodeObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
 {
     // AccessibilityObject calls clearChildren.
-    AccessibilityObject::detach(detachmentType, cache);
+    AccessibilityObject::detachRemoteParts(detachmentType);
     m_node = nullptr;
 }
 
@@ -1044,7 +1044,7 @@ Element* AccessibilityNodeObject::mouseButtonListener(MouseButtonListenerResultF
 
     // check if our parent is a mouse button listener
     // FIXME: Do the continuation search like anchorElement does
-    for (auto& element : elementLineage(is<Element>(*node) ? downcast<Element>(node) : node->parentElement())) {
+    for (auto& element : lineageOfType<Element>(is<Element>(*node) ? downcast<Element>(*node) : *node->parentElement())) {
         // If we've reached the body and this is not a control element, do not expose press action for this element unless filter is IncludeBodyElement.
         // It can cause false positives, where every piece of text is labeled as accepting press actions.
         if (element.hasTagName(bodyTag) && isStaticText() && filter == ExcludeBodyElement)
@@ -1104,7 +1104,7 @@ void AccessibilityNodeObject::changeValueByStep(bool increase)
 
     value += increase ? step : -step;
 
-    setValue(String::numberToStringFixedPrecision(value));
+    setValue(String::number(value));
 
     auto objectCache = axObjectCache();
     if (objectCache)
@@ -1122,7 +1122,7 @@ void AccessibilityNodeObject::changeValueByPercent(float percentChange)
         step = std::abs(percentChange) * (1 / percentChange);
 
     value += step;
-    setValue(String::numberToStringFixedPrecision(value));
+    setValue(String::number(value));
 
     auto objectCache = axObjectCache();
     if (objectCache)
@@ -1313,14 +1313,14 @@ void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOr
             auto objectCache = axObjectCache();
             // Only use the <label> text if there's no ARIA override.
             if (objectCache && !innerText.isEmpty() && !ariaAccessibilityDescription())
-                textOrder.append(AccessibilityText(innerText, isMeter() ? AccessibilityTextSource::Alternative : AccessibilityTextSource::LabelByElement, objectCache->getOrCreate(label)));
+                textOrder.append(AccessibilityText(innerText, isMeter() ? AccessibilityTextSource::Alternative : AccessibilityTextSource::LabelByElement));
             return;
         }
     }
     
     AccessibilityObject* titleUIElement = this->titleUIElement();
     if (titleUIElement)
-        textOrder.append(AccessibilityText(String(), AccessibilityTextSource::LabelByElement, titleUIElement));
+        textOrder.append(AccessibilityText(String(), AccessibilityTextSource::LabelByElement));
 }
 
 void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrder) const
@@ -1517,7 +1517,7 @@ void AccessibilityNodeObject::ariaLabeledByText(Vector<AccessibilityText>& textO
         for (const auto& element : elements)
             axElements.append(objectCache->getOrCreate(element));
         
-        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative, axElements));
+        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative));
     }
 }
     
@@ -1739,7 +1739,7 @@ static bool shouldUseAccessibilityObjectInnerText(AccessibilityObject* obj, Acce
     if (is<AccessibilityList>(*obj))
         return false;
 
-    if (is<AccessibilityTable>(*obj) && downcast<AccessibilityTable>(*obj).isExposableThroughAccessibility())
+    if (is<AccessibilityTable>(*obj) && downcast<AccessibilityTable>(*obj).isExposable())
         return false;
 
     if (obj->isTree() || obj->isCanvas())

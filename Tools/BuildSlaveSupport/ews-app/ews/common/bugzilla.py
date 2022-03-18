@@ -74,6 +74,40 @@ class Bugzilla():
         return attachment_json.get(str(attachment_id))
 
     @classmethod
+    def _get_commit_queue_patches_from_bug(cls, bug_id):
+        if not util.is_valid_id(bug_id):
+            _log.warn('Invalid bug id: "{}"'.format(bug_id))
+            return []
+
+        bug_url = '{}rest/bug/{}/attachment'.format(config.BUG_SERVER_URL, bug_id)
+        api_key = os.getenv('BUGZILLA_API_KEY', None)
+        if api_key:
+            bug_url += '?api_key={}'.format(api_key)
+        bug = util.fetch_data_from_url(bug_url)
+        if not bug:
+            return []
+        bug_json = bug.json().get('bugs')
+        if not bug_json or len(bug_json) == 0:
+            return []
+
+        commit_queue_patches = []
+        for patch_json in bug_json.get(str(bug_id)):
+            if cls._is_patch_cq_plus(patch_json) == 1:
+                commit_queue_patches.append(patch_json.get('id'))
+
+        return commit_queue_patches
+
+    @classmethod
+    def _is_patch_cq_plus(cls, patch_json):
+        if not patch_json:
+            return -1
+
+        for flag in patch_json.get('flags', []):
+            if flag.get('name') == 'commit-queue' and flag.get('status') == '+':
+                return 1
+        return 0
+
+    @classmethod
     def file_path_for_patch(cls, patch_id):
         if not os.path.exists(config.PATCH_FOLDER):
             os.mkdir(config.PATCH_FOLDER)
@@ -85,6 +119,14 @@ class Bugzilla():
         ids_needing_review = set(BugzillaBeautifulSoup().fetch_attachment_ids_from_review_queue(current_time - timedelta(7)))
         #TODO: add security bugs support here.
         return ids_needing_review
+
+    @classmethod
+    def get_list_of_patches_for_commit_queue(cls):
+        bug_ids_for_commit_queue = set(BugzillaBeautifulSoup().fetch_bug_ids_for_commit_queue())
+        ids_for_commit_queue = []
+        for bug_id in bug_ids_for_commit_queue:
+            ids_for_commit_queue.extend(cls._get_commit_queue_patches_from_bug(bug_id))
+        return ids_for_commit_queue
 
 
 class BugzillaBeautifulSoup():
@@ -116,7 +158,7 @@ class BugzillaBeautifulSoup():
         attempts = 0
         while not authenticated:
             attempts += 1
-            _log.info('Logging in as {}...'.format(username))
+            _log.debug('Logging in as {}...'.format(username))
             self.browser.open(config.BUG_SERVER_URL + 'index.cgi?GoAheadAndLogIn=1')
             self.browser.select_form(name="login")
             self.browser['Bugzilla_login'] = username
@@ -143,10 +185,18 @@ class BugzillaBeautifulSoup():
             review_queue_url += '&product=Security'
         return self._parse_attachment_ids_request_query(self._load_query(review_queue_url), since)
 
+    def fetch_bug_ids_for_commit_queue(self):
+        commit_queue_url = "buglist.cgi?query_format=advanced&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&field0-0-0=flagtypes.name&type0-0-0=equals&value0-0-0=commit-queue%2B&order=Last+Changed"
+        soup = BeautifulSoup(self._load_query(commit_queue_url))
+        # The contents of the <a> inside the cells in the first column happen
+        # to be the bug id.
+        return [int(bug_link_cell.find("a").string)
+                for bug_link_cell in soup('td', "first-child")]
+
     def _load_query(self, query):
         self.authenticate()
         full_url = '{}{}'.format(config.BUG_SERVER_URL, query)
-        _log.info('Getting list of patches needing review, URL: {}'.format(full_url))
+        _log.debug('Getting list of patches needing review, URL: {}'.format(full_url))
         return self.browser.open(full_url)
 
     def _parse_attachment_ids_request_query(self, page, since=None):

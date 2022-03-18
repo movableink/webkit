@@ -225,7 +225,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
     jit.jitAssertTagsInPlace();
 
     // Pro-forma stuff.
-    if (Options::printEachOSRExit()) {
+    if (UNLIKELY(Options::printEachOSRExit())) {
         SpeculationFailureDebugInfo* debugInfo = new SpeculationFailureDebugInfo;
         debugInfo->codeBlock = jit.codeBlock();
         debugInfo->kind = exit.m_kind;
@@ -608,14 +608,32 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                         break;
                     }
 
-                    case BooleanDisplacedInJSStack:
-                    case UnboxedCellInGPR:
-                    case CellDisplacedInJSStack:
+#if USE(JSVALUE32_64)
+                    case InPair:
+#endif
                     case InGPR:
+                    case BooleanDisplacedInJSStack:
+                    case CellDisplacedInJSStack:
                     case DisplacedInJSStack: {
                         sideState->tmps[i] = reinterpret_cast<JSValue*>(tmpScratch)[i + tmpOffset];
                         break;
                     }
+
+                    case UnboxedCellInGPR: {
+#if USE(JSVALUE64)
+                        sideState->tmps[i] = reinterpret_cast<JSValue*>(tmpScratch)[i + tmpOffset];
+#else
+                        EncodedValueDescriptor* valueDescriptor = bitwise_cast<EncodedValueDescriptor*>(tmpScratch + i + tmpOffset);
+                        sideState->tmps[i] = JSValue(JSValue::CellTag, valueDescriptor->asBits.payload);
+#endif
+                        break;
+                    }
+
+                    case UnboxedBooleanInGPR: {
+                        sideState->tmps[i] = jsBoolean(static_cast<bool>(tmpScratch[i + tmpOffset]));
+                        break;
+                    }
+
                     default: 
                         RELEASE_ASSERT_NOT_REACHED();
                         break;
@@ -633,7 +651,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                     continue;
 
                 auto* inlineCallFrame = codeOrigin->inlineCallFrame();
-                addSideState(reinterpret_cast<CallFrame*>(reinterpret_cast<char*>(callFrame) + inlineCallFrame->returnPCOffset() - sizeof(CPURegister)), callBytecodeIndex, inlineCallFrame->tmpOffset);
+                addSideState(reinterpret_cast_ptr<CallFrame*>(reinterpret_cast<char*>(callFrame) + inlineCallFrame->returnPCOffset() - sizeof(CPURegister)), callBytecodeIndex, inlineCallFrame->tmpOffset);
             }
 
             if (!codeOrigin)

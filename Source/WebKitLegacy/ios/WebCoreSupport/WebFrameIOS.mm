@@ -44,6 +44,7 @@
 #import <WebCore/RenderText.h>
 #import <WebCore/RenderedDocumentMarker.h>
 #import <WebCore/SelectionRect.h>
+#import <WebCore/SimpleRange.h>
 #import <WebCore/TextBoundaries.h>
 #import <WebCore/TextFlags.h>
 #import <WebCore/VisiblePosition.h>
@@ -941,7 +942,8 @@ static VisiblePosition SimpleSmartExtendEnd(const VisiblePosition& start, const 
 {
     Frame *frame = [self coreFrame];
     IntPoint adjustedPoint = frame->view()->windowToContents(roundedIntPoint(point));
-    HitTestResult result = frame->eventHandler().hitTestResultAtPoint(adjustedPoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent);
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AllowChildFrameContent };
+    HitTestResult result = frame->eventHandler().hitTestResultAtPoint(adjustedPoint, hitType);
     Node* hitNode = result.innerNode();
     if (!hitNode || !hitNode->renderer())
         return IntRect();

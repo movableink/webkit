@@ -1,3 +1,113 @@
+2020-03-13  Konstantin Tokarev  <annulen@yandex.ru>
+
+        [CMake] Eleminate mismatches between Find* module names and variables they set
+        https://bugs.webkit.org/show_bug.cgi?id=208948
+
+        Reviewed by Michael Catanzaro.
+
+        * CMakeLists.txt:
+        * cmake/FindAlsaLib.cmake:
+        * cmake/FindLibEvent.cmake:
+        * cmake/FindLibOpus.cmake: Renamed from Source/ThirdParty/libwebrtc/cmake/FindOpus.cmake.
+        * cmake/FindLibVpx.cmake: Renamed from Source/ThirdParty/libwebrtc/cmake/FindVpx.cmake.
+
+2020-03-02  Alan Coon  <alancoon@apple.com>
+
+        Add new Mac target numbers
+        https://bugs.webkit.org/show_bug.cgi?id=208398
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/Version.xcconfig:
+        * Configurations/WebKitTargetConditionals.xcconfig:
+
+2020-02-09  Keith Rollin  <krollin@apple.com>
+
+        Re-enable LTO for ARM builds
+        https://bugs.webkit.org/show_bug.cgi?id=207402
+        <rdar://problem/49190767>
+
+        Reviewed by Sam Weinig.
+
+        Bug 190758 re-enabled LTO for Production builds for x86-family CPUs.
+        Enabling it for ARM was left out due to a compiler issue. That issue
+        has been fixed, and so now we can re-enable LTO for ARM.
+
+        * Configurations/Base.xcconfig:
+
+2020-02-03  youenn fablet  <youenn@apple.com>
+
+        Make sure RTCVideoEncoderH264 generate a keyframe even if the frame that was supposed to be a key frame was dropped
+        https://bugs.webkit.org/show_bug.cgi?id=207108
+
+        Reviewed by Eric Carlson.
+
+        Add a parameter telling whether a frame to be encoded should be a key frame.
+        In encoder callback, if the frame is expected to be a key frame, set a flag to force the next frame to be a key frame.
+        This ensures that keyframe sending is not delayed in case encoding is dropping or failing to encode frames.
+
+        * Source/webrtc/sdk/objc/components/video_codec/RTCVideoEncoderH264.mm:
+        (-[RTCVideoEncoderH264 initWithCodecInfo:]):
+        (-[RTCVideoEncoderH264 encode:codecSpecificInfo:frameTypes:]):
+        (-[RTCVideoEncoderH264 frameWasEncoded:flags:sampleBuffer:codecSpecificInfo:width:height:renderTimeMs:timestamp:rotation:isKeyFrameRequired:]):
+
+2020-01-20  youenn fablet  <youenn@apple.com>
+
+        Setting kVTCompressionPropertyKey_DataRateLimits on RTCVideoEncoderH264 fails
+        https://bugs.webkit.org/show_bug.cgi?id=206402
+
+        Reviewed by Eric Carlson.
+
+        Add helper routine dedicated to setting VTB/VCP array value properties.
+        Logging shows the bitrate is then set appropriately.
+
+        * Source/webrtc/sdk/objc/components/video_codec/helpers.cc:
+        * Source/webrtc/sdk/objc/components/video_codec/helpers.h:
+
+2020-01-06  youenn fablet  <youenn@apple.com>
+
+        Implement RTC VTB encoders in GPUProcess
+        https://bugs.webkit.org/show_bug.cgi?id=205713
+
+        Reviewed by Eric Carlson.
+
+        Add support for remote video encoders created and used through simple routines.
+        Add factory to create video encoders implemented elsewhere than in WebRTC backend.
+        This is used for H264 encoders.
+
+        * Configurations/libwebrtc.iOS.exp:
+        * Configurations/libwebrtc.iOSsim.exp:
+        * Configurations/libwebrtc.mac.exp:
+        * Source/webrtc/sdk/WebKit/WebKitEncoder.h: Added.
+        (webrtc::WebKitRTPFragmentationHeader::value):
+        (webrtc::WebKitEncodedFrameInfo::decode):
+        (webrtc::WebKitEncodedFrameInfo::encode const):
+        (webrtc::WebKitRTPFragmentationHeader::WebKitRTPFragmentationHeader):
+        (webrtc::WebKitRTPFragmentationHeader::encode const):
+        (webrtc::WebKitRTPFragmentationHeader::decode):
+        * Source/webrtc/sdk/WebKit/WebKitEncoder.mm: Added.
+        (webrtc::VideoEncoderFactoryWithSimulcast::CreateVideoEncoder):
+        (webrtc::videoEncoderCallbacks):
+        (webrtc::setVideoEncoderCallbacks):
+        (webrtc::RemoteVideoEncoder::RemoteVideoEncoder):
+        (webrtc::RemoteVideoEncoder::InitEncode):
+        (webrtc::RemoteVideoEncoder::Release):
+        (webrtc::RemoteVideoEncoder::Encode):
+        (webrtc::RemoteVideoEncoder::SetRates):
+        (webrtc::RemoteVideoEncoder::GetEncoderInfo const):
+        (webrtc::RemoteVideoEncoder::RegisterEncodeCompleteCallback):
+        (webrtc::RemoteVideoEncoder::encodeComplete):
+        (webrtc::createLocalEncoder):
+        (webrtc::releaseLocalEncoder):
+        (webrtc::initializeLocalEncoder):
+        (webrtc::encodeLocalEncoderFrame):
+        (webrtc::setLocalEncoderRates):
+        * Source/webrtc/sdk/WebKit/WebKitUtilities.h:
+        * Source/webrtc/sdk/WebKit/WebKitUtilities.mm:
+        * libwebrtc.xcodeproj/project.pbxproj:
+
 2020-01-01  youenn fablet  <youenn@apple.com>
 
         Implement transceiver setCodecPreferences

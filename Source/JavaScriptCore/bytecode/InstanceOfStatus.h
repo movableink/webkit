@@ -36,7 +36,7 @@ class AccessCase;
 class CodeBlock;
 class StructureStubInfo;
 
-class InstanceOfStatus {
+class InstanceOfStatus final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum State {
@@ -82,7 +82,7 @@ public:
     static InstanceOfStatus computeFor(CodeBlock*, ICStatusMap&, BytecodeIndex);
     
 #if ENABLE(DFG_JIT)
-    static InstanceOfStatus computeForStubInfo(const ConcurrentJSLocker&, StructureStubInfo*);
+    static InstanceOfStatus computeForStubInfo(const ConcurrentJSLocker&, VM&, StructureStubInfo*);
 #endif
     
     State state() const { return m_state; }

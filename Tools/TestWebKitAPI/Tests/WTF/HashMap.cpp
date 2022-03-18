@@ -88,6 +88,9 @@ TEST(WTF_HashMap, DoubleHashCollisions)
     const double negativeZeroKey = -zeroKey;
 
     DoubleHashMap map;
+#if !CHECK_HASHTABLE_ITERATORS &&!DUMP_HASHTABLE_STATS_PER_TABLE
+    static_assert(sizeof(map) == sizeof(void*));
+#endif
 
     map.add(clobberKey, 1);
     map.add(zeroKey, 2);
@@ -716,7 +719,7 @@ TEST(WTF_HashMap, RefPtrNotZeroedBeforeDeref)
     // value.
     // A zero would be a incorrect outcome as it would mean we nulled the bucket before an opaque
     // call.
-    EXPECT_TRUE(observer->observedBucket == observer.get() || observer->observedBucket == RefPtr<DerefObserver>::hashTableDeletedValue());
+    EXPECT_TRUE(observer->observedBucket == observer.get() || observer->observedBucket == RefPtr<DerefObserver>::PtrTraits::hashTableDeletedValue());
     EXPECT_EQ(observer->count, 0u);
 }
 
@@ -1044,33 +1047,48 @@ TEST(WTF_HashMap, ReserveInitialCapacity)
 {
     HashMap<String, String> map;
     EXPECT_EQ(0u, map.size());
+    EXPECT_EQ(0u, map.capacity());
+
     map.reserveInitialCapacity(9999);
     EXPECT_EQ(0u, map.size());
+    EXPECT_EQ(32768u, map.capacity());
+
     for (int i = 0; i < 9999; ++i)
         map.add(makeString("foo", i), makeString("bar", i));
     EXPECT_EQ(9999u, map.size());
+    EXPECT_EQ(32768u, map.capacity());
     EXPECT_TRUE(map.contains("foo3"_str));
     EXPECT_STREQ("bar3", map.get("foo3"_str).utf8().data());
+
     for (int i = 0; i < 9999; ++i)
         map.add(makeString("excess", i), makeString("baz", i));
     EXPECT_EQ(9999u + 9999u, map.size());
+    EXPECT_EQ(32768u + 32768u, map.capacity());
+
     for (int i = 0; i < 9999; ++i)
         EXPECT_TRUE(map.remove(makeString("foo", i)));
     EXPECT_EQ(9999u, map.size());
+    EXPECT_EQ(32768u, map.capacity());
     EXPECT_STREQ("baz3", map.get("excess3"_str).utf8().data());
+
     for (int i = 0; i < 9999; ++i)
         EXPECT_TRUE(map.remove(makeString("excess", i)));
     EXPECT_EQ(0u, map.size());
-    
+    EXPECT_EQ(8u, map.capacity());
+
     HashMap<String, String> map2;
     map2.reserveInitialCapacity(9999);
     EXPECT_FALSE(map2.remove("foo1"_s));
+
     for (int i = 0; i < 2000; ++i)
         map2.add(makeString("foo", i), makeString("bar", i));
     EXPECT_EQ(2000u, map2.size());
+    EXPECT_EQ(32768u, map2.capacity());
+
     for (int i = 0; i < 2000; ++i)
         EXPECT_TRUE(map2.remove(makeString("foo", i)));
     EXPECT_EQ(0u, map2.size());
+    EXPECT_EQ(8u, map2.capacity());
 }
 
 TEST(WTF_HashMap, Random_IsEvenlyDistributedAfterRemove)

@@ -50,7 +50,11 @@ public:
     // referrer header should be omitted.
     WEBCORE_EXPORT static String generateReferrerHeader(ReferrerPolicy, const URL&, const String& referrer);
 
+    static String generateOriginHeader(ReferrerPolicy, const URL&, const SecurityOrigin&);
+
     static bool shouldInheritSecurityOriginFromOwner(const URL&);
+
+    static bool isBaseURLSchemeAllowed(const URL&);
 
     enum LocalLoadPolicy {
         AllowLocalLoadsForAll, // No restriction on local loads.

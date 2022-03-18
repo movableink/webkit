@@ -34,6 +34,7 @@
 
 #include "LibWebRTCNetwork.h"
 #include "WebProcess.h"
+#include <WebCore/RuntimeEnabledFeatures.h>
 #include <webrtc/api/async_resolver_factory.h>
 #include <webrtc/pc/peer_connection_factory.h>
 
@@ -59,12 +60,12 @@ void LibWebRTCProvider::disableNonLocalhostConnections()
     WebProcess::singleton().libWebRTCNetwork().disableNonLocalhostConnections();
 }
 
-void LibWebRTCProvider::unregisterMDNSNames(uint64_t documentIdentifier)
+void LibWebRTCProvider::unregisterMDNSNames(DocumentIdentifier documentIdentifier)
 {
     WebProcess::singleton().libWebRTCNetwork().mdnsRegister().unregisterMDNSNames(documentIdentifier);
 }
 
-void LibWebRTCProvider::registerMDNSName(uint64_t documentIdentifier, const String& ipAddress, CompletionHandler<void(MDNSNameOrError&&)>&& callback)
+void LibWebRTCProvider::registerMDNSName(DocumentIdentifier documentIdentifier, const String& ipAddress, CompletionHandler<void(MDNSNameOrError&&)>&& callback)
 {
     WebProcess::singleton().libWebRTCNetwork().mdnsRegister().registerMDNSName(documentIdentifier, ipAddress, WTFMove(callback));
 }
@@ -141,7 +142,7 @@ std::unique_ptr<webrtc::VideoDecoderFactory> LibWebRTCProvider::createDecoderFac
 #if ENABLE(GPU_PROCESS)
     // We only support efficient sending of video frames with IOSURFACE
 #if HAVE(IOSURFACE) && !PLATFORM(MACCATALYST)
-    LibWebRTCCodecs::setVideoDecoderCallbacks(m_useGPUProcess);
+    LibWebRTCCodecs::setCallbacks(RuntimeEnabledFeatures::sharedFeatures().webRTCPlatformCodecsInGPUProcessEnabled());
 #endif
 #endif
     return LibWebRTCProviderCocoa::createDecoderFactory();

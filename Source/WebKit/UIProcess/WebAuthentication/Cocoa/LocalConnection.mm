@@ -28,92 +28,81 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#import "DeviceIdentitySPI.h"
-#import <WebCore/ExceptionData.h>
+#import <WebCore/LocalizedStrings.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RunLoop.h>
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/LocalConnectionAdditions.h>
+#endif
 
 #import "LocalAuthenticationSoftLink.h"
 
 namespace WebKit {
 
-void LocalConnection::getUserConsent(const String& reason, UserConsentCallback&& completionHandler) const
+void LocalConnection::verifyUser(const String& rpId, SecAccessControlRef accessControl, UserVerificationCallback&& completionHandler) const
 {
     auto context = adoptNS([allocLAContextInstance() init]);
-    auto reply = makeBlockPtr([completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
-        ASSERT(!RunLoop::isMain());
 
-        UserConsent consent = UserConsent::Yes;
-        if (!success || error) {
-            LOG_ERROR("Couldn't authenticate with biometrics: %@", error);
-            consent = UserConsent::No;
-        }
-        RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), consent]() mutable {
-            completionHandler(consent);
-        });
-    });
-    [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics localizedReason:reason reply:reply.get()];
-}
-
-void LocalConnection::getUserConsent(const String& reason, SecAccessControlRef accessControl, UserConsentContextCallback&& completionHandler) const
-{
-    auto context = adoptNS([allocLAContextInstance() init]);
-    auto reply = makeBlockPtr([context, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
-        ASSERT(!RunLoop::isMain());
-
-        UserConsent consent = UserConsent::Yes;
-        if (!success || error) {
-            LOG_ERROR("Couldn't authenticate with biometrics: %@", error);
-            consent = UserConsent::No;
-        }
-        RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), consent, context = WTFMove(context)]() mutable {
-            completionHandler(consent, context.get());
-        });
-    });
-    [context evaluateAccessControl:accessControl operation:LAAccessControlOperationUseKeySign localizedReason:reason reply:reply.get()];
-}
-
-void LocalConnection::getAttestation(const String& rpId, const String& username, const Vector<uint8_t>& hash, AttestationCallback&& completionHandler) const
-{
-#if HAVE(DEVICE_IDENTITY)
-    // Apple Attestation
-    ASSERT(hash.size() <= 32);
-
-    RetainPtr<SecAccessControlRef> accessControlRef;
-    {
-        CFErrorRef errorRef = nullptr;
-        accessControlRef = adoptCF(SecAccessControlCreateWithFlags(NULL, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, kSecAccessControlPrivateKeyUsage | kSecAccessControlUserPresence, &errorRef));
-        auto retainError = adoptCF(errorRef);
-        if (errorRef) {
-            LOG_ERROR("Couldn't create ACL: %@", (NSError *)errorRef);
-            completionHandler(NULL, NULL, [NSError errorWithDomain:@"com.apple.WebKit.WebAuthN" code:1 userInfo:nil]);
-            return;
-        }
+    auto options = adoptNS([[NSMutableDictionary alloc] init]);
+    if ([context biometryType] == LABiometryTypeTouchID) {
+#if PLATFORM(IOS)
+        [options setObject:WebCore::genericTouchIDPromptTitle() forKey:@(LAOptionAuthenticationTitle)];
+        ASSERT_UNUSED(rpId, rpId);
+#else
+        [options setObject:WebCore::makeCredentialTouchIDPromptTitle(rpId) forKey:@(LAOptionAuthenticationTitle)];
+#endif
+        [options setObject:@NO forKey:@(LAOptionFallbackVisible)];
     }
+#if PLATFORM(IOS)
+    [options setObject:WebCore::biometricFallbackPromptTitle() forKey:@(LAOptionPasscodeTitle)];
+#endif
 
-    String label = makeString(username, "@", rpId);
-    NSDictionary *options = @{
-        kMAOptionsBAAKeychainLabel: label,
-        // FIXME(rdar://problem/38489134): Need a formal name.
-        kMAOptionsBAAKeychainAccessGroup: @"com.apple.safari.WebAuthN.credentials",
-        kMAOptionsBAAIgnoreExistingKeychainItems: @YES,
-        // FIXME(rdar://problem/38489134): Determine a proper lifespan.
-        kMAOptionsBAAValidity: @(1440), // Last one day.
-        kMAOptionsBAASCRTAttestation: @NO,
-        kMAOptionsBAANonce: [NSData dataWithBytes:hash.data() length:hash.size()],
-        kMAOptionsBAAAccessControls: (id)accessControlRef.get(),
-        kMAOptionsBAAOIDSToInclude: @[kMAOptionsBAAOIDNonce]
-    };
+    auto reply = makeBlockPtr([context, completionHandler = WTFMove(completionHandler)] (NSDictionary *, NSError *error) mutable {
+        ASSERT(!RunLoop::isMain());
 
-    // FIXME(183652): Reduce prompt for biometrics
-    DeviceIdentityIssueClientCertificateWithCompletion(dispatch_get_main_queue(), options, makeBlockPtr(WTFMove(completionHandler)).get());
-#endif // HAVE(DEVICE_IDENTITY)
+        UserVerification verification = UserVerification::Yes;
+        if (error) {
+            LOG_ERROR("Couldn't authenticate with biometrics: %@", error);
+            verification = UserVerification::No;
+        }
+        RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), verification, context = WTFMove(context)] () mutable {
+            completionHandler(verification, context.get());
+        });
+    });
+
+    [context evaluateAccessControl:accessControl operation:LAAccessControlOperationUseKeySign options:options.get() reply:reply.get()];
 }
 
-NSDictionary *LocalConnection::selectCredential(const NSArray *credentials) const
+RetainPtr<SecKeyRef> LocalConnection::createCredentialPrivateKey(LAContext *context, SecAccessControlRef accessControlRef, const String& secAttrLabel, NSData *secAttrApplicationTag) const
 {
-    // FIXME(rdar://problem/35900534): We don't have an UI to prompt users for selecting intersectedCredentials, and therefore we always use the first one for now.
-    return credentials[0];
+    NSDictionary *attributes = @{
+        (id)kSecAttrTokenID: (id)kSecAttrTokenIDSecureEnclave,
+        (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrKeySizeInBits: @256,
+        (id)kSecPrivateKeyAttrs: @{
+            (id)kSecUseAuthenticationContext: context,
+            (id)kSecAttrAccessControl: (id)accessControlRef,
+            (id)kSecAttrIsPermanent: @YES,
+            (id)kSecAttrAccessGroup: @"com.apple.webkit.webauthn",
+            (id)kSecAttrLabel: secAttrLabel,
+            (id)kSecAttrApplicationTag: secAttrApplicationTag,
+        }};
+    CFErrorRef errorRef = nullptr;
+    auto credentialPrivateKey = adoptCF(SecKeyCreateRandomKey((__bridge CFDictionaryRef)attributes, &errorRef));
+    auto retainError = adoptCF(errorRef);
+    if (errorRef) {
+        LOG_ERROR("Couldn't create private key: %@", (NSError *)errorRef);
+        return nullptr;
+    }
+    return credentialPrivateKey;
+}
+
+void LocalConnection::getAttestation(SecKeyRef privateKey, NSData *authData, NSData *hash, AttestationCallback&& completionHandler) const
+{
+#if defined(LOCALCONNECTION_ADDITIONS)
+LOCALCONNECTION_ADDITIONS
+#endif
 }
 
 } // namespace WebKit

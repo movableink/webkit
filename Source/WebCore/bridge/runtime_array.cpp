@@ -27,6 +27,7 @@
 #include "runtime_array.h"
 
 #include "JSDOMBinding.h"
+#include "WebCoreJSClientData.h"
 #include <JavaScriptCore/ArrayPrototype.h>
 #include <JavaScriptCore/Error.h>
 #include <JavaScriptCore/JSGlobalObjectInlines.h>
@@ -38,9 +39,9 @@ namespace JSC {
 
 const ClassInfo RuntimeArray::s_info = { "RuntimeArray", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
 
-RuntimeArray::RuntimeArray(JSGlobalObject* lexicalGlobalObject, Structure* structure)
-    : JSArray(lexicalGlobalObject->vm(), structure, 0)
-    , m_array(0)
+RuntimeArray::RuntimeArray(VM& vm, Structure* structure)
+    : JSArray(vm, structure, nullptr)
+    , m_array(nullptr)
 {
 }
 
@@ -148,7 +149,7 @@ bool RuntimeArray::putByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject,
     return thisObject->getConcreteArray()->setValueAt(lexicalGlobalObject, index, value);
 }
 
-bool RuntimeArray::deleteProperty(JSCell*, JSGlobalObject*, PropertyName)
+bool RuntimeArray::deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&)
 {
     return false;
 }
@@ -156,6 +157,11 @@ bool RuntimeArray::deleteProperty(JSCell*, JSGlobalObject*, PropertyName)
 bool RuntimeArray::deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned)
 {
     return false;
+}
+
+JSC::IsoSubspace* RuntimeArray::subspaceForImpl(JSC::VM& vm)
+{
+    return &static_cast<JSVMClientData*>(vm.clientData)->runtimeArraySpace();
 }
 
 }

@@ -32,6 +32,7 @@ namespace WebCore {
 
 class Document;
 class Element;
+class EventListener;
 class EventTarget;
 class HTMLElement;
 class LayoutUnit;
@@ -80,13 +81,16 @@ public:
     bool shouldOpenAsAboutBlank(const String&) const;
 
     bool needsPreloadAutoQuirk() const;
-    bool needsFullWidthHeightFullscreenStyleQuirk() const;
 
     bool shouldBypassBackForwardCache() const;
+
+    static bool shouldMakeEventListenerPassive(const EventTarget&, const AtomString& eventType, const EventListener&);
 
 #if ENABLE(MEDIA_STREAM)
     bool shouldEnableLegacyGetUserMedia() const;
 #endif
+
+    bool shouldDisableElementFullscreenQuirk() const;
 
 private:
     bool needsQuirks() const;
@@ -104,6 +108,10 @@ private:
     mutable Optional<bool> m_needsGMailOverflowScrollQuirk;
     mutable Optional<bool> m_needsYouTubeOverflowScrollQuirk;
     mutable Optional<bool> m_needsPreloadAutoQuirk;
+#endif
+    mutable Optional<bool> m_shouldDisableElementFullscreenQuirk;
+#if ENABLE(TOUCH_EVENTS)
+    mutable Optional<bool> m_shouldDispatchSimulatedMouseEventsQuirk;
 #endif
 };
 

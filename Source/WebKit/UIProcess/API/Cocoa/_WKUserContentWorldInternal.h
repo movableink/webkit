@@ -25,18 +25,7 @@
 
 #import "_WKUserContentWorld.h"
 
-#import "APIUserContentWorld.h"
-#import "WKObject.h"
-#import <wtf/Vector.h>
-#import <wtf/text/WTFString.h>
-
-namespace WebKit {
-
-template<> struct WrapperTraits<API::UserContentWorld> {
-    using WrapperClass = _WKUserContentWorld;
-};
-
-}
+@class WKContentWorld;
 
 namespace API {
 
@@ -60,6 +49,7 @@ inline Vector<WTF::String> toStringVector(NSArray *input)
 
 @interface _WKUserContentWorld () <WKObject> {
 @package
-    API::ObjectStorage<API::UserContentWorld> _userContentWorld;
+    RetainPtr<WKContentWorld> _contentWorld;
 }
+- (instancetype)_initWithContentWorld:(WKContentWorld *)world;
 @end

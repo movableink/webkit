@@ -35,6 +35,7 @@
 #include "BoxShape.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "ImageData.h"
 #include "LengthFunctions.h"
 #include "PolygonShape.h"
 #include "RasterShape.h"
@@ -61,7 +62,7 @@ static std::unique_ptr<Shape> createEllipseShape(const FloatPoint& center, const
     return makeUnique<RectangleShape>(FloatRect(center.x() - radii.width(), center.y() - radii.height(), radii.width()*2, radii.height()*2), radii);
 }
 
-static std::unique_ptr<Shape> createPolygonShape(std::unique_ptr<Vector<FloatPoint>> vertices, WindRule fillRule)
+static std::unique_ptr<Shape> createPolygonShape(Vector<FloatPoint>&& vertices, WindRule fillRule)
 {
     return makeUnique<PolygonShape>(WTFMove(vertices), fillRule);
 }
@@ -128,14 +129,13 @@ std::unique_ptr<Shape> Shape::createShape(const BasicShape& basicShape, const La
         const Vector<Length>& values = polygon.values();
         size_t valuesSize = values.size();
         ASSERT(!(valuesSize % 2));
-        std::unique_ptr<Vector<FloatPoint>> vertices = makeUnique<Vector<FloatPoint>>(valuesSize / 2);
+        Vector<FloatPoint> vertices(valuesSize / 2);
         for (unsigned i = 0; i < valuesSize; i += 2) {
             FloatPoint vertex(
                 floatValueForLength(values.at(i), boxWidth),
                 floatValueForLength(values.at(i + 1), boxHeight));
-            (*vertices)[i / 2] = physicalPointToLogical(vertex, logicalBoxSize.height(), writingMode);
+            vertices[i / 2] = physicalPointToLogical(vertex, logicalBoxSize.height(), writingMode);
         }
-
         shape = createPolygonShape(WTFMove(vertices), polygon.windRule());
         break;
     }
@@ -181,15 +181,16 @@ std::unique_ptr<Shape> Shape::createRasterShape(Image* image, float threshold, c
     IntRect marginRect = snappedIntRect(marginR);
     auto intervals = makeUnique<RasterShapeIntervals>(marginRect.height(), -marginRect.y());
     // FIXME (149420): This buffer should not be unconditionally unaccelerated.
-    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(imageRect.size(), Unaccelerated);
+    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated);
 
     if (imageBuffer) {
         GraphicsContext& graphicsContext = imageBuffer->context();
         if (image)
             graphicsContext.drawImage(*image, IntRect(IntPoint(), imageRect.size()));
 
-        RefPtr<Uint8ClampedArray> pixelArray = imageBuffer->getUnmultipliedImageData(IntRect(IntPoint(), imageRect.size()));
-        RELEASE_ASSERT(pixelArray);
+        auto imageData = imageBuffer->getImageData(AlphaPremultiplication::Unpremultiplied, { IntPoint(), imageRect.size() });
+        RELEASE_ASSERT(imageData && imageData->data());
+        auto* pixelArray = imageData->data();
         unsigned pixelArrayLength = pixelArray->length();
         unsigned pixelArrayOffset = 3; // Each pixel is four bytes: RGBA.
         uint8_t alphaPixelThreshold = static_cast<uint8_t>(lroundf(clampTo<float>(threshold, 0, 1) * 255.0f));

@@ -61,7 +61,7 @@
 #include "RenderLayerCompositor.h"
 #include "RenderLineBreak.h"
 #include "RenderListItem.h"
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 #include "RenderListMarker.h"
 #endif
 #include "RenderFragmentContainer.h"
@@ -737,10 +737,8 @@ void RenderElement::styleWillChange(StyleDifference diff, const RenderStyle& new
         auto needsInvalidateEventRegion = [&] {
             if (m_style.pointerEvents() != newStyle.pointerEvents())
                 return true;
-#if ENABLE(POINTER_EVENTS)
             if (m_style.effectiveTouchActions() != newStyle.effectiveTouchActions())
                 return true;
-#endif
             return false;
         };
 
@@ -885,7 +883,7 @@ void RenderElement::insertedIntoTree()
         if (!layer)
             layer = parent()->enclosingLayer();
         if (layer)
-            layer->setHasVisibleContent();
+            layer->dirtyVisibleContentStatus();
     }
 
     RenderObject::insertedIntoTree();
@@ -1413,8 +1411,13 @@ std::unique_ptr<RenderStyle> RenderElement::selectionPseudoStyle() const
 
     if (ShadowRoot* root = element()->containingShadowRoot()) {
         if (root->mode() == ShadowRootMode::UserAgent) {
-            if (Element* shadowHost = element()->shadowHost())
-                return shadowHost->renderer()->getUncachedPseudoStyle({ PseudoId::Selection });
+            auto* currentElement = element()->shadowHost();
+            // When an element has display: contents, this element doesn't have a renderer
+            // and its children will render as children of the parent element.
+            while (currentElement && currentElement->hasDisplayContents())
+                currentElement = currentElement->parentElement();
+            if (currentElement && currentElement->renderer())
+                return currentElement->renderer()->getUncachedPseudoStyle({ PseudoId::Selection });
         }
     }
 
@@ -2052,7 +2055,7 @@ bool RenderElement::checkForRepaintDuringLayout() const
 
 ImageOrientation RenderElement::imageOrientation() const
 {
-    return ImageOrientation::FromImage;
+    return style().imageOrientation();
 }
 
 void RenderElement::adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded()

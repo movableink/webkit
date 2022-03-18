@@ -2,6 +2,7 @@ set(WebKit_OUTPUT_NAME WebKit2)
 set(WebKit_WebProcess_OUTPUT_NAME WebKitWebProcess)
 set(WebKit_NetworkProcess_OUTPUT_NAME WebKitNetworkProcess)
 set(WebKit_PluginProcess_OUTPUT_NAME WebKitPluginProcess)
+set(WebKit_GPUProcess_OUTPUT_NAME WebKitGPUProcess)
 
 add_definitions(-DBUILDING_WEBKIT)
 
@@ -11,7 +12,7 @@ list(APPEND WebKit_SOURCES
 
     NetworkProcess/WebStorage/StorageManager.cpp
 
-    NetworkProcess/win/NetworkProcessMainWin.cpp
+    NetworkProcess/curl/NetworkProcessMainCurl.cpp
 
     Platform/IPC/win/AttachmentWin.cpp
     Platform/IPC/win/ConnectionWin.cpp
@@ -48,6 +49,8 @@ list(APPEND WebKit_SOURCES
 
     UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 
+    UIProcess/Inspector/win/WebInspectorProxyWin.cpp
+
     UIProcess/Launcher/win/ProcessLauncherWin.cpp
 
     UIProcess/WebsiteData/curl/WebsiteDataStoreCurl.cpp
@@ -55,16 +58,15 @@ list(APPEND WebKit_SOURCES
     UIProcess/WebsiteData/win/WebsiteDataStoreWin.cpp
 
     UIProcess/win/PageClientImpl.cpp
-    UIProcess/win/TextCheckerWin.cpp
     UIProcess/win/WebContextMenuProxyWin.cpp
-    UIProcess/win/WebInspectorProxyWin.cpp
     UIProcess/win/WebPageProxyWin.cpp
     UIProcess/win/WebPopupMenuProxyWin.cpp
-    UIProcess/win/WebPreferencesWin.cpp
     UIProcess/win/WebProcessPoolWin.cpp
     UIProcess/win/WebView.cpp
 
     WebProcess/InjectedBundle/win/InjectedBundleWin.cpp
+
+    WebProcess/Inspector/win/WebInspectorUIWin.cpp
 
     WebProcess/MediaCache/WebMediaKeyStorageManager.cpp
 
@@ -72,7 +74,6 @@ list(APPEND WebKit_SOURCES
 
     WebProcess/Plugins/Netscape/win/PluginProxyWin.cpp
 
-    WebProcess/WebCoreSupport/win/WebContextMenuClientWin.cpp
     WebProcess/WebCoreSupport/win/WebPopupMenuWin.cpp
 
     WebProcess/WebPage/AcceleratedSurface.cpp
@@ -81,7 +82,6 @@ list(APPEND WebKit_SOURCES
     WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
     WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
 
-    WebProcess/WebPage/win/WebInspectorUIWin.cpp
     WebProcess/WebPage/win/WebPageWin.cpp
 
     WebProcess/win/WebProcessMainWin.cpp
@@ -97,14 +97,12 @@ add_custom_command(
 )
 
 list(APPEND WebKit_INCLUDE_DIRECTORIES
-    "${WEBKIT_DIR}/NetworkProcess/win"
     "${WEBKIT_DIR}/Platform/classifier"
     "${WEBKIT_DIR}/PluginProcess/win"
     "${WEBKIT_DIR}/Shared/API/c/win"
     "${WEBKIT_DIR}/Shared/CoordinatedGraphics"
     "${WEBKIT_DIR}/Shared/CoordinatedGraphics/threadedcompositor"
     "${WEBKIT_DIR}/Shared/Plugins/win"
-    "${WEBKIT_DIR}/Shared/unix"
     "${WEBKIT_DIR}/Shared/win"
     "${WEBKIT_DIR}/UIProcess/API/C/cairo"
     "${WEBKIT_DIR}/UIProcess/API/C/curl"
@@ -112,11 +110,13 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/API/cpp/win"
     "${WEBKIT_DIR}/UIProcess/API/win"
     "${WEBKIT_DIR}/UIProcess/CoordinatedGraphics"
+    "${WEBKIT_DIR}/UIProcess/Inspector/socket"
+    "${WEBKIT_DIR}/UIProcess/Inspector/win"
     "${WEBKIT_DIR}/UIProcess/Plugins/win"
     "${WEBKIT_DIR}/UIProcess/win"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/API/win"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/API/win/DOM"
-    "${WEBKIT_DIR}/WebProcess/win"
+    "${WEBKIT_DIR}/WebProcess/Inspector/win"
     "${WEBKIT_DIR}/WebProcess/WebCoreSupport/win"
     "${WEBKIT_DIR}/WebProcess/WebPage/CoordinatedGraphics"
     "${WEBKIT_DIR}/WebProcess/WebPage/win"
@@ -135,6 +135,10 @@ list(APPEND WebProcess_SOURCES
 
 list(APPEND NetworkProcess_SOURCES
     NetworkProcess/EntryPoint/win/NetworkProcessMain.cpp
+)
+
+list(APPEND GPUProcess_SOURCES
+    GPUProcess/EntryPoint/win/GPUProcessMain.cpp
 )
 
 if (${ENABLE_PLUGIN_PROCESS})
@@ -169,35 +173,30 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/WebProcess/WebCoreSupport/curl"
 )
 
-list(APPEND WebKit_LIBRARIES
-    PRIVATE
-        ${OPENSSL_LIBRARIES}
-        D2d1.lib
-        D3d11.lib
-        Dwrite
-        Dxgi.lib
-        Dxguid
-        WindowsCodecs
-        mfuuid.lib
-        strmiids.lib
+list(APPEND WebKit_PRIVATE_LIBRARIES
+    OpenSSL::SSL
+    D2d1.lib
+    D3d11.lib
+    Dwrite
+    Dxgi.lib
+    Dxguid
+    WindowsCodecs
+    mfuuid.lib
+    strmiids.lib
 )
 
 if (ENABLE_REMOTE_INSPECTOR)
     list(APPEND WebKit_SOURCES
-        UIProcess/socket/RemoteInspectorClient.cpp
-        UIProcess/socket/RemoteInspectorProtocolHandler.cpp
+        UIProcess/Inspector/socket/RemoteInspectorClient.cpp
+        UIProcess/Inspector/socket/RemoteInspectorProtocolHandler.cpp
 
-        UIProcess/win/RemoteWebInspectorProxyWin.cpp
+        UIProcess/Inspector/win/RemoteWebInspectorProxyWin.cpp
     )
 
     list(APPEND WebKit_INCLUDE_DIRECTORIES
         "${WEBKIT_DIR}/UIProcess/socket"
     )
 endif ()
-
-set(SharedWebKitLibraries
-    ${WebKit_LIBRARIES}
-)
 
 WEBKIT_WRAP_SOURCELIST(${WebKit_SOURCES})
 
@@ -387,4 +386,9 @@ WEBKIT_MAKE_FORWARDING_HEADERS(WebKit
     DESTINATION ${WebKit_FRAMEWORK_HEADERS_DIR}/WebKit
     FILES ${WebKit_PUBLIC_FRAMEWORK_HEADERS}
     FLATTENED
+)
+
+list(APPEND WebKit_PRIVATE_DEFINITIONS
+    STATICALLY_LINKED_WITH_PAL
+    STATICALLY_LINKED_WITH_WebCore
 )

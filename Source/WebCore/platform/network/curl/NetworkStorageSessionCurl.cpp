@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,18 +28,13 @@
 
 #if USE(CURL)
 
-#include "Cookie.h"
-#include "CookieJarCurl.h"
 #include "CookieJarDB.h"
 #include "CookieRequestHeaderFieldProxy.h"
 #include "CurlContext.h"
-#include "NetworkingContext.h"
-#include "ResourceHandle.h"
+#include "HTTPCookieAcceptPolicy.h"
 #include <wtf/FileSystem.h>
-#include <wtf/MainThread.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -58,10 +53,30 @@ static String defaultCookieJarPath()
 #endif
 }
 
+static String cookiesForSession(const NetworkStorageSession& session, const URL& firstParty, const URL& url, bool forHTTPHeader)
+{
+    StringBuilder cookies;
+
+    auto searchHTTPOnly = forHTTPHeader ? WTF::nullopt : Optional<bool> { false };
+    auto secure = url.protocolIs("https") ? WTF::nullopt : Optional<bool> { false };
+
+    if (auto result = session.cookieDatabase().searchCookies(firstParty, url, searchHTTPOnly, secure, WTF::nullopt)) {
+        for (const auto& cookie : *result) {
+            if (!cookies.isEmpty())
+                cookies.append("; ");
+            cookies.append(cookie.name);
+            cookies.append("=");
+            cookies.append(cookie.value);
+        }
+    }
+
+    return cookies.toString();
+}
+
 NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID)
     : m_sessionID(sessionID)
-    , m_cookieStorage(makeUniqueRef<CookieJarCurl>())
-    , m_cookieDatabase(makeUniqueRef<CookieJarDB>(defaultCookieJarPath()))
+    // :memory: creates in-memory database, see https://www.sqlite.org/inmemorydb.html
+    , m_cookieDatabase(makeUniqueRef<CookieJarDB>(sessionID.isEphemeral() ? ":memory:"_s : defaultCookieJarPath()))
 {
 }
 
@@ -80,72 +95,93 @@ CookieJarDB& NetworkStorageSession::cookieDatabase() const
     return m_cookieDatabase;
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, const String& value) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, const String& value) const
 {
-    cookieStorage().setCookiesFromDOM(*this, firstParty, sameSiteInfo, url, frameID, pageID, value);
+    cookieDatabase().setCookie(firstParty, url, value, CookieJarDB::Source::Script);
 }
 
-bool NetworkStorageSession::cookiesEnabled() const
+void NetworkStorageSession::setCookiesFromHTTPResponse(const URL& firstParty, const URL& url, const String& value) const
 {
-    return cookieStorage().cookiesEnabled(*this);
+    cookieDatabase().setCookie(firstParty, url, value, CookieJarDB::Source::Network);
 }
 
-std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, IncludeSecureCookies includeSecureCookies) const
+void NetworkStorageSession::setCookieAcceptPolicy(CookieAcceptPolicy policy) const
 {
-    return cookieStorage().cookiesForDOM(*this, firstParty, sameSiteInfo, url, frameID, pageID, includeSecureCookies);
+    cookieDatabase().setAcceptPolicy(policy);
 }
 
-void NetworkStorageSession::setCookies(const Vector<Cookie>&, const URL&, const URL&)
+HTTPCookieAcceptPolicy NetworkStorageSession::cookieAcceptPolicy() const
+{
+    switch (cookieDatabase().acceptPolicy()) {
+    case CookieAcceptPolicy::Always:
+        return HTTPCookieAcceptPolicy::AlwaysAccept;
+    case CookieAcceptPolicy::Never:
+        return HTTPCookieAcceptPolicy::Never;
+    case CookieAcceptPolicy::OnlyFromMainDocumentDomain:
+        return HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
+    case CookieAcceptPolicy::ExclusivelyFromMainDocumentDomain:
+        return HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain;
+    }
+
+    ASSERT_NOT_REACHED();
+    return HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
+}
+
+std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL& firstParty, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP) const
+{
+    // FIXME: This should filter secure cookies out if the caller requests it.
+    return { cookiesForSession(*this, firstParty, url, false), false };
+}
+
+void NetworkStorageSession::setCookies(const Vector<Cookie>&, const URL&, const URL& /* mainDocumentURL */)
 {
     // FIXME: Implement for WebKit to use.
 }
 
-void NetworkStorageSession::setCookie(const Cookie&)
+void NetworkStorageSession::setCookie(const Cookie& cookie)
 {
-    // FIXME: Implement for WebKit to use.
+    cookieDatabase().setCookie(cookie);
 }
 
-void NetworkStorageSession::deleteCookie(const Cookie&)
+void NetworkStorageSession::deleteCookie(const Cookie& cookie)
 {
-    // FIXME: Implement for WebKit to use.
+    String url = makeString(cookie.secure ? "https"_s : "http"_s, "://"_s, cookie.domain, cookie.path);
+    cookieDatabase().deleteCookie(url, cookie.name);
 }
 
-void NetworkStorageSession::deleteCookie(const URL& url, const String& cookie) const
+void NetworkStorageSession::deleteCookie(const URL& url, const String& name) const
 {
-    cookieStorage().deleteCookie(*this, url, cookie);
+    cookieDatabase().deleteCookie(url, name);
 }
 
 void NetworkStorageSession::deleteAllCookies()
 {
-    cookieStorage().deleteAllCookies(*this);
+    cookieDatabase().deleteAllCookies();
 }
 
-void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime since)
+void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime)
 {
-    cookieStorage().deleteAllCookiesModifiedSince(*this, since);
+    // FIXME: Not yet implemented
 }
 
-void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& hostnames, IncludeHttpOnlyCookies includeHttpOnlyCookies)
+void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& /* cookieHostNames */, IncludeHttpOnlyCookies)
 {
     // FIXME: Not yet implemented.
-    UNUSED_PARAM(includeHttpOnlyCookies);
-    deleteCookiesForHostnames(hostnames);
 }
 
 void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& cookieHostNames)
 {
-    cookieStorage().deleteCookiesForHostnames(*this, cookieHostNames);
+    deleteCookiesForHostnames(cookieHostNames, IncludeHttpOnlyCookies::Yes);
 }
 
 Vector<Cookie> NetworkStorageSession::getAllCookies()
 {
-    // FIXME: Implement for WebKit to use.
-    return { };
+    return cookieDatabase().getAllCookies();
 }
 
-void NetworkStorageSession::getHostnamesWithCookies(HashSet<String>& hostnames)
+void NetworkStorageSession::getHostnamesWithCookies(HashSet<String>& /* hostnames */)
 {
-    cookieStorage().getHostnamesWithCookies(*this, hostnames);
+    // FIXME: Not yet implemented
 }
 
 Vector<Cookie> NetworkStorageSession::getCookies(const URL&)
@@ -160,9 +196,14 @@ void NetworkStorageSession::hasCookies(const RegistrableDomain&, CompletionHandl
     completionHandler(false);
 }
 
-bool NetworkStorageSession::getRawCookies(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, Vector<Cookie>& rawCookies) const
+bool NetworkStorageSession::getRawCookies(const URL& firstParty, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, Vector<Cookie>& rawCookies) const
 {
-    return cookieStorage().getRawCookies(*this, firstParty, sameSiteInfo, url, frameID, pageID, rawCookies);
+    auto cookies = cookieDatabase().searchCookies(firstParty, url, WTF::nullopt, WTF::nullopt, WTF::nullopt);
+    if (!cookies)
+        return false;
+
+    rawCookies = WTFMove(*cookies);
+    return true;
 }
 
 void NetworkStorageSession::flushCookieStore()
@@ -170,14 +211,15 @@ void NetworkStorageSession::flushCookieStore()
     // FIXME: Implement for WebKit to use.
 }
 
-std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, IncludeSecureCookies includeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP) const
 {
-    return cookieStorage().cookieRequestHeaderFieldValue(*this, firstParty, sameSiteInfo, url, frameID, pageID, includeSecureCookies);
+    // FIXME: This should filter secure cookies out if the caller requests it.
+    return { cookiesForSession(*this, firstParty, url, true), false };
 }
 
 std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy& headerFieldProxy) const
 {
-    return cookieStorage().cookieRequestHeaderFieldValue(*this, headerFieldProxy.firstParty, headerFieldProxy.sameSiteInfo, headerFieldProxy.url, headerFieldProxy.frameID, headerFieldProxy.pageID, headerFieldProxy.includeSecureCookies);
+    return cookieRequestHeaderFieldValue(headerFieldProxy.firstParty, headerFieldProxy.sameSiteInfo, headerFieldProxy.url, headerFieldProxy.frameID, headerFieldProxy.pageID, headerFieldProxy.includeSecureCookies, ShouldAskITP::Yes);
 }
 
 void NetworkStorageSession::setProxySettings(CurlProxySettings&& proxySettings)

@@ -187,6 +187,7 @@ WI.settings = {
     emulateInUserGesture: new WI.Setting("emulate-in-user-gesture", false),
     enableControlFlowProfiler: new WI.Setting("enable-control-flow-profiler", false),
     enableLineWrapping: new WI.Setting("enable-line-wrapping", true),
+    frontendAppearance: new WI.Setting("frontend-appearance", "system"),
     groupMediaRequestsByDOMNode: new WI.Setting("group-media-requests-by-dom-node", WI.Setting.migrateValue("group-by-dom-node") || false),
     indentUnit: new WI.Setting("indent-unit", 4),
     indentWithTabs: new WI.Setting("indent-with-tabs", false),
@@ -216,8 +217,7 @@ WI.settings = {
     zoomFactor: new WI.Setting("zoom-factor", 1),
 
     // Experimental
-    experimentalEnablePreviewFeatures: new WI.Setting("experimental-enable-preview-features", false),
-    experimentalEnableNewTabBar: new WI.Setting("experimental-enable-new-tab-bar", false),
+    experimentalEnablePreviewFeatures: new WI.Setting("experimental-enable-preview-features", true),
     experimentalEnableStylesJumpToEffective: new WI.Setting("experimental-styles-jump-to-effective", false),
 
     // Protocol
@@ -227,6 +227,7 @@ WI.settings = {
     protocolFilterMultiplexingBackendMessages: new WI.Setting("protocol-filter-multiplexing-backend-messages", true),
 
     // Engineering
+    engineeringShowInternalExecutionContexts: new WI.EngineeringSetting("engineering-show-internal-execution-contexts", false),
     engineeringShowInternalScripts: new WI.EngineeringSetting("engineering-show-internal-scripts", false),
     engineeringPauseForInternalScripts: new WI.EngineeringSetting("engineering-pause-for-internal-scripts", false),
     engineeringShowInternalObjectsInHeapSnapshot: new WI.EngineeringSetting("engineering-show-internal-objects-in-heap-snapshot", false),
@@ -235,6 +236,7 @@ WI.settings = {
 
     // Debug
     debugShowConsoleEvaluations: new WI.DebugSetting("debug-show-console-evaluations", false),
+    debugOutlineFocusedElement: new WI.DebugSetting("debug-outline-focused-element", false),
     debugEnableLayoutFlashing: new WI.DebugSetting("debug-enable-layout-flashing", false),
     debugEnableStyleEditingDebugMode: new WI.DebugSetting("debug-enable-style-editing-debug-mode", false),
     debugEnableUncaughtExceptionReporter: new WI.DebugSetting("debug-enable-uncaught-exception-reporter", true),
@@ -245,18 +247,15 @@ WI.settings = {
 
 WI.previewFeatures = [];
 
-WI.isTechnologyPreviewBuild = function()
+// WebKit may by default enable certain features in a Technology Preview that are not enabled in trunk.
+// Provide a switch that will make non-preview builds behave like an experimental build, for those preview features.
+WI.canShowPreviewFeatures = function()
 {
-    return WI.isExperimentalBuild && !WI.isEngineeringBuild;
+    let hasPreviewFeatures = WI.previewFeatures.length > 0;
+    return hasPreviewFeatures && WI.isExperimentalBuild;
 };
 
 WI.arePreviewFeaturesEnabled = function()
 {
-    if (WI.isExperimentalBuild)
-        return true;
-
-    if (WI.settings.experimentalEnablePreviewFeatures.value)
-        return true;
-
-    return false;
+    return WI.canShowPreviewFeatures() && WI.settings.experimentalEnablePreviewFeatures.value;
 };

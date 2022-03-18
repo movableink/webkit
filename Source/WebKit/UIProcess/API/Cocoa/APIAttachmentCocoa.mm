@@ -29,14 +29,12 @@
 #import "PageClient.h"
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/SharedBuffer.h>
+
 #if PLATFORM(IOS_FAMILY)
 #import <MobileCoreServices/MobileCoreServices.h>
 #else
 #import <CoreServices/CoreServices.h>
 #endif
-#import <pal/spi/cocoa/NSKeyedArchiverSPI.h>
-
-#define CAN_SECURELY_ARCHIVE_FILE_WRAPPER (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400) || (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 120000)
 
 namespace API {
 
@@ -160,12 +158,7 @@ RefPtr<WebCore::SharedBuffer> Attachment::createSerializedRepresentation() const
     if (!fileWrapper || !m_webPage)
         return nullptr;
 
-#if CAN_SECURELY_ARCHIVE_FILE_WRAPPER
-    NSData *serializedData = securelyArchivedDataWithRootObject(fileWrapper);
-#else
-    NSData *serializedData = insecurelyArchivedDataWithRootObject(fileWrapper);
-#endif
-
+    NSData *serializedData = [NSKeyedArchiver archivedDataWithRootObject:fileWrapper requiringSecureCoding:YES error:nullptr];
     if (!serializedData)
         return nullptr;
 
@@ -181,12 +174,7 @@ void Attachment::updateFromSerializedRepresentation(Ref<WebCore::SharedBuffer>&&
     if (!serializedData)
         return;
 
-#if CAN_SECURELY_ARCHIVE_FILE_WRAPPER
-    NSFileWrapper *fileWrapper = unarchivedObjectOfClassesFromData(m_webPage->pageClient().serializableFileWrapperClasses(), serializedData.get());
-#else
-    NSFileWrapper *fileWrapper = insecurelyUnarchiveObjectFromData(serializedData.get());
-#endif
-
+    NSFileWrapper *fileWrapper = [NSKeyedUnarchiver unarchivedObjectOfClasses:m_webPage->pageClient().serializableFileWrapperClasses() fromData:serializedData.get() error:nullptr];
     if (![fileWrapper isKindOfClass:NSFileWrapper.class])
         return;
 

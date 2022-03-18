@@ -9,12 +9,10 @@ list(APPEND TestWebKit_DEPENDENCIES TestWebKitAPI-forwarding-headers)
 add_dependencies(TestWebKitAPIInjectedBundle TestWebKitAPI-forwarding-headers)
 
 include_directories(SYSTEM
-    ${CAIRO_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
     ${GSTREAMER_INCLUDE_DIRS}
     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
-    ${WPE_INCLUDE_DIRS}
     ${WPEBACKEND_FDO_INCLUDE_DIRS}
 )
 
@@ -84,7 +82,6 @@ target_include_directories(TestWebKitAPIBase PRIVATE
 target_sources(TestWebKitAPIInjectedBundle PRIVATE
     glib/UtilitiesGLib.cpp
 
-    wpe/InjectedBundleControllerWPE.cpp
     wpe/PlatformUtilitiesWPE.cpp
 )
 target_include_directories(TestWebKitAPIInjectedBundle PRIVATE

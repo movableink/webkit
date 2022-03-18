@@ -53,6 +53,8 @@
 #include "IDBConnectionToServer.h"
 #include "InspectorClient.h"
 #include "LibWebRTCProvider.h"
+#include "MediaRecorderPrivate.h"
+#include "MediaRecorderProvider.h"
 #include "NetworkStorageSession.h"
 #include "Page.h"
 #include "PageConfiguration.h"
@@ -299,7 +301,7 @@ private:
     bool spellingUIIsShowing() final { return false; }
 
     void willSetInputMethodState() final { }
-    void setInputMethodState(bool) final { }
+    void setInputMethodState(Element*) final { }
 
     bool canShowFontPanel() const final { return false; }
 
@@ -577,8 +579,17 @@ Ref<StorageNamespace> EmptyStorageNamespaceProvider::createTransientLocalStorage
     return adoptRef(*new EmptyStorageNamespace { sessionID });
 }
 
-class EmptyStorageSessionProvider : public StorageSessionProvider {
+class EmptyStorageSessionProvider final : public StorageSessionProvider {
     NetworkStorageSession* storageSession() const final { return nullptr; }
+};
+
+class EmptyMediaRecorderProvider final : public MediaRecorderProvider {
+public:
+    EmptyMediaRecorderProvider() = default;
+private:
+#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
+    std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(const MediaStreamPrivate&) final { return nullptr; }
+#endif
 };
 
 PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
@@ -591,7 +602,9 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         CacheStorageProvider::create(),
         adoptRef(*new EmptyBackForwardClient),
         CookieJar::create(adoptRef(*new EmptyStorageSessionProvider)),
-        makeUniqueRef<EmptyProgressTrackerClient>()
+        makeUniqueRef<EmptyProgressTrackerClient>(),
+        makeUniqueRef<EmptyFrameLoaderClient>(),
+        makeUniqueRef<EmptyMediaRecorderProvider>()
     };
 
     static NeverDestroyed<EmptyChromeClient> dummyChromeClient;
@@ -613,9 +626,6 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
 
     static NeverDestroyed<EmptyInspectorClient> dummyInspectorClient;
     pageConfiguration.inspectorClient = &dummyInspectorClient.get();
-
-    static NeverDestroyed<EmptyFrameLoaderClient> dummyFrameLoaderClient;
-    pageConfiguration.loaderClientForMainFrame = &dummyFrameLoaderClient.get();
 
     pageConfiguration.diagnosticLoggingClient = makeUnique<EmptyDiagnosticLoggingClient>();
 

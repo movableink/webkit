@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -251,6 +251,8 @@ private:
 
 class ConservativeRoots;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VM);
+
 #if COMPILER(MSVC)
 #pragma warning(push)
 #pragma warning(disable: 4200) // Disable "zero-sized array in struct/union" warning
@@ -263,8 +265,7 @@ struct ScratchBuffer {
 
     static ScratchBuffer* create(size_t size)
     {
-        ScratchBuffer* result = new (fastMalloc(ScratchBuffer::allocationSize(size))) ScratchBuffer;
-
+        ScratchBuffer* result = new (VMMalloc::malloc(ScratchBuffer::allocationSize(size))) ScratchBuffer;
         return result;
     }
 
@@ -377,6 +378,8 @@ public:
     std::unique_ptr<IsoHeapCellType> errorInstanceHeapCellType;
     std::unique_ptr<IsoHeapCellType> globalLexicalEnvironmentHeapCellType;
     std::unique_ptr<IsoHeapCellType> globalObjectHeapCellType;
+    std::unique_ptr<IsoHeapCellType> injectedScriptHostSpaceHeapCellType;
+    std::unique_ptr<IsoHeapCellType> javaScriptCallFrameHeapCellType;
     std::unique_ptr<IsoHeapCellType> jsModuleRecordHeapCellType;
     std::unique_ptr<IsoHeapCellType> moduleNamespaceObjectHeapCellType;
     std::unique_ptr<IsoHeapCellType> nativeStdFunctionHeapCellType;
@@ -439,6 +442,7 @@ public:
     CompleteSubspace variableSizedCellSpace; // FIXME: This space is problematic because we have things in here like DirectArguments and ScopedArguments; those should be split into JSValueOOB cells and JSValueStrict auxiliaries. https://bugs.webkit.org/show_bug.cgi?id=182858
     CompleteSubspace destructibleObjectSpace;
     
+    IsoSubspace arraySpace;
     IsoSubspace bigIntSpace;
     IsoSubspace calleeSpace;
     IsoSubspace clonedArgumentsSpace;
@@ -451,8 +455,10 @@ public:
     IsoSubspace getterSetterSpace;
     IsoSubspace globalLexicalEnvironmentSpace;
     IsoSubspace internalFunctionSpace;
+    IsoSubspace jsProxySpace;
     IsoSubspace nativeExecutableSpace;
     IsoSubspace numberObjectSpace;
+    IsoSubspace plainObjectSpace;
     IsoSubspace promiseSpace;
     IsoSubspace propertyNameEnumeratorSpace;
     IsoSubspace propertyTableSpace;
@@ -492,6 +498,7 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(apiGlobalObjectSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(apiValueWrapperSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(arrayBufferSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(arrayIteratorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(asyncGeneratorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(bigIntObjectSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(booleanObjectSpace)
@@ -509,9 +516,11 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(functionRareDataSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(generatorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(globalObjectSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(injectedScriptHostSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(int8ArraySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(int16ArraySpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(int32ArraySpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(javaScriptCallFrameSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(jsModuleRecordSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(mapBucketSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(mapIteratorSpace)
@@ -527,6 +536,7 @@ public:
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(setIteratorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(setSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(strictEvalActivationSpace)
+    DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(stringIteratorSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(sourceCodeSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(symbolSpace)
     DYNAMIC_ISO_SUBSPACE_DEFINE_MEMBER(symbolObjectSpace)
@@ -807,9 +817,7 @@ public:
     ALWAYS_INLINE static bool canUseJIT()
     {
 #if ENABLE(JIT)
-#if !ASSERT_DISABLED
-        RELEASE_ASSERT(s_canUseJITIsSet);
-#endif
+        ASSERT(s_canUseJITIsSet);
         return s_canUseJIT;
 #else
         return false;
@@ -952,7 +960,7 @@ public:
     {
         ASSERT(Options::useExceptionFuzz());
         if (!m_exceptionFuzzBuffer)
-            m_exceptionFuzzBuffer = MallocPtr<EncodedJSValue>::malloc(size);
+            m_exceptionFuzzBuffer = MallocPtr<EncodedJSValue, VMMalloc>::malloc(size);
         return m_exceptionFuzzBuffer.get();
     }
 
@@ -1028,11 +1036,10 @@ public:
 
     void shrinkFootprintWhenIdle();
 
-    WatchpointSet* ensureWatchpointSetForImpureProperty(const Identifier&);
-    void registerWatchpointForImpureProperty(const Identifier&, Watchpoint*);
+    WatchpointSet* ensureWatchpointSetForImpureProperty(UniquedStringImpl*);
     
     // FIXME: Use AtomString once it got merged with Identifier.
-    JS_EXPORT_PRIVATE void addImpureProperty(const String&);
+    JS_EXPORT_PRIVATE void addImpureProperty(UniquedStringImpl*);
     
     InlineWatchpointSet& primitiveGigacageEnabled() { return m_primitiveGigacageEnabled; }
 
@@ -1206,7 +1213,7 @@ private:
     bool m_shouldBuildPCToCodeOriginMapping { false };
     std::unique_ptr<CodeCache> m_codeCache;
     std::unique_ptr<BuiltinExecutables> m_builtinExecutables;
-    HashMap<String, RefPtr<WatchpointSet>> m_impurePropertyWatchpointSets;
+    HashMap<RefPtr<UniquedStringImpl>, RefPtr<WatchpointSet>> m_impurePropertyWatchpointSets;
     std::unique_ptr<TypeProfiler> m_typeProfiler;
     std::unique_ptr<TypeProfilerLog> m_typeProfilerLog;
     unsigned m_typeProfilerEnabledCount;
@@ -1220,7 +1227,7 @@ private:
     std::unique_ptr<ControlFlowProfiler> m_controlFlowProfiler;
     unsigned m_controlFlowProfilerEnabledCount;
     Deque<std::unique_ptr<QueuedTask>> m_microtaskQueue;
-    MallocPtr<EncodedJSValue> m_exceptionFuzzBuffer;
+    MallocPtr<EncodedJSValue, VMMalloc> m_exceptionFuzzBuffer;
     VMTraps m_traps;
     RefPtr<Watchdog> m_watchdog;
     std::unique_ptr<HeapProfiler> m_heapProfiler;
@@ -1238,7 +1245,7 @@ private:
     uintptr_t m_currentWeakRefVersion { 0 };
 
 #if ENABLE(JIT)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     JS_EXPORT_PRIVATE static bool s_canUseJITIsSet;
 #endif
     JS_EXPORT_PRIVATE static bool s_canUseJIT;

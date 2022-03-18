@@ -49,6 +49,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleAdjuster.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -57,6 +58,8 @@
 namespace WebCore {
 
 namespace Style {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TreeResolverScope);
 
 TreeResolver::TreeResolver(Document& document)
     : m_document(document)
@@ -195,6 +198,9 @@ ElementUpdates TreeResolver::resolveElement(Element& element)
         return { };
     }
 
+    if (!element.rendererIsEverNeeded())
+        return { };
+
     auto newStyle = styleForElement(element, parent().style);
 
     if (!affectsRenderedSubtree(element, *newStyle))
@@ -238,9 +244,9 @@ ElementUpdates TreeResolver::resolveElement(Element& element)
     auto beforeUpdate = resolvePseudoStyle(element, update, PseudoId::Before);
     auto afterUpdate = resolvePseudoStyle(element, update, PseudoId::After);
 
-#if ENABLE(POINTER_EVENTS) && PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY)
     // FIXME: Track this exactly.
-    if (update.style->touchActions() != TouchAction::Auto && !m_document.quirks().shouldDisablePointerEventsQuirk() && RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled())
+    if (update.style->touchActions() != TouchAction::Auto && !m_document.quirks().shouldDisablePointerEventsQuirk())
         m_document.setMayHaveElementsWithNonAutoTouchAction();
 #endif
 
@@ -301,7 +307,7 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(std::unique_ptr<RenderSt
 {
     auto* oldStyle = element.renderOrDisplayContentsStyle();
 
-    bool shouldRecompositeLayer = false;
+    OptionSet<AnimationImpact> animationImpact;
 
     // New code path for CSS Animations and CSS Transitions.
     if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
@@ -321,7 +327,7 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(std::unique_ptr<RenderSt
     // as animations created via the JS API.
     if (element.hasKeyframeEffects()) {
         auto animatedStyle = RenderStyle::clonePtr(*newStyle);
-        shouldRecompositeLayer = element.applyKeyframeEffects(*animatedStyle);
+        animationImpact = element.applyKeyframeEffects(*animatedStyle);
         newStyle = WTFMove(animatedStyle);
     }
 
@@ -330,11 +336,14 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(std::unique_ptr<RenderSt
         auto& animationController = m_document.frame()->animation();
 
         auto animationUpdate = animationController.updateAnimations(element, *newStyle, oldStyle);
-        shouldRecompositeLayer = animationUpdate.animationChangeRequiresRecomposite;
+        animationImpact.add(animationUpdate.impact);
 
         if (animationUpdate.style)
             newStyle = WTFMove(animationUpdate.style);
     }
+
+    if (animationImpact)
+        Adjuster::adjustAnimatedStyle(*newStyle, parentBoxStyle(), animationImpact);
 
     auto change = oldStyle ? determineChange(*oldStyle, *newStyle) : Detach;
 
@@ -342,8 +351,7 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(std::unique_ptr<RenderSt
     if (validity >= Validity::SubtreeAndRenderersInvalid || parentChange == Detach)
         change = Detach;
 
-    shouldRecompositeLayer |= element.styleResolutionShouldRecompositeLayer();
-
+    bool shouldRecompositeLayer = animationImpact.contains(AnimationImpact::RequiresRecomposite) || element.styleResolutionShouldRecompositeLayer();
     return { WTFMove(newStyle), change, shouldRecompositeLayer };
 }
 

@@ -138,7 +138,7 @@ public:
     String actionVerb() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
-    virtual void getDocumentLinks(AccessibilityChildrenVector&);
+    AccessibilityChildrenVector documentLinks() override;
     FrameView* documentFrameView() const override;
 
     void clearChildren() override;
@@ -149,8 +149,7 @@ public:
     void setValue(const String&) override;
     void setSelectedRows(AccessibilityChildrenVector&) override;
     AccessibilityOrientation orientation() const override;
-    
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
+
     void textChanged() override;
     void addChildren() override;
     bool canHaveChildren() const override;
@@ -203,6 +202,7 @@ public:
 
 protected:
     explicit AccessibilityRenderObject(RenderObject*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
     ScrollableArea* getScrollableAreaIfScrollable() const override;
     void scrollTo(const IntPoint&) const override;
     

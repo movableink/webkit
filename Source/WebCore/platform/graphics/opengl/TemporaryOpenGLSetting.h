@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include "GraphicsTypes3D.h"
+#include "GraphicsTypesGL.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D) && (USE(OPENGL) || USE(OPENGL_ES))
+#if ENABLE(GRAPHICS_CONTEXT_GL) && (USE(OPENGL) || USE(OPENGL_ES))
 
 #include <wtf/Noncopyable.h>
 
@@ -53,15 +53,15 @@ public:
 #if PLATFORM(QT)
     TemporaryOpenGLSetting(QOpenGLExtensions*, GC3Denum capability, GC3Denum scopedState);
 #else
-    TemporaryOpenGLSetting(GC3Denum capability, GC3Denum scopedState);
+    TemporaryOpenGLSetting(GCGLenum capability, GCGLenum scopedState);
 #endif
     ~TemporaryOpenGLSetting();
 
 private:
-    const GC3Denum m_capability;
-    const GC3Denum m_scopedState;
-    GC3Denum m_originalState;
-
+    const GCGLenum m_capability;
+    const GCGLenum m_scopedState;
+    GCGLenum m_originalState;
+    
 #if PLATFORM(QT)
     QOpenGLExtensions* m_functions { nullptr };
 #endif

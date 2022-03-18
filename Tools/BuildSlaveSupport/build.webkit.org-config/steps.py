@@ -191,7 +191,7 @@ class InstallWpeDependencies(shell.ShellCommand):
 
 
 def appendCustomBuildFlags(step, platform, fullPlatform):
-    if platform not in ('gtk', 'wincairo', 'ios', 'jsc-only', 'wpe'):
+    if platform not in ('gtk', 'wincairo', 'ios', 'jsc-only', 'wpe', 'playstation'):
         return
     if fullPlatform.startswith('ios-simulator'):
         platform = 'ios-simulator'
@@ -367,7 +367,7 @@ class RunJavaScriptCoreTests(TestWithFailureCount):
         architecture = self.getProperty("architecture")
         # Currently run-javascriptcore-test doesn't support run javascript core test binaries list below remotely
         if architecture in ['mips', 'armv7', 'aarch64']:
-            self.command += ['--no-testmasm', '--no-testair', '--no-testb3', '--no-testdfg', '--no-testapi']
+            self.command += ['--no-testmasm', '--no-testair', '--no-testb3', '--no-testdfg', '--no-testapi', '--verbose']
         # Linux bots have currently problems with JSC tests that try to use large amounts of memory.
         # Check: https://bugs.webkit.org/show_bug.cgi?id=175140
         if platform in ('gtk', 'wpe'):
@@ -439,7 +439,6 @@ class RunWebKitTests(shell.Test):
                "--master-name", "webkit.org",
                "--buildbot-master", BUILD_WEBKIT_URL,
                "--report", RESULTS_WEBKIT_URL,
-               "--test-results-server", "webkit-test-results.webkit.org",
                "--exit-after-n-crashes-or-timeouts", "50",
                "--exit-after-n-failures", "500",
                WithProperties("--%(configuration)s")]
@@ -653,6 +652,7 @@ class RunLLDBWebKitTests(RunPythonTests):
         "./Tools/Scripts/test-lldb-webkit",
         "--verbose",
         "--no-build",
+        WithProperties("--%(configuration)s"),
     ]
     failedTestsFormatString = "%d lldb test%s failed"
 

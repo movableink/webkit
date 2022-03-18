@@ -35,7 +35,7 @@
 #include "InlineFormattingState.h"
 #include "InlineTextItem.h"
 #include "IntRect.h"
-#include "LayoutContainer.h"
+#include "LayoutContainerBox.h"
 #include "LayoutDescendantIterator.h"
 #include "LayoutState.h"
 #include "RenderStyle.h"
@@ -121,23 +121,21 @@ static void paintInlineContent(GraphicsContext& context, LayoutPoint absoluteOff
         return;
 
     for (auto& run : displayRuns) {
-        if (auto& textContext = run.textContext()) {
+        if (auto& textContent = run.textContent()) {
             auto& style = run.style();
             context.setStrokeColor(style.color());
             context.setFillColor(style.color());
 
-            auto absoluteLogicalLeft = absoluteOffset.x() + run.logicalLeft();
+            auto absoluteLeft = absoluteOffset.x() + run.left();
             // FIXME: Add non-baseline align painting
             auto& lineBox = displayInlineContent->lineBoxForRun(run);
-            auto baselineOffset = absoluteOffset.y() + lineBox.logicalTop() + lineBox.baselineOffset();
-            auto expansionContext = textContext->expansion();
-            auto textRun = TextRun { textContext->content(), run.logicalLeft() - lineBox.logicalLeft(),
-                expansionContext ? expansionContext->horizontalExpansion : 0,
-                expansionContext ? expansionContext->behavior : DefaultExpansion };
+            auto baselineOffset = absoluteOffset.y() + lineBox.top() + lineBox.baselineOffset();
+            auto expansion = run.expansion();
+            auto textRun = TextRun { textContent->content(), run.left() - lineBox.left(), expansion.horizontalExpansion, expansion.behavior };
             textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
-            context.drawText(style.fontCascade(), textRun, { absoluteLogicalLeft, baselineOffset });
+            context.drawText(style.fontCascade(), textRun, { absoluteLeft, baselineOffset });
         } else if (auto* cachedImage = run.image()) {
-            auto runAbsoluteRect = FloatRect { absoluteOffset.x() + run.logicalLeft(), absoluteOffset.y() + run.logicalTop(), run.logicalWidth(), run.logicalHeight() };
+            auto runAbsoluteRect = FloatRect { absoluteOffset.x() + run.left(), absoluteOffset.y() + run.top(), run.width(), run.height() };
             context.drawImage(*cachedImage->image(), runAbsoluteRect);
         }
     }
@@ -152,8 +150,8 @@ static Box absoluteDisplayBox(const Layout::LayoutState& layoutState, const Layo
         return layoutState.displayBoxForLayoutBox(layoutBox);
 
     auto absoluteBox = Box { layoutState.displayBoxForLayoutBox(layoutBox) };
-    for (auto* container = layoutBox.containingBlock(); container != &layoutBox.initialContainingBlock(); container = container->containingBlock())
-        absoluteBox.moveBy(layoutState.displayBoxForLayoutBox(*container).topLeft());
+    for (auto* containerBox = layoutBox.containingBlock(); containerBox != &layoutBox.initialContainingBlock(); containerBox = containerBox->containingBlock())
+        absoluteBox.moveBy(layoutState.displayBoxForLayoutBox(*containerBox).topLeft());
     return absoluteBox;
 }
 
@@ -170,6 +168,8 @@ static void paintSubtree(GraphicsContext& context, const Layout::LayoutState& la
     auto paint = [&] (auto& layoutBox) {
         if (layoutBox.style().visibility() != Visibility::Visible)
             return;
+        if (!layoutState.hasDisplayBox(layoutBox))
+            return;
         auto absoluteDisplayBox = Display::absoluteDisplayBox(layoutState, layoutBox);
         if (!dirtyRect.intersects(snappedIntRect(absoluteDisplayBox.rect())))
             return;
@@ -182,26 +182,26 @@ static void paintSubtree(GraphicsContext& context, const Layout::LayoutState& la
         }
         // Only inline content for now.
         if (layoutBox.establishesInlineFormattingContext()) {
-            auto& container = downcast<Layout::Container>(layoutBox);
-            paintInlineContent(context, absoluteDisplayBox.topLeft(), downcast<Layout::InlineFormattingState>(layoutState.establishedFormattingState(container)));
+            auto& containerBox = downcast<Layout::ContainerBox>(layoutBox);
+            paintInlineContent(context, absoluteDisplayBox.topLeft(), layoutState.establishedInlineFormattingState(containerBox));
         }
     };
 
     paint(paintRootBox);
-    if (!is<Layout::Container>(paintRootBox) || !downcast<Layout::Container>(paintRootBox).hasChild())
+    if (!is<Layout::ContainerBox>(paintRootBox) || !downcast<Layout::ContainerBox>(paintRootBox).hasChild())
         return;
 
     LayoutBoxList layoutBoxList;
-    layoutBoxList.append(downcast<Layout::Container>(paintRootBox).firstChild());
+    layoutBoxList.append(downcast<Layout::ContainerBox>(paintRootBox).firstChild());
     while (!layoutBoxList.isEmpty()) {
         while (true) {
             auto& layoutBox = *layoutBoxList.last();
             if (isPaintRootCandidate(layoutBox))
                 break;
             paint(layoutBox);
-            if (!is<Layout::Container>(layoutBox) || !downcast<Layout::Container>(layoutBox).hasChild())
+            if (!is<Layout::ContainerBox>(layoutBox) || !downcast<Layout::ContainerBox>(layoutBox).hasChild())
                 break;
-            layoutBoxList.append(downcast<Layout::Container>(layoutBox).firstChild());
+            layoutBoxList.append(downcast<Layout::ContainerBox>(layoutBox).firstChild());
         }
         while (!layoutBoxList.isEmpty()) {
             auto& layoutBox = *layoutBoxList.takeLast();
@@ -239,10 +239,11 @@ static LayoutRect collectPaintRootsAndContentRect(const Layout::LayoutState& lay
                 break;
             if (isPaintRootCandidate(layoutBox))
                 appendPaintRoot(layoutBox);
-            contentRect.uniteIfNonZero(Display::absoluteDisplayBox(layoutState, layoutBox).rect());
-            if (!is<Layout::Container>(layoutBox) || !downcast<Layout::Container>(layoutBox).hasChild())
+            if (layoutState.hasDisplayBox(layoutBox))
+                contentRect.uniteIfNonZero(Display::absoluteDisplayBox(layoutState, layoutBox).rect());
+            if (!is<Layout::ContainerBox>(layoutBox) || !downcast<Layout::ContainerBox>(layoutBox).hasChild())
                 break;
-            layoutBoxList.append(downcast<Layout::Container>(layoutBox).firstChild());
+            layoutBoxList.append(downcast<Layout::ContainerBox>(layoutBox).firstChild());
         }
         while (!layoutBoxList.isEmpty()) {
             auto& layoutBox = *layoutBoxList.takeLast();
@@ -292,7 +293,7 @@ void Painter::paintInlineFlow(const Layout::LayoutState& layoutState, GraphicsCo
 
     ASSERT(layoutRoot.establishesInlineFormattingContext());
 
-    paintInlineContent(context, { }, downcast<Layout::InlineFormattingState>(layoutState.establishedFormattingState(layoutRoot)));
+    paintInlineContent(context, { }, layoutState.establishedInlineFormattingState(layoutRoot));
 }
 
 }

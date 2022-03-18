@@ -37,8 +37,8 @@ _log = logging.getLogger(__name__)
 class StubRepository(SCM):
     _stub_repository_json = 'checkout_information.json'
 
-    def __init__(self, cwd, filesystem, **kwargs):
-        self._filesystem = filesystem
+    def __init__(self, cwd, patch_directories=None, **kwargs):
+        SCM.__init__(self, cwd, **kwargs)
 
     @classmethod
     def _find_parent_path_matching_callback_condition(cls, path, callback, filesystem=None):
@@ -62,6 +62,9 @@ class StubRepository(SCM):
 
     def svn_revision(self, path):
         return self.native_revision(path)
+
+    def svn_branch(self, path):
+        return self.native_branch(path)
 
     def native_revision(self, path):
         return self._find_parent_path_matching_callback_condition(path, lambda path: self._decode_json(path)['id'], filesystem=self._filesystem)

@@ -215,7 +215,7 @@ public:
 
     void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const override;
 
-    void setSelectionState(SelectionState) override;
+    void setSelectionState(HighlightState) override;
 
     bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplaced() && !isInline() && !isTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
@@ -294,6 +294,8 @@ public:
 
 protected:
     LayoutUnit computedCSSPadding(const Length&) const;
+    virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
+    void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
 
 private:
     ContinuationChainNode& ensureContinuationChainNode();

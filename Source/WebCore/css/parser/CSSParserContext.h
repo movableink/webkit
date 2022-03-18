@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,22 +65,14 @@ public:
     bool attachmentEnabled { false };
 #endif
     bool deferredCSSParserEnabled { false };
+    bool scrollBehaviorEnabled { false };
     
     // This is only needed to support getMatchedCSSRules.
     bool hasDocumentSecurityOrigin { false };
     
     bool useSystemAppearance { false };
 
-    URL completeURL(const String& url) const
-    {
-        if (url.isNull())
-            return URL();
-        if (charset.isEmpty())
-            return URL(baseURL, url);
-        TextEncoding encoding(charset);
-        auto& encodingForURLParsing = encoding.encodingForFormSubmissionOrURLParsing();
-        return URL(baseURL, url, encodingForURLParsing == UTF8Encoding() ? nullptr : &encodingForURLParsing);
-    }
+    URL completeURL(const String& url) const;
 
     bool isContentOpaque { false };
 };
@@ -116,7 +108,8 @@ struct CSSParserContextHash {
 #if ENABLE(ATTACHMENT_ELEMENT)
             & key.attachmentEnabled                         << 11
 #endif
-            & key.mode                                      << 12; // Keep this last.
+            & key.scrollBehaviorEnabled                     << 12
+            & key.mode                                      << 13; // Keep this last.
         hash ^= WTF::intHash(bits);
         return hash;
     }

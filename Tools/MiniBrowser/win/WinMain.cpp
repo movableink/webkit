@@ -31,7 +31,6 @@
 #include "stdafx.h"
 #include "Common.h"
 #include "MiniBrowserLibResource.h"
-#include "MiniBrowserReplace.h"
 #include <wtf/win/SoftLinking.h>
 
 #if USE(CF)
@@ -58,7 +57,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 #endif
 
     MSG msg { };
-    HACCEL hAccelTable;
+    HACCEL hAccelTable, hPreAccelTable;
 
     INITCOMMONCONTROLSEX InitCtrlEx;
 
@@ -94,35 +93,31 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     ShowWindow(mainWindow.hwnd(), nCmdShow);
 
     hAccelTable = LoadAccelerators(hInst, MAKEINTRESOURCE(IDC_MINIBROWSER));
+    hPreAccelTable = LoadAccelerators(hInst, MAKEINTRESOURCE(IDR_ACCELERATORS_PRE));
 
     if (options.requestedURL.length())
         mainWindow.loadURL(options.requestedURL.GetBSTR());
     else
-        mainWindow.browserWindow()->loadURL(_bstr_t(defaultURL).GetBSTR());
+        mainWindow.goHome();
 
 #pragma warning(disable:4509)
 
     // Main message loop:
     __try {
-#if ENABLE(WEBKIT)
         while (GetMessage(&msg, nullptr, 0, 0)) {
 #if USE(CF)
             CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
 #endif
-            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
+            if (TranslateAccelerator(msg.hwnd, hPreAccelTable, &msg))
+                continue;
+            bool processed = false;
+            if (MainWindow::isInstance(msg.hwnd))
+                processed = TranslateAccelerator(msg.hwnd, hAccelTable, &msg);
+            if (!processed) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
         }
-#else
-        IWebKitMessageLoopPtr messageLoop;
-
-        hr = WebKitCreateInstance(CLSID_WebKitMessageLoop, 0, IID_IWebKitMessageLoop, reinterpret_cast<void**>(&messageLoop.GetInterfacePtr()));
-        if (FAILED(hr))
-            goto exit;
-
-        messageLoop->run(hAccelTable);
-#endif
     } __except(createCrashReport(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER) { }
 
 exit:

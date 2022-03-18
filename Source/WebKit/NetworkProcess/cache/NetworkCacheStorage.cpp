@@ -34,6 +34,7 @@
 #include <mutex>
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
+#include <wtf/PageBlock.h>
 #include <wtf/RandomNumber.h>
 #include <wtf/RunLoop.h>
 #include <wtf/text/CString.h>
@@ -47,7 +48,11 @@ static const char versionDirectoryPrefix[] = "Version ";
 static const char recordsDirectoryName[] = "Records";
 static const char blobsDirectoryName[] = "Blobs";
 static const char blobSuffix[] = "-blob";
-constexpr size_t maximumInlineBodySize { 16 * 1024 };
+
+static inline size_t maximumInlineBodySize()
+{
+    return WTF::pageSize();
+}
 
 static double computeRecordWorth(FileTimes);
 
@@ -174,7 +179,7 @@ static String makeSaltFilePath(const String& baseDirectoryPath)
     return FileSystem::pathByAppendingComponent(makeVersionedDirectoryPath(baseDirectoryPath), saltFileName);
 }
 
-RefPtr<Storage> Storage::open(const String& baseCachePath, Mode mode)
+RefPtr<Storage> Storage::open(const String& baseCachePath, Mode mode, size_t capacity)
 {
     ASSERT(RunLoop::isMain());
     ASSERT(!baseCachePath.isNull());
@@ -188,7 +193,7 @@ RefPtr<Storage> Storage::open(const String& baseCachePath, Mode mode)
     if (!salt)
         return nullptr;
 
-    return adoptRef(new Storage(cachePath, mode, *salt));
+    return adoptRef(new Storage(cachePath, mode, *salt, capacity));
 }
 
 using RecordFileTraverseFunction = Function<void (const String& fileName, const String& hashString, const String& type, bool isBlob, const String& recordDirectoryPath)>;
@@ -238,11 +243,12 @@ static void deleteEmptyRecordsDirectories(const String& recordsPath)
     });
 }
 
-Storage::Storage(const String& baseDirectoryPath, Mode mode, Salt salt)
+Storage::Storage(const String& baseDirectoryPath, Mode mode, Salt salt, size_t capacity)
     : m_basePath(baseDirectoryPath)
     , m_recordsPath(makeRecordsDirectoryPath(baseDirectoryPath))
     , m_mode(mode)
     , m_salt(salt)
+    , m_capacity(capacity)
     , m_readOperationTimeoutTimer(*this, &Storage::cancelAllReadOperations)
     , m_writeOperationDispatchTimer(*this, &Storage::dispatchPendingWriteOperations)
     , m_ioQueue(WorkQueue::create("com.apple.WebKit.Cache.Storage", WorkQueue::Type::Concurrent))
@@ -290,7 +296,7 @@ static size_t estimateRecordsSize(unsigned recordCount, unsigned blobCount)
 {
     auto inlineBodyCount = recordCount - std::min(blobCount, recordCount);
     auto headerSizes = recordCount * 4096;
-    auto inlineBodySizes = (maximumInlineBodySize / 2) * inlineBodyCount;
+    auto inlineBodySizes = (maximumInlineBodySize() / 2) * inlineBodyCount;
     return headerSizes + inlineBodySizes;
 }
 
@@ -798,7 +804,7 @@ void Storage::dispatchPendingWriteOperations()
 
 bool Storage::shouldStoreBodyAsBlob(const Data& bodyData)
 {
-    return bodyData.size() > maximumInlineBodySize;
+    return bodyData.size() > maximumInlineBodySize();
 }
 
 void Storage::dispatchWriteOperation(std::unique_ptr<WriteOperation> writeOperationPtr)
@@ -956,7 +962,7 @@ void Storage::traverse(const String& type, OptionSet<TraverseFlag> flags, Traver
                     traverseOperation.handler(&record, info);
                 }
 
-                std::lock_guard<Lock> lock(traverseOperation.activeMutex);
+                auto locker = holdLock(traverseOperation.activeMutex);
                 --traverseOperation.activeCount;
                 traverseOperation.activeCondition.notifyOne();
             });
@@ -986,8 +992,10 @@ void Storage::traverse(const String& type, OptionSet<TraverseFlag> flags, Traver
 void Storage::setCapacity(size_t capacity)
 {
     ASSERT(RunLoop::isMain());
+    if (m_capacity == capacity)
+        return;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     const size_t assumedAverageRecordSize = 50 << 10;
     size_t maximumRecordCount = capacity / assumedAverageRecordSize;
     // ~10 bits per element are required for <1% false positive rate.

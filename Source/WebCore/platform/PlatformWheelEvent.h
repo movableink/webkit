@@ -34,6 +34,10 @@
 typedef struct _GdkEventScroll GdkEventScroll;
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 // The ScrollByPixelWheelEvent is a fine-grained event that specifies the precise number of pixels to scroll.
@@ -59,6 +63,8 @@ enum PlatformWheelEventPhase : uint8_t {
     PlatformWheelEventPhaseCancelled = 1 << 4,
     PlatformWheelEventPhaseMayBegin = 1 << 5,
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, PlatformWheelEventPhase);
 
 #endif
 
@@ -230,5 +236,7 @@ inline FloatPoint PlatformWheelEvent::swipeVelocity() const
 }
 
 #endif // ENABLE(KINETIC_SCROLLING)
+
+WTF::TextStream& operator<<(WTF::TextStream&, const PlatformWheelEvent&);
 
 } // namespace WebCore

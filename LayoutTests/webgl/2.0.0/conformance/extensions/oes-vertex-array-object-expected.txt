@@ -64,13 +64,21 @@ Test: ../../resources/webgl_test_files/conformance/extensions/oes-vertex-array-o
 [ 61: PASS ] should be 0,255,0,255
 [ 62: PASS ] should be 0,0,255,255
 [ 63: PASS ] should be 0,255,255,255
-[ 64: FAIL ] getError expected: INVALID_OPERATION. Was NO_ERROR : Draw call should fail.
-[ 65: PASS ] getError was expected value: NO_ERROR : Draw call should not fail.
-[ 66: PASS ] getError was expected value: NO_ERROR : Draw call should not fail.
+[ 64: PASS ] getError was expected value: INVALID_OPERATION : Draw call should fail.
+[ 65: FAIL ] References from unbound VAOs keep Position buffer alive.
+[ 66: FAIL ] References from unbound VAOs keep Color buffer alive
 [ 67: PASS ] getError was expected value: NO_ERROR : Draw call should not fail.
-[ 68: PASS ] should be red
-[ 69: PASS ] should be green
-[ 70: PASS ] getError was expected value: NO_ERROR : there should be no errors
-[ 71: PASS ] successfullyParsed is true
-[ FAIL ] 1 failures reported
+[ 68: FAIL ] References from unbound VAOs keep Position buffer alive.
+[ 69: FAIL ] References from unbound VAOs keep Color buffer alive
+[ 70: PASS ] getError was expected value: NO_ERROR : Draw call should not fail.
+[ 71: FAIL ] References from unbound VAOs keep Position buffer alive.
+[ 72: FAIL ] References from unbound VAOs keep Color buffer alive
+[ 73: PASS ] getError was expected value: NO_ERROR : Draw call should not fail.
+[ 74: FAIL ] References from unbound VAOs keep Position buffer alive.
+[ 75: FAIL ] References from unbound VAOs keep Color buffer alive
+[ 76: PASS ] should be red
+[ 77: PASS ] should be green
+[ 78: PASS ] getError was expected value: NO_ERROR : there should be no errors
+[ 79: PASS ] successfullyParsed is true
+[ FAIL ] 8 failures reported
 

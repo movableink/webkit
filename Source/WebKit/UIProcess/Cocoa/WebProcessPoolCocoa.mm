@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #import "config.h"
 #import "WebProcessPool.h"
 
+#import "AccessibilitySupportSPI.h"
 #import "CookieStorageUtilsCF.h"
 #import "LegacyCustomProtocolManagerClient.h"
 #import "Logging.h"
@@ -33,6 +34,7 @@
 #import "NetworkProcessMessages.h"
 #import "NetworkProcessProxy.h"
 #import "PluginProcessManager.h"
+#import "PreferenceObserver.h"
 #import "SandboxUtilities.h"
 #import "TextChecker.h"
 #import "UserInterfaceIdiom.h"
@@ -47,25 +49,33 @@
 #import "WebProcessMessages.h"
 #import "WindowServerConnection.h"
 #import <WebCore/Color.h>
+#import <WebCore/LocalizedDeviceModel.h>
+#import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/NotImplemented.h>
+#import <WebCore/PictureInPictureSupport.h>
 #import <WebCore/PlatformPasteboard.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SharedBuffer.h>
+#import <WebCore/UTIUtilities.h>
 #import <objc/runtime.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
-#import <pal/spi/cocoa/NSKeyedArchiverSPI.h>
 #import <sys/param.h>
 #import <wtf/FileSystem.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/cocoa/Entitlements.h>
+#import <wtf/spi/darwin/SandboxSPI.h>
 #import <wtf/spi/darwin/dyldSPI.h>
+
+#if ENABLE(REMOTE_INSPECTOR)
+#import <JavaScriptCore/RemoteInspector.h>
+#import <JavaScriptCore/RemoteInspectorConstants.h>
+#endif
 
 #if PLATFORM(MAC)
 #import <QuartzCore/CARemoteLayerServer.h>
 #else
-#import "AccessibilitySupportSPI.h"
 #import "UIKitSPI.h"
 #import <pal/ios/ManagedConfigurationSoftLink.h>
 #import <pal/spi/ios/ManagedConfigurationSPI.h>
@@ -81,6 +91,7 @@ SOFT_LINK_CLASS(WebContentAnalysis, WebFilterEvaluator);
 #endif
 
 #if PLATFORM(COCOA)
+#import <WebCore/SystemBattery.h>
 #import <pal/spi/cocoa/NEFilterSourceSPI.h>
 
 SOFT_LINK_FRAMEWORK_OPTIONAL(NetworkExtension);
@@ -102,10 +113,12 @@ static NSString * const WebKitSuppressMemoryPressureHandlerDefaultsKey = @"WebKi
 static NSString * const WebKitLogCookieInformationDefaultsKey = @"WebKitLogCookieInformation";
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
 SOFT_LINK_PRIVATE_FRAMEWORK(BackBoardServices)
 SOFT_LINK(BackBoardServices, BKSDisplayBrightnessGetCurrent, float, (), ());
 #endif
+
+#define WEBPROCESSPOOL_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - WebProcessPool::" fmt, this, ##__VA_ARGS__)
 
 namespace WebKit {
 using namespace WebCore;
@@ -160,6 +173,14 @@ void WebProcessPool::platformInitialize()
         installMemoryPressureHandler();
 
     setLegacyCustomProtocolManagerClient(makeUnique<LegacyCustomProtocolManagerClient>());
+
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    [WKPreferenceObserver swizzleRegisterDefaults];
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
+        // Start observing preference changes.
+        [WKPreferenceObserver sharedInstance];
+    });
+#endif
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -203,13 +224,51 @@ static bool deviceHasAGXCompilerService()
         });
     return deviceHasAGXCompilerService;
 }
+#endif
 
+#if PLATFORM(IOS_FAMILY)
 static bool isInternalInstall()
 {
     static bool isInternal = MGGetBoolAnswer(kMGQAppleInternalInstallCapability);
     return isInternal;
 }
 #endif
+
+// FIXME(207716): The following should be removed when the GPU process is complete.
+static const Vector<String>& mediaRelatedMachServices()
+{
+    ASSERT(isMainThread());
+    static const auto services = makeNeverDestroyed(Vector<String> {
+        "com.apple.audio.AudioComponentRegistrar", "com.apple.coremedia.endpoint.xpc",
+        "com.apple.coremedia.routediscoverer.xpc", "com.apple.coremedia.routingcontext.xpc",
+        "com.apple.coremedia.volumecontroller.xpc", "com.apple.accessibility.mediaaccessibilityd",
+        "com.apple.mediaremoted.xpc",
+#if PLATFORM(IOS_FAMILY)
+        "com.apple.audio.AudioSession", "com.apple.MediaPlayer.RemotePlayerService",
+        "com.apple.audio.toolbox.reporting.service", "com.apple.coremedia.admin",
+        "com.apple.coremedia.asset.xpc", "com.apple.coremedia.assetimagegenerator.xpc",
+        "com.apple.coremedia.audiodeviceclock.xpc", "com.apple.coremedia.audioprocessingtap.xpc",
+        "com.apple.coremedia.capturesession", "com.apple.coremedia.capturesource",
+        "com.apple.coremedia.compressionsession", "com.apple.coremedia.cpe.xpc",
+        "com.apple.coremedia.cpeprotector.xpc", "com.apple.coremedia.customurlloader.xpc",
+        "com.apple.coremedia.decompressionsession", "com.apple.coremedia.figcontentkeysession.xpc",
+        "com.apple.coremedia.figcpecryptor", "com.apple.coremedia.formatreader.xpc",
+        "com.apple.coremedia.player.xpc", "com.apple.coremedia.remaker",
+        "com.apple.coremedia.remotequeue", "com.apple.coremedia.routingsessionmanager.xpc",
+        "com.apple.coremedia.samplebufferaudiorenderer.xpc", "com.apple.coremedia.samplebufferrendersynchronizer.xpc",
+        "com.apple.coremedia.sandboxserver.xpc", "com.apple.coremedia.sts",
+        "com.apple.coremedia.systemcontroller.xpc", "com.apple.coremedia.videoqueue",
+        "com.apple.coremedia.visualcontext.xpc", "com.apple.airplay.apsynccontroller.xpc",
+        "com.apple.audio.AURemoteIOServer"
+#endif
+#if PLATFORM(MAC)
+        "com.apple.coremedia.endpointstream.xpc", "com.apple.coremedia.endpointplaybacksession.xpc",
+        "com.apple.coremedia.endpointremotecontrolsession.xpc", "com.apple.coremedia.videodecoder",
+        "com.apple.coremedia.videoencoder"
+#endif
+    });
+    return services;
+}
 
 void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process, WebProcessCreationParameters& parameters)
 {
@@ -241,7 +300,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     parameters.uiProcessBundleResourcePath = m_resolvedPaths.uiProcessBundleResourcePath;
     SandboxExtension::createHandleWithoutResolvingPath(parameters.uiProcessBundleResourcePath, SandboxExtension::Type::ReadOnly, parameters.uiProcessBundleResourcePathExtensionHandle);
 
-    parameters.uiProcessBundleIdentifier = String([[NSBundle mainBundle] bundleIdentifier]);
+    parameters.uiProcessBundleIdentifier = applicationBundleIdentifier();
     parameters.uiProcessSDKVersion = dyld_get_program_sdk_version();
 
 #if PLATFORM(IOS_FAMILY)
@@ -258,7 +317,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     parameters.fontWhitelist = m_fontWhitelist;
 
     if (m_bundleParameters) {
-        auto keyedArchiver = secureArchiver();
+        auto keyedArchiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
 
         @try {
             [keyedArchiver encodeObject:m_bundleParameters.get() forKey:@"parameters"];
@@ -295,7 +354,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 #endif
 
     // FIXME: Remove this and related parameter when <rdar://problem/29448368> is fixed.
-    if (isSafari && !parameters.shouldCaptureAudioInUIProcess && mediaDevicesEnabled)
+    if (isSafari && mediaDevicesEnabled && !m_defaultPageGroup->preferences().captureAudioInUIProcessEnabled() && !m_defaultPageGroup->preferences().captureAudioInGPUProcessEnabled())
         SandboxExtension::createHandleForGenericExtension("com.apple.webkit.microphone", parameters.audioCaptureExtensionHandle);
 #endif
 
@@ -315,22 +374,47 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
         SandboxExtension::createHandleForMachLookup("com.apple.AGXCompilerService", WTF::nullopt, compilerServiceExtensionHandle);
         parameters.compilerServiceExtensionHandle = WTFMove(compilerServiceExtensionHandle);
     }
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    if (!WebCore::IOSApplication::isMobileSafari() || _AXSApplicationAccessibilityEnabled()) {
+        static const char* services[] = {
+            "com.apple.lsd.open",
+            "com.apple.lsd.mapdb",
+            "com.apple.mobileassetd",
+            "com.apple.iconservices",
+            "com.apple.PowerManagement.control",
+            "com.apple.frontboard.systemappservices"
+        };
+        auto size = WTF_ARRAY_LENGTH(services);
+        parameters.dynamicMachExtensionHandles.allocate(size);
+        for (size_t i = 0; i < size; ++i)
+            SandboxExtension::createHandleForMachLookup(services[i], WTF::nullopt, parameters.dynamicMachExtensionHandles[i]);
+    }
     
     if (isInternalInstall()) {
         SandboxExtension::Handle diagnosticsExtensionHandle;
-        SandboxExtension::createHandleForMachLookup("com.apple.diagnosticd", WTF::nullopt, diagnosticsExtensionHandle);
+        SandboxExtension::createHandleForMachLookup("com.apple.diagnosticd", WTF::nullopt, diagnosticsExtensionHandle, SandboxExtension::Flags::NoReport);
         parameters.diagnosticsExtensionHandle = WTFMove(diagnosticsExtensionHandle);
     }
 #endif
     
 #if PLATFORM(COCOA)
     if ([getNEFilterSourceClass() filterRequired]) {
-        SandboxExtension::Handle handle;
-        SandboxExtension::createHandleForMachLookup("com.apple.nehelper", WTF::nullopt, handle);
-        parameters.neHelperExtensionHandle = WTFMove(handle);
-        SandboxExtension::createHandleForMachLookup("com.apple.nesessionmanager.content-filter", WTF::nullopt, handle);
-        parameters.neSessionManagerExtensionHandle = WTFMove(handle);
+        SandboxExtension::Handle helperHandle;
+        SandboxExtension::createHandleForMachLookup("com.apple.nehelper", WTF::nullopt, helperHandle);
+        parameters.neHelperExtensionHandle = WTFMove(helperHandle);
+        SandboxExtension::Handle managerHandle;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
+        SandboxExtension::createHandleForMachLookup("com.apple.nesessionmanager", WTF::nullopt, managerHandle);
+#else
+        SandboxExtension::createHandleForMachLookup("com.apple.nesessionmanager.content-filter", WTF::nullopt, managerHandle);
+#endif
+        parameters.neSessionManagerExtensionHandle = WTFMove(managerHandle);
     }
+    parameters.systemHasBattery = systemHasBattery();
+    parameters.mimeTypesMap = commonMimeTypesMap();
+    parameters.mapUTIFromMIMEType = createUTIFromMIMETypeMap();
 #endif
     
 #if PLATFORM(IOS)
@@ -343,59 +427,78 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     
 #if PLATFORM(IOS_FAMILY)
     parameters.currentUserInterfaceIdiomIsPad = currentUserInterfaceIdiomIsPad();
+    parameters.supportsPictureInPicture = supportsPictureInPicture();
+    parameters.cssValueToSystemColorMap = RenderThemeIOS::cssValueToSystemColorMap();
+    parameters.focusRingColor = RenderTheme::singleton().focusRingColor(OptionSet<StyleColor::Options>());
+    parameters.localizedDeviceModel = localizedDeviceModel();
+#if USE(UTTYPE_SWIZZLER)
+    if (WebCore::IOSApplication::isMobileSafari())
+        parameters.vectorOfUTTypeItem = createVectorOfUTTypeItem();
+#endif
+#endif
+    
+    // Allow microphone access if either preference is set because WebRTC requires microphone access.
+    bool needWebProcessExtensions = !m_defaultPageGroup->preferences().useGPUProcessForMedia()
+        || !m_defaultPageGroup->preferences().captureAudioInGPUProcessEnabled()
+        || !m_defaultPageGroup->preferences().captureVideoInGPUProcessEnabled();
+
+    if (needWebProcessExtensions) {
+        // FIXME(207716): The following should be removed when the GPU process is complete.
+        const auto& services = mediaRelatedMachServices();
+        parameters.mediaExtensionHandles.allocate(services.size());
+        for (size_t i = 0, size = services.size(); i < size; ++i)
+            SandboxExtension::createHandleForMachLookup(services[i], WTF::nullopt, parameters.mediaExtensionHandles[i]);
+    }
+
+#if ENABLE(CFPREFS_DIRECT_MODE) && PLATFORM(IOS_FAMILY)
+    if (_AXSApplicationAccessibilityEnabled()) {
+        SandboxExtension::Handle preferencesExtensionHandle;
+        SandboxExtension::createHandleForMachLookup("com.apple.cfprefsd.daemon", WTF::nullopt, preferencesExtensionHandle);
+        parameters.preferencesExtensionHandle = WTFMove(preferencesExtensionHandle);
+    }
 #endif
 }
 
 void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationParameters& parameters)
 {
-    parameters.uiProcessBundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+    parameters.uiProcessBundleIdentifier = applicationBundleIdentifier();
     parameters.uiProcessSDKVersion = dyld_get_program_sdk_version();
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
     {
         bool isSafari = false;
+        bool isMiniBrowser = false;
 #if PLATFORM(IOS_FAMILY)
         isSafari = WebCore::IOSApplication::isMobileSafari();
+        isMiniBrowser = WebCore::IOSApplication::isMiniBrowser();
 #elif PLATFORM(MAC)
         isSafari = WebCore::MacApplication::isSafari();
+        isMiniBrowser = WebCore::MacApplication::isMiniBrowser();
 #endif
-        if (isSafari) {
+        if (isSafari || isMiniBrowser) {
             parameters.defaultDataStoreParameters.networkSessionParameters.httpProxy = URL(URL(), [defaults stringForKey:(NSString *)WebKit2HTTPProxyDefaultsKey]);
             parameters.defaultDataStoreParameters.networkSessionParameters.httpsProxy = URL(URL(), [defaults stringForKey:(NSString *)WebKit2HTTPSProxyDefaultsKey]);
         }
     }
 
-    parameters.enableLegacyTLS = false;
-    if (id value = [defaults objectForKey:@"WebKitEnableLegacyTLS"])
-        parameters.enableLegacyTLS = [value boolValue];
-    if (!parameters.enableLegacyTLS) {
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
-        parameters.enableLegacyTLS = [[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitTLS"] == MCRestrictedBoolExplicitYes;
-#elif PLATFORM(MAC)
-        parameters.enableLegacyTLS = CFPreferencesGetAppBooleanValue(CFSTR("allowDeprecatedWebKitTLS"), CFSTR("com.apple.applicationaccess"), nullptr);
-#endif
-    }
-    parameters.defaultDataStoreParameters.networkSessionParameters.enableLegacyTLS = parameters.enableLegacyTLS;
-
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
-
-#if PLATFORM(IOS_FAMILY)
-    parameters.ctDataConnectionServiceType = m_configuration->ctDataConnectionServiceType();
-#endif
 
     parameters.shouldSuppressMemoryPressureHandler = [defaults boolForKey:WebKitSuppressMemoryPressureHandlerDefaultsKey];
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     ASSERT(parameters.uiProcessCookieStorageIdentifier.isEmpty());
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
     parameters.uiProcessCookieStorageIdentifier = identifyingDataFromCookieStorage([[NSHTTPCookieStorage sharedHTTPCookieStorage] _cookieStorage]);
 #endif
 
     parameters.storageAccessAPIEnabled = storageAccessAPIEnabled();
-    parameters.suppressesConnectionTerminationOnSystemChange = m_configuration->suppressesConnectionTerminationOnSystemChange();
 
-    parameters.shouldEnableITPDatabase = [defaults boolForKey:[NSString stringWithFormat:@"InternalDebug%@", WebPreferencesKey::isITPDatabaseEnabledKey().createCFString().get()]];
+    NSNumber *databaseEnabledValue = [defaults objectForKey:[NSString stringWithFormat:@"InternalDebug%@", WebPreferencesKey::isITPDatabaseEnabledKey().createCFString().get()]];
+    if (databaseEnabledValue)
+        parameters.shouldEnableITPDatabase = databaseEnabledValue.boolValue;
+    else
+        parameters.shouldEnableITPDatabase = m_defaultPageGroup->preferences().isITPDatabaseEnabled();
 
     parameters.enableAdClickAttributionDebugMode = [defaults boolForKey:[NSString stringWithFormat:@"Experimental%@", WebPreferencesKey::adClickAttributionDebugModeEnabledKey().createCFString().get()]];
 }
@@ -481,7 +584,7 @@ bool WebProcessPool::networkProcessHasEntitlementForTesting(const String& entitl
     return WTF::hasEntitlement(ensureNetworkProcess().connection()->xpcConnection(), entitlement.utf8().data());
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
 float WebProcessPool::displayBrightness()
 {
     return BKSDisplayBrightnessGetCurrent();
@@ -489,8 +592,19 @@ float WebProcessPool::displayBrightness()
     
 void WebProcessPool::backlightLevelDidChangeCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo)
 {
-    WebProcessPool* pool = reinterpret_cast<WebProcessPool*>(observer);
+    auto* pool = reinterpret_cast<WebProcessPool*>(observer);
     pool->sendToAllProcesses(Messages::WebProcess::BacklightLevelDidChange(BKSDisplayBrightnessGetCurrent()));
+}
+#endif
+
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+void WebProcessPool::remoteWebInspectorEnabledCallback(CFNotificationCenterRef, void *observer, CFStringRef name, const void *, CFDictionaryRef userInfo)
+{
+    auto* pool = reinterpret_cast<WebProcessPool*>(observer);
+    for (size_t i = 0; i < pool->m_processes.size(); ++i) {
+        auto process = pool->m_processes[i];
+        process->enableRemoteInspectorIfNeeded();
+    }
 }
 #endif
 
@@ -540,11 +654,18 @@ void WebProcessPool::registerNotificationObservers()
     m_deactivationObserver = [[NSNotificationCenter defaultCenter] addObserverForName:NSApplicationDidResignActiveNotification object:NSApp queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
         setApplicationIsActive(false);
     }];
-#elif PLATFORM(IOS)
+#elif !PLATFORM(MACCATALYST)
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), this, backlightLevelDidChangeCallback, static_cast<CFStringRef>(UIBacklightLevelChangedNotification), nullptr, CFNotificationSuspensionBehaviorCoalesce);
+#if PLATFORM(IOS)
+#if ENABLE(REMOTE_INSPECTOR)
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), this, remoteWebInspectorEnabledCallback, static_cast<CFStringRef>(CFSTR(WIRServiceEnabledNotification)), nullptr, CFNotificationSuspensionBehaviorCoalesce);
+#endif
+#endif // PLATFORM(IOS)
     m_accessibilityEnabledObserver = [[NSNotificationCenter defaultCenter] addObserverForName:(__bridge id)kAXSApplicationAccessibilityEnabledNotification object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *) {
-        for (size_t i = 0; i < m_processes.size(); ++i)
+        for (size_t i = 0; i < m_processes.size(); ++i) {
+            m_processes[i]->unblockPreferenceServiceIfNeeded();
             m_processes[i]->unblockAccessibilityServerIfNeeded();
+        }
     }];
 #endif // !PLATFORM(IOS_FAMILY)
 }
@@ -563,8 +684,13 @@ void WebProcessPool::unregisterNotificationObservers()
 #endif
     [[NSNotificationCenter defaultCenter] removeObserver:m_activationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_deactivationObserver.get()];
-#elif PLATFORM(IOS)
+#elif !PLATFORM(MACCATALYST)
     CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), this, static_cast<CFStringRef>(UIBacklightLevelChangedNotification) , nullptr);
+#if PLATFORM(IOS)
+#if ENABLE(REMOTE_INSPECTOR)
+    CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), this, CFSTR(WIRServiceEnabledNotification), nullptr);
+#endif
+#endif // PLATFORM(IOS)
     [[NSNotificationCenter defaultCenter] removeObserver:m_accessibilityEnabledObserver.get()];
 #endif // !PLATFORM(IOS_FAMILY)
 }
@@ -676,7 +802,7 @@ int webProcessThroughputQOS()
 #if PLATFORM(IOS_FAMILY)
 void WebProcessPool::applicationIsAboutToSuspend()
 {
-    RELEASE_LOG(ProcessSuspension, "WebProcessPool::applicationIsAboutToSuspend() Terminating non-critical processes");
+    WEBPROCESSPOOL_RELEASE_LOG(ProcessSuspension, "applicationIsAboutToSuspend: Terminating non-critical processes");
 
     m_backForwardCache->pruneToSize(1);
     m_webProcessCache->clear();
@@ -701,10 +827,10 @@ void WebProcessPool::initializeClassesForParameterCoding()
     auto mutableSet = adoptNS([standardClasses mutableCopy]);
 
     for (const auto& customClass : customClasses) {
-        const auto* className = customClass.utf8().data();
-        Class objectClass = objc_lookUpClass(className);
+        auto className = customClass.utf8();
+        Class objectClass = objc_lookUpClass(className.data());
         if (!objectClass) {
-            WTFLogAlways("InjectedBundle::extendClassesForParameterCoder - Class %s is not a valid Objective C class.\n", className);
+            WTFLogAlways("InjectedBundle::extendClassesForParameterCoder - Class %s is not a valid Objective C class.\n", className.data());
             break;
         }
 
@@ -717,6 +843,12 @@ void WebProcessPool::initializeClassesForParameterCoding()
 NSSet *WebProcessPool::allowedClassesForParameterCoding() const
 {
     return m_classesForParameterCoder.get();
+}
+
+void WebProcessPool::notifyPreferencesChanged(const String& domain, const String& key, const Optional<String>& encodedValue)
+{
+    for (auto process : m_processes)
+        process->send(Messages::WebProcess::NotifyPreferencesChanged(domain, key, encodedValue), 0);
 }
 
 } // namespace WebKit

@@ -24,9 +24,9 @@
  */
 
 #include "config.h"
-#include "RemoteScrollingCoordinatorProxy.h"
 
-#if ENABLE(ASYNC_SCROLLING)
+#if ENABLE(UI_SIDE_COMPOSITING)
+#include "RemoteScrollingCoordinatorProxy.h"
 
 #include "ArgumentCoders.h"
 #include "RemoteLayerTreeDrawingAreaProxy.h"
@@ -228,11 +228,11 @@ void RemoteScrollingCoordinatorProxy::scrollingTreeNodeDidScroll(ScrollingNodeID
     m_webPageProxy.send(Messages::RemoteScrollingCoordinator::ScrollPositionChangedForNode(scrolledNodeID, newScrollPosition, scrollingLayerPositionAction == ScrollingLayerPositionAction::Sync));
 }
 
-void RemoteScrollingCoordinatorProxy::scrollingTreeNodeRequestsScroll(ScrollingNodeID scrolledNodeID, const FloatPoint& scrollPosition, bool representsProgrammaticScroll)
+void RemoteScrollingCoordinatorProxy::scrollingTreeNodeRequestsScroll(ScrollingNodeID scrolledNodeID, const FloatPoint& scrollPosition, ScrollType scrollType, ScrollClamping)
 {
     if (scrolledNodeID == rootScrollingNodeID() && m_requestedScrollInfo) {
         m_requestedScrollInfo->requestsScrollPositionUpdate = true;
-        m_requestedScrollInfo->requestIsProgrammaticScroll = representsProgrammaticScroll;
+        m_requestedScrollInfo->requestIsProgrammaticScroll = scrollType == ScrollType::Programmatic;
         m_requestedScrollInfo->requestedScrollPosition = scrollPosition;
     }
 }
@@ -259,7 +259,6 @@ bool RemoteScrollingCoordinatorProxy::hasScrollableMainFrame() const
     return rootNode->canHaveScrollbars() || rootNode->visualViewportIsSmallerThanLayoutViewport();
 }
 
-#if ENABLE(POINTER_EVENTS)
 OptionSet<TouchAction> RemoteScrollingCoordinatorProxy::activeTouchActionsForTouchIdentifier(unsigned touchIdentifier) const
 {
     auto iterator = m_touchActionsByTouchIdentifier.find(touchIdentifier);
@@ -278,8 +277,6 @@ void RemoteScrollingCoordinatorProxy::clearTouchActionsForTouchIdentifier(unsign
     m_touchActionsByTouchIdentifier.remove(touchIdentifier);
 }
 
-#endif
-
 } // namespace WebKit
 
-#endif // ENABLE(ASYNC_SCROLLING)
+#endif // ENABLE(UI_SIDE_COMPOSITING)

@@ -27,9 +27,11 @@
 #import "TestWKWebView.h"
 
 #import "ClassMethodSwizzler.h"
+#import "InstanceMethodSwizzler.h"
 #import "TestNavigationDelegate.h"
 #import "Utilities.h"
 
+#import <WebKit/WKContentWorld.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WebKitPrivate.h>
 #import <WebKit/_WKActivatedElementInfo.h>
@@ -49,6 +51,11 @@
 SOFT_LINK_FRAMEWORK(UIKit)
 SOFT_LINK_CLASS(UIKit, UIWindow)
 
+static NSString *overrideBundleIdentifier(id, SEL)
+{
+    return @"com.apple.TestWebKitAPI";
+}
+
 @implementation WKWebView (WKWebViewTestingQuirks)
 
 // TestWebKitAPI is currently not a UIApplication so we are unable to track if it is in
@@ -63,6 +70,22 @@ SOFT_LINK_CLASS(UIKit, UIWindow)
 #endif
 
 @implementation WKWebView (TestWebKitAPI)
+
+#if PLATFORM(IOS_FAMILY)
+
++ (void)initialize
+{
+    // FIXME: This hack should no longer be necessary on builds that have the fix for <rdar://problem/56790195>.
+    // Calling +displayIdentifier will guarantee a call to an internal UIKit helper method that caches the fake
+    // bundle name "com.apple.TestWebKitAPI" for the rest of the process' lifetime. This allows us to avoid crashing
+    // under -[UIScrollView setContentOffset:animated:] due to telemetry code that requires a bundle identifier.
+    // Note that this swizzling is temporary, since unconditionally swizzling -[NSBundle bundleIdentifier] for the
+    // entirely of the test causes other tests to fail or time out.
+    InstanceMethodSwizzler bundleIdentifierSwizzler(NSBundle.class, @selector(bundleIdentifier), reinterpret_cast<IMP>(overrideBundleIdentifier));
+    [UIApplication displayIdentifier];
+}
+
+#endif // PLATFORM(IOS_FAMILY)
 
 - (void)loadTestPageNamed:(NSString *)pageName
 {
@@ -97,6 +120,12 @@ SOFT_LINK_CLASS(UIKit, UIWindow)
 - (void)synchronouslyLoadHTMLString:(NSString *)html
 {
     [self synchronouslyLoadHTMLString:html baseURL:[[[NSBundle mainBundle] bundleURL] URLByAppendingPathComponent:@"TestWebKitAPI.resources"]];
+}
+
+- (void)synchronouslyLoadHTMLString:(NSString *)html preferences:(WKWebpagePreferences *)preferences
+{
+    [self loadHTMLString:html baseURL:[[[NSBundle mainBundle] bundleURL] URLByAppendingPathComponent:@"TestWebKitAPI.resources"]];
+    [self _test_waitForDidFinishNavigationWithPreferences:preferences];
 }
 
 - (void)synchronouslyLoadTestPageNamed:(NSString *)pageName
@@ -185,7 +214,7 @@ SOFT_LINK_CLASS(UIKit, UIWindow)
         *errorOut = nil;
 
     RetainPtr<id> evalResult;
-    [self _callAsyncFunction:script withArguments:arguments completionHandler:[&] (id result, NSError *error) {
+    [self callAsyncJavaScript:script arguments:arguments inContentWorld:WKContentWorld.pageWorld completionHandler:[&] (id result, NSError *error) {
         evalResult = result;
         if (errorOut)
             *errorOut = [error retain];
@@ -305,6 +334,35 @@ NSEventMask __simulated_forceClickAssociatedEventsMask(id self, SEL _cmd)
     return _forceKeyWindow || [super isKeyWindow];
 }
 
+#if PLATFORM(IOS_FAMILY)
+static NeverDestroyed<RetainPtr<UIWindow>> gOverriddenApplicationKeyWindow;
+static NeverDestroyed<std::unique_ptr<InstanceMethodSwizzler>> gApplicationKeyWindowSwizzler;
+static NeverDestroyed<std::unique_ptr<InstanceMethodSwizzler>> gSharedApplicationSwizzler;
+
+static void setOverriddenApplicationKeyWindow(UIWindow *window)
+{
+    if (gOverriddenApplicationKeyWindow.get() == window)
+        return;
+
+    if (!UIApplication.sharedApplication) {
+        InstanceMethodSwizzler bundleIdentifierSwizzler(NSBundle.class, @selector(bundleIdentifier), reinterpret_cast<IMP>(overrideBundleIdentifier));
+        UIApplicationInitialize();
+        UIApplicationInstantiateSingleton(UIApplication.class);
+    }
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        gApplicationKeyWindowSwizzler.get() = makeUnique<InstanceMethodSwizzler>(UIApplication.class, @selector(keyWindow), reinterpret_cast<IMP>(applicationKeyWindowOverride));
+    });
+    gOverriddenApplicationKeyWindow.get() = window;
+}
+
+static UIWindow *applicationKeyWindowOverride(id, SEL)
+{
+    return gOverriddenApplicationKeyWindow.get().get();
+}
+#endif
+
 - (void)makeKeyWindow
 {
     if (_forceKeyWindow)
@@ -314,6 +372,7 @@ NSEventMask __simulated_forceClickAssociatedEventsMask(id self, SEL _cmd)
 #if PLATFORM(MAC)
     [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidBecomeKeyNotification object:self];
 #else
+    setOverriddenApplicationKeyWindow(self);
     [[NSNotificationCenter defaultCenter] postNotificationName:UIWindowDidBecomeKeyNotification object:self];
 #endif
 }
@@ -393,7 +452,7 @@ static UICalloutBar *suppressUICalloutBar()
 - (void)_setUpTestWindow:(NSRect)frame
 {
 #if PLATFORM(MAC)
-    _hostWindow = adoptNS([[TestWKWebViewHostWindow alloc] initWithContentRect:frame styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO]);
+    _hostWindow = adoptNS([[TestWKWebViewHostWindow alloc] initWithContentRect:frame styleMask:(NSWindowStyleMaskBorderless | NSWindowStyleMaskMiniaturizable) backing:NSBackingStoreBuffered defer:NO]);
     [_hostWindow setFrameOrigin:NSMakePoint(0, 0)];
     [_hostWindow setIsVisible:YES];
     [_hostWindow contentView].wantsLayer = YES;
@@ -513,6 +572,11 @@ static UICalloutBar *suppressUICalloutBar()
     TestWebKitAPI::Util::run(&isDone);
 
     return matches;
+}
+
+- (void)clickOnElementID:(NSString *)elementID
+{
+    [self evaluateJavaScript:[NSString stringWithFormat:@"document.getElementById('%@').click();", elementID] completionHandler:nil];
 }
 
 #if PLATFORM(IOS_FAMILY)

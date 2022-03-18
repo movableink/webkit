@@ -36,6 +36,12 @@
 #import <WebKit/_WKRemoteObjectInterface.h>
 #import <WebKit/_WKRemoteObjectRegistry.h>
 
+#import <wtf/SoftLinking.h>
+
+SOFT_LINK_LIBRARY(libAccessibility)
+SOFT_LINK(libAccessibility, _AXSZoomTouchSetEnabled, void, (Boolean enabled), (enabled));
+SOFT_LINK(libAccessibility, _AXSApplicationAccessibilitySetEnabled, void, (Boolean enabled), (enabled));
+
 @implementation WKWebView (WKAccessibilityTesting)
 - (NSArray<NSValue *> *)rectsAtSelectionOffset:(NSInteger)offset withText:(NSString *)text
 {
@@ -68,9 +74,15 @@ TEST(AccessibilityTests, RectsForSpeakingSelectionBasic)
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width,initial-scale=1'><span id='first'>first</span><span id='second'> second</span><br><span id='third'> third</span>"];
     [webView stringByEvaluatingJavaScript:@"document.execCommand('SelectAll')"];
 
+#if PLATFORM(MACCATALYST)
+    checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 8, 25, 19), 0);
+    checkCGRectValueAtIndex([webView rectsAtSelectionOffset:6 withText:@"second"], CGRectMake(36, 8, 46, 19), 0);
+    checkCGRectValueAtIndex([webView rectsAtSelectionOffset:13 withText:@"third"], CGRectMake(8, 27, 31, 19), 0);
+#else
     checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 8, 26, 19), 0);
     checkCGRectValueAtIndex([webView rectsAtSelectionOffset:6 withText:@"second"], CGRectMake(37, 8, 46, 19), 0);
     checkCGRectValueAtIndex([webView rectsAtSelectionOffset:13 withText:@"third"], CGRectMake(8, 27, 31, 20), 0);
+#endif
 }
 
 TEST(AccessibilityTests, RectsForSpeakingSelectionWithLineWrapping)
@@ -80,11 +92,19 @@ TEST(AccessibilityTests, RectsForSpeakingSelectionWithLineWrapping)
     [webView stringByEvaluatingJavaScript:@"document.execCommand('SelectAll')"];
 
     NSArray<NSValue *> *rects = [webView rectsAtSelectionOffset:0 withText:@"abcdefghijklmnopqrstuvwxyz"];
+#if PLATFORM(MACCATALYST)
+    checkCGRectValueAtIndex(rects, CGRectMake(8, 8, 304, 116), 0);
+    checkCGRectValueAtIndex(rects, CGRectMake(8, 124, 304, 116), 1);
+    checkCGRectValueAtIndex(rects, CGRectMake(8, 240, 304, 116), 2);
+    checkCGRectValueAtIndex(rects, CGRectMake(8, 356, 304, 116), 3);
+    checkCGRectValueAtIndex(rects, CGRectMake(8, 472, 145, 116), 4);
+#else
     checkCGRectValueAtIndex(rects, CGRectMake(8, 8, 304, 114), 0);
     checkCGRectValueAtIndex(rects, CGRectMake(8, 122, 304, 117), 1);
     checkCGRectValueAtIndex(rects, CGRectMake(8, 239, 304, 117), 2);
     checkCGRectValueAtIndex(rects, CGRectMake(8, 356, 304, 117), 3);
     checkCGRectValueAtIndex(rects, CGRectMake(8, 473, 145, 117), 4);
+#endif
 }
 
 TEST(AccessibilityTests, RectsForSpeakingSelectionDoNotCrashWhenChangingSelection)
@@ -109,18 +129,34 @@ TEST(AccessibilityTests, StoreSelection)
     // Select first node and store the selection
     [webView stringByEvaluatingJavaScript:@"getSelection().setBaseAndExtent(first, 0, first, 1)"];
     [webView _accessibilityStoreSelection];
+#if PLATFORM(MACCATALYST)
+    checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 8, 25, 19), 0);
+#else
     checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 8, 26, 19), 0);
+#endif
+
     // Now select the second node, we should use the stored selection to retrieve rects
     [webView stringByEvaluatingJavaScript:@"getSelection().setBaseAndExtent(second, 0, second, 1)"];
+#if PLATFORM(MACCATALYST)
+    checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 8, 25, 19), 0);
+#else
     checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 8, 26, 19), 0);
+#endif
     
     // Clear the stored selection, we should use the current selection to retrieve rects
     [webView _accessibilityClearSelection];
+#if PLATFORM(MACCATALYST)
+    checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 27, 25, 19), 0);
+#else
     checkCGRectValueAtIndex([webView rectsAtSelectionOffset:0 withText:@"first"], CGRectMake(8, 27, 26, 20), 0);
+#endif
 }
 
 TEST(AccessibilityTests, WebProcessLoaderBundleLoaded)
 {
+    _AXSZoomTouchSetEnabled(true);
+    _AXSApplicationAccessibilitySetEnabled(true);
+
     WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"AccessibilityTestPlugin"];
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration]);
     _WKRemoteObjectInterface *interface = [_WKRemoteObjectInterface remoteObjectInterfaceWithProtocol:@protocol(AccessibilityTestSupportProtocol)];
@@ -144,6 +180,9 @@ TEST(AccessibilityTests, WebProcessLoaderBundleLoaded)
         isDone = true;
     }];
     TestWebKitAPI::Util::run(&isDone);
+
+    _AXSZoomTouchSetEnabled(false);
+    _AXSApplicationAccessibilitySetEnabled(false);
 }
 
 } // namespace TestWebKitAPI

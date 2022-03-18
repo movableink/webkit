@@ -26,6 +26,7 @@
 #pragma once
 
 #include "DataReference.h"
+#include "PolicyDecision.h"
 #include "SandboxExtension.h"
 #include "UserData.h"
 #include "WebsitePoliciesData.h"
@@ -69,6 +70,8 @@ struct LoadParameters {
     WebCore::LockHistory lockHistory { WebCore::LockHistory::No };
     WebCore::LockBackForwardList lockBackForwardList { WebCore::LockBackForwardList::No };
     String clientRedirectSourceForHistory;
+    NavigatingToAppBoundDomain isNavigatingToAppBoundDomain { NavigatingToAppBoundDomain::No };
+    NavigatedAwayFromAppBoundDomain hasNavigatedAwayFromAppBoundDomain { NavigatedAwayFromAppBoundDomain::No };
 
 #if PLATFORM(COCOA)
     RetainPtr<NSDictionary> dataDetectionContext;

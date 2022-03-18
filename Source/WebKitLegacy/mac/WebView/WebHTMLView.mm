@@ -80,6 +80,7 @@
 #import <WebCore/CachedResourceLoader.h>
 #import <WebCore/Chrome.h>
 #import <WebCore/ColorMac.h>
+#import <WebCore/CompositionHighlight.h>
 #import <WebCore/ContextMenu.h>
 #import <WebCore/ContextMenuController.h>
 #import <WebCore/DictionaryLookup.h>
@@ -143,6 +144,7 @@
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/MainThread.h>
 #import <wtf/MathExtras.h>
+#import <wtf/NakedPtr.h>
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RunLoop.h>
 #import <wtf/SystemTracing.h>
@@ -236,11 +238,11 @@ using WebEvent = NSEvent;
 const auto WebEventMouseDown = NSEventTypeLeftMouseDown;
 
 @interface WebMenuTarget : NSObject {
-    WebCore::ContextMenuController* _menuController;
+    NakedPtr<WebCore::ContextMenuController> _menuController;
 }
 + (WebMenuTarget*)sharedMenuTarget;
-- (WebCore::ContextMenuController*)menuController;
-- (void)setMenuController:(WebCore::ContextMenuController*)menuController;
+- (NakedPtr<WebCore::ContextMenuController>)menuController;
+- (void)setMenuController:(NakedPtr<WebCore::ContextMenuController>)menuController;
 - (void)forwardContextMenuAction:(id)sender;
 @end
 
@@ -622,12 +624,12 @@ static Optional<NSInteger> toTag(WebCore::ContextMenuAction action)
     return target;
 }
 
-- (WebCore::ContextMenuController*)menuController
+- (NakedPtr<WebCore::ContextMenuController>)menuController
 {
     return _menuController;
 }
 
-- (void)setMenuController:(WebCore::ContextMenuController*)menuController
+- (void)setMenuController:(NakedPtr<WebCore::ContextMenuController>)menuController
 {
     _menuController = menuController;
 }
@@ -987,7 +989,7 @@ struct WebHTMLViewInterpretKeyEventsParameters {
     RetainPtr<WebDataSource> dataSource;
 
 #if PLATFORM(MAC)
-    WebCore::CachedImage* promisedDragTIFFDataSource;
+    NakedPtr<WebCore::CachedImage> promisedDragTIFFDataSource;
 #endif
 
     SEL selectorForDoCommandBySelector;
@@ -4358,7 +4360,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     NSFileWrapper *wrapper = nil;
     NSURL *draggingElementURL = nil;
     
-    if (auto* tiffResource = _private->promisedDragTIFFDataSource) {
+    if (auto tiffResource = _private->promisedDragTIFFDataSource) {
         if (auto* buffer = tiffResource->resourceBuffer()) {
             NSURLResponse *response = tiffResource->response().nsURLResponse();
             draggingElementURL = [response URL];
@@ -5983,7 +5985,7 @@ static BOOL writingDirectionKeyBindingsEnabled()
 
 #if PLATFORM(MAC)
 
-- (BOOL)_interpretKeyEvent:(WebCore::KeyboardEvent*)event savingCommands:(BOOL)savingCommands
+- (BOOL)_interpretKeyEvent:(NakedPtr<WebCore::KeyboardEvent>)event savingCommands:(BOOL)savingCommands
 {
     ASSERT(core([self _frame]) == downcast<WebCore::Node>(event->target())->document().frame());
     ASSERT(!savingCommands || event->keypressCommands().isEmpty()); // Save commands once for each event.
@@ -6112,7 +6114,7 @@ static BOOL writingDirectionKeyBindingsEnabled()
 
 #if PLATFORM(MAC)
 
-- (void)setPromisedDragTIFFDataSource:(WebCore::CachedImage*)source
+- (void)setPromisedDragTIFFDataSource:(NakedPtr<WebCore::CachedImage>)source
 {
     if (source)
         source->addClient(promisedDataClient());
@@ -6569,7 +6571,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if (replacementRange.location != NSNotFound)
         [[self _frame] _selectNSRange:replacementRange];
 
-    coreFrame->editor().setComposition(text, underlines, newSelRange.location, NSMaxRange(newSelRange));
+    coreFrame->editor().setComposition(text, underlines, { }, newSelRange.location, NSMaxRange(newSelRange));
 }
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
@@ -7078,14 +7080,17 @@ static CGImageRef selectionImage(WebCore::Frame* frame, bool forceBlackText)
     return [self elementAtPoint:point allowShadowContent:NO];
 }
 
-- (NSDictionary *)elementAtPoint:(NSPoint)point allowShadowContent:(BOOL)allow
+- (NSDictionary *)elementAtPoint:(NSPoint)point allowShadowContent:(BOOL)allowShadowContent
 {
+    using namespace WebCore;
+
     auto* coreFrame = core([self _frame]);
     if (!coreFrame)
         return nil;
-    WebCore::HitTestRequest::HitTestRequestType hitType = WebCore::HitTestRequest::ReadOnly | WebCore::HitTestRequest::Active | WebCore::HitTestRequest::AllowChildFrameContent
-        | (allow ? 0 : WebCore::HitTestRequest::DisallowUserAgentShadowContent);
-    return [[[WebElementDictionary alloc] initWithHitTestResult:coreFrame->eventHandler().hitTestResultAtPoint(WebCore::IntPoint(point), hitType)] autorelease];
+    OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AllowChildFrameContent };
+    if (!allowShadowContent)
+        hitType.add(HitTestRequest::DisallowUserAgentShadowContent);
+    return [[[WebElementDictionary alloc] initWithHitTestResult:coreFrame->eventHandler().hitTestResultAtPoint(IntPoint { point }, hitType)] autorelease];
 }
 
 - (NSUInteger)countMatchesForText:(NSString *)string inDOMRange:(DOMRange *)range options:(WebFindOptions)options limit:(NSUInteger)limit markMatches:(BOOL)markMatches

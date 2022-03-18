@@ -192,19 +192,17 @@ void msToGregorianDateTime(VM& vm, double ms, WTF::TimeType outputTimeType, Greg
     tm = GregorianDateTime(ms, localTime);
 }
 
-double parseDateFromNullTerminatedCharacters(VM& vm, const char* dateString)
+static double parseDate(VM& vm, const char* dateString)
 {
-    bool haveTZ;
-    int offset;
-    double localTimeMS = WTF::parseDateFromNullTerminatedCharacters(dateString, haveTZ, offset);
-    if (std::isnan(localTimeMS))
-        return std::numeric_limits<double>::quiet_NaN();
+    bool isLocalTime;
+    double value = WTF::parseES5DateFromNullTerminatedCharacters(dateString, isLocalTime);
+    if (std::isnan(value))
+        value = WTF::parseDateFromNullTerminatedCharacters(dateString, isLocalTime);
 
-    // fall back to local timezone.
-    if (!haveTZ)
-        offset = localTimeOffset(vm, localTimeMS, WTF::LocalTime).offset / WTF::msPerMinute;
+    if (isLocalTime)
+        value -= localTimeOffset(vm, value, WTF::LocalTime).offset;
 
-    return localTimeMS - (offset * WTF::msPerMinute);
+    return value;
 }
 
 double parseDate(JSGlobalObject* globalObject, VM& vm, const String& date)
@@ -224,9 +222,7 @@ double parseDate(JSGlobalObject* globalObject, VM& vm, const String& date)
     }
 
     auto dateUtf8 = expectedString.value();
-    double value = WTF::parseES5DateFromNullTerminatedCharacters(dateUtf8.data());
-    if (std::isnan(value))
-        value = parseDateFromNullTerminatedCharacters(vm, dateUtf8.data());
+    double value = parseDate(vm, dateUtf8.data());
     vm.cachedDateString = date;
     vm.cachedDateStringValue = value;
     return value;

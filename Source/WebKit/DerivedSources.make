@@ -23,8 +23,10 @@
 VPATH = \
     $(WebKit2) \
     $(WebKit2)/GPUProcess \
+    $(WebKit2)/GPUProcess/graphics \
     $(WebKit2)/GPUProcess/mac \
     $(WebKit2)/GPUProcess/media \
+    $(WebKit2)/GPUProcess/media/ios \
     $(WebKit2)/GPUProcess/webrtc \
     $(WebKit2)/NetworkProcess \
     $(WebKit2)/NetworkProcess/Cookies \
@@ -51,9 +53,12 @@ VPATH = \
     $(WebKit2)/WebProcess/FullScreen \
     $(WebKit2)/WebProcess/Geolocation \
     $(WebKit2)/WebProcess/GPU \
+    $(WebKit2)/WebProcess/GPU/graphics \
     $(WebKit2)/WebProcess/GPU/media \
+    $(WebKit2)/WebProcess/GPU/media/ios \
     $(WebKit2)/WebProcess/GPU/webrtc \
     $(WebKit2)/WebProcess/IconDatabase \
+    $(WebKit2)/WebProcess/Inspector \
     $(WebKit2)/WebProcess/MediaCache \
     $(WebKit2)/WebProcess/MediaStream \
     $(WebKit2)/WebProcess/Network \
@@ -79,6 +84,8 @@ VPATH = \
     $(WebKit2)/UIProcess/Databases \
     $(WebKit2)/UIProcess/Downloads \
     $(WebKit2)/UIProcess/GPU \
+    $(WebKit2)/UIProcess/Inspector \
+    $(WebKit2)/UIProcess/Inspector/Agents \
     $(WebKit2)/UIProcess/MediaStream \
     $(WebKit2)/UIProcess/Network \
     $(WebKit2)/UIProcess/Network/CustomProtocols \
@@ -119,6 +126,7 @@ MESSAGE_RECEIVERS = \
     LegacyCustomProtocolManagerProxy \
     LibWebRTCCodecs \
     LibWebRTCCodecsProxy \
+    MediaPlayerPrivateRemote \
     NPObjectMessageReceiver \
     NetworkConnectionToWebProcess \
     NetworkContentRuleListManager \
@@ -140,14 +148,39 @@ MESSAGE_RECEIVERS = \
     PluginProcessConnectionManager \
     PluginProcessProxy \
     PluginProxy \
+    RemoteAudioDestinationManager \
+    RemoteAudioDestinationProxy \
+    RemoteAudioSession \
+    RemoteAudioSessionProxy \
+    RemoteAudioMediaStreamTrackRendererManager \
+    RemoteAudioMediaStreamTrackRenderer \
     RemoteLayerTreeDrawingAreaProxy \
+    RemoteCDMProxy \
+    RemoteCDMFactoryProxy \
+    RemoteCDMInstanceProxy \
+    RemoteCDMInstanceSession \
+    RemoteCDMInstanceSessionProxy \
+    RemoteLegacyCDMProxy \
+    RemoteLegacyCDMFactoryProxy \
+    RemoteLegacyCDMSession \
+    RemoteLegacyCDMSessionProxy \
     RemoteMediaPlayerManager \
     RemoteMediaPlayerManagerProxy \
+    RemoteMediaPlayerProxy \
+    RemoteMediaRecorder \
+    RemoteMediaRecorderManager \
     RemoteMediaResourceManager \
+    RemoteMediaSessionHelper \
+    RemoteMediaSessionHelperProxy \
     RemoteObjectRegistry \
+    RemoteRenderingBackend \
+    RemoteRenderingBackendProxy \
+    RemoteSampleBufferDisplayLayer \
+    RemoteSampleBufferDisplayLayerManager \
     RemoteScrollingCoordinator \
     RemoteWebInspectorProxy \
     RemoteWebInspectorUI \
+    SampleBufferDisplayLayer \
     SecItemShimProxy \
     ServiceWorkerFetchTask \
     SmartMagnificationController \

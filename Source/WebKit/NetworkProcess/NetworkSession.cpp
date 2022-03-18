@@ -86,7 +86,7 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
     : m_sessionID(parameters.sessionID)
     , m_networkProcess(networkProcess)
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
-    , m_enableResourceLoadStatisticsLogTestingEvent(parameters.enableResourceLoadStatisticsLogTestingEvent)
+    , m_enableResourceLoadStatisticsLogTestingEvent(parameters.resourceLoadStatisticsParameters.enableLogTestingEvent)
 #endif
     , m_adClickAttribution(makeUniqueRef<AdClickAttributionManager>(parameters.sessionID))
     , m_testSpeedMultiplier(parameters.testSpeedMultiplier)
@@ -111,8 +111,8 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
                 RELEASE_LOG_ERROR(NetworkCache, "Failed to initialize the WebKit network disk cache");
         }
 
-        if (!parameters.resourceLoadStatisticsDirectory.isEmpty())
-            SandboxExtension::consumePermanently(parameters.resourceLoadStatisticsDirectoryExtensionHandle);
+        if (!parameters.resourceLoadStatisticsParameters.directory.isEmpty())
+            SandboxExtension::consumePermanently(parameters.resourceLoadStatisticsParameters.directoryExtensionHandle);
     }
 
     m_isStaleWhileRevalidateEnabled = parameters.staleWhileRevalidateEnabled;
@@ -151,7 +151,7 @@ void NetworkSession::invalidateAndCancel()
     if (m_resourceLoadStatistics)
         m_resourceLoadStatistics->invalidateAndCancel();
 #endif
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_isInvalidated = true;
 #endif
 }
@@ -170,12 +170,9 @@ void NetworkSession::setResourceLoadStatisticsEnabled(bool enable)
     if (m_resourceLoadStatistics)
         return;
 
-    // FIXME(193728): Support ResourceLoadStatistics for ephemeral sessions, too.
-    if (m_sessionID.isEphemeral())
-        return;
-
-    m_resourceLoadStatistics = WebResourceLoadStatisticsStore::create(*this, m_resourceLoadStatisticsDirectory, m_shouldIncludeLocalhostInResourceLoadStatistics);
-    m_resourceLoadStatistics->populateMemoryStoreFromDisk([] { });
+    m_resourceLoadStatistics = WebResourceLoadStatisticsStore::create(*this, m_resourceLoadStatisticsDirectory, m_shouldIncludeLocalhostInResourceLoadStatistics, (m_sessionID.isEphemeral() ? ResourceLoadStatistics::IsEphemeral::Yes : ResourceLoadStatistics::IsEphemeral::No));
+    if (!m_sessionID.isEphemeral())
+        m_resourceLoadStatistics->populateMemoryStoreFromDisk([] { });
 
     if (m_enableResourceLoadStatisticsDebugMode == EnableResourceLoadStatisticsDebugMode::Yes)
         m_resourceLoadStatistics->setResourceLoadStatisticsDebugMode(true, [] { });
@@ -188,9 +185,12 @@ void NetworkSession::setResourceLoadStatisticsEnabled(bool enable)
 void NetworkSession::recreateResourceLoadStatisticStore(CompletionHandler<void()>&& completionHandler)
 {
     destroyResourceLoadStatistics();
-    m_resourceLoadStatistics = WebResourceLoadStatisticsStore::create(*this, m_resourceLoadStatisticsDirectory, m_shouldIncludeLocalhostInResourceLoadStatistics);
-    m_resourceLoadStatistics->populateMemoryStoreFromDisk(WTFMove(completionHandler));
+    m_resourceLoadStatistics = WebResourceLoadStatisticsStore::create(*this, m_resourceLoadStatisticsDirectory, m_shouldIncludeLocalhostInResourceLoadStatistics, (m_sessionID.isEphemeral() ? ResourceLoadStatistics::IsEphemeral::Yes : ResourceLoadStatistics::IsEphemeral::No));
     forwardResourceLoadStatisticsSettings();
+    if (!m_sessionID.isEphemeral())
+        m_resourceLoadStatistics->populateMemoryStoreFromDisk(WTFMove(completionHandler));
+    else
+        completionHandler();
 }
 
 void NetworkSession::forwardResourceLoadStatisticsSettings()

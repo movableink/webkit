@@ -429,6 +429,7 @@ EncodedJSValue JSFunction::callerGetter(JSGlobalObject* globalObject, EncodedJSV
     case SourceParseMode::AsyncGeneratorWrapperFunctionMode:
     case SourceParseMode::AsyncGeneratorWrapperMethodMode:
     case SourceParseMode::GeneratorWrapperMethodMode:
+    case SourceParseMode::InstanceFieldInitializerMode:
         if (!function->jsExecutable()->isStrictMode())
             return JSValue::encode(caller);
         return JSValue::encode(throwTypeError(globalObject, scope, "Function.caller used to retrieve strict caller"_s));
@@ -543,9 +544,9 @@ bool JSFunction::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName pr
     if (propertyName == vm.propertyNames->length || propertyName == vm.propertyNames->name) {
         FunctionRareData* rareData = thisObject->ensureRareData(vm);
         if (propertyName == vm.propertyNames->length)
-            rareData->setHasModifiedLength();
+            rareData->setHasModifiedLengthForNonHostFunction();
         else
-            rareData->setHasModifiedName();
+            rareData->setHasModifiedNameForNonHostFunction();
     }
 
     if (UNLIKELY(isThisValueAltered(slot, thisObject)))
@@ -585,7 +586,7 @@ bool JSFunction::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName pr
     RELEASE_AND_RETURN(scope, Base::put(thisObject, globalObject, propertyName, value, slot));
 }
 
-bool JSFunction::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+bool JSFunction::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -594,9 +595,9 @@ bool JSFunction::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Prop
     if (propertyName == vm.propertyNames->length || propertyName == vm.propertyNames->name) {
         FunctionRareData* rareData = thisObject->ensureRareData(vm);
         if (propertyName == vm.propertyNames->length)
-            rareData->setHasModifiedLength();
+            rareData->setHasModifiedLengthForNonHostFunction();
         else
-            rareData->setHasModifiedName();
+            rareData->setHasModifiedNameForNonHostFunction();
     }
 
     if (thisObject->isHostOrBuiltinFunction()) {
@@ -616,7 +617,7 @@ bool JSFunction::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Prop
         RETURN_IF_EXCEPTION(scope, false);
     }
     
-    RELEASE_AND_RETURN(scope, Base::deleteProperty(thisObject, globalObject, propertyName));
+    RELEASE_AND_RETURN(scope, Base::deleteProperty(thisObject, globalObject, propertyName, slot));
 }
 
 bool JSFunction::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, const PropertyDescriptor& descriptor, bool throwException)
@@ -629,9 +630,9 @@ bool JSFunction::defineOwnProperty(JSObject* object, JSGlobalObject* globalObjec
     if (propertyName == vm.propertyNames->length || propertyName == vm.propertyNames->name) {
         FunctionRareData* rareData = thisObject->ensureRareData(vm);
         if (propertyName == vm.propertyNames->length)
-            rareData->setHasModifiedLength();
+            rareData->setHasModifiedLengthForNonHostFunction();
         else
-            rareData->setHasModifiedName();
+            rareData->setHasModifiedNameForNonHostFunction();
     }
 
     if (thisObject->isHostOrBuiltinFunction()) {
@@ -765,9 +766,8 @@ void JSFunction::setFunctionName(JSGlobalObject* globalObject, JSValue value)
         else
             name = makeString('[', String(&uid), ']');
     } else {
-        JSString* jsStr = value.toString(globalObject);
-        RETURN_IF_EXCEPTION(scope, void());
-        name = jsStr->value(globalObject);
+        ASSERT(value.isString());
+        name = asString(value)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, void());
     }
     reifyName(vm, globalObject, name);
@@ -895,13 +895,13 @@ JSFunction::PropertyStatus JSFunction::reifyLazyBoundNameIfNeeded(VM& vm, JSGlob
         reifyName(vm, globalObject);
     else if (this->inherits<JSBoundFunction>(vm)) {
         FunctionRareData* rareData = this->ensureRareData(vm);
-        JSString* name = jsCast<JSBoundFunction*>(this)->name();
+        JSString* nameMayBeNull = jsCast<JSBoundFunction*>(this)->nameMayBeNull();
         JSString* string = nullptr;
-        if (name->length() != 0) {
-            string = jsString(globalObject, jsString(vm, "bound "_s), name);
+        if (nameMayBeNull) {
+            string = jsString(globalObject, vm.smallStrings.boundPrefixString(), nameMayBeNull);
             RETURN_IF_EXCEPTION(scope, PropertyStatus::Lazy);
         } else
-            string = jsString(vm, "bound "_s);
+            string = jsEmptyString(vm);
         unsigned initialAttributes = PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly;
         rareData->setHasReifiedName();
         putDirect(vm, nameIdent, string, initialAttributes);
@@ -909,7 +909,7 @@ JSFunction::PropertyStatus JSFunction::reifyLazyBoundNameIfNeeded(VM& vm, JSGlob
     return PropertyStatus::Reified;
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 void JSFunction::assertTypeInfoFlagInvariants()
 {
     // If you change this, you'll need to update speculationFromClassInfo.
@@ -919,6 +919,6 @@ void JSFunction::assertTypeInfoFlagInvariants()
     else
         RELEASE_ASSERT(info != JSBoundFunction::info());
 }
-#endif
+#endif // ASSERT_ENABLED
 
 } // namespace JSC

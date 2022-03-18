@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGL)
+#if ENABLE(GRAPHICS_CONTEXT_GL)
 
 #if USE(LIBEPOXY)
 // libepoxy headers have to be included before <ANGLE/ShaderLang.h> in order to avoid
@@ -96,8 +96,6 @@ public:
     
     bool compileShaderSource(const char* shaderSource, ANGLEShaderType, String& translatedShaderSource, String& shaderValidationLog, Vector<std::pair<ANGLEShaderSymbolType, sh::ShaderVariable>>& symbols, uint64_t extraCompileOptions = 0);
 
-    static bool angleAvailable();
-
 private:
 
     void cleanupCompilers();
@@ -115,4 +113,4 @@ private:
 
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(GRAPHICS_CONTEXT_GL)

@@ -61,8 +61,8 @@
 #include "DataListSuggestionPicker.h"
 #endif
 
-#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_3D)
-#include "GraphicsContext3DManager.h"
+#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_GL)
+#include "GraphicsContextGLOpenGLManager.h"
 #endif
 
 namespace WebCore {
@@ -494,6 +494,16 @@ void Chrome::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
     m_client.setCursorHiddenUntilMouseMoves(hiddenUntilMouseMoves);
 }
 
+std::unique_ptr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, ShouldAccelerate shouldAccelerate, ShouldUseDisplayList shouldUseDisplayList, RenderingPurpose purpose, float resolutionScale, ColorSpace colorSpace) const
+{
+    return m_client.createImageBuffer(size, shouldAccelerate, shouldUseDisplayList, purpose, resolutionScale, colorSpace);
+}
+
+std::unique_ptr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, float resolutionScale, ColorSpace colorSpace) const
+{
+    return m_client.createImageBuffer(size, renderingMode, resolutionScale, colorSpace);
+}
+
 PlatformDisplayID Chrome::displayID() const
 {
     return m_displayID;
@@ -516,8 +526,8 @@ void Chrome::windowScreenDidChange(PlatformDisplayID displayID)
 #endif
     m_page.setNeedsRecalcStyleInAllFrames();
 
-#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_3D)
-    GraphicsContext3DManager::sharedManager().screenDidChange(displayID, this);
+#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_GL)
+    GraphicsContextGLOpenGLManager::sharedManager().screenDidChange(displayID, this);
 #endif
 }
 

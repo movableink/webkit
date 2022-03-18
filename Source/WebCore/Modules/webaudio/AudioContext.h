@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -107,7 +107,7 @@ public:
 
     Document* document() const; // ASSERTs if document no longer exists.
 
-    Document* hostingDocument() const final;
+    DocumentIdentifier hostingDocumentIdentifier() const final;
 
     AudioDestinationNode* destination() { return m_destinationNode.get(); }
     size_t currentSampleFrame() const { return m_destinationNode ? m_destinationNode->currentSampleFrame() : 0; }
@@ -282,8 +282,8 @@ public:
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
-    const void* nextAudioNodeLogIdentifier() { return childLogIdentifier(++m_nextAudioNodeIdentifier); }
-    const void* nextAudioParameterLogIdentifier() { return childLogIdentifier(++m_nextAudioParameterIdentifier); }
+    const void* nextAudioNodeLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioNodeIdentifier); }
+    const void* nextAudioParameterLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioParameterIdentifier); }
 #endif
 
     void postTask(WTF::Function<void()>&&);
@@ -347,19 +347,16 @@ private:
     void derefUnfinishedSourceNodes();
 
     // PlatformMediaSessionClient
-    PlatformMediaSession::MediaType mediaType() const override { return PlatformMediaSession::WebAudio; }
-    PlatformMediaSession::MediaType presentationType() const override { return PlatformMediaSession::WebAudio; }
-    PlatformMediaSession::CharacteristicsFlags characteristics() const override { return m_state == State::Running ? PlatformMediaSession::HasAudio : PlatformMediaSession::HasNothing; }
+    PlatformMediaSession::MediaType mediaType() const override { return PlatformMediaSession::MediaType::WebAudio; }
+    PlatformMediaSession::MediaType presentationType() const override { return PlatformMediaSession::MediaType::WebAudio; }
     void mayResumePlayback(bool shouldResume) override;
     void suspendPlayback() override;
     bool canReceiveRemoteControlCommands() const override { return false; }
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument*) override { }
     bool supportsSeeking() const override { return false; }
     bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const override { return false; }
-    String sourceApplicationIdentifier() const override;
     bool canProduceAudio() const final { return true; }
     bool isSuspended() const final;
-    bool processingUserGestureForMedia() const final;
 
     void visibilityStateChanged() final;
 

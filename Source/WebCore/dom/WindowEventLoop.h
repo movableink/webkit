@@ -53,6 +53,8 @@ public:
 
     CustomElementQueue& backupElementQueue();
 
+    WEBCORE_EXPORT static void breakToAllowRenderingUpdate();
+
 private:
     static Ref<WindowEventLoop> create(const String&);
     WindowEventLoop(const String&);
@@ -60,6 +62,8 @@ private:
     void scheduleToRun() final;
     bool isContextThread() const final;
     MicrotaskQueue& microtaskQueue() final;
+
+    void didReachTimeToRun();
 
     String m_agentClusterKey;
     Timer m_timer;

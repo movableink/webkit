@@ -40,6 +40,7 @@
 #include "HTMLVideoElement.h"
 #include "HitTestResult.h"
 #include "Logging.h"
+#include "NowPlayingInfo.h"
 #include "Page.h"
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
@@ -53,7 +54,7 @@
 #if PLATFORM(IOS_FAMILY)
 #include "AudioSession.h"
 #include "RuntimeApplicationChecks.h"
-#include <wtf/spi/darwin/dyldSPI.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 namespace WebCore {
@@ -105,12 +106,12 @@ static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& 
 }
 
 MediaElementSession::MediaElementSession(HTMLMediaElement& element)
-    : PlatformMediaSession(element)
+    : PlatformMediaSession(PlatformMediaSessionManager::sharedManager(), element)
     , m_element(element)
     , m_restrictions(NoRestrictions)
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     , m_targetAvailabilityChangedTimer(*this, &MediaElementSession::targetAvailabilityChangedTimerFired)
-    , m_hasPlaybackTargets(PlatformMediaSessionManager::sharedManager().hasWirelessTargetsAvailable())
+    , m_hasPlaybackTargets(manager().hasWirelessTargetsAvailable())
 #endif
     , m_mainContentCheckTimer(*this, &MediaElementSession::mainContentCheckTimerFired)
     , m_clientDataBufferingTimer(*this, &MediaElementSession::clientDataBufferingTimerFired)
@@ -201,13 +202,13 @@ void MediaElementSession::clientDataBufferingTimerFired()
     updateClientDataBuffering();
 
 #if PLATFORM(IOS_FAMILY)
-    PlatformMediaSessionManager::sharedManager().configureWireLessTargetMonitoring();
+    manager().configureWireLessTargetMonitoring();
 #endif
 
     if (state() != Playing || !m_element.elementIsHidden())
         return;
 
-    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::sharedManager().restrictions(mediaType());
+    PlatformMediaSessionManager::SessionRestrictions restrictions = manager().restrictions(mediaType());
     if ((restrictions & PlatformMediaSessionManager::BackgroundTabPlaybackRestricted) == PlatformMediaSessionManager::BackgroundTabPlaybackRestricted)
         pauseSession();
 }
@@ -436,7 +437,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return true;
     }
 
-    if (client().presentationType() == Audio && purpose == PlaybackControlsPurpose::ControlsManager) {
+    if (client().presentationType() == MediaType::Audio && purpose == PlaybackControlsPurpose::ControlsManager) {
         if (!hasBehaviorRestriction(RequireUserGestureToControlControlsManager) || m_element.document().processingUserGestureForMedia()) {
             INFO_LOG(LOGIDENTIFIER, "returning TRUE: audio element with user gesture");
             return true;
@@ -636,7 +637,7 @@ void MediaElementSession::setHasPlaybackTargetAvailabilityListeners(bool hasList
 
 #if PLATFORM(IOS_FAMILY)
     m_hasPlaybackTargetAvailabilityListeners = hasListeners;
-    PlatformMediaSessionManager::sharedManager().configureWireLessTargetMonitoring();
+    manager().configureWireLessTargetMonitoring();
 #else
     UNUSED_PARAM(hasListeners);
     m_element.document().playbackTargetPickerClientStateDidChange(*this, m_element.mediaState());
@@ -737,7 +738,7 @@ bool MediaElementSession::requiresFullscreenForVideoPlayback() const
 #if PLATFORM(IOS_FAMILY)
     if (IOSApplication::isIBooks())
         return !m_element.hasAttributeWithoutSynchronization(HTMLNames::webkit_playsinlineAttr) && !m_element.hasAttributeWithoutSynchronization(HTMLNames::playsinlineAttr);
-    if (dyld_get_program_sdk_version() < DYLD_IOS_VERSION_10_0)
+    if (applicationSDKVersion() < DYLD_IOS_VERSION_10_0)
         return !m_element.hasAttributeWithoutSynchronization(HTMLNames::webkit_playsinlineAttr);
 #endif
 
@@ -865,17 +866,18 @@ static bool isElementMainContentForPurposesOfAutoplay(const HTMLMediaElement& el
     if (!shouldHitTestMainFrame)
         return true;
 
+    if (!mainFrame.document())
+        return false;
+
     // Hit test the area of the main frame where the element appears, to determine if the element is being obscured.
+    // Elements which are obscured by other elements cannot be main content.
     IntRect rectRelativeToView = element.clientRect();
     ScrollPosition scrollPosition = mainFrame.view()->documentScrollPositionRelativeToViewOrigin();
     IntRect rectRelativeToTopDocument(rectRelativeToView.location() + scrollPosition, rectRelativeToView.size());
-    HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowUserAgentShadowContent);
+    OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AllowChildFrameContent, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent };
     HitTestResult result(rectRelativeToTopDocument.center());
 
-    // Elements which are obscured by other elements cannot be main content.
-    if (!mainFrame.document())
-        return false;
-    mainFrame.document()->hitTest(request, result);
+    mainFrame.document()->hitTest(hitType, result);
     result.setToNonUserAgentShadowAncestor();
     RefPtr<Element> hitElement = result.targetElement();
     if (hitElement != &element)
@@ -976,16 +978,24 @@ bool MediaElementSession::updateIsMainContent() const
     return m_isMainContent;
 }
 
-bool MediaElementSession::allowsNowPlayingControlsVisibility() const
-{
-    auto page = m_element.document().page();
-    return page && !page->isVisibleAndActive();
-}
-
 bool MediaElementSession::allowsPlaybackControlsForAutoplayingAudio() const
 {
     auto page = m_element.document().page();
     return page && page->allowsPlaybackControlsForAutoplayingAudio();
+}
+
+Optional<NowPlayingInfo> MediaElementSession::nowPlayingInfo() const
+{
+    auto* page = m_element.document().page();
+    bool allowsNowPlayingControlsVisibility = page && !page->isVisibleAndActive();
+    bool isPlaying = state() == PlatformMediaSession::Playing;
+    bool supportsSeeking = m_element.supportsSeeking();
+    double duration = supportsSeeking ? m_element.duration() : MediaPlayer::invalidTime();
+    double currentTime = m_element.currentTime();
+    if (!std::isfinite(currentTime) || !supportsSeeking)
+        currentTime = MediaPlayer::invalidTime();
+
+    return NowPlayingInfo { m_element.mediaSessionTitle(), m_element.sourceApplicationIdentifier(), duration, currentTime, supportsSeeking, m_element.mediaSessionUniqueIdentifier(), isPlaying, allowsNowPlayingControlsVisibility };
 }
 
 String convertEnumerationToString(const MediaPlaybackDenialReason enumerationValue)

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+* Copyright (C) 2008-2020 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -133,9 +133,9 @@ Ref<AccessibilityRenderObject> AccessibilityRenderObject::create(RenderObject* r
     return adoptRef(*new AccessibilityRenderObject(renderer));
 }
 
-void AccessibilityRenderObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
+void AccessibilityRenderObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
 {
-    AccessibilityNodeObject::detach(detachmentType, cache);
+    AccessibilityNodeObject::detachRemoteParts(detachmentType);
     
     detachRemoteSVGRoot();
     
@@ -1492,7 +1492,7 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
 
 bool AccessibilityRenderObject::isLoaded() const
 {
-    return !m_renderer->document().parser();
+    return m_renderer ? !m_renderer->document().parser() : false;
 }
 
 double AccessibilityRenderObject::estimatedLoadingProgress() const
@@ -1572,9 +1572,13 @@ String AccessibilityRenderObject::selectedText() const
 
 String AccessibilityRenderObject::accessKey() const
 {
+    if (!m_renderer)
+        return String();
+
     Node* node = m_renderer->node();
     if (!is<Element>(node))
-        return nullAtom();
+        return String();
+
     return downcast<Element>(*node).attributeWithoutSynchronization(accesskeyAttr);
 }
 
@@ -1637,20 +1641,21 @@ void AccessibilityRenderObject::setSelectedTextRange(const PlainTextRange& range
 
 URL AccessibilityRenderObject::url() const
 {
-    if (isLink() && is<HTMLAnchorElement>(*m_renderer->node())) {
+    auto* node = this->node();
+    if (isLink() && is<HTMLAnchorElement>(node)) {
         if (HTMLAnchorElement* anchor = downcast<HTMLAnchorElement>(anchorElement()))
             return anchor->href();
     }
-    
-    if (isWebArea())
+
+    if (m_renderer && isWebArea())
         return m_renderer->document().url();
-    
-    if (isImage() && is<HTMLImageElement>(m_renderer->node()))
-        return downcast<HTMLImageElement>(*m_renderer->node()).src();
-    
-    if (isInputImage())
-        return downcast<HTMLInputElement>(*m_renderer->node()).src();
-    
+
+    if (isImage() && is<HTMLImageElement>(node))
+        return downcast<HTMLImageElement>(node)->src();
+
+    if (isInputImage() && is<HTMLInputElement>(node))
+        return downcast<HTMLInputElement>(node)->src();
+
     return URL();
 }
 
@@ -1895,9 +1900,10 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityParentForImageMap(H
     
     return nullptr;
 }
-    
-void AccessibilityRenderObject::getDocumentLinks(AccessibilityChildrenVector& result)
+
+AXCoreObject::AccessibilityChildrenVector AccessibilityRenderObject::documentLinks()
 {
+    AccessibilityChildrenVector result;
     Document& document = m_renderer->document();
     Ref<HTMLCollection> links = document.links();
     for (unsigned i = 0; auto* current = links->item(i); ++i) {
@@ -1919,6 +1925,8 @@ void AccessibilityRenderObject::getDocumentLinks(AccessibilityChildrenVector& re
             }
         }
     }
+
+    return result;
 }
 
 FrameView* AccessibilityRenderObject::documentFrameView() const 
@@ -2206,19 +2214,19 @@ VisiblePosition AccessibilityRenderObject::visiblePositionForPoint(const IntPoin
 
     Node* innerNode = nullptr;
     
-    // locate the node containing the point
+    // Locate the node containing the point
+    // FIXME: Remove this loop and instead add HitTestRequest::AllowVisibleChildFrameContentOnly to the hit test request type.
     LayoutPoint pointResult;
     while (1) {
-        LayoutPoint ourpoint;
+        LayoutPoint pointToUse;
 #if PLATFORM(MAC)
-        ourpoint = frameView->screenToContents(point);
+        pointToUse = frameView->screenToContents(point);
 #else
-        ourpoint = point;
+        pointToUse = point;
 #endif
-        HitTestRequest request(HitTestRequest::ReadOnly |
-                               HitTestRequest::Active);
-        HitTestResult result(ourpoint);
-        renderView->document().hitTest(request, result);
+        constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active };
+        HitTestResult result { pointToUse };
+        renderView->document().hitTest(hitType, result);
         innerNode = result.innerNode();
         if (!innerNode)
             return VisiblePosition();
@@ -2375,21 +2383,19 @@ AXCoreObject* AccessibilityRenderObject::accessibilityImageMapHitTest(HTMLAreaEl
     if (!area)
         return nullptr;
 
-    AccessibilityObject* parent = nullptr;
-    for (Element* mapParent = area->parentElement(); mapParent; mapParent = mapParent->parentElement()) {
-        if (is<HTMLMapElement>(*mapParent)) {
-            parent = accessibilityParentForImageMap(downcast<HTMLMapElement>(mapParent));
-            break;
-        }
-    }
+    auto* mapParent = ancestorsOfType<HTMLMapElement>(*area).first();
+    if (!mapParent)
+        return nullptr;
+
+    auto* parent = accessibilityParentForImageMap(mapParent);
     if (!parent)
         return nullptr;
-    
+
     for (const auto& child : parent->children()) {
         if (child->elementRect().contains(point))
             return child.get();
     }
-    
+
     return nullptr;
 }
 
@@ -2429,9 +2435,9 @@ AXCoreObject* AccessibilityRenderObject::accessibilityHitTest(const IntPoint& po
 
     RenderLayer* layer = downcast<RenderBox>(*m_renderer).layer();
      
-    HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AccessibilityHitTest);
-    HitTestResult hitTestResult = HitTestResult(point);
-    layer->hitTest(request, hitTestResult);
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::AccessibilityHitTest };
+    HitTestResult hitTestResult { point };
+    layer->hitTest(hitType, hitTestResult);
     Node* node = hitTestResult.innerNode();
     if (!node)
         return nullptr;
@@ -3473,7 +3479,7 @@ void AccessibilityRenderObject::ariaSelectedRows(AccessibilityChildrenVector& re
     }
 
     // Get all the rows.
-    auto rowsIteration = [&](auto& rows) {
+    auto rowsIteration = [&](const auto& rows) {
         for (auto& row : rows) {
             if (row->isSelected() || row->isActiveDescendantOfFocusedContainer()) {
                 result.append(row);
@@ -3488,7 +3494,7 @@ void AccessibilityRenderObject::ariaSelectedRows(AccessibilityChildrenVector& re
         rowsIteration(allRows);
     } else if (is<AccessibilityTable>(*this)) {
         auto& thisTable = downcast<AccessibilityTable>(*this);
-        if (thisTable.isExposableThroughAccessibility() && thisTable.supportsSelectedRows())
+        if (thisTable.isExposable() && thisTable.supportsSelectedRows())
             rowsIteration(thisTable.rows());
     }
 }
@@ -3856,8 +3862,10 @@ String AccessibilityRenderObject::passwordFieldValue() const
 ScrollableArea* AccessibilityRenderObject::getScrollableAreaIfScrollable() const
 {
     // If the parent is a scroll view, then this object isn't really scrollable, the parent ScrollView should handle the scrolling.
-    if (parentObject() && parentObject()->isAccessibilityScrollView())
-        return nullptr;
+    if (auto* parent = parentObject()) {
+        if (parent->isScrollView())
+            return nullptr;
+    }
 
     if (!is<RenderBox>(renderer()))
         return nullptr;

@@ -1726,6 +1726,9 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const Signature& signature, 
                 patchpoint->effects.writesPinned = true;
                 patchpoint->effects.readsPinned = true;
 
+                // We need to clobber the size register since the LLInt always bounds checks
+                if (m_mode == MemoryMode::Signaling)
+                    patchpoint->clobberLate(RegisterSet { PinnedRegisterInfo::get().sizeRegister });
                 patchpoint->setGenerator([unlinkedWasmToWasmCalls, functionIndex] (CCallHelpers& jit, const B3::StackmapGenerationParams&) {
                     AllowMacroScratchRegisterUsage allowScratch(jit);
                     CCallHelpers::Call call = jit.threadSafePatchableNearCall();
@@ -1754,7 +1757,6 @@ auto B3IRGenerator::addCallIndirect(unsigned tableIndex, const Signature& signat
     ExpressionType callableFunctionBuffer;
     ExpressionType instancesBuffer;
     ExpressionType callableFunctionBufferLength;
-    ExpressionType mask;
     {
         ExpressionType table = m_currentBlock->appendNew<MemoryValue>(m_proc, Load, pointerType(), origin(),
             instanceValue(), safeCast<int32_t>(Instance::offsetOfTablePtr(m_numImportFunctions, tableIndex)));
@@ -1764,9 +1766,6 @@ auto B3IRGenerator::addCallIndirect(unsigned tableIndex, const Signature& signat
             table, safeCast<int32_t>(FuncRefTable::offsetOfInstances()));
         callableFunctionBufferLength = m_currentBlock->appendNew<MemoryValue>(m_proc, Load, Int32, origin(),
             table, safeCast<int32_t>(Table::offsetOfLength()));
-        mask = m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(),
-            m_currentBlock->appendNew<MemoryValue>(m_proc, Load, Int32, origin(),
-                table, safeCast<int32_t>(Table::offsetOfMask())));
     }
 
     // Check the index we are looking for is valid.
@@ -1780,9 +1779,6 @@ auto B3IRGenerator::addCallIndirect(unsigned tableIndex, const Signature& signat
     }
 
     calleeIndex = m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), calleeIndex);
-
-    if (Options::enableSpectreMitigations())
-        calleeIndex = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), mask, calleeIndex);
 
     ExpressionType callableFunction;
     {
@@ -1993,7 +1989,7 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompile(CompilationC
     irGenerator.insertConstants();
 
     procedure.resetReachability();
-    if (!ASSERT_DISABLED)
+    if (ASSERT_ENABLED)
         validate(procedure, "After parsing:\n");
 
     dataLogIf(WasmB3IRGeneratorInternal::verbose, "Pre SSA: ", procedure);

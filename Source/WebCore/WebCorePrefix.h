@@ -41,12 +41,9 @@
 #endif
 #endif
 
-#if PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS))
-#undef WEBCORE_EXPORT
-#define WEBCORE_EXPORT WTF_EXPORT_DECLARATION
-#else
+#if !OS(WINDOWS) || PLATFORM(QT)
 #include <pthread.h>
-#endif // PLATFORM(WIN)
+#endif // !OS(WINDOWS) || PLATFORM(QT)
 
 #include <sys/types.h>
 #include <fcntl.h>

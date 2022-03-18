@@ -76,17 +76,23 @@ typedef struct _GstMpegtsSection GstMpegtsSection;
 #endif
 #endif
 
+#if ENABLE(ENCRYPTED_MEDIA)
+#include "CDMProxy.h"
+#endif
+
 typedef struct _GstStreamVolume GstStreamVolume;
 typedef struct _GstVideoInfo GstVideoInfo;
-typedef struct _GstGLContext GstGLContext;
-typedef struct _GstGLDisplay GstGLDisplay;
+
+#if USE(WPE_VIDEO_PLANE_DISPLAY_DMABUF)
+struct wpe_video_plane_display_dmabuf_source;
+#endif
 
 namespace WebCore {
 
 class BitmapTextureGL;
 class GLContext;
 class GraphicsContext;
-class GraphicsContext3D;
+class GraphicsContextGLOpenGL;
 class IntSize;
 class IntRect;
 class VideoTextureCopierGStreamer;
@@ -181,11 +187,7 @@ public:
     bool supportsFullscreen() const final;
     MediaPlayer::MovieLoadType movieLoadType() const final;
 
-    unsigned decodedFrameCount() const final;
-    unsigned droppedFrameCount() const final;
-    unsigned audioDecodedByteCount() const final;
-    unsigned videoDecodedByteCount() const final;
-
+    Optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() final;
     void acceleratedRenderingStateChanged() final;
 
 #if USE(TEXTURE_MAPPER_GL)
@@ -208,7 +210,7 @@ public:
 #endif
 
 #if USE(GSTREAMER_GL)
-    bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject, GC3Denum, GC3Dint, GC3Denum, GC3Denum, GC3Denum, bool, bool) override;
+    bool copyVideoTextureToPlatformTexture(GraphicsContextGLOpenGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) override;
     NativeImagePtr nativeImageForCurrentTime() override;
 #endif
 
@@ -371,7 +373,7 @@ protected:
 #if ENABLE(ENCRYPTED_MEDIA)
     Lock m_cdmAttachmentMutex;
     Condition m_cdmAttachmentCondition;
-    RefPtr<const CDMInstance> m_cdmInstance;
+    RefPtr<CDMInstanceProxy> m_cdmInstance;
 
     Lock m_protectionMutex; // Guards access to m_handledProtectionEvents.
     HashSet<uint32_t> m_handledProtectionEvents;
@@ -450,7 +452,8 @@ private:
     bool isCDMAttached() const { return m_cdmInstance; }
     void attemptToDecryptWithLocalInstance();
     void initializationDataEncountered(InitData&&);
-    void setWaitingForKey(bool);
+    InitData parseInitDataFromProtectionMessage(GstMessage*);
+    bool waitForCDMAttachment();
 #endif
 
     Atomic<bool> m_isPlayerShuttingDown;
@@ -521,6 +524,11 @@ private:
     Optional<bool> m_hasTaintedOrigin { WTF::nullopt };
 
     GRefPtr<GstElement> m_fpsSink { nullptr };
+
+private:
+#if USE(WPE_VIDEO_PLANE_DISPLAY_DMABUF)
+    GUniquePtr<struct wpe_video_plane_display_dmabuf_source> m_wpeVideoPlaneDisplayDmaBuf;
+#endif
 };
 
 }

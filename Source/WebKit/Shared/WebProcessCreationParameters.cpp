@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,10 +60,6 @@ void WebProcessCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << webKitLoggingChannels;
 #if ENABLE(MEDIA_STREAM)
     encoder << audioCaptureExtensionHandle;
-    encoder << shouldCaptureAudioInUIProcess;
-    encoder << shouldCaptureAudioInGPUProcess;
-    encoder << shouldCaptureVideoInUIProcess;
-    encoder << shouldCaptureDisplayInUIProcess;
 #endif
     encoder << urlSchemesRegisteredAsEmptyDocument;
     encoder << urlSchemesRegisteredAsSecure;
@@ -163,16 +159,38 @@ void WebProcessCreationParameters::encode(IPC::Encoder& encoder) const
 #if PLATFORM(IOS)
     encoder << compilerServiceExtensionHandle;
     encoder << contentFilterExtensionHandle;
-    encoder << diagnosticsExtensionHandle;
 #endif
-    
+
+#if PLATFORM(IOS_FAMILY)
+    encoder << diagnosticsExtensionHandle;
+    encoder << dynamicMachExtensionHandles;
+#endif
+
 #if PLATFORM(COCOA)
     encoder << neHelperExtensionHandle;
     encoder << neSessionManagerExtensionHandle;
+    encoder << systemHasBattery;
+    encoder << mimeTypesMap;
+    encoder << mapUTIFromMIMEType;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     encoder << currentUserInterfaceIdiomIsPad;
+    encoder << supportsPictureInPicture;
+    encoder << cssValueToSystemColorMap;
+    encoder << focusRingColor;
+    encoder << localizedDeviceModel;
+#if USE(UTTYPE_SWIZZLER)
+    encoder << vectorOfUTTypeItem;
+#endif
+#endif
+
+#if PLATFORM(COCOA)
+    // FIXME(207716): The following should be removed when the GPU process is complete.
+    encoder << mediaExtensionHandles;
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    encoder << preferencesExtensionHandle;
+#endif
 #endif
 }
 
@@ -228,15 +246,6 @@ bool WebProcessCreationParameters::decode(IPC::Decoder& decoder, WebProcessCreat
     if (!audioCaptureExtensionHandle)
         return false;
     parameters.audioCaptureExtensionHandle = WTFMove(*audioCaptureExtensionHandle);
-
-    if (!decoder.decode(parameters.shouldCaptureAudioInUIProcess))
-        return false;
-    if (!decoder.decode(parameters.shouldCaptureAudioInGPUProcess))
-        return false;
-    if (!decoder.decode(parameters.shouldCaptureVideoInUIProcess))
-        return false;
-    if (!decoder.decode(parameters.shouldCaptureDisplayInUIProcess))
-        return false;
 #endif
     if (!decoder.decode(parameters.urlSchemesRegisteredAsEmptyDocument))
         return false;
@@ -418,12 +427,20 @@ bool WebProcessCreationParameters::decode(IPC::Decoder& decoder, WebProcessCreat
     if (!contentFilterExtensionHandle)
         return false;
     parameters.contentFilterExtensionHandle = WTFMove(*contentFilterExtensionHandle);
+#endif
 
+#if PLATFORM(IOS_FAMILY)
     Optional<Optional<SandboxExtension::Handle>> diagnosticsExtensionHandle;
     decoder >> diagnosticsExtensionHandle;
     if (!diagnosticsExtensionHandle)
         return false;
     parameters.diagnosticsExtensionHandle = WTFMove(*diagnosticsExtensionHandle);
+
+    Optional<SandboxExtension::HandleArray> dynamicMachExtensionHandles;
+    decoder >> dynamicMachExtensionHandles;
+    if (!dynamicMachExtensionHandles)
+        return false;
+    parameters.dynamicMachExtensionHandles = WTFMove(*dynamicMachExtensionHandles);
 #endif
 
 #if PLATFORM(COCOA)
@@ -438,11 +455,73 @@ bool WebProcessCreationParameters::decode(IPC::Decoder& decoder, WebProcessCreat
     if (!neSessionManagerExtensionHandle)
         return false;
     parameters.neSessionManagerExtensionHandle = WTFMove(*neSessionManagerExtensionHandle);
+
+    Optional<bool> systemHasBattery;
+    decoder >> systemHasBattery;
+    if (!systemHasBattery)
+        return false;
+    parameters.systemHasBattery = WTFMove(*systemHasBattery);
+
+    Optional<Optional<HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>>> mimeTypesMap;
+    decoder >> mimeTypesMap;
+    if (!mimeTypesMap)
+        return false;
+    parameters.mimeTypesMap = WTFMove(*mimeTypesMap);
+
+    Optional<HashMap<String, String>> mapUTIFromMIMEType;
+    decoder >> mapUTIFromMIMEType;
+    if (!mapUTIFromMIMEType)
+        return false;
+    parameters.mapUTIFromMIMEType = WTFMove(*mapUTIFromMIMEType);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     if (!decoder.decode(parameters.currentUserInterfaceIdiomIsPad))
         return false;
+
+    if (!decoder.decode(parameters.supportsPictureInPicture))
+        return false;
+
+    Optional<WebCore::RenderThemeIOS::CSSValueToSystemColorMap> cssValueToSystemColorMap;
+    decoder >> cssValueToSystemColorMap;
+    if (!cssValueToSystemColorMap)
+        return false;
+    parameters.cssValueToSystemColorMap = WTFMove(*cssValueToSystemColorMap);
+
+    Optional<WebCore::Color> focusRingColor;
+    decoder >> focusRingColor;
+    if (!focusRingColor)
+        return false;
+    parameters.focusRingColor = WTFMove(*focusRingColor);
+    
+    if (!decoder.decode(parameters.localizedDeviceModel))
+        return false;
+    
+#if USE(UTTYPE_SWIZZLER)
+    Optional<Vector<WebCore::UTTypeItem>> vectorOfUTTypeItem;
+    decoder >> vectorOfUTTypeItem;
+    if (!vectorOfUTTypeItem)
+        return false;
+    parameters.vectorOfUTTypeItem = WTFMove(*vectorOfUTTypeItem);
+#endif
+#endif
+
+#if PLATFORM(COCOA)
+    // FIXME(207716): The following should be removed when the GPU process is complete.
+    Optional<SandboxExtension::HandleArray> mediaExtensionHandles;
+    decoder >> mediaExtensionHandles;
+    if (!mediaExtensionHandles)
+        return false;
+    parameters.mediaExtensionHandles = WTFMove(*mediaExtensionHandles);
+    // FIXME(207716): End region to remove.
+
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    Optional<Optional<SandboxExtension::Handle>> preferencesExtensionHandle;
+    decoder >> preferencesExtensionHandle;
+    if (!preferencesExtensionHandle)
+        return false;
+    parameters.preferencesExtensionHandle = WTFMove(*preferencesExtensionHandle);
+#endif
 #endif
 
     return true;

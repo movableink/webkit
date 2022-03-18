@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,8 @@
 namespace JSC {
 
 class SymbolTable;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
 
 static ALWAYS_INLINE int missingSymbolMarker() { return std::numeric_limits<int>::max(); }
 
@@ -332,7 +334,7 @@ private:
     static const intptr_t FlagBits = 6;
     
     class FatEntry {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
     public:
         FatEntry(intptr_t bits)
             : m_bits(bits & ~SlimFlag)
@@ -633,14 +635,18 @@ public:
         return m_arguments->length();
     }
     
-    void setArgumentsLength(VM& vm, uint32_t length)
+    bool trySetArgumentsLength(VM& vm, uint32_t length)
     {
-        if (UNLIKELY(!m_arguments))
-            m_arguments.set(vm, this, ScopedArgumentsTable::create(vm, length));
-        else
+        if (UNLIKELY(!m_arguments)) {
+            ScopedArgumentsTable* table = ScopedArgumentsTable::tryCreate(vm, length);
+            if (UNLIKELY(!table))
+                return false;
+            m_arguments.set(vm, this, table);
+        } else
             m_arguments.set(vm, this, m_arguments->setLength(vm, length));
+        return true;
     }
-    
+
     ScopeOffset argumentOffset(uint32_t i) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);

@@ -30,8 +30,10 @@
 #include "Editing.h"
 #include "Element.h"
 #include "HTMLInputElement.h"
+#include "Range.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "SimpleRange.h"
 #include "TextIterator.h"
 #include "VisibleUnits.h"
 #include <stdio.h>
@@ -87,12 +89,13 @@ VisibleSelection::VisibleSelection(const VisiblePosition& base, const VisiblePos
     validate();
 }
 
-VisibleSelection::VisibleSelection(const Range& range, EAffinity affinity, bool isDirectional)
-    : m_base(range.startPosition())
-    , m_extent(range.endPosition())
+VisibleSelection::VisibleSelection(const SimpleRange& range, EAffinity affinity, bool isDirectional)
+    : m_base(createLegacyEditingPosition(&range.startContainer(), range.startOffset()))
+    , m_extent(createLegacyEditingPosition(&range.endContainer(), range.endOffset()))
     , m_affinity(affinity)
     , m_isDirectional(isDirectional)
 {
+    ASSERT(&range.startContainer().treeScope() == &range.endContainer().treeScope());
     validate();
 }
 
@@ -241,7 +244,7 @@ void VisibleSelection::appendTrailingWhitespace()
         UChar c = charIt.text()[0];
         if ((!isSpaceOrNewline(c) && c != noBreakSpace) || c == '\n')
             break;
-        m_end = charIt.range()->endPosition();
+        m_end = createLegacyEditingPosition(charIt.range().end);
     }
 }
 

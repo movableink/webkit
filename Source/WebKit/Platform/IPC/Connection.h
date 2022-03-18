@@ -82,16 +82,19 @@ enum class WaitForOption {
     InterruptWaitingIfSyncMessageArrives = 1 << 0,
 };
 
-#define MESSAGE_CHECK_BASE(assertion, connection) do \
+#define MESSAGE_CHECK_BASE(assertion, connection) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, (void)0)
+
+#define MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion) do \
     if (!(assertion)) { \
         ASSERT(assertion); \
         (connection)->markCurrentlyDispatchedMessageAsInvalid(); \
+        { completion; } \
         return; \
     } \
 while (0)
 
 template<typename AsyncReplyResult> struct AsyncReplyError {
-    static AsyncReplyResult create() { return { }; };
+    static AsyncReplyResult create() { return AsyncReplyResult { }; };
 };
 
 class MachMessage;
@@ -271,7 +274,7 @@ private:
     
     std::unique_ptr<Decoder> waitForMessage(StringReference messageReceiverName, StringReference messageName, uint64_t destinationID, Seconds timeout, OptionSet<WaitForOption>);
     
-    std::unique_ptr<Decoder> waitForSyncReply(uint64_t syncRequestID, Seconds timeout, OptionSet<SendSyncOption>);
+    std::unique_ptr<Decoder> waitForSyncReply(uint64_t syncRequestID, StringReference messageReceiverName, StringReference messageName, Seconds timeout, OptionSet<SendSyncOption>);
 
     bool dispatchMessageToWorkQueueReceiver(std::unique_ptr<Decoder>&);
     bool dispatchMessageToThreadReceiver(std::unique_ptr<Decoder>&);

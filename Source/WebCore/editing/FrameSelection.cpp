@@ -61,6 +61,7 @@
 #include "RenderWidget.h"
 #include "RenderedPosition.h"
 #include "Settings.h"
+#include "SimpleRange.h"
 #include "SpatialNavigation.h"
 #include "StyleProperties.h"
 #include "TypingCommand.h"
@@ -369,8 +370,13 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
 
     setCaretRectNeedsUpdate();
 
-    if (!newSelection.isNone() && !(options & DoNotSetFocus))
+    if (!newSelection.isNone() && !(options & DoNotSetFocus)) {
+        auto* oldFocusedElement = m_frame->document()->focusedElement();
         setFocusedElementIfNeeded();
+        // FIXME: Should not be needed.
+        if (m_frame->document()->focusedElement() != oldFocusedElement)
+            m_frame->document()->updateStyleIfNeeded();
+    }
 
     // Always clear the x position used for vertical arrow navigation.
     // It will be restored by the vertical arrow navigation code if necessary.
@@ -436,7 +442,7 @@ void FrameSelection::setNeedsSelectionUpdate(RevealSelectionAfterUpdate revealMo
         m_selectionRevealMode = SelectionRevealMode::Reveal;
     m_pendingSelectionUpdate = true;
     if (RenderView* view = m_frame->contentRenderer())
-        view->selection().clear();
+        view->selection().clearSelection();
 }
 
 void FrameSelection::updateAndRevealSelection(const AXTextStateChangeIntent& intent)
@@ -492,7 +498,7 @@ void DragCaretController::nodeWillBeRemoved(Node& node)
         return;
 
     if (RenderView* view = node.document().renderView())
-        view->selection().clear();
+        view->selection().clearSelection();
 
     clear();
 }
@@ -557,7 +563,7 @@ void FrameSelection::respondToNodeModification(Node& node, bool baseRemoved, boo
 
     if (clearRenderTreeSelection) {
         if (auto* renderView = node.document().renderView()) {
-            renderView->selection().clear();
+            renderView->selection().clearSelection();
 
             // Trigger a selection update so the selection will be set again.
             m_selectionRevealIntent = AXTextStateChangeIntent();
@@ -1570,7 +1576,7 @@ void FrameSelection::prepareForDestruction()
 #endif
 
     if (auto* view = m_frame->contentRenderer())
-        view->selection().clear();
+        view->selection().clearSelection();
 
     setSelectionWithoutUpdatingAppearance(VisibleSelection(), defaultSetSelectionOptions(), AlignCursorOnScrollIfNeeded, CharacterGranularity);
     m_previousCaretNode = nullptr;
@@ -1768,6 +1774,27 @@ void FrameSelection::paintCaret(GraphicsContext& context, const LayoutPoint& pai
         CaretBase::paintCaret(m_selection.start().deprecatedNode(), context, paintOffset, clipRect);
 }
 
+Color CaretBase::computeCaretColor(const RenderStyle& elementStyle, Node* node)
+{
+    // On iOS, we want to fall back to the tintColor, and only override if CSS has explicitly specified a custom color.
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+    UNUSED_PARAM(node);
+    return elementStyle.caretColor();
+#else
+    auto* rootEditableElement = node ? node->rootEditableElement() : nullptr;
+    auto* rootEditableStyle = rootEditableElement && rootEditableElement->renderer() ? &rootEditableElement->renderer()->style() : nullptr;
+    // CSS value "auto" is treated as an invalid color.
+    if (!elementStyle.caretColor().isValid() && rootEditableStyle) {
+        auto rootEditableBackgroundColor = rootEditableStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+        auto elementBackgroundColor = elementStyle.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+        auto disappearsIntoBackground = rootEditableBackgroundColor.blend(elementBackgroundColor) == rootEditableBackgroundColor;
+        if (disappearsIntoBackground)
+            return rootEditableStyle->visitedDependentColorWithColorFilter(CSSPropertyCaretColor);
+    }
+    return elementStyle.visitedDependentColorWithColorFilter(CSSPropertyCaretColor);
+#endif
+}
+
 void CaretBase::paintCaret(Node* node, GraphicsContext& context, const LayoutPoint& paintOffset, const LayoutRect& clipRect) const
 {
 #if ENABLE(TEXT_CARET)
@@ -1784,22 +1811,8 @@ void CaretBase::paintCaret(Node* node, GraphicsContext& context, const LayoutPoi
 
     Color caretColor = Color::black;
     Element* element = is<Element>(*node) ? downcast<Element>(node) : node->parentElement();
-    if (element && element->renderer()) {
-        auto computeCaretColor = [] (const RenderStyle& elementStyle, const RenderStyle* rootEditableStyle) {
-            // CSS value "auto" is treated as an invalid color.
-            if (!elementStyle.caretColor().isValid() && rootEditableStyle) {
-                auto rootEditableBackgroundColor = rootEditableStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
-                auto elementBackgroundColor = elementStyle.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
-                auto disappearsIntoBackground = rootEditableBackgroundColor.blend(elementBackgroundColor) == rootEditableBackgroundColor;
-                if (disappearsIntoBackground)
-                    return rootEditableStyle->visitedDependentColorWithColorFilter(CSSPropertyCaretColor);
-            }
-            return elementStyle.visitedDependentColorWithColorFilter(CSSPropertyCaretColor);
-        };
-        auto* rootEditableElement = node->rootEditableElement();
-        auto* rootEditableStyle = rootEditableElement && rootEditableElement->renderer() ? &rootEditableElement->renderer()->style() : nullptr;
-        caretColor = computeCaretColor(element->renderer()->style(), rootEditableStyle);
-    }
+    if (element && element->renderer())
+        caretColor = CaretBase::computeCaretColor(element->renderer()->style(), node);
 
     context.fillRect(caret, caretColor);
 #else
@@ -2154,7 +2167,7 @@ void FrameSelection::updateAppearance()
 #endif
 
     if (!selection.isRange()) {
-        view->selection().clear();
+        view->selection().clearSelection();
         return;
     }
 
@@ -2179,7 +2192,7 @@ void FrameSelection::updateAppearance()
         RenderObject* endRenderer = endPos.deprecatedNode()->renderer();
         int endOffset = endPos.deprecatedEditingOffset();
         ASSERT(startOffset >= 0 && endOffset >= 0);
-        view->selection().set({ startRenderer, endRenderer, static_cast<unsigned>(startOffset), static_cast<unsigned>(endOffset) });
+        view->selection().setSelection({ startRenderer, endRenderer, static_cast<unsigned>(startOffset), static_cast<unsigned>(endOffset) });
     }
 }
 
@@ -2346,20 +2359,16 @@ static HTMLFormElement* scanForForm(Element* start)
 {
     if (!start)
         return nullptr;
-
-    auto descendants = descendantsOfType<HTMLElement>(start->document());
-    for (auto it = descendants.from(*start), end = descendants.end(); it != end; ++it) {
-        HTMLElement& element = *it;
+    for (auto& element : descendantsOfType<HTMLElement>(start->document())) {
         if (is<HTMLFormElement>(element))
             return &downcast<HTMLFormElement>(element);
         if (is<HTMLFormControlElement>(element))
             return downcast<HTMLFormControlElement>(element).form();
         if (is<HTMLFrameElementBase>(element)) {
-            Document* contentDocument = downcast<HTMLFrameElementBase>(element).contentDocument();
-            if (!contentDocument)
-                continue;
-            if (HTMLFormElement* frameResult = scanForForm(contentDocument->documentElement()))
-                return frameResult;
+            if (auto* contentDocument = downcast<HTMLFrameElementBase>(element).contentDocument()) {
+                if (auto* frameResult = scanForForm(contentDocument->documentElement()))
+                    return frameResult;
+            }
         }
     }
     return nullptr;

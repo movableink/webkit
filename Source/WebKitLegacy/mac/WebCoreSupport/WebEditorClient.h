@@ -32,6 +32,7 @@
 #import <WebCore/TextCheckerClient.h>
 #import <WebCore/VisibleSelection.h>
 #import <wtf/Forward.h>
+#import <wtf/Ref.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
@@ -50,7 +51,7 @@ public:
     WebEditorClient(WebView *);
     virtual ~WebEditorClient();
 
-    void didCheckSucceed(int sequence, NSArray *results);
+    void didCheckSucceed(WebCore::TextCheckingRequestIdentifier, NSArray *results);
 
 private:
     bool isGrammarCheckingEnabled() final;
@@ -148,6 +149,8 @@ private:
     RefPtr<WebCore::DocumentFragment> documentFragmentFromDelegate(int index) final;
     bool performsTwoStepPaste(WebCore::DocumentFragment*) final;
     void updateStringForFind(const String&) final { }
+
+    bool shouldRevealCurrentSelectionAfterInsertion() const final;
 #endif
 
     bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range& destination, bool isMove) final;
@@ -166,7 +169,7 @@ private:
     void getGuessesForWord(const String& word, const String& context, const WebCore::VisibleSelection& currentSelection, Vector<String>& guesses) final;
 
     void willSetInputMethodState() final;
-    void setInputMethodState(bool enabled) final;
+    void setInputMethodState(WebCore::Element*) final;
     void requestCheckingOfString(WebCore::TextCheckingRequest&, const WebCore::VisibleSelection& currentSelection) final;
 
 #if PLATFORM(MAC)
@@ -193,7 +196,8 @@ private:
     WebView *m_webView;
     RetainPtr<WebEditorUndoTarget> m_undoTarget;
     bool m_haveUndoRedoOperations { false };
-    RefPtr<WebCore::TextCheckingRequest> m_textCheckingRequest;
+    
+    HashMap<WebCore::TextCheckingRequestIdentifier, Ref<WebCore::TextCheckingRequest>> m_requestsInFlight;
 
 #if PLATFORM(IOS_FAMILY)
     bool m_delayingContentChangeNotifications { false };

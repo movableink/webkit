@@ -44,6 +44,7 @@
 #include "WebSocketChannelManager.h"
 #include <WebCore/ActivityState.h>
 #include <WebCore/FrameIdentifier.h>
+#include <WebCore/NetworkStorageSession.h>
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/RegistrableDomain.h>
 #if PLATFORM(MAC)
@@ -63,11 +64,6 @@
 #if PLATFORM(COCOA)
 #include <dispatch/dispatch.h>
 #include <wtf/MachSendRight.h>
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-#include "ProcessTaskStateObserver.h"
-OBJC_CLASS BKSProcessAssertion;
 #endif
 
 #if PLATFORM(WAYLAND) && USE(WPE_RENDERER)
@@ -105,6 +101,7 @@ struct ServiceWorkerContextData;
 
 namespace WebKit {
 
+class DependencyProcessAssertion;
 class EventDispatcher;
 class GamepadData;
 class GPUProcessConnection;
@@ -119,6 +116,7 @@ class UserData;
 class WaylandCompositorDisplay;
 class WebAutomationSessionProxy;
 class WebCacheStorageProvider;
+class WebCookieJar;
 class WebCompiledContentRuleListData;
 class WebConnectionToUIProcess;
 class WebFrame;
@@ -140,11 +138,7 @@ struct WebsiteDataStoreParameters;
 class LayerHostingContext;
 #endif
 
-class WebProcess
-    : public AuxiliaryProcess
-#if PLATFORM(IOS_FAMILY)
-    , ProcessTaskStateObserver::Client
-#endif
+class WebProcess : public AuxiliaryProcess
 {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -173,6 +167,10 @@ public:
     InjectedBundle* injectedBundle() const { return m_injectedBundle.get(); }
     
     PAL::SessionID sessionID() const { ASSERT(m_sessionID); return *m_sessionID; }
+
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode() const { return m_thirdPartyCookieBlockingMode; }
+#endif
 
 #if PLATFORM(COCOA)
     const WTF::MachSendRight& compositingRenderServerPort() const { return m_compositingRenderServerPort; }
@@ -246,7 +244,7 @@ public:
 
     const String& uiProcessBundleIdentifier() const { return m_uiProcessBundleIdentifier; }
 
-    void updateActivePages();
+    void updateActivePages(const String& overrideDisplayName);
     void getActivePagesOriginsForTesting(CompletionHandler<void(Vector<String>&&)>&&);
     void pageActivityStateDidChange(WebCore::PageIdentifier, OptionSet<WebCore::ActivityState::Flag> changed);
 
@@ -288,20 +286,25 @@ public:
     WebAutomationSessionProxy* automationSessionProxy() { return m_automationSessionProxy.get(); }
 
     WebCacheStorageProvider& cacheStorageProvider() { return m_cacheStorageProvider.get(); }
+    WebCookieJar& cookieJar() { return m_cookieJar.get(); }
     WebSocketChannelManager& webSocketChannelManager() { return m_webSocketChannelManager; }
 
 #if PLATFORM(IOS_FAMILY)
     void accessibilityProcessSuspendedNotification(bool);
-    
-    void unblockAccessibilityServer(const SandboxExtension::Handle&);
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     float backlightLevel() const { return m_backlightLevel; }
 #endif
 
 #if PLATFORM(COCOA)
     void setMediaMIMETypes(const Vector<String>);
+#if ENABLE(REMOTE_INSPECTOR)
+    void enableRemoteWebInspector(const SandboxExtension::Handle&);
+#endif
+    void notifyPreferencesChanged(const String& domain, const String& key, const Optional<String>& encodedValue);
+    void unblockAccessibilityServer(const SandboxExtension::Handle&);
+    void unblockPreferenceService(const SandboxExtension::Handle&);
 #endif
 
     bool areAllPagesThrottleable() const;
@@ -311,6 +314,19 @@ public:
 #if ENABLE(SERVICE_WORKER)
     void addServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier);
     bool removeServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier);
+#endif
+
+#if PLATFORM(IOS)
+    void grantAccessToAssetServices(WebKit::SandboxExtension::Handle&& mobileAssetHandle,  WebKit::SandboxExtension::Handle&& mobileAssetV2Handle);
+    void revokeAccessToAssetServices();
+#endif
+
+#if PLATFORM(MAC)
+    void updatePageScreenProperties();
+#endif
+
+#if ENABLE(GPU_PROCESS)
+    void setUseGPUProcessForMedia(bool);
 #endif
 
 private:
@@ -376,7 +392,6 @@ private:
     void startMemorySampler(SandboxExtension::Handle&&, const String&, const double);
     void stopMemorySampler();
     
-    void getWebCoreStatistics(uint64_t callbackID);
     void garbageCollectJavaScriptObjects();
     void setJavaScriptGarbageCollectorTimerEnabled(bool flag);
 
@@ -390,8 +405,7 @@ private:
 #endif
 
 #if ENABLE(SERVICE_WORKER)
-    void establishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebPageProxyIdentifier, WebCore::PageIdentifier, const WebPreferencesStore&, WebCore::RegistrableDomain&&, ServiceWorkerInitializationData&&);
-    void registerServiceWorkerClients();
+    void establishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebPageProxyIdentifier, WebCore::PageIdentifier, const WebPreferencesStore&, WebCore::RegistrableDomain&&, ServiceWorkerInitializationData&&, CompletionHandler<void()>&&);
 #endif
 
     void fetchWebsiteData(OptionSet<WebsiteDataType>, CompletionHandler<void(WebsiteData&&)>&&);
@@ -446,6 +460,10 @@ private:
 
 #endif
 
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    void setShouldBlockThirdPartyCookiesForTesting(WebCore::ThirdPartyCookieBlockingMode, CompletionHandler<void()>&&);
+#endif
+
     void platformInitializeProcess(const AuxiliaryProcessInitializationParameters&);
 
     // IPC::Connection::Client
@@ -469,16 +487,13 @@ private:
     void updateProcessName();
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     void backlightLevelDidChange(float backlightLevel);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void processTaskStateDidChange(ProcessTaskStateObserver::TaskState) final;
     bool shouldFreezeOnSuspension() const;
     void updateFreezerStatus();
-
-    void releaseProcessWasResumedAssertions();
 #endif
 
 #if ENABLE(VIDEO)
@@ -491,6 +506,8 @@ private:
 #if PLATFORM(GTK) || PLATFORM(WPE)
     void sendMessageToWebExtension(UserMessage&&);
 #endif
+
+    bool isAlwaysOnLoggingAllowed() { return m_sessionID ? m_sessionID->isAlwaysOnLoggingAllowed() : true; }
 
     RefPtr<WebConnectionToUIProcess> m_webConnection;
 
@@ -535,6 +552,7 @@ private:
 #endif
 
     Ref<WebCacheStorageProvider> m_cacheStorageProvider;
+    Ref<WebCookieJar> m_cookieJar;
     WebSocketChannelManager m_webSocketChannelManager;
 
     std::unique_ptr<LibWebRTCNetwork> m_libWebRTCNetwork;
@@ -563,10 +581,7 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     WebSQLiteDatabaseTracker m_webSQLiteDatabaseTracker;
-    RefPtr<ProcessTaskStateObserver> m_taskStateObserver;
-    Lock m_processWasResumedAssertionsLock;
-    RetainPtr<BKSProcessAssertion> m_processWasResumedUIAssertion;
-    RetainPtr<BKSProcessAssertion> m_processWasResumedOwnAssertion;
+    std::unique_ptr<DependencyProcessAssertion> m_uiProcessDependencyProcessAssertion;
 #endif
 
     enum PageMarkingLayersAsVolatileCounterType { };
@@ -605,7 +620,7 @@ private:
     HashMap<String, RefPtr<SandboxExtension>> m_mediaCaptureSandboxExtensions;
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     float m_backlightLevel { 0 };
 #endif
 
@@ -618,6 +633,17 @@ private:
     // Prewarmed WebProcesses do not have an associated sessionID yet, which is why this is an optional.
     // By the time the WebProcess gets a WebPage, it is guaranteed to have a sessionID.
     Optional<PAL::SessionID> m_sessionID;
+
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    WebCore::ThirdPartyCookieBlockingMode m_thirdPartyCookieBlockingMode { WebCore::ThirdPartyCookieBlockingMode::All };
+#endif
+
+#if PLATFORM(IOS)
+    RefPtr<SandboxExtension> m_assetServiceExtension;
+    RefPtr<SandboxExtension> m_assetServiceV2Extension;
+#endif
+
+    bool m_useGPUProcessForMedia { false };
 };
 
 } // namespace WebKit

@@ -38,6 +38,19 @@ OBJC_CLASS NSScrollerImp;
 
 namespace WebCore {
 
+struct RequestedScrollData {
+    FloatPoint scrollPosition;
+    ScrollType scrollType { ScrollType::User };
+    ScrollClamping clamping { ScrollClamping::Clamped };
+    
+    bool operator==(const RequestedScrollData& other) const
+    {
+        return scrollPosition == other.scrollPosition
+            && scrollType == other.scrollType
+            && clamping == other.clamping;
+    }
+};
+
 class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
@@ -46,10 +59,12 @@ public:
         ScrollableAreaSize = NumStateNodeBits,
         TotalContentsSize,
         ReachableContentsSize,
-        ParentRelativeScrollableRect,
         ScrollPosition,
         ScrollOrigin,
         ScrollableAreaParams,
+#if ENABLE(SCROLLING_THREAD)
+        ReasonsForSynchronousScrolling,
+#endif
         RequestedScrollPosition,
 #if ENABLE(CSS_SCROLL_SNAP)
         HorizontalSnapOffsets,
@@ -76,9 +91,6 @@ public:
 
     const FloatSize& reachableContentsSize() const { return m_reachableContentsSize; }
     WEBCORE_EXPORT void setReachableContentsSize(const FloatSize&);
-
-    const LayoutRect& parentRelativeScrollableRect() const { return m_parentRelativeScrollableRect; }
-    WEBCORE_EXPORT void setParentRelativeScrollableRect(const LayoutRect&);
 
     const FloatPoint& scrollPosition() const { return m_scrollPosition; }
     WEBCORE_EXPORT void setScrollPosition(const FloatPoint&);
@@ -109,9 +121,13 @@ public:
     const ScrollableAreaParameters& scrollableAreaParameters() const { return m_scrollableAreaParameters; }
     WEBCORE_EXPORT void setScrollableAreaParameters(const ScrollableAreaParameters& params);
 
-    const FloatPoint& requestedScrollPosition() const { return m_requestedScrollPosition; }
-    bool requestedScrollPositionRepresentsProgrammaticScroll() const { return m_requestedScrollPositionRepresentsProgrammaticScroll; }
-    WEBCORE_EXPORT void setRequestedScrollPosition(const FloatPoint&, bool representsProgrammaticScroll);
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
+    WEBCORE_EXPORT void setSynchronousScrollingReasons(OptionSet<SynchronousScrollingReason>);
+#endif
+
+    const RequestedScrollData& requestedScrollData() const { return m_requestedScrollData; }
+    WEBCORE_EXPORT void setRequestedScrollData(const RequestedScrollData&);
 
     bool isMonitoringWheelEvents() const { return m_isMonitoringWheelEvents; }
     WEBCORE_EXPORT void setIsMonitoringWheelEvents(bool);
@@ -147,9 +163,7 @@ private:
     FloatSize m_scrollableAreaSize;
     FloatSize m_totalContentsSize;
     FloatSize m_reachableContentsSize;
-    LayoutRect m_parentRelativeScrollableRect;
     FloatPoint m_scrollPosition;
-    FloatPoint m_requestedScrollPosition;
     IntPoint m_scrollOrigin;
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -169,8 +183,10 @@ private:
 #endif
 
     ScrollableAreaParameters m_scrollableAreaParameters;
-
-    bool m_requestedScrollPositionRepresentsProgrammaticScroll { false };
+    RequestedScrollData m_requestedScrollData;
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> m_synchronousScrollingReasons;
+#endif
     bool m_isMonitoringWheelEvents { false };
 };
 

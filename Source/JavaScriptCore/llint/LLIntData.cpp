@@ -81,7 +81,7 @@ void initialize()
     }
 
     ASSERT(llint_throw_from_slow_path_trampoline < UINT8_MAX);
-    for (int i = 0; i < maxOpcodeLength + 1; ++i) {
+    for (unsigned i = 0; i < maxOpcodeLength + 1; ++i) {
         Data::s_exceptionInstructions[i] = llint_throw_from_slow_path_trampoline;
         Data::s_wasmExceptionInstructions[i] = wasm_throw_from_slow_path_trampoline;
     }
@@ -139,7 +139,7 @@ void Data::performAssertions(VM& vm)
     ASSERT(!(reinterpret_cast<ptrdiff_t>((reinterpret_cast<WriteBarrier<JSCell>*>(0x4000)->slot())) - 0x4000));
 
     // FIXME: make these assertions less horrible.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     Vector<int> testVector;
     testVector.resize(42);
     ASSERT(bitwise_cast<uint32_t*>(&testVector)[sizeof(void*)/sizeof(uint32_t) + 1] == 42);

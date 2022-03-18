@@ -39,7 +39,6 @@
 #include "MediaControlElements.h"
 #include "TextTrackList.h"
 #include "UserStyleSheetTypes.h"
-#include "VTTCue.h"
 #include <algorithm>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
@@ -351,7 +350,7 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
         return emptyString();
 
     StringBuilder builder;
-    appendCSS(builder, CSSPropertyBorderRadius, makeString(FormattedNumber::fixedWidth(radius, 2), "px"), behavior == kMACaptionAppearanceBehaviorUseValue);
+    appendCSS(builder, CSSPropertyBorderRadius, makeString(radius, "px"), behavior == kMACaptionAppearanceBehaviorUseValue);
     return builder.toString();
 }
 
@@ -682,9 +681,9 @@ String CaptionUserPreferencesMediaAF::displayNameForTrack(AudioTrack* track) con
 
 static String trackDisplayName(TextTrack* track)
 {
-    if (track == TextTrack::captionMenuOffItem())
+    if (track == &TextTrack::captionMenuOffItem())
         return textTrackOffMenuItemText();
-    if (track == TextTrack::captionMenuAutomaticItem())
+    if (track == &TextTrack::captionMenuAutomaticItem())
         return textTrackAutomaticMenuItemText();
 
     StringBuilder displayNameBuilder;
@@ -813,36 +812,32 @@ static bool textTrackCompare(const RefPtr<TextTrack>& a, const RefPtr<TextTrack>
 {
     String preferredLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(defaultLanguage()));
     String aLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(a->validBCP47Language()));
-    String bLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(b->language()));
+    String bLanguageDisplayName = displayNameForLanguageLocale(languageIdentifier(b->validBCP47Language()));
 
     // Tracks in the user's preferred language are always at the top of the menu.
     bool aIsPreferredLanguage = !codePointCompare(aLanguageDisplayName, preferredLanguageDisplayName);
     bool bIsPreferredLanguage = !codePointCompare(bLanguageDisplayName, preferredLanguageDisplayName);
-    if ((aIsPreferredLanguage || bIsPreferredLanguage) && (aIsPreferredLanguage != bIsPreferredLanguage))
+    if (aIsPreferredLanguage != bIsPreferredLanguage)
         return aIsPreferredLanguage;
 
     // Tracks not in the user's preferred language sort first by language ...
-    if (codePointCompare(aLanguageDisplayName, bLanguageDisplayName))
-        return codePointCompare(aLanguageDisplayName, bLanguageDisplayName) < 0;
+    if (auto languageDisplayNameComparison = codePointCompare(aLanguageDisplayName, bLanguageDisplayName))
+        return languageDisplayNameComparison < 0;
 
     // ... but when tracks have the same language, main program content sorts next highest ...
     bool aIsMainContent = a->isMainProgramContent();
     bool bIsMainContent = b->isMainProgramContent();
-    if ((aIsMainContent || bIsMainContent) && (aIsMainContent != bIsMainContent))
+    if (aIsMainContent != bIsMainContent)
         return aIsMainContent;
 
-    // ... and main program trakcs sort higher than CC tracks ...
+    // ... and main program tracks sort higher than CC tracks ...
     bool aIsCC = a->isClosedCaptions();
     bool bIsCC = b->isClosedCaptions();
-    if ((aIsCC || bIsCC) && (aIsCC != bIsCC)) {
-        if (aIsCC)
-            return aIsMainContent;
-        return bIsMainContent;
-    }
+    if (aIsCC != bIsCC)
+        return aIsCC;
 
     // ... and tracks of the same type and language sort by the menu item text.
-    auto trackDisplayComparison = codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get()));
-    if (trackDisplayComparison)
+    if (auto trackDisplayComparison = codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())))
         return trackDisplayComparison < 0;
 
     // ... and if the menu item text is the same, compare the unique IDs
@@ -976,8 +971,8 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
 
     std::sort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
 
-    tracksForMenu.insert(0, TextTrack::captionMenuOffItem());
-    tracksForMenu.insert(1, TextTrack::captionMenuAutomaticItem());
+    tracksForMenu.insert(0, &TextTrack::captionMenuOffItem());
+    tracksForMenu.insert(1, &TextTrack::captionMenuAutomaticItem());
 
     return tracksForMenu;
 }

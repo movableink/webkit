@@ -35,6 +35,7 @@
 #include "HTTPHeaderValues.h"
 #include "ImageDecoder.h"
 #include "MemoryCache.h"
+#include "SecurityPolicy.h"
 #include "ServiceWorkerRegistrationData.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -83,25 +84,6 @@ const AtomString& CachedResourceRequest::initiatorName() const
 
     static NeverDestroyed<AtomString> defaultName("other", AtomString::ConstructFromLiteral);
     return defaultName;
-}
-
-void CachedResourceRequest::deprecatedSetAsPotentiallyCrossOrigin(const String& mode, Document& document)
-{
-    ASSERT(m_options.mode == FetchOptions::Mode::NoCors);
-
-    m_origin = &document.securityOrigin();
-
-    if (mode.isNull())
-        return;
-
-    m_options.mode = FetchOptions::Mode::Cors;
-
-    FetchOptions::Credentials credentials = equalLettersIgnoringASCIICase(mode, "omit")
-        ? FetchOptions::Credentials::Omit : equalLettersIgnoringASCIICase(mode, "use-credentials")
-        ? FetchOptions::Credentials::Include : FetchOptions::Credentials::SameOrigin;
-    m_options.credentials = credentials;
-    m_options.storedCredentialsPolicy = credentials == FetchOptions::Credentials::Include ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
-    updateRequestForAccessControl(m_resourceRequest, document.securityOrigin(), m_options.storedCredentialsPolicy);
 }
 
 void CachedResourceRequest::updateForAccessControl(Document& document)
@@ -243,16 +225,19 @@ void CachedResourceRequest::updateReferrerOriginAndUserAgentHeaders(FrameLoader&
 {
     // Implementing step 9 to 11 of https://fetch.spec.whatwg.org/#http-network-or-cache-fetch as of 16 March 2018
     String outgoingReferrer = frameLoader.outgoingReferrer();
-    String outgoingOrigin = frameLoader.outgoingOrigin();
-    if (m_resourceRequest.hasHTTPReferrer()) {
+    if (m_resourceRequest.hasHTTPReferrer())
         outgoingReferrer = m_resourceRequest.httpReferrer();
-        outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
-    }
     updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer);
-
-    FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
-
     frameLoader.applyUserAgentIfNeeded(m_resourceRequest);
+
+    if (!m_resourceRequest.httpOrigin().isEmpty())
+        return;
+    String outgoingOrigin;
+    if (m_options.mode == FetchOptions::Mode::Cors)
+        outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
+    else
+        outgoingOrigin = SecurityPolicy::generateOriginHeader(m_options.referrerPolicy, m_resourceRequest.url(), SecurityOrigin::createFromString(outgoingReferrer));
+    FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 }
 
 bool isRequestCrossOrigin(SecurityOrigin* origin, const URL& requestURL, const ResourceLoaderOptions& options)

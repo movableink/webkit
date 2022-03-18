@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 
 #include "ArithProfile.h"
 #include "BasicBlockLocation.h"
+#include "ByValInfo.h"
 #include "BytecodeDumper.h"
 #include "BytecodeGenerator.h"
 #include "BytecodeLivenessAnalysis.h"
@@ -109,6 +110,8 @@
 #endif
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
 
 const ClassInfo CodeBlock::s_info = {
     "CodeBlock", nullptr, nullptr, nullptr,
@@ -293,6 +296,8 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, CopyParsedBlockTag, CodeBlock
     , m_didFailJITCompilation(false)
     , m_didFailFTLCompilation(false)
     , m_hasBeenCompiledWithFTL(false)
+    , m_hasLinkedOSRExit(false)
+    , m_isEligibleForLLIntDowngrade(false) 
     , m_numCalleeLocals(other.m_numCalleeLocals)
     , m_numVars(other.m_numVars)
     , m_numberOfArgumentsToSkip(other.m_numberOfArgumentsToSkip)
@@ -352,6 +357,8 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, ScriptExecutable* ownerExecut
     , m_didFailJITCompilation(false)
     , m_didFailFTLCompilation(false)
     , m_hasBeenCompiledWithFTL(false)
+    , m_hasLinkedOSRExit(false)
+    , m_isEligibleForLLIntDowngrade(false) 
     , m_numCalleeLocals(unlinkedCodeBlock->numCalleeLocals())
     , m_numVars(unlinkedCodeBlock->numVars())
     , m_hasDebuggerStatement(false)
@@ -440,14 +447,8 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
                 const UnlinkedHandlerInfo& unlinkedHandler = unlinkedCodeBlock->exceptionHandler(i);
                 HandlerInfo& handler = m_rareData->m_exceptionHandlers[i];
 #if ENABLE(JIT)
-                auto instruction = instructions().at(unlinkedHandler.target);
-                MacroAssemblerCodePtr<BytecodePtrTag> codePtr;
-                if (instruction->isWide32())
-                    codePtr = LLInt::getWide32CodePtr<BytecodePtrTag>(op_catch);
-                else if (instruction->isWide16())
-                    codePtr = LLInt::getWide16CodePtr<BytecodePtrTag>(op_catch);
-                else
-                    codePtr = LLInt::getCodePtr<BytecodePtrTag>(op_catch);
+                auto& instruction = *instructions().at(unlinkedHandler.target).ptr();
+                MacroAssemblerCodePtr<BytecodePtrTag> codePtr = LLInt::getCodePtr<BytecodePtrTag>(instruction);
                 handler.initialize(unlinkedHandler, CodeLocationLabel<ExceptionHandlerPtrTag>(codePtr.retagged<ExceptionHandlerPtrTag>()));
 #else
                 handler.initialize(unlinkedHandler);
@@ -473,7 +474,8 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
             for (size_t i = 0; i < count; i++) {
                 UnlinkedSimpleJumpTable& sourceTable = unlinkedCodeBlock->switchJumpTable(i);
                 SimpleJumpTable& destTable = m_rareData->m_switchJumpTables[i];
-                destTable.branchOffsets = sourceTable.branchOffsets;
+                destTable.branchOffsets.resizeToFit(sourceTable.branchOffsets.size());
+                std::copy(sourceTable.branchOffsets.begin(), sourceTable.branchOffsets.end(), destTable.branchOffsets.begin());
                 destTable.min = sourceTable.min;
             }
         }
@@ -757,7 +759,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
         }
 
         case op_debug: {
-            if (instruction->as<OpDebug>().m_debugHookType == DidReachBreakpoint)
+            if (instruction->as<OpDebug>().m_debugHookType == DidReachDebuggerStatement)
                 m_hasDebuggerStatement = true;
             break;
         }
@@ -866,7 +868,7 @@ CodeBlock::~CodeBlock()
 #endif // ENABLE(JIT)
 }
 
-void CodeBlock::setConstantIdentifierSetRegisters(VM& vm, const Vector<ConstantIdentifierSetEntry>& constants)
+void CodeBlock::setConstantIdentifierSetRegisters(VM& vm, const RefCountedArray<ConstantIdentifierSetEntry>& constants)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSGlobalObject* globalObject = m_globalObject.get();
@@ -888,7 +890,7 @@ void CodeBlock::setConstantIdentifierSetRegisters(VM& vm, const Vector<ConstantI
     }
 }
 
-void CodeBlock::setConstantRegisters(const Vector<WriteBarrier<Unknown>>& constants, const Vector<SourceCodeRepresentation>& constantsSourceCodeRepresentation, ScriptExecutable* topLevelExecutable)
+void CodeBlock::setConstantRegisters(const RefCountedArray<WriteBarrier<Unknown>>& constants, const RefCountedArray<SourceCodeRepresentation>& constantsSourceCodeRepresentation, ScriptExecutable* topLevelExecutable)
 {
     VM& vm = *m_vm;
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -899,10 +901,13 @@ void CodeBlock::setConstantRegisters(const Vector<WriteBarrier<Unknown>>& consta
     {
         ConcurrentJSLocker locker(m_lock);
         m_constantRegisters.resizeToFit(count);
+        m_constantsSourceCodeRepresentation.resizeToFit(count);
     }
     for (size_t i = 0; i < count; i++) {
         JSValue constant = constants[i].get();
-        switch (constantsSourceCodeRepresentation[i]) {
+        SourceCodeRepresentation representation = constantsSourceCodeRepresentation[i];
+        m_constantsSourceCodeRepresentation[i] = representation;
+        switch (representation) {
         case SourceCodeRepresentation::LinkTimeConstant:
             constant = globalObject->linkTimeConstant(static_cast<LinkTimeConstant>(constant.asInt32AsAnyInt()));
             break;
@@ -934,8 +939,6 @@ void CodeBlock::setConstantRegisters(const Vector<WriteBarrier<Unknown>>& consta
         }
         m_constantRegisters[i].set(vm, this, constant);
     }
-
-    m_constantsSourceCodeRepresentation = constantsSourceCodeRepresentation;
 }
 
 void CodeBlock::setAlternative(VM& vm, CodeBlock* alternative)
@@ -1099,8 +1102,6 @@ BytecodeIndex CodeBlock::bytecodeIndexForExit(BytecodeIndex exitIndex) const
 
 void CodeBlock::propagateTransitions(const ConcurrentJSLocker&, SlotVisitor& visitor)
 {
-    UNUSED_PARAM(visitor);
-
     VM& vm = *m_vm;
 
     if (jitType() == JITType::InterpreterThunk) {
@@ -1135,8 +1136,8 @@ void CodeBlock::propagateTransitions(const ConcurrentJSLocker&, SlotVisitor& vis
         
         dfgCommon->recordedStatuses.markIfCheap(visitor);
         
-        for (auto& weakReference : dfgCommon->weakStructureReferences)
-            weakReference->markIfCheap(visitor);
+        for (StructureID structureID : dfgCommon->weakStructureReferences)
+            vm.getStructure(structureID)->markIfCheap(visitor);
 
         for (auto& transition : dfgCommon->transitions) {
             if (shouldMarkTransition(vm, transition)) {
@@ -1195,8 +1196,9 @@ void CodeBlock::determineLiveness(const ConcurrentJSLocker&, SlotVisitor& visito
         }
     }
     if (allAreLiveSoFar) {
-        for (unsigned i = 0; i < dfgCommon->weakStructureReferences.size(); ++i) {
-            if (!vm.heap.isMarked(dfgCommon->weakStructureReferences[i].get())) {
+        for (StructureID structureID : dfgCommon->weakStructureReferences) {
+            Structure* structure = vm.getStructure(structureID);
+            if (!vm.heap.isMarked(structure)) {
                 allAreLiveSoFar = false;
                 break;
             }
@@ -1228,8 +1230,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
             StructureID oldStructureID = metadata.m_modeMetadata.defaultMode.structureID;
             if (!oldStructureID || vm.heap.isMarked(vm.heap.structureIDTable().get(oldStructureID)))
                 return;
-            if (Options::verboseOSR())
-                dataLogF("Clearing LLInt property access.\n");
+            dataLogLnIf(Options::verboseOSR(), "Clearing LLInt property access.");
             LLIntPrototypeLoadAdaptiveStructureWatchpoint::clearLLIntGetByIdCache(metadata);
         });
 
@@ -1237,8 +1238,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
             StructureID oldStructureID = metadata.m_structureID;
             if (!oldStructureID || vm.heap.isMarked(vm.heap.structureIDTable().get(oldStructureID)))
                 return;
-            if (Options::verboseOSR())
-                dataLogF("Clearing LLInt property access.\n");
+            dataLogLnIf(Options::verboseOSR(), "Clearing LLInt property access.");
             metadata.m_structureID = 0;
             metadata.m_offset = 0;
         });
@@ -1251,8 +1251,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
                 && (!newStructureID || vm.heap.isMarked(vm.heap.structureIDTable().get(newStructureID)))
                 && (!chain || vm.heap.isMarked(chain)))
                 return;
-            if (Options::verboseOSR())
-                dataLogF("Clearing LLInt put transition.\n");
+            dataLogLnIf(Options::verboseOSR(), "Clearing LLInt put transition.");
             metadata.m_oldStructureID = 0;
             metadata.m_offset = 0;
             metadata.m_newStructureID = 0;
@@ -1301,8 +1300,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
             WriteBarrierBase<SymbolTable>& symbolTable = metadata.m_symbolTable;
             if (!symbolTable || vm.heap.isMarked(symbolTable.get()))
                 return;
-            if (Options::verboseOSR())
-                dataLogF("Clearing dead symbolTable %p.\n", symbolTable.get());
+            dataLogLnIf(Options::verboseOSR(), "Clearing dead symbolTable ", RawPointer(symbolTable.get()));
             symbolTable.clear();
         });
 
@@ -1314,8 +1312,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
             WriteBarrierBase<Structure>& structure = metadata.m_structure;
             if (!structure || vm.heap.isMarked(structure.get()))
                 return;
-            if (Options::verboseOSR())
-                dataLogF("Clearing scope access with structure %p.\n", structure.get());
+            dataLogLnIf(Options::verboseOSR(), "Clearing scope access with structure ", RawPointer(structure.get()));
             structure.clear();
         };
 
@@ -1330,8 +1327,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
             auto& instruction = instructions().at(std::get<1>(pair.key));
             OpcodeID opcode = instruction->opcodeID();
             if (opcode == op_get_by_id) {
-                if (Options::verboseOSR())
-                    dataLogF("Clearing LLInt property access.\n");
+                dataLogLnIf(Options::verboseOSR(), "Clearing LLInt property access.");
                 LLIntPrototypeLoadAdaptiveStructureWatchpoint::clearLLIntGetByIdCache(instruction->as<OpGetById>().metadata(this));
             }
             return true;
@@ -1350,8 +1346,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
 
     forEachLLIntCallLinkInfo([&](LLIntCallLinkInfo& callLinkInfo) {
         if (callLinkInfo.isLinked() && !vm.heap.isMarked(callLinkInfo.callee())) {
-            if (Options::verboseOSR())
-                dataLog("Clearing LLInt call from ", *this, "\n");
+            dataLogLnIf(Options::verboseOSR(), "Clearing LLInt call from ", *this);
             callLinkInfo.unlink();
         }
         if (callLinkInfo.lastSeenCallee() && !vm.heap.isMarked(callLinkInfo.lastSeenCallee()))
@@ -1388,6 +1383,41 @@ void CodeBlock::finalizeUnconditionally(VM& vm)
     UNUSED_PARAM(vm);
 
     updateAllPredictions();
+
+#if ENABLE(JIT)
+    bool isEligibleForLLIntDowngrade = m_isEligibleForLLIntDowngrade;
+    m_isEligibleForLLIntDowngrade = false;
+    // If BaselineJIT code is not executing, and an optimized replacement exists, we attempt
+    // to discard baseline JIT code and reinstall LLInt code to save JIT memory.
+    if (Options::useLLInt() && !m_hasLinkedOSRExit && jitType() == JITType::BaselineJIT && !m_vm->heap.codeBlockSet().isCurrentlyExecuting(this)) {
+        if (CodeBlock* optimizedCodeBlock = optimizedReplacement()) {
+            if (!optimizedCodeBlock->m_osrExitCounter) {
+                if (isEligibleForLLIntDowngrade) {
+                    m_jitCode = nullptr;
+                    LLInt::setEntrypoint(this);
+                    RELEASE_ASSERT(jitType() == JITType::InterpreterThunk);
+
+                    for (size_t i = 0; i < m_unlinkedCode->numberOfExceptionHandlers(); i++) {
+                        const UnlinkedHandlerInfo& unlinkedHandler = m_unlinkedCode->exceptionHandler(i);
+                        HandlerInfo& handler = m_rareData->m_exceptionHandlers[i];
+                        auto& instruction = *instructions().at(unlinkedHandler.target).ptr();
+                        MacroAssemblerCodePtr<BytecodePtrTag> codePtr = LLInt::getCodePtr<BytecodePtrTag>(instruction);
+                        handler.initialize(unlinkedHandler, CodeLocationLabel<ExceptionHandlerPtrTag>(codePtr.retagged<ExceptionHandlerPtrTag>()));
+                    }
+
+                    unlinkIncomingCalls();
+
+                    // It's safe to clear these out here because in finalizeUnconditionally all compiler threads
+                    // are safepointed, meaning they're running either before or after bytecode parser, and bytecode
+                    // parser is the only data structure pointing into the various *infos.
+                    resetJITData();
+                } else
+                    m_isEligibleForLLIntDowngrade = true;
+            }
+        }
+    }
+
+#endif
     
     if (JITCode::couldBeInterpreted(jitType()))
         finalizeLLIntInlineCaches();
@@ -1551,12 +1581,10 @@ CallLinkInfo* CodeBlock::getCallLinkInfoForBytecodeIndex(BytecodeIndex index)
     return nullptr;
 }
 
-RareCaseProfile* CodeBlock::addRareCaseProfile(BytecodeIndex bytecodeIndex)
+void CodeBlock::setRareCaseProfiles(RefCountedArray<RareCaseProfile>&& rareCaseProfiles)
 {
     ConcurrentJSLocker locker(m_lock);
-    auto& jitData = ensureJITData(locker);
-    jitData.m_rareCaseProfiles.append(RareCaseProfile(bytecodeIndex));
-    return &jitData.m_rareCaseProfiles.last();
+    ensureJITData(locker).m_rareCaseProfiles = WTFMove(rareCaseProfiles);
 }
 
 RareCaseProfile* CodeBlock::rareCaseProfileForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex bytecodeIndex)
@@ -1598,13 +1626,24 @@ void CodeBlock::resetJITData()
         // We can clear these because no other thread will have references to any stub infos, call
         // link infos, or by val infos if we don't have JIT code. Attempts to query these data
         // structures using the concurrent API (getICStatusMap and friends) will return nothing if we
-        // don't have JIT code.
-        jitData->m_stubInfos.clear();
-        jitData->m_callLinkInfos.clear();
-        jitData->m_byValInfos.clear();
+        // don't have JIT code. So it's safe to call this if we fail a baseline JIT compile.
+        //
+        // We also call this from finalizeUnconditionally when we degrade from baseline JIT to LLInt
+        // code. This is safe to do since all compiler threads are safepointed in finalizeUnconditionally,
+        // which means we've made it past bytecode parsing. Only the bytecode parser will hold onto
+        // references to these various *infos via its use of ICStatusMap. Also, OSR exit might point to
+        // these *infos, but when we have an OSR exit linked to this CodeBlock, we won't downgrade
+        // to LLInt.
+
+        for (StructureStubInfo* stubInfo : jitData->m_stubInfos) {
+            stubInfo->aboutToDie();
+            stubInfo->deref();
+        }
+
         // We can clear this because the DFG's queries to these data structures are guarded by whether
         // there is JIT code.
-        jitData->m_rareCaseProfiles.clear();
+
+        m_jitData = nullptr;
     }
 }
 #endif
@@ -1650,13 +1689,18 @@ void CodeBlock::stronglyVisitStrongReferences(const ConcurrentJSLocker& locker, 
 #if ENABLE(JIT)
     if (auto* jitData = m_jitData.get()) {
         for (ByValInfo* byValInfo : jitData->m_byValInfos)
-            visitor.append(byValInfo->cachedSymbol);
+            byValInfo->visitAggregate(visitor);
+        for (StructureStubInfo* stubInfo : jitData->m_stubInfos)
+            stubInfo->visitAggregate(visitor);
     }
 #endif
 
 #if ENABLE(DFG_JIT)
-    if (JITCode::isOptimizingJIT(jitType()))
+    if (JITCode::isOptimizingJIT(jitType())) {
+        DFG::CommonData* dfgCommon = m_jitCode->dfgCommon();
+        dfgCommon->recordedStatuses.visitAggregate(visitor);
         visitOSRExitTargets(locker, visitor);
+    }
 #endif
 }
 
@@ -1680,8 +1724,8 @@ void CodeBlock::stronglyVisitWeakReferences(const ConcurrentJSLocker&, SlotVisit
     for (auto& weakReference : dfgCommon->weakReferences)
         visitor.append(weakReference);
 
-    for (auto& weakStructureReference : dfgCommon->weakStructureReferences)
-        visitor.append(weakStructureReference);
+    for (StructureID structureID : dfgCommon->weakStructureReferences)
+        visitor.appendUnbarriered(visitor.vm().getStructure(structureID));
 
     dfgCommon->livenessHasBeenProved = true;
 #endif    
@@ -1731,10 +1775,24 @@ CodeBlock* CodeBlock::baselineVersion()
 }
 
 #if ENABLE(JIT)
-bool CodeBlock::hasOptimizedReplacement(JITType typeToReplace)
+CodeBlock* CodeBlock::optimizedReplacement(JITType typeToReplace)
 {
     CodeBlock* replacement = this->replacement();
-    return replacement && JITCode::isHigherTier(replacement->jitType(), typeToReplace);
+    if (!replacement)
+        return nullptr;
+    if (JITCode::isHigherTier(replacement->jitType(), typeToReplace))
+        return replacement;
+    return nullptr;
+}
+
+CodeBlock* CodeBlock::optimizedReplacement()
+{
+    return optimizedReplacement(jitType());
+}
+
+bool CodeBlock::hasOptimizedReplacement(JITType typeToReplace)
+{
+    return !!optimizedReplacement(typeToReplace);
 }
 
 bool CodeBlock::hasOptimizedReplacement()
@@ -1753,7 +1811,7 @@ HandlerInfo* CodeBlock::handlerForIndex(unsigned index, RequiredHandler required
 {
     if (!m_rareData)
         return 0;
-    return HandlerInfo::handlerForIndex(m_rareData->m_exceptionHandlers, index, requiredHandler);
+    return HandlerInfo::handlerForIndex<HandlerInfo>(m_rareData->m_exceptionHandlers, index, requiredHandler);
 }
 
 DisposableCallSiteIndex CodeBlock::newExceptionHandlingCallSiteIndex(CallSiteIndex originalCallSite)
@@ -1781,7 +1839,7 @@ void CodeBlock::ensureCatchLivenessIsComputedForBytecodeIndex(BytecodeIndex byte
     OpCatch op = instruction->as<OpCatch>();
     auto& metadata = op.metadata(this);
     if (!!metadata.m_buffer) {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         ConcurrentJSLocker locker(m_lock);
         bool found = false;
         auto* rareData = m_rareData.get();
@@ -1793,7 +1851,7 @@ void CodeBlock::ensureCatchLivenessIsComputedForBytecodeIndex(BytecodeIndex byte
             }
         }
         ASSERT(found);
-#endif
+#endif // ASSERT_ENABLED
         return;
     }
 
@@ -1818,7 +1876,7 @@ void CodeBlock::ensureCatchLivenessIsComputedForBytecodeIndexSlow(const OpCatch&
     });
 
     for (int i = 0; i < numParameters(); ++i)
-        liveOperands.append(virtualRegisterForArgument(i));
+        liveOperands.append(virtualRegisterForArgumentIncludingThis(i));
 
     auto profiles = makeUnique<ValueProfileAndVirtualRegisterBuffer>(liveOperands.size());
     RELEASE_ASSERT(profiles->m_size == liveOperands.size());
@@ -1896,19 +1954,18 @@ bool CodeBlock::hasOpDebugForLineAndColumn(unsigned line, Optional<unsigned> col
     return false;
 }
 
-void CodeBlock::shrinkToFit(ShrinkMode shrinkMode)
+void CodeBlock::shrinkToFit(const ConcurrentJSLocker&, ShrinkMode shrinkMode)
 {
-    ConcurrentJSLocker locker(m_lock);
-
-#if ENABLE(JIT)
-    if (auto* jitData = m_jitData.get())
-        jitData->m_rareCaseProfiles.shrinkToFit();
-#endif
-    
-    if (shrinkMode == EarlyShrink) {
+#if USE(JSVALUE32_64)
+    // Only 32bit Baseline JIT is touching m_constantRegisters address directly.
+    if (shrinkMode == ShrinkMode::EarlyShrink)
         m_constantRegisters.shrinkToFit();
-        m_constantsSourceCodeRepresentation.shrinkToFit();
-        
+#else
+    m_constantRegisters.shrinkToFit();
+#endif
+    m_constantsSourceCodeRepresentation.shrinkToFit();
+
+    if (shrinkMode == ShrinkMode::EarlyShrink) {
         if (m_rareData) {
             m_rareData->m_switchJumpTables.shrinkToFit();
             m_rareData->m_stringSwitchJumpTables.shrinkToFit();
@@ -2182,8 +2239,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
 {
     CodeBlock* callerCodeBlock = callerFrame->codeBlock();
     
-    if (Options::verboseCallLink())
-        dataLog("Noticing call link from ", pointerDump(callerCodeBlock), " to ", *this, "\n");
+    dataLogLnIf(Options::verboseCallLink(), "Noticing call link from ", pointerDump(callerCodeBlock), " to ", *this);
     
 #if ENABLE(DFG_JIT)
     if (!m_shouldAlwaysBeInlined)
@@ -2191,8 +2247,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
     
     if (!callerCodeBlock) {
         m_shouldAlwaysBeInlined = false;
-        if (Options::verboseCallLink())
-            dataLog("    Clearing SABI because caller is native.\n");
+        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because caller is native.");
         return;
     }
 
@@ -2207,8 +2262,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
     
     if (!DFG::isSmallEnoughToInlineCodeInto(callerCodeBlock)) {
         m_shouldAlwaysBeInlined = false;
-        if (Options::verboseCallLink())
-            dataLog("    Clearing SABI because caller is too large.\n");
+        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because caller is too large.");
         return;
     }
 
@@ -2218,15 +2272,13 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
         // ensures that a function is SABI only if it is called no more frequently than
         // any of its callers.
         m_shouldAlwaysBeInlined = false;
-        if (Options::verboseCallLink())
-            dataLog("    Clearing SABI because caller is in LLInt.\n");
+        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because caller is in LLInt.");
         return;
     }
     
     if (JITCode::isOptimizingJIT(callerCodeBlock->jitType())) {
         m_shouldAlwaysBeInlined = false;
-        if (Options::verboseCallLink())
-            dataLog("    Clearing SABI bcause caller was already optimized.\n");
+        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI bcause caller was already optimized.");
         return;
     }
     
@@ -2235,8 +2287,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
         // optimized anytime soon. For eval code this is particularly true since we
         // delay eval optimization by a *lot*.
         m_shouldAlwaysBeInlined = false;
-        if (Options::verboseCallLink())
-            dataLog("    Clearing SABI because caller is not a function.\n");
+        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because caller is not a function.");
         return;
     }
 
@@ -2245,8 +2296,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
     vm().topCallFrame->iterate(vm(), functor);
 
     if (functor.didRecurse()) {
-        if (Options::verboseCallLink())
-            dataLog("    Clearing SABI because recursion was detected.\n");
+        dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because recursion was detected.");
         m_shouldAlwaysBeInlined = false;
         return;
     }
@@ -2259,8 +2309,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
     if (canCompile(callerCodeBlock->capabilityLevelState()))
         return;
     
-    if (Options::verboseCallLink())
-        dataLog("    Clearing SABI because the caller is not a DFG candidate.\n");
+    dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because the caller is not a DFG candidate.");
     
     m_shouldAlwaysBeInlined = false;
 #endif
@@ -2408,12 +2457,9 @@ double CodeBlock::optimizationThresholdScalingFactor()
     
     result *= codeTypeThresholdMultiplier();
     
-    if (Options::verboseOSR()) {
-        dataLog(
-            *this, ": bytecode cost is ", bytecodeCost,
-            ", scaling execution counter by ", result, " * ", codeTypeThresholdMultiplier(),
-            "\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        *this, ": bytecode cost is ", bytecodeCost,
+        ", scaling execution counter by ", result, " * ", codeTypeThresholdMultiplier());
     return result;
 }
 
@@ -2502,22 +2548,19 @@ auto CodeBlock::updateOSRExitCounterAndCheckIfNeedToReoptimize(DFG::OSRExitState
 
 void CodeBlock::optimizeNextInvocation()
 {
-    if (Options::verboseOSR())
-        dataLog(*this, ": Optimizing next invocation.\n");
+    dataLogLnIf(Options::verboseOSR(), *this, ": Optimizing next invocation.");
     m_jitExecuteCounter.setNewThreshold(0, this);
 }
 
 void CodeBlock::dontOptimizeAnytimeSoon()
 {
-    if (Options::verboseOSR())
-        dataLog(*this, ": Not optimizing anytime soon.\n");
+    dataLogLnIf(Options::verboseOSR(), *this, ": Not optimizing anytime soon.");
     m_jitExecuteCounter.deferIndefinitely();
 }
 
 void CodeBlock::optimizeAfterWarmUp()
 {
-    if (Options::verboseOSR())
-        dataLog(*this, ": Optimizing after warm-up.\n");
+    dataLogLnIf(Options::verboseOSR(), *this, ": Optimizing after warm-up.");
 #if ENABLE(DFG_JIT)
     m_jitExecuteCounter.setNewThreshold(
         adjustedCounterValue(Options::thresholdForOptimizeAfterWarmUp()), this);
@@ -2526,8 +2569,7 @@ void CodeBlock::optimizeAfterWarmUp()
 
 void CodeBlock::optimizeAfterLongWarmUp()
 {
-    if (Options::verboseOSR())
-        dataLog(*this, ": Optimizing after long warm-up.\n");
+    dataLogLnIf(Options::verboseOSR(), *this, ": Optimizing after long warm-up.");
 #if ENABLE(DFG_JIT)
     m_jitExecuteCounter.setNewThreshold(
         adjustedCounterValue(Options::thresholdForOptimizeAfterLongWarmUp()), this);
@@ -2536,8 +2578,7 @@ void CodeBlock::optimizeAfterLongWarmUp()
 
 void CodeBlock::optimizeSoon()
 {
-    if (Options::verboseOSR())
-        dataLog(*this, ": Optimizing soon.\n");
+    dataLogLnIf(Options::verboseOSR(), *this, ": Optimizing soon.");
 #if ENABLE(DFG_JIT)
     m_jitExecuteCounter.setNewThreshold(
         adjustedCounterValue(Options::thresholdForOptimizeSoon()), this);
@@ -2546,8 +2587,7 @@ void CodeBlock::optimizeSoon()
 
 void CodeBlock::forceOptimizationSlowPathConcurrently()
 {
-    if (Options::verboseOSR())
-        dataLog(*this, ": Forcing slow path concurrently.\n");
+    dataLogLnIf(Options::verboseOSR(), *this, ": Forcing slow path concurrently.");
     m_jitExecuteCounter.forceSlowPathConcurrently();
 }
 
@@ -2556,7 +2596,7 @@ void CodeBlock::setOptimizationThresholdBasedOnCompilationResult(CompilationResu
 {
     JITType type = jitType();
     if (type != JITType::BaselineJIT) {
-        dataLog(*this, ": expected to have baseline code but have ", type, "\n");
+        dataLogLn(*this, ": expected to have baseline code but have ", type);
         CRASH_WITH_INFO(bitwise_cast<uintptr_t>(jitCode().get()), static_cast<uint8_t>(type));
     }
     
@@ -2760,8 +2800,7 @@ void CodeBlock::updateAllPredictions()
 
 bool CodeBlock::shouldOptimizeNow()
 {
-    if (Options::verboseOSR())
-        dataLog("Considering optimizing ", *this, "...\n");
+    dataLogLnIf(Options::verboseOSR(), "Considering optimizing ", *this, "...");
 
     if (m_optimizationDelayCounter >= Options::maximumOptimizationDelay())
         return true;
@@ -2796,7 +2835,7 @@ bool CodeBlock::shouldOptimizeNow()
 void CodeBlock::tallyFrequentExitSites()
 {
     ASSERT(JITCode::isOptimizingJIT(jitType()));
-    ASSERT(alternative()->jitType() == JITType::BaselineJIT);
+    ASSERT(JITCode::isBaselineCode(alternative()->jitType()));
     
     CodeBlock* profiledBlock = alternative();
     
@@ -3163,7 +3202,7 @@ void CodeBlock::insertBasicBlockBoundariesForControlFlowProfiler()
 {
     if (!unlinkedCodeBlock()->hasOpProfileControlFlowBytecodeOffsets())
         return;
-    const Vector<InstructionStream::Offset>& bytecodeOffsets = unlinkedCodeBlock()->opProfileControlFlowBytecodeOffsets();
+    const RefCountedArray<InstructionStream::Offset>& bytecodeOffsets = unlinkedCodeBlock()->opProfileControlFlowBytecodeOffsets();
     for (size_t i = 0, offsetsLength = bytecodeOffsets.size(); i < offsetsLength; i++) {
         // Because op_profile_control_flow is emitted at the beginning of every basic block, finding 
         // the next op_profile_control_flow will give us the text range of a single basic block.
@@ -3267,14 +3306,9 @@ Optional<BytecodeIndex> CodeBlock::bytecodeIndexFromCallSiteIndex(CallSiteIndex 
 {
     Optional<BytecodeIndex> bytecodeIndex;
     JITType jitType = this->jitType();
-    if (jitType == JITType::InterpreterThunk || jitType == JITType::BaselineJIT) {
-#if USE(JSVALUE64)
+    if (jitType == JITType::InterpreterThunk || jitType == JITType::BaselineJIT)
         bytecodeIndex = callSiteIndex.bytecodeIndex();
-#else
-        Instruction* instruction = bitwise_cast<Instruction*>(callSiteIndex.bits());
-        bytecodeIndex = this->bytecodeIndex(instruction);
-#endif
-    } else if (jitType == JITType::DFGJIT || jitType == JITType::FTLJIT) {
+    else if (jitType == JITType::DFGJIT || jitType == JITType::FTLJIT) {
 #if ENABLE(DFG_JIT)
         RELEASE_ASSERT(canGetCodeOrigin(callSiteIndex));
         CodeOrigin origin = codeOrigin(callSiteIndex);

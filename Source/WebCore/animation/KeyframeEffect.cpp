@@ -45,11 +45,13 @@
 #include "JSDOMConvert.h"
 #include "JSKeyframeEffect.h"
 #include "KeyframeEffectStack.h"
+#include "Logging.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
 #include "RuntimeEnabledFeatures.h"
+#include "StyleAdjuster.h"
 #include "StylePendingResources.h"
 #include "StyleResolver.h"
 #include "TimingFunction.h"
@@ -57,6 +59,7 @@
 #include "WillChangeData.h"
 #include <JavaScriptCore/Exception.h>
 #include <wtf/UUID.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -518,7 +521,7 @@ Ref<KeyframeEffect> KeyframeEffect::create(const Element& target)
 }
 
 KeyframeEffect::KeyframeEffect(Element* target)
-    : m_target(target)
+    : m_target(makeWeakPtr(target))
 {
 }
 
@@ -768,6 +771,20 @@ void KeyframeEffect::updateBlendingKeyframes(RenderStyle& elementStyle)
     setBlendingKeyframes(keyframeList);
 }
 
+bool KeyframeEffect::animatesProperty(CSSPropertyID property) const
+{
+    if (!m_blendingKeyframes.isEmpty())
+        return m_blendingKeyframes.properties().contains(property);
+
+    for (auto& keyframe : m_parsedKeyframes) {
+        for (auto keyframeProperty : keyframe.unparsedStyle.keys()) {
+            if (keyframeProperty == property)
+                return true;
+        }
+    }
+    return false;
+}
+
 bool KeyframeEffect::forceLayoutIfNeeded()
 {
     if (!m_needsForcedLayout || !m_target)
@@ -789,6 +806,7 @@ bool KeyframeEffect::forceLayoutIfNeeded()
 void KeyframeEffect::clearBlendingKeyframes()
 {
     m_blendingKeyframesSource = BlendingKeyframesSource::WebAnimation;
+    m_unanimatedStyle = nullptr;
     m_blendingKeyframes.clear();
 }
 
@@ -798,7 +816,7 @@ void KeyframeEffect::setBlendingKeyframes(KeyframeList& blendingKeyframes)
 
     computedNeedsForcedLayout();
     computeStackingContextImpact();
-    computeShouldRunAccelerated();
+    computeAcceleratedPropertiesState();
 
     checkForMatchingTransformFunctionLists();
     checkForMatchingFilterFunctionLists();
@@ -907,12 +925,12 @@ void KeyframeEffect::computeDeclarativeAnimationBlendingKeyframes(const RenderSt
 {
     ASSERT(is<DeclarativeAnimation>(animation()));
     if (is<CSSAnimation>(animation()))
-        computeCSSAnimationBlendingKeyframes();
+        computeCSSAnimationBlendingKeyframes(newStyle);
     else if (is<CSSTransition>(animation()))
         computeCSSTransitionBlendingKeyframes(oldStyle, newStyle);
 }
 
-void KeyframeEffect::computeCSSAnimationBlendingKeyframes()
+void KeyframeEffect::computeCSSAnimationBlendingKeyframes(const RenderStyle& unanimatedStyle)
 {
     ASSERT(is<CSSAnimation>(animation()));
 
@@ -921,7 +939,7 @@ void KeyframeEffect::computeCSSAnimationBlendingKeyframes()
 
     KeyframeList keyframeList(backingAnimation.name());
     if (auto* styleScope = Style::Scope::forOrdinal(*m_target, backingAnimation.nameStyleScopeOrdinal()))
-        styleScope->resolver().keyframeStylesForAnimation(*m_target, &cssAnimation->unanimatedStyle(), keyframeList);
+        styleScope->resolver().keyframeStylesForAnimation(*m_target, &unanimatedStyle, keyframeList);
 
     // Ensure resource loads for all the frames.
     for (auto& keyframe : keyframeList.keyframes()) {
@@ -1047,10 +1065,10 @@ void KeyframeEffect::setAnimation(WebAnimation* animation)
 
 void KeyframeEffect::setTarget(RefPtr<Element>&& newTarget)
 {
-    if (m_target == newTarget)
+    if (m_target.get() == newTarget.get())
         return;
 
-    auto previousTarget = std::exchange(m_target, WTFMove(newTarget));
+    auto previousTarget = std::exchange(m_target, makeWeakPtr(newTarget.get()));
 
     if (auto* effectAnimation = animation())
         effectAnimation->effectTargetDidChange(previousTarget.get(), m_target.get());
@@ -1081,21 +1099,33 @@ void KeyframeEffect::apply(RenderStyle& targetStyle)
     updateBlendingKeyframes(targetStyle);
 
     auto computedTiming = getComputedTiming();
-
-    updateAcceleratedAnimationState(computedTiming);
+    m_phaseAtLastApplication = computedTiming.phase;
 
     InspectorInstrumentation::willApplyKeyframeEffect(*m_target, *this, computedTiming);
 
     if (!computedTiming.progress)
         return;
 
-    setAnimatedPropertiesInStyle(targetStyle, computedTiming.progress.value());
+    if (!m_unanimatedStyle)
+        m_unanimatedStyle = RenderStyle::clonePtr(targetStyle);
 
-    // https://w3c.github.io/web-animations/#side-effects-section
-    // For every property targeted by at least one animation effect that is current or in effect, the user agent
-    // must act as if the will-change property ([css-will-change-1]) on the target element includes the property.
-    if (m_triggersStackingContext && targetStyle.hasAutoUsedZIndex())
-        targetStyle.setUsedZIndex(0);
+    setAnimatedPropertiesInStyle(targetStyle, computedTiming.progress.value());
+}
+
+bool KeyframeEffect::isCurrentlyAffectingProperty(CSSPropertyID property, Accelerated accelerated) const
+{
+    if (accelerated == Accelerated::Yes && !isRunningAccelerated() && !isAboutToRunAccelerated())
+        return false;
+
+    if (!m_blendingKeyframes.properties().contains(property))
+        return false;
+
+    return m_phaseAtLastApplication == AnimationEffectPhase::Active;
+}
+
+bool KeyframeEffect::isRunningAcceleratedAnimationForProperty(CSSPropertyID property) const
+{
+    return m_isRunningAccelerated && CSSPropertyAnimation::animationOfPropertyIsAccelerated(property) && m_blendingKeyframes.properties().contains(property);
 }
 
 void KeyframeEffect::invalidate()
@@ -1103,23 +1133,36 @@ void KeyframeEffect::invalidate()
     invalidateElement(m_target.get());
 }
 
-void KeyframeEffect::computeShouldRunAccelerated()
+void KeyframeEffect::computeAcceleratedPropertiesState()
 {
-    m_shouldRunAccelerated = hasBlendingKeyframes();
+    bool hasSomeAcceleratedProperties = false;
+    bool hasSomeUnacceleratedProperties = false;
+
     for (auto cssPropertyId : m_blendingKeyframes.properties()) {
-        if (!CSSPropertyAnimation::animationOfPropertyIsAccelerated(cssPropertyId)) {
-            m_shouldRunAccelerated = false;
-            return;
-        }
+        // If any animated property can be accelerated, then the animation should run accelerated.
+        if (CSSPropertyAnimation::animationOfPropertyIsAccelerated(cssPropertyId))
+            hasSomeAcceleratedProperties = true;
+        else
+            hasSomeUnacceleratedProperties = true;
+        if (hasSomeAcceleratedProperties && hasSomeUnacceleratedProperties)
+            break;
     }
+
+    if (!hasSomeAcceleratedProperties)
+        m_acceleratedPropertiesState = AcceleratedProperties::None;
+    else if (hasSomeUnacceleratedProperties)
+        m_acceleratedPropertiesState = AcceleratedProperties::Some;
+    else
+        m_acceleratedPropertiesState = AcceleratedProperties::All;
 }
 
 void KeyframeEffect::getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle)
 {
-    if (!m_target || !animation())
+    if (!m_target || !renderer() || !animation())
         return;
 
     auto progress = getComputedTiming().progress;
+    LOG_WITH_STREAM(Animations, stream << "KeyframeEffect " << this << " getAnimatedStyle - progress " << progress);
     if (!progress)
         return;
 
@@ -1307,46 +1350,39 @@ TimingFunction* KeyframeEffect::timingFunctionForKeyframeAtIndex(size_t index)
     return nullptr;
 }
 
-void KeyframeEffect::updateAcceleratedAnimationState(ComputedEffectTiming computedTiming)
+void KeyframeEffect::updateAcceleratedActions()
 {
-    if (!m_shouldRunAccelerated)
+    if (m_acceleratedPropertiesState == AcceleratedProperties::None)
         return;
 
-    if (!renderer()) {
-        if (isRunningAccelerated())
-            addPendingAcceleratedAction(AcceleratedAction::Stop);
+    auto computedTiming = getComputedTiming();
+
+    // If we're not already running accelerated, the only thing we're interested in is whether we need to start the animation
+    // which we need to do once we're in the active phase. Otherwise, there's no change in accelerated state to consider.
+    bool isActive = computedTiming.phase == AnimationEffectPhase::Active;
+    if (!m_isRunningAccelerated) {
+        if (isActive && animation()->playState() == WebAnimation::PlayState::Running)
+            addPendingAcceleratedAction(AcceleratedAction::Play);
         return;
     }
 
-    auto localTime = animation()->currentTime();
-
-    // If we don't have a localTime or localTime < 0, we either don't have a start time or we're before the startTime
-    // so we shouldn't be running.
-    if (!localTime || localTime.value() < 0_s) {
-        if (isRunningAccelerated())
-            addPendingAcceleratedAction(AcceleratedAction::Stop);
+    // If we're no longer active, we need to remove the accelerated animation.
+    if (!isActive) {
+        addPendingAcceleratedAction(AcceleratedAction::Stop);
         return;
     }
 
     auto playState = animation()->playState();
+    // The only thing left to consider is whether we need to pause or resume the animation following a change of play-state.
     if (playState == WebAnimation::PlayState::Paused) {
         if (m_lastRecordedAcceleratedAction != AcceleratedAction::Pause) {
             if (m_lastRecordedAcceleratedAction == AcceleratedAction::Stop)
                 addPendingAcceleratedAction(AcceleratedAction::Play);
             addPendingAcceleratedAction(AcceleratedAction::Pause);
         }
-        return;
-    }
-
-    if (playState == WebAnimation::PlayState::Finished) {
-        addPendingAcceleratedAction(AcceleratedAction::Stop);
-        return;
-    }
-
-    if (playState == WebAnimation::PlayState::Running && computedTiming.phase == AnimationEffectPhase::Active) {
+    } else if (playState == WebAnimation::PlayState::Running && isActive) {
         if (m_lastRecordedAcceleratedAction != AcceleratedAction::Play)
             addPendingAcceleratedAction(AcceleratedAction::Play);
-        return;
     }
 }
 
@@ -1363,23 +1399,41 @@ void KeyframeEffect::addPendingAcceleratedAction(AcceleratedAction action)
     animation()->acceleratedStateDidChange();
 }
 
+void KeyframeEffect::animationDidTick()
+{
+    invalidate();
+    updateAcceleratedActions();
+}
+
+void KeyframeEffect::animationDidPlay()
+{
+    if (m_acceleratedPropertiesState != AcceleratedProperties::None)
+        addPendingAcceleratedAction(AcceleratedAction::Play);
+}
+
 void KeyframeEffect::animationDidSeek()
 {
     // There is no need to seek if we're not playing an animation already. If seeking
     // means we're moving into an active lexicalGlobalObject, we'll pick this up in apply().
-    if (m_shouldRunAccelerated && isRunningAccelerated())
+    if (m_isRunningAccelerated || isAboutToRunAccelerated())
         addPendingAcceleratedAction(AcceleratedAction::Seek);
 }
 
 void KeyframeEffect::animationWasCanceled()
 {
-    if (m_shouldRunAccelerated && isRunningAccelerated())
+    if (m_isRunningAccelerated || isAboutToRunAccelerated())
+        addPendingAcceleratedAction(AcceleratedAction::Stop);
+}
+
+void KeyframeEffect::willChangeRenderer()
+{
+    if (m_isRunningAccelerated || isAboutToRunAccelerated())
         addPendingAcceleratedAction(AcceleratedAction::Stop);
 }
 
 void KeyframeEffect::animationSuspensionStateDidChange(bool animationIsSuspended)
 {
-    if (m_shouldRunAccelerated)
+    if (m_isRunningAccelerated || isAboutToRunAccelerated())
         addPendingAcceleratedAction(animationIsSuspended ? AcceleratedAction::Pause : AcceleratedAction::Play);
 }
 
@@ -1393,22 +1447,19 @@ void KeyframeEffect::applyPendingAcceleratedActions()
     if (m_pendingAcceleratedActions.isEmpty())
         return;
 
-    // In the case where we have a composited renderer, we'll be applying all pending accelerated actions.
-    // In case we don't have a composited renderer, then we won't be able to apply the pending accelerated
-    // actions. In both cases, we can clear the pending accelerated actions.
-    auto pendingAcceleratedActions = m_pendingAcceleratedActions;
-    m_pendingAcceleratedActions.clear();
-
     auto* renderer = this->renderer();
     if (!renderer || !renderer->isComposited()) {
-        // If we don't have a composited renderer when we were supposed to be applying an accelerated action other
-        // than to stop a running animation, then we won't manage to apply accelerations in the future either, so
-        // we should reset the flag to run accelerated.
-        m_lastRecordedAcceleratedAction = AcceleratedAction::Stop;
+        // The renderer may no longer be composited because the accelerated animation ended before we had a chance to update it,
+        // in which case if we asked for the animation to stop, we can discard the current set of accelerated actions.
+        if (m_lastRecordedAcceleratedAction == AcceleratedAction::Stop) {
+            m_pendingAcceleratedActions.clear();
+            m_isRunningAccelerated = false;
+        }
         return;
     }
 
-    auto* compositedRenderer = downcast<RenderBoxModelObject>(renderer);
+    auto pendingAcceleratedActions = m_pendingAcceleratedActions;
+    m_pendingAcceleratedActions.clear();
 
     // To simplify the code we use a default of 0s for an unresolved current time since for a Stop action that is acceptable.
     auto timeOffset = animation()->currentTime().valueOr(0_s).seconds() - delay().seconds();
@@ -1416,23 +1467,23 @@ void KeyframeEffect::applyPendingAcceleratedActions()
     for (const auto& action : pendingAcceleratedActions) {
         switch (action) {
         case AcceleratedAction::Play:
-            if (!compositedRenderer->startAnimation(timeOffset, backingAnimationForCompositedRenderer(), m_blendingKeyframes)) {
-                m_shouldRunAccelerated = false;
+            m_isRunningAccelerated = renderer->startAnimation(timeOffset, backingAnimationForCompositedRenderer(), m_blendingKeyframes);
+            if (!m_isRunningAccelerated) {
                 m_lastRecordedAcceleratedAction = AcceleratedAction::Stop;
-                animation()->acceleratedStateDidChange();
                 return;
             }
             break;
         case AcceleratedAction::Pause:
-            compositedRenderer->animationPaused(timeOffset, m_blendingKeyframes.animationName());
+            renderer->animationPaused(timeOffset, m_blendingKeyframes.animationName());
             break;
         case AcceleratedAction::Seek:
-            compositedRenderer->animationSeeked(timeOffset, m_blendingKeyframes.animationName());
+            renderer->animationSeeked(timeOffset, m_blendingKeyframes.animationName());
             break;
         case AcceleratedAction::Stop:
-            compositedRenderer->animationFinished(m_blendingKeyframes.animationName());
+            renderer->animationFinished(m_blendingKeyframes.animationName());
             if (!m_target->document().renderTreeBeingDestroyed())
                 m_target->invalidateStyleAndLayerComposition();
+            m_isRunningAccelerated = false;
             break;
         }
     }
@@ -1508,7 +1559,7 @@ bool KeyframeEffect::computeExtentOfTransformAnimation(LayoutRect& bounds) const
     auto& box = downcast<RenderBox>(*renderer());
     auto rendererBox = snapRectToDevicePixels(box.borderBoxRect(), box.document().deviceScaleFactor());
 
-    auto cumulativeBounds = bounds;
+    LayoutRect cumulativeBounds;
 
     for (const auto& keyframe : m_blendingKeyframes.keyframes()) {
         const auto* keyframeStyle = keyframe.style();

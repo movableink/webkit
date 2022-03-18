@@ -117,6 +117,7 @@ if (ENABLE_VIDEO)
             ${GSTREAMER_GL_LIBRARIES}
         )
         list(APPEND WebCore_SOURCES
+            platform/graphics/gstreamer/PlatformDisplayGStreamer.cpp
             platform/graphics/gstreamer/VideoTextureCopierGStreamer.cpp
         )
     endif ()
@@ -164,9 +165,10 @@ if (ENABLE_ENCRYPTED_MEDIA)
     )
 
     list(APPEND WebCore_SOURCES
+        platform/encryptedmedia/CDMProxy.cpp
         platform/encryptedmedia/clearkey/CDMClearKey.cpp
-
         platform/graphics/gstreamer/eme/CDMFactoryGStreamer.cpp
+        platform/graphics/gstreamer/eme/CDMProxyClearKey.cpp
     )
 
     list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES

@@ -17,6 +17,12 @@
     "imported/w3c/css/css-values/vh_not_refreshing_on_chrome.html": [
         "slow"
     ],
+    "imported/w3c/web-animations/timing-model/animations/updating-the-finished-state.html": [
+        "slow"
+    ],
+    "imported/w3c/web-animations/timing-model/timelines/update-and-send-events.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/IndexedDB/idb-binary-key-roundtrip.htm": [
         "slow"
     ],
@@ -428,6 +434,12 @@
     "imported/w3c/web-platform-tests/beacon/beacon-navigate.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/content-security-policy/frame-ancestors/report-blocked-frame.sub.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/content-security-policy/frame-ancestors/report-only-frame.sub.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/content-security-policy/generic/no-default-src.sub.html": [
         "slow"
     ],
@@ -482,6 +494,15 @@
     "imported/w3c/web-platform-tests/css/css-color/color-resolving-hsl.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/css/css-fonts/font-display/font-display.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/css/css-fonts/variations/at-font-face-font-matching.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/css/css-fonts/variations/font-style-interpolation.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/css/css-transitions/properties-value-001.html": [
         "slow"
     ],
@@ -498,9 +519,6 @@
         "slow"
     ],
     "imported/w3c/web-platform-tests/css/css-transitions/transitioncancel-001.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/css/cssom-view/matchMedia.xht": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/css/cssom-view/scroll-behavior-default-css.html": [
@@ -2180,10 +2198,19 @@
     "imported/w3c/web-platform-tests/workers/semantics/multiple-workers/007.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/xhr/overridemimetype-blob.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/xhr/progress-events-response-data-gzip.htm": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/xhr/response-data-progress.htm": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/xhr/send-redirect-bogus.htm": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/xhr/setrequestheader-content-type.htm": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/xhr/xmlhttprequest-timeout-aborted.html": [

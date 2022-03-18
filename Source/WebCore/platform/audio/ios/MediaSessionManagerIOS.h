@@ -27,6 +27,8 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#include "AudioSession.h"
+#include "MediaSessionHelperIOS.h"
 #include "MediaSessionManagerCocoa.h"
 #include <wtf/RetainPtr.h>
 
@@ -41,17 +43,18 @@ extern NSString* WebUIApplicationDidEnterBackgroundNotification;
 
 namespace WebCore {
 
-class MediaSessionManageriOS : public MediaSessionManagerCocoa {
+class MediaSessionManageriOS
+    : public MediaSessionManagerCocoa
+    , public MediaSessionHelperClient
+    , public AudioSession::InterruptionObserver {
 public:
     virtual ~MediaSessionManageriOS();
 
-    void externalOutputDeviceAvailableDidChange();
     bool hasWirelessTargetsAvailable() override;
-#if HAVE(CELESTIAL)
-    void carPlayServerDied();
-    void updateCarPlayIsConnected(Optional<bool>&&);
-    void activeAudioRouteDidChange(Optional<bool>&&);
-#endif
+    static WEBCORE_EXPORT void providePresentingApplicationPID();
+
+    using WeakValueType = MediaSessionHelperClient::WeakValueType;
+    using MediaSessionHelperClient::weakPtrFactory;
 
 private:
     friend class PlatformMediaSessionManager;
@@ -62,16 +65,27 @@ private:
 
     void configureWireLessTargetMonitoring() override;
     void providePresentingApplicationPIDIfNecessary() final;
-    void sessionWillEndPlayback(PlatformMediaSession&) final;
+    void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying) final;
 
+    // AudioSession::InterruptionObserver
+    void beginAudioSessionInterruption() final { beginInterruption(PlatformMediaSession::SystemInterruption); }
+    void endAudioSessionInterruption(AudioSession::MayResume mayResume) final { endInterruption(mayResume == AudioSession::MayResume::Yes ? PlatformMediaSession::MayResumePlaying : PlatformMediaSession::NoFlags); }
+
+    // MediaSessionHelperClient
+    void applicationWillEnterForeground(SuspendedUnderLock) final;
+    void applicationDidEnterBackground(SuspendedUnderLock) final;
+    void applicationWillBecomeInactive() final;
+    void applicationDidBecomeActive() final;
+    void externalOutputDeviceAvailableDidChange(HasAvailableTargets) final;
+    void activeAudioRouteDidChange(ShouldPause) final;
+    void activeVideoRouteDidChange(SupportsAirPlayVideo, Ref<MediaPlaybackTarget>&&) final;
+    void isPlayingToAutomotiveHeadUnitDidChange(PlayingToAutomotiveHeadUnit) final;
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "MediaSessionManageriOS"; }
 #endif
 
-    RetainPtr<WebMediaSessionHelper> m_objcObserver;
-#if HAVE(CELESTIAL)
+    bool m_isMonitoringWirelessRoutes { false };
     bool m_havePresentedApplicationPID { false };
-#endif
 };
 
 } // namespace WebCore

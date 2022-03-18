@@ -275,7 +275,20 @@ private:
                 }
                 break;
             }
-                
+
+            case CheckArrayOrEmpty: {
+                const AbstractValue& value = m_state.forNode(node->child1());
+                if (!(value.m_type & SpecEmpty)) {
+                    node->convertCheckArrayOrEmptyToCheckArray();
+                    changed = true;
+                }
+                // Even if the input includes SpecEmpty, we can fall through to CheckArray and remove the node.
+                // CheckArrayOrEmpty can be removed when arrayMode meets the requirement. In that case, CellUse's
+                // check just remains, and it works as CheckArrayOrEmpty without ArrayMode checking.
+                ASSERT(typeFilterFor(node->child1().useKind()) & SpecEmpty);
+                FALLTHROUGH;
+            }
+
             case CheckArray:
             case Arrayify: {
                 if (!node->arrayMode().alreadyChecked(m_graph, node, m_state.forNode(node->child1())))
@@ -401,7 +414,7 @@ private:
                         FlushedJSValue);
                 } else {
                     data = m_graph.m_stackAccessData.add(
-                        virtualRegisterForArgument(index + 1), FlushedJSValue);
+                        virtualRegisterForArgumentIncludingThis(index + 1), FlushedJSValue);
                 }
                 
                 if (inlineCallFrame && !inlineCallFrame->isVarargs() && index < static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1)) {
@@ -606,18 +619,15 @@ private:
                 AbstractValue baseValue = m_state.forNode(child);
                 AbstractValue valueValue = m_state.forNode(node->child2());
 
-                m_interpreter.execute(indexInBlock); // Push CFA over this node after we get the state before.
-                alreadyHandled = true; // Don't allow the default constant folder to do things to this.
-
                 if (!baseValue.m_structure.isFinite())
                     break;
-                
+
                 PutByIdStatus status = PutByIdStatus::computeFor(
                     m_graph.globalObjectFor(origin.semantic),
                     baseValue.m_structure.toStructureSet(),
                     m_graph.identifiers()[identifierNumber],
                     node->op() == PutByIdDirect);
-                
+
                 if (!status.isSimple())
                     break;
 
@@ -629,9 +639,9 @@ private:
                 changed = true;
 
                 bool allGood = true;
+                RegisteredStructureSet newSet;
+                TransitionVector transitions;
                 for (const PutByIdVariant& variant : status.variants()) {
-                    if (!allGood)
-                        break;
                     for (const ObjectPropertyCondition& condition : variant.conditionSet()) {
                         if (m_graph.watchCondition(condition))
                             continue;
@@ -648,10 +658,32 @@ private:
                             m_insertionSet.insertConstantForUse(
                                 indexInBlock, node->origin, condition.object(), KnownCellUse));
                     }
+
+                    if (!allGood)
+                        break;
+
+                    if (variant.kind() == PutByIdVariant::Transition) {
+                        RegisteredStructure newStructure = m_graph.registerStructure(variant.newStructure());
+                        transitions.append(
+                            Transition(
+                                m_graph.registerStructure(variant.oldStructureForTransition()), newStructure));
+                        newSet.add(newStructure);
+                    } else {
+                        ASSERT(variant.kind() == PutByIdVariant::Replace);
+                        newSet.merge(*m_graph.addStructureSet(variant.oldStructure()));
+                    }
                 }
 
                 if (!allGood)
                     break;
+
+                // Push CFA over this node after we get the state before.
+                m_interpreter.didFoldClobberWorld();
+                m_interpreter.observeTransitions(indexInBlock, transitions);
+                if (m_state.forNode(node->child1()).changeStructure(m_graph, newSet) == Contradiction)
+                    m_state.setIsValid(false);
+
+                alreadyHandled = true; // Don't allow the default constant folder to do things to this.
                 
                 m_insertionSet.insertNode(
                     indexInBlock, SpecNone, FilterPutByIdStatus, node->origin,
@@ -693,6 +725,15 @@ private:
                 if (m_state.forNode(node->child1()).m_type & ~(SpecFullNumber | SpecBoolean | SpecString | SpecSymbol | SpecBigInt))
                     break;
                 
+                node->convertToIdentity();
+                changed = true;
+                break;
+            }
+
+            case ToPropertyKey: {
+                if (m_state.forNode(node->child1()).m_type & ~(SpecString | SpecSymbol))
+                    break;
+
                 node->convertToIdentity();
                 changed = true;
                 break;
@@ -1055,6 +1096,7 @@ private:
             case PhantomNewGeneratorFunction:
             case PhantomNewAsyncGeneratorFunction:
             case PhantomNewAsyncFunction:
+            case PhantomNewArrayIterator:
             case PhantomCreateActivation:
             case PhantomDirectArguments:
             case PhantomClonedArguments:

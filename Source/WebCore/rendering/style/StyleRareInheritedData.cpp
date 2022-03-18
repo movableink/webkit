@@ -73,6 +73,8 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
 
 COMPILE_ASSERT(sizeof(StyleRareInheritedData) <= sizeof(GreaterThanOrSameSizeAsStyleRareInheritedData), StyleRareInheritedData_should_bit_pack);
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
+
 StyleRareInheritedData::StyleRareInheritedData()
     : listStyleImage(RenderStyle::initialListStyleImage())
     , textStrokeWidth(RenderStyle::initialTextStrokeWidth())
@@ -103,9 +105,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textIndentType(RenderStyle::initialTextIndentType())
 #endif
     , lineBoxContain(static_cast<unsigned>(RenderStyle::initialLineBoxContain().toRaw()))
-#if ENABLE(CSS_IMAGE_ORIENTATION)
     , imageOrientation(RenderStyle::initialImageOrientation())
-#endif
     , imageRendering(static_cast<unsigned>(RenderStyle::initialImageRendering()))
     , lineSnap(static_cast<unsigned>(RenderStyle::initialLineSnap()))
     , lineAlign(static_cast<unsigned>(RenderStyle::initialLineAlign()))
@@ -133,9 +133,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , joinStyle(RenderStyle::initialJoinStyle())
     , hasSetStrokeWidth(false)
     , hasSetStrokeColor(false)
-#if ENABLE(POINTER_EVENTS)
     , effectiveTouchActions(static_cast<unsigned>(RenderStyle::initialTouchActions()))
-#endif
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
     , miterLimit(RenderStyle::initialStrokeMiterLimit())
@@ -201,9 +199,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textIndentType(o.textIndentType)
 #endif
     , lineBoxContain(o.lineBoxContain)
-#if ENABLE(CSS_IMAGE_ORIENTATION)
     , imageOrientation(o.imageOrientation)
-#endif
     , imageRendering(o.imageRendering)
     , lineSnap(o.lineSnap)
     , lineAlign(o.lineAlign)
@@ -231,9 +227,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , joinStyle(o.joinStyle)
     , hasSetStrokeWidth(o.hasSetStrokeWidth)
     , hasSetStrokeColor(o.hasSetStrokeColor)
-#if ENABLE(POINTER_EVENTS)
     , effectiveTouchActions(o.effectiveTouchActions)
-#endif
     , strokeWidth(o.strokeWidth)
     , strokeColor(o.strokeColor)
     , visitedLinkStrokeColor(o.visitedLinkStrokeColor)
@@ -331,9 +325,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && appleColorFilter == o.appleColorFilter
         && tabSize == o.tabSize
         && lineGrid == o.lineGrid
-#if ENABLE(CSS_IMAGE_ORIENTATION)
         && imageOrientation == o.imageOrientation
-#endif
         && imageRendering == o.imageRendering
 #if ENABLE(CSS_IMAGE_RESOLUTION)
         && imageResolutionSource == o.imageResolutionSource
@@ -356,9 +348,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && joinStyle == o.joinStyle
         && hasSetStrokeWidth == o.hasSetStrokeWidth
         && hasSetStrokeColor == o.hasSetStrokeColor
-#if ENABLE(POINTER_EVENTS)
         && effectiveTouchActions == o.effectiveTouchActions
-#endif
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor

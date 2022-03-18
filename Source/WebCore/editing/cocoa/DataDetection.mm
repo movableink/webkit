@@ -43,6 +43,7 @@
 #import "NodeTraversal.h"
 #import "Range.h"
 #import "RenderObject.h"
+#import "SimpleRange.h"
 #import "StyleProperties.h"
 #import "Text.h"
 #import "TextIterator.h"
@@ -499,7 +500,7 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
             iterator.advance();
 
         Vector<RefPtr<Range>> fragmentRanges;
-        RefPtr<Range> currentRange = iterator.range();
+        RefPtr<Range> currentRange = createLiveRange(iterator.range());
         CFIndex fragmentIndex = queryRange.start.queryIndex;
         if (fragmentIndex == queryRange.end.queryIndex)
             fragmentRanges.append(TextIterator::subrange(*currentRange, queryRange.start.offset, queryRange.end.offset - queryRange.start.offset));
@@ -516,7 +517,7 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
             for (; iteratorCount < iteratorTargetAdvanceCount; ++iteratorCount)
                 iterator.advance();
 
-            currentRange = iterator.range();
+            currentRange = createLiveRange(iterator.range());
             RefPtr<Range> fragmentRange = (fragmentIndex == queryRange.end.queryIndex) ?  Range::create(currentRange->ownerDocument(), &currentRange->startContainer(), currentRange->startOffset(), &currentRange->endContainer(), currentRange->startOffset() + queryRange.end.offset) : currentRange;
             RefPtr<Range> previousRange = fragmentRanges.last();
             if (&previousRange->startContainer() == &fragmentRange->startContainer()) {
@@ -612,7 +613,6 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
             Ref<HTMLAnchorElement> anchorElement = HTMLAnchorElement::create(document);
             anchorElement->setHref(correspondingURL);
             anchorElement->setDir("ltr");
-            anchorElement->setInlineStyleProperty(CSSPropertyColor, CSSValueCurrentcolor);
 
             if (shouldUseLightLinks) {
                 document.updateStyleIfNeeded();
@@ -630,6 +630,7 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
                         double overrideAlphaMultiplier = 0.38;
                         auto underlineColor = Color(makeRGBAFromHSLA(hue, saturation, overrideLightness, overrideAlphaMultiplier * textColor.alphaAsFloat()));
 
+                        anchorElement->setInlineStyleProperty(CSSPropertyColor, CSSValueCurrentcolor);
                         anchorElement->setInlineStyleProperty(CSSPropertyTextDecorationColor, underlineColor.cssText());
                     }
                 }

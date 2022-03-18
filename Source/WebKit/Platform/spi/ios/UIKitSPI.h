@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#import <UIKit/NSTextAlternatives.h>
 #import <UIKit/UIAlertController_Private.h>
 #import <UIKit/UIApplication_Private.h>
 #import <UIKit/UIBarButtonItem_Private.h>
@@ -92,11 +93,12 @@
 #if HAVE(LINK_PREVIEW)
 #import <UIKit/UIPreviewAction_Private.h>
 #import <UIKit/UIPreviewItemController.h>
+#endif
+
 #if USE(UICONTEXTMENU)
 #import <UIKit/UIContextMenuInteraction_ForSpringBoardOnly.h>
 #import <UIKit/UIContextMenuInteraction_ForWebKitOnly.h>
 #import <UIKit/UIContextMenuInteraction_Private.h>
-#endif
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
@@ -189,8 +191,17 @@ typedef NS_ENUM(NSInteger, UIDatePickerPrivateMode)  {
     UIDatePickerModeYearAndMonth = 4269,
 };
 
+#if HAVE(UIDATEPICKER_STYLE)
+typedef NS_ENUM(NSInteger, UIDatePickerStyle) {
+    UIDatePickerStyleAutomatic = 0
+}
+#endif
+
 @interface UIDatePicker ()
 @property (nonatomic, readonly, getter=_contentWidth) CGFloat contentWidth;
+#if HAVE(UIDATEPICKER_STYLE)
+@property (nonatomic, readwrite, assign) UIDatePickerStyle preferredDatePickerStyle;
+#endif
 @end
 
 @interface UIDevice ()
@@ -467,6 +478,7 @@ typedef enum {
 @interface UIViewController ()
 + (UIViewController *)_viewControllerForFullScreenPresentationFromView:(UIView *)view;
 + (UIViewController *)viewControllerForView:(UIView *)view;
+- (BOOL)isPerformingModalTransition;
 @end
 
 @interface UIViewController (ViewService)
@@ -1087,13 +1099,25 @@ typedef NS_OPTIONS(NSInteger, UIWKDocumentRequestFlags) {
 @property (nonatomic, strong) UIImage *image;
 @end
 
+typedef NS_ENUM(NSUInteger, _UIContextMenuLayout) {
+    _UIContextMenuLayoutActionsOnly = 1,
+    _UIContextMenuLayoutCompactMenu = 3,
+};
+
 @interface _UIContextMenuStyle : NSObject <NSCopying>
+@property (nonatomic) _UIContextMenuLayout preferredLayout;
++ (instancetype)defaultStyle;
 @end
 
 #if USE(UICONTEXTMENU)
 @interface UITargetedPreview ()
 @property (nonatomic, strong, setter=_setOverridePositionTrackingView:) UIView *overridePositionTrackingView;
 @end
+
+@interface UIContextMenuInteraction ()
+- (void)_presentMenuAtLocation:(CGPoint)location;
+@end
+
 #endif // USE(UICONTEXTMENU)
 
 #if HAVE(LINK_PREVIEW) && USE(UICONTEXTMENU)
@@ -1104,14 +1128,28 @@ typedef NS_OPTIONS(NSInteger, UIWKDocumentRequestFlags) {
 @end
 #endif // HAVE(LINK_PREVIEW) && USE(UICONTEXTMENU)
 
+@interface NSTextAlternatives : NSObject
+- (id)initWithPrimaryString:(NSString *)primaryString alternativeStrings:(NSArray<NSString *> *)alternativeStrings;
+- (id)initWithPrimaryString:(NSString *)primaryString alternativeStrings:(NSArray<NSString *> *)alternativeStrings isLowConfidence:(BOOL)lowConfidence;
+
+@property (readonly) NSString *primaryString;
+@property (readonly) NSArray<NSString *> *alternativeStrings;
+@property (readonly) BOOL isLowConfidence;
+@end
 
 #endif // USE(APPLE_INTERNAL_SDK)
 
 #define UIWKDocumentRequestMarkedTextRects (1 << 5)
 
-@interface UITextInteractionAssistant (Staging_55645619)
-- (void)didEndScrollingOrZooming;
+@interface UITextInteractionAssistant (IPI)
+@property (nonatomic, readonly) BOOL inGesture;
+@property (nonatomic, readonly) UITextInteraction *interactions;
 - (void)willStartScrollingOrZooming;
+- (void)didEndScrollingOrZooming;
+@end
+
+@interface UITextInteraction (IPI)
+@property (nonatomic, readonly) BOOL inGesture;
 @end
 
 #if HAVE(LINK_PREVIEW) && USE(UICONTEXTMENU)
@@ -1236,6 +1274,7 @@ typedef NS_OPTIONS(NSInteger, UIWKDocumentRequestFlags) {
 - (UIResponder *)firstResponder;
 - (void)pasteAndMatchStyle:(id)sender;
 - (void)makeTextWritingDirectionNatural:(id)sender;
+@property (nonatomic, setter=_setSuppressSoftwareKeyboard:) BOOL _suppressSoftwareKeyboard;
 @end
 
 @interface _UINavigationInteractiveTransitionBase ()

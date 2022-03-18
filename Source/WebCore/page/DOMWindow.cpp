@@ -147,6 +147,21 @@
 namespace WebCore {
 using namespace Inspector;
 
+static const Seconds defaultTransientActivationDuration { 2_s };
+
+static Optional<Seconds>& transientActivationDurationOverrideForTesting()
+{
+    static NeverDestroyed<Optional<Seconds>> overrideForTesting;
+    return overrideForTesting;
+}
+
+static Seconds transientActivationDuration()
+{
+    if (auto override = transientActivationDurationOverrideForTesting())
+        return *override;
+    return defaultTransientActivationDuration;
+}
+
 WTF_MAKE_ISO_ALLOCATED_IMPL(DOMWindow);
 
 class PostMessageTimer : public TimerBase {
@@ -435,6 +450,7 @@ void DOMWindow::prewarmLocalStorageIfNecessary()
     if (!page->mainFrame().mayPrewarmLocalStorage())
         return;
 
+    // This eagerly constructs the StorageArea, which will load items from disk.
     auto localStorageResult = this->localStorage();
     if (localStorageResult.hasException())
         return;
@@ -1488,13 +1504,78 @@ WindowProxy* DOMWindow::top() const
 
 String DOMWindow::origin() const
 {
-    auto document = this->document();
+    auto* document = this->document();
     return document ? document->securityOrigin().toString() : emptyString();
+}
+
+SecurityOrigin* DOMWindow::securityOrigin() const
+{
+    auto* document = this->document();
+    return document ? &document->securityOrigin() : nullptr;
 }
 
 Document* DOMWindow::document() const
 {
     return downcast<Document>(ContextDestructionObserver::scriptExecutionContext());
+}
+
+void DOMWindow::overrideTransientActivationDurationForTesting(Optional<Seconds>&& override)
+{
+    transientActivationDurationOverrideForTesting() = WTFMove(override);
+}
+
+// When the current high resolution time is greater than or equal to the last activation timestamp in W, and
+// less than the last activation timestamp in W plus the transient activation duration, then W is said to
+// have transient activation. (https://html.spec.whatwg.org/multipage/interaction.html#transient-activation)
+bool DOMWindow::hasTransientActivation() const
+{
+    auto now = MonotonicTime::now();
+    return now >= m_lastActivationTimestamp && now < (m_lastActivationTimestamp + transientActivationDuration());
+}
+
+// https://html.spec.whatwg.org/multipage/interaction.html#consume-user-activation
+bool DOMWindow::consumeTransientActivation()
+{
+    if (!hasTransientActivation())
+        return false;
+
+    for (Frame* frame = this->frame() ? &this->frame()->tree().top() : nullptr; frame; frame = frame->tree().traverseNext()) {
+        auto* window = frame->window();
+        if (!window || window->lastActivationTimestamp() != MonotonicTime::infinity())
+            window->setLastActivationTimestamp(-MonotonicTime::infinity());
+    }
+
+    return true;
+}
+
+// https://html.spec.whatwg.org/multipage/interaction.html#activation-notification
+void DOMWindow::notifyActivated(MonotonicTime activationTime)
+{
+    setLastActivationTimestamp(activationTime);
+    if (!frame())
+        return;
+
+    for (Frame* ancestor = frame() ? frame()->tree().parent() : nullptr; ancestor; ancestor = ancestor->tree().parent()) {
+        if (auto* window = ancestor->window())
+            window->setLastActivationTimestamp(activationTime);
+    }
+
+    auto* securityOrigin = this->securityOrigin();
+    if (!securityOrigin)
+        return;
+
+    auto* descendant = frame();
+    while ((descendant = descendant->tree().traverseNext(frame()))) {
+        auto* descendantWindow = descendant->window();
+        if (!descendantWindow)
+            continue;
+
+        auto* descendantSecurityOrigin = descendantWindow->securityOrigin();
+        if (!descendantSecurityOrigin || !descendantSecurityOrigin->isSameOriginAs(*securityOrigin))
+            continue;
+
+        descendantWindow->setLastActivationTimestamp(activationTime);
+    }
 }
 
 StyleMedia& DOMWindow::styleMedia()
@@ -1592,7 +1673,7 @@ double DOMWindow::devicePixelRatio() const
 
 void DOMWindow::scrollBy(double x, double y) const
 {
-    scrollBy({ x, y });
+    scrollBy(ScrollToOptions(x, y));
 }
 
 void DOMWindow::scrollBy(const ScrollToOptions& options) const
@@ -1602,7 +1683,11 @@ void DOMWindow::scrollBy(const ScrollToOptions& options) const
 
     document()->updateLayoutIgnorePendingStylesheets();
 
-    FrameView* view = frame()->view();
+    auto* frame = this->frame();
+    if (!frame)
+        return;
+
+    auto view = makeRefPtr(frame->view());
     if (!view)
         return;
 
@@ -1614,10 +1699,10 @@ void DOMWindow::scrollBy(const ScrollToOptions& options) const
 
 void DOMWindow::scrollTo(double x, double y, ScrollClamping clamping) const
 {
-    scrollTo({ x, y }, clamping);
+    scrollTo(ScrollToOptions(x, y), clamping);
 }
 
-void DOMWindow::scrollTo(const ScrollToOptions& options, ScrollClamping) const
+void DOMWindow::scrollTo(const ScrollToOptions& options, ScrollClamping clamping) const
 {
     if (!isCurrentlyDisplayedInFrame())
         return;
@@ -1630,13 +1715,23 @@ void DOMWindow::scrollTo(const ScrollToOptions& options, ScrollClamping) const
         view->contentsScrollPosition().x(), view->contentsScrollPosition().y()
     );
 
-    if (!scrollToOptions.left.value() && !scrollToOptions.top.value() && view->contentsScrollPosition() == IntPoint(0, 0))
+    // This is an optimization for the common case of scrolling to (0, 0) when the scroller is already at the origin.
+    // If an animated scroll is in progress, this optimization is skipped to ensure that the animated scroll is really stopped.
+    if (view->currentScrollBehaviorStatus() == ScrollBehaviorStatus::NotInAnimation && !scrollToOptions.left.value() && !scrollToOptions.top.value() && view->contentsScrollPosition() == IntPoint(0, 0))
         return;
 
     document()->updateLayoutIgnorePendingStylesheets();
 
     IntPoint layoutPos(view->mapFromCSSToLayoutUnits(scrollToOptions.left.value()), view->mapFromCSSToLayoutUnits(scrollToOptions.top.value()));
-    view->setContentsScrollPosition(layoutPos);
+
+    // FIXME: Should we use document()->scrollingElement()?
+    // See https://bugs.webkit.org/show_bug.cgi?id=205059
+    if (useSmoothScrolling(scrollToOptions.behavior.valueOr(ScrollBehavior::Auto), document()->documentElement())) {
+        view->scrollToOffsetWithAnimation(layoutPos, ScrollType::Programmatic, clamping);
+        return;
+    }
+
+    view->setContentsScrollPosition(layoutPos, clamping);
 }
 
 bool DOMWindow::allowedToChangeWindowGeometry() const
@@ -2283,7 +2378,7 @@ void DOMWindow::setLocation(DOMWindow& activeWindow, const URL& completedURL, Se
         lockHistory, lockBackForwardList);
 }
 
-void DOMWindow::printErrorMessage(const String& message)
+void DOMWindow::printErrorMessage(const String& message) const
 {
     if (message.isEmpty())
         return;
@@ -2386,7 +2481,7 @@ ExceptionOr<RefPtr<Frame>> DOMWindow::createWindow(const String& urlString, cons
     auto initiatedByMainFrame = activeFrame->isMainFrame() ? InitiatedByMainFrame::Yes : InitiatedByMainFrame::Unknown;
 
     ResourceRequest resourceRequest { completedURL, referrer };
-    FrameLoadRequest frameLoadRequest { *activeDocument, activeDocument->securityOrigin(), resourceRequest, frameName, LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, activeDocument->shouldOpenExternalURLsPolicyToPropagate(), initiatedByMainFrame };
+    FrameLoadRequest frameLoadRequest { *activeDocument, activeDocument->securityOrigin(), WTFMove(resourceRequest), frameName, LockHistory::No, LockBackForwardList::No, ReferrerPolicy::EmptyString, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, activeDocument->shouldOpenExternalURLsPolicyToPropagate(), initiatedByMainFrame };
 
     // We pass the opener frame for the lookupFrame in case the active frame is different from
     // the opener frame, and the name references a frame relative to the opener frame.
@@ -2411,7 +2506,7 @@ ExceptionOr<RefPtr<Frame>> DOMWindow::createWindow(const String& urlString, cons
     if (created) {
         ResourceRequest resourceRequest { completedURL, referrer, ResourceRequestCachePolicy::UseProtocolCachePolicy };
         FrameLoader::addSameSiteInfoToRequestIfNeeded(resourceRequest, openerFrame.document());
-        FrameLoadRequest frameLoadRequest { *activeWindow.document(), activeWindow.document()->securityOrigin(), resourceRequest, "_self"_s, LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, activeDocument->shouldOpenExternalURLsPolicyToPropagate(), initiatedByMainFrame };
+        FrameLoadRequest frameLoadRequest { *activeWindow.document(), activeWindow.document()->securityOrigin(), WTFMove(resourceRequest), "_self"_s, LockHistory::No, LockBackForwardList::No, ReferrerPolicy::EmptyString, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, activeDocument->shouldOpenExternalURLsPolicyToPropagate(), initiatedByMainFrame };
         newFrame->loader().changeLocation(WTFMove(frameLoadRequest));
     } else if (!urlString.isEmpty()) {
         LockHistory lockHistory = UserGestureIndicator::processingUserGesture() ? LockHistory::No : LockHistory::Yes;

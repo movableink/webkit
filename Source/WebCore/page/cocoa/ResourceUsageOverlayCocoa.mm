@@ -44,14 +44,15 @@
 #include <wtf/text/StringConcatenateNumbers.h>
 
 using WebCore::ResourceUsageOverlay;
-@interface WebOverlayLayer : CALayer {
+
+@interface WebResourceUsageOverlayLayer : CALayer {
     ResourceUsageOverlay* m_overlay;
 }
 @end
 
-@implementation WebOverlayLayer
+@implementation WebResourceUsageOverlayLayer
 
-- (WebOverlayLayer *)initWithResourceUsageOverlay:(ResourceUsageOverlay *)overlay
+- (instancetype)initWithResourceUsageOverlay:(ResourceUsageOverlay *)overlay
 {
     self = [super init];
     if (!self)
@@ -128,13 +129,13 @@ static CGColorRef createColor(float r, float g, float b, float a)
 struct HistoricMemoryCategoryInfo {
     HistoricMemoryCategoryInfo() { } // Needed for std::array.
 
-    HistoricMemoryCategoryInfo(unsigned category, RGBA32 rgba, String name, bool subcategory = false)
+    HistoricMemoryCategoryInfo(unsigned category, uint32_t argb, String name, bool subcategory = false)
         : name(WTFMove(name))
         , isSubcategory(subcategory)
         , type(category)
     {
         float r, g, b, a;
-        Color(rgba).getRGBA(r, g, b, a);
+        Color { SimpleColor { argb } }.getRGBA(r, g, b, a);
         color = adoptCF(createColor(r, g, b, a));
     }
 
@@ -216,7 +217,7 @@ static void appendDataToHistory(const ResourceUsageData& data)
 
 void ResourceUsageOverlay::platformInitialize()
 {
-    m_layer = adoptNS([[WebOverlayLayer alloc] initWithResourceUsageOverlay:this]);
+    m_layer = adoptNS([[WebResourceUsageOverlayLayer alloc] initWithResourceUsageOverlay:this]);
 
     m_containerLayer = adoptNS([[CALayer alloc] init]);
     [m_containerLayer.get() addSublayer:m_layer.get()];

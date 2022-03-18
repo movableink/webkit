@@ -28,8 +28,11 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#import <Security/SecItem.h>
 #import <WebCore/ExceptionData.h>
 #import <wtf/RunLoop.h>
+#import <wtf/spi/cocoa/SecuritySPI.h>
+#import <wtf/text/Base64.h>
 #import <wtf/text/WTFString.h>
 
 #import "LocalAuthenticationSoftLink.h"
@@ -41,82 +44,93 @@ MockLocalConnection::MockLocalConnection(const WebCore::MockWebAuthenticationCon
 {
 }
 
-void MockLocalConnection::getUserConsent(const String&, UserConsentCallback&& callback) const
+void MockLocalConnection::verifyUser(const String&, SecAccessControlRef, UserVerificationCallback&& callback) const
 {
     // Mock async operations.
     RunLoop::main().dispatch([configuration = m_configuration, callback = WTFMove(callback)]() mutable {
         ASSERT(configuration.local);
         if (!configuration.local->acceptAuthentication) {
-            callback(UserConsent::No);
+            callback(UserVerification::No, nil);
             return;
         }
-        callback(UserConsent::Yes);
+        callback(UserVerification::Yes, adoptNS([allocLAContextInstance() init]).get());
     });
 }
 
-void MockLocalConnection::getUserConsent(const String&, SecAccessControlRef, UserConsentContextCallback&& callback) const
+RetainPtr<SecKeyRef> MockLocalConnection::createCredentialPrivateKey(LAContext *, SecAccessControlRef, const String& secAttrLabel, NSData *secAttrApplicationTag) const
+{
+    ASSERT(m_configuration.local);
+
+    // Get Key and add it to Keychain.
+    NSDictionary* options = @{
+        (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
+        (id)kSecAttrKeySizeInBits: @256,
+    };
+    CFErrorRef errorRef = nullptr;
+    auto key = adoptCF(SecKeyCreateWithData(
+        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:m_configuration.local->privateKeyBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (__bridge CFDictionaryRef)options,
+        &errorRef
+    ));
+    if (errorRef)
+        return nullptr;
+
+    NSDictionary* addQuery = @{
+        (id)kSecValueRef: (id)key.get(),
+        (id)kSecClass: (id)kSecClassKey,
+        (id)kSecAttrLabel: secAttrLabel,
+        (id)kSecAttrApplicationTag: secAttrApplicationTag,
+        (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock,
+#if HAVE(DATA_PROTECTION_KEYCHAIN)
+        (id)kSecUseDataProtectionKeychain: @YES
+#else
+        (id)kSecAttrNoLegacy: @YES
+#endif
+    };
+    OSStatus status = SecItemAdd((__bridge CFDictionaryRef)addQuery, NULL);
+    if (status) {
+        LOG_ERROR("Couldn't add the key to the keychain. %d", status);
+        return nullptr;
+    }
+
+    return key;
+}
+
+void MockLocalConnection::getAttestation(SecKeyRef, NSData *, NSData *, AttestationCallback&& callback) const
 {
     // Mock async operations.
     RunLoop::main().dispatch([configuration = m_configuration, callback = WTFMove(callback)]() mutable {
-        ASSERT(configuration.local);
-        if (!configuration.local->acceptAuthentication) {
-            callback(UserConsent::No, nil);
-            return;
-        }
-        callback(UserConsent::Yes, adoptNS([allocLAContextInstance() init]).get());
-    });
-}
-
-void MockLocalConnection::getAttestation(const String& rpId, const String& username, const Vector<uint8_t>& hash, AttestationCallback&& callback) const
-{
-    // Mock async operations.
-    RunLoop::main().dispatch([configuration = m_configuration, rpId, username, hash, callback = WTFMove(callback)]() mutable {
         ASSERT(configuration.local);
         if (!configuration.local->acceptAttestation) {
-            callback(NULL, NULL, [NSError errorWithDomain:NSOSStatusErrorDomain code:-1 userInfo:nil]);
+            callback(NULL, [NSError errorWithDomain:@"WebAuthentication" code:-1 userInfo:@{ NSLocalizedDescriptionKey: @"The operation couldn't complete." }]);
             return;
         }
-
-        // Get Key and add it to Keychain.
-        NSDictionary* options = @{
-            (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
-            (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
-            (id)kSecAttrKeySizeInBits: @256,
-        };
-        CFErrorRef errorRef = nullptr;
-        auto key = adoptCF(SecKeyCreateWithData(
-            (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:configuration.local->privateKeyBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
-            (__bridge CFDictionaryRef)options,
-            &errorRef
-        ));
-        ASSERT(!errorRef);
-
-        // Mock what DeviceIdentity would do.
-        String label = makeString(username, "@", rpId, "-rk-ucrt");
-        NSDictionary* addQuery = @{
-            (id)kSecValueRef: (id)key.get(),
-            (id)kSecClass: (id)kSecClassKey,
-            (id)kSecAttrLabel: (id)label,
-        };
-        OSStatus status = SecItemAdd((__bridge CFDictionaryRef)addQuery, NULL);
-        ASSERT_UNUSED(status, !status);
 
         auto attestationCertificate = adoptCF(SecCertificateCreateWithData(NULL, (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:configuration.local->userCertificateBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get()));
         auto attestationIssuingCACertificate = adoptCF(SecCertificateCreateWithData(NULL, (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:configuration.local->intermediateCACertificateBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get()));
-
-        callback(key.get(), [NSArray arrayWithObjects: (__bridge id)attestationCertificate.get(), (__bridge id)attestationIssuingCACertificate.get(), nil], NULL);
+        callback([NSArray arrayWithObjects: (__bridge id)attestationCertificate.get(), (__bridge id)attestationIssuingCACertificate.get(), nil], NULL);
     });
 }
 
-NSDictionary *MockLocalConnection::selectCredential(const NSArray *credentials) const
+void MockLocalConnection::filterResponses(HashSet<Ref<WebCore::AuthenticatorAssertionResponse>>& responses) const
 {
-    auto preferredUserhandle = adoptNS([[NSData alloc] initWithBase64EncodedString:m_configuration.local->preferredUserhandleBase64 options:0]);
-    for (NSDictionary *credential : credentials) {
-        if ([credential[(id)kSecAttrApplicationTag] isEqualToData:preferredUserhandle.get()])
-            return credential;
+    const auto& preferredCredentialIdBase64 = m_configuration.local->preferredCredentialIdBase64;
+    if (preferredCredentialIdBase64.isEmpty())
+        return;
+
+    auto itr = responses.begin();
+    for (; itr != responses.end(); ++itr) {
+        auto* rawId = itr->get().rawId();
+        ASSERT(rawId);
+        auto rawIdBase64 = base64Encode(rawId->data(), rawId->byteLength());
+        if (rawIdBase64 == preferredCredentialIdBase64)
+            break;
     }
-    ASSERT_NOT_REACHED();
-    return nil;
+    auto response = responses.take(itr);
+    ASSERT(response);
+    responses.clear();
+    responses.add(WTFMove(*response));
 }
 
 } // namespace WebKit

@@ -26,10 +26,11 @@
 #import "config.h"
 #import "WKUserContentControllerInternal.h"
 
+#import "APIContentWorld.h"
 #import "APISerializedScriptValue.h"
-#import "APIUserContentWorld.h"
 #import "InjectUserScriptImmediately.h"
 #import "WKContentRuleListInternal.h"
+#import "WKContentWorldInternal.h"
 #import "WKFrameInfoInternal.h"
 #import "WKNSArray.h"
 #import "WKScriptMessageHandler.h"
@@ -146,14 +147,14 @@ private:
 
 - (void)addScriptMessageHandler:(id <WKScriptMessageHandler>)scriptMessageHandler name:(NSString *)name
 {
-    auto handler = WebKit::WebScriptMessageHandler::create(makeUnique<ScriptMessageHandlerDelegate>(self, scriptMessageHandler, name), name, API::UserContentWorld::normalWorld());
+    auto handler = WebKit::WebScriptMessageHandler::create(makeUnique<ScriptMessageHandlerDelegate>(self, scriptMessageHandler, name), name, API::ContentWorld::pageContentWorld());
     if (!_userContentControllerProxy->addUserScriptMessageHandler(handler.get()))
         [NSException raise:NSInvalidArgumentException format:@"Attempt to add script message handler with name '%@' when one already exists.", name];
 }
 
 - (void)removeScriptMessageHandlerForName:(NSString *)name
 {
-    _userContentControllerProxy->removeUserMessageHandlerForName(name, API::UserContentWorld::normalWorld());
+    _userContentControllerProxy->removeUserMessageHandlerForName(name, API::ContentWorld::pageContentWorld());
 }
 
 #pragma mark WKObject protocol implementation
@@ -172,10 +173,12 @@ private:
     _userContentControllerProxy->removeUserScript(*userScript->_userScript);
 }
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 - (void)_removeAllUserScriptsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld
 {
-    _userContentControllerProxy->removeAllUserScripts(*userContentWorld->_userContentWorld);
+    _userContentControllerProxy->removeAllUserScripts(*userContentWorld->_contentWorld->_contentWorld);
 }
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_addUserScriptImmediately:(WKUserScript *)userScript
 {
@@ -223,26 +226,28 @@ private:
     _userContentControllerProxy->removeAllUserStyleSheets();
 }
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 - (void)_removeAllUserStyleSheetsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld
 {
-    _userContentControllerProxy->removeAllUserStyleSheets(*userContentWorld->_userContentWorld);
+    _userContentControllerProxy->removeAllUserStyleSheets(*userContentWorld->_contentWorld->_contentWorld);
 }
 
 - (void)_addScriptMessageHandler:(id <WKScriptMessageHandler>)scriptMessageHandler name:(NSString *)name userContentWorld:(_WKUserContentWorld *)userContentWorld
 {
-    auto handler = WebKit::WebScriptMessageHandler::create(makeUnique<ScriptMessageHandlerDelegate>(self, scriptMessageHandler, name), name, *userContentWorld->_userContentWorld);
+    auto handler = WebKit::WebScriptMessageHandler::create(makeUnique<ScriptMessageHandlerDelegate>(self, scriptMessageHandler, name), name, *userContentWorld->_contentWorld->_contentWorld);
     if (!_userContentControllerProxy->addUserScriptMessageHandler(handler.get()))
         [NSException raise:NSInvalidArgumentException format:@"Attempt to add script message handler with name '%@' when one already exists.", name];
 }
 
 - (void)_removeScriptMessageHandlerForName:(NSString *)name userContentWorld:(_WKUserContentWorld *)userContentWorld
 {
-    _userContentControllerProxy->removeUserMessageHandlerForName(name, *userContentWorld->_userContentWorld);
+    _userContentControllerProxy->removeUserMessageHandlerForName(name, *userContentWorld->_contentWorld->_contentWorld);
 }
 
 - (void)_removeAllScriptMessageHandlersAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld
 {
-    _userContentControllerProxy->removeAllUserMessageHandlers(*userContentWorld->_userContentWorld);
+    _userContentControllerProxy->removeAllUserMessageHandlers(*userContentWorld->_contentWorld->_contentWorld);
 }
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 @end

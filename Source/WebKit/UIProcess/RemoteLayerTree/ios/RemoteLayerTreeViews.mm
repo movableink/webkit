@@ -96,7 +96,6 @@ static bool isScrolledBy(WKChildScrollView* scrollView, UIView *hitView)
     return false;
 }
 
-#if ENABLE(POINTER_EVENTS)
 OptionSet<WebCore::TouchAction> touchActionsForPoint(UIView *rootView, const WebCore::IntPoint& point)
 {
     Vector<UIView *, 16> viewsAtPoint;
@@ -129,7 +128,6 @@ OptionSet<WebCore::TouchAction> touchActionsForPoint(UIView *rootView, const Web
 
     return node->eventRegion().touchActionsForPoint(WebCore::IntPoint(hitViewPoint));
 }
-#endif
 
 UIScrollView *findActingScrollParent(UIScrollView *scrollView, const RemoteLayerTreeHost& host)
 {
@@ -150,6 +148,16 @@ UIScrollView *findActingScrollParent(UIScrollView *scrollView, const RemoteLayer
         }
     }
     return nil;
+}
+
+static Class scrollViewScrollIndicatorClass()
+{
+    static dispatch_once_t onceToken;
+    static Class scrollIndicatorClass;
+    dispatch_once(&onceToken, ^{
+        scrollIndicatorClass = NSClassFromString(@"_UIScrollViewScrollIndicator");
+    });
+    return scrollIndicatorClass;
 }
 
 }
@@ -177,6 +185,13 @@ UIScrollView *findActingScrollParent(UIScrollView *scrollView, const RemoteLayer
         if ([view isKindOfClass:[WKChildScrollView class]]) {
             if (WebKit::isScrolledBy((WKChildScrollView *)view, viewsAtPoint.last())) {
                 LOG_WITH_STREAM(UIHitTesting, stream << " " << (void*)view << " is child scroll view and scrolled by " << (void*)viewsAtPoint.last());
+                return view;
+            }
+        }
+
+        if ([view isKindOfClass:WebKit::scrollViewScrollIndicatorClass()] && [view.superview isKindOfClass:WKChildScrollView.class]) {
+            if (WebKit::isScrolledBy((WKChildScrollView *)view.superview, viewsAtPoint.last())) {
+                LOG_WITH_STREAM(UIHitTesting, stream << " " << (void*)view << " is the scroll indicator of child scroll view, which is scrolled by " << (void*)viewsAtPoint.last());
                 return view;
             }
         }

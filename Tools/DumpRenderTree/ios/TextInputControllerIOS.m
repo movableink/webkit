@@ -33,13 +33,14 @@
 
 #import <WebKit/WebFramePrivate.h>
 #import <WebKit/WebKit.h>
+#import <WebKit/WebKitLegacy.h>
 
 @implementation TextInputController
 
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)aSelector
 {
     if (aSelector == @selector(insertText:)
-        || aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:)
+        || aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:highlights:)
         || aSelector == @selector(markedRange))
         return NO;
 
@@ -50,7 +51,7 @@
 {
     if (aSelector == @selector(insertText:))
         return @"insertText";
-    if (aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:))
+    if (aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:highlights:))
         return @"setMarkedText";
     if (aSelector == @selector(markedRange))
         return @"markedRange";
@@ -83,7 +84,7 @@
     [[webView mainFrame] confirmMarkedText:text];
 }
 
-- (void)setMarkedText:(NSString *)text selectedFrom:(NSInteger)selectionStart length:(NSInteger)selectionLength suppressUnderline:(BOOL)suppressUnderline
+- (void)setMarkedText:(NSString *)text selectedFrom:(NSInteger)selectionStart length:(NSInteger)selectionLength suppressUnderline:(BOOL)suppressUnderline highlights:(NSArray<NSDictionary *> *)highlights
 {
     if (selectionStart == -1)
         selectionStart = NSNotFound;

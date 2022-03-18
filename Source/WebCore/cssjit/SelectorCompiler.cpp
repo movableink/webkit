@@ -396,12 +396,23 @@ static FunctionType constructFragments(const CSSSelector* rootSelector, Selector
 
 static void computeBacktrackingInformation(SelectorFragmentList& selectorFragments, unsigned level = 0);
 
-SelectorCompilationStatus compileSelector(const CSSSelector* lastSelector, SelectorContext selectorContext, JSC::MacroAssemblerCodeRef<CSSSelectorPtrTag>& codeRef)
+void compileSelector(CompiledSelector& compiledSelector, const CSSSelector* selector, SelectorContext selectorContext)
 {
-    if (!JSC::VM::canUseJIT())
-        return SelectorCompilationStatus::CannotCompile;
-    SelectorCodeGenerator codeGenerator(lastSelector, selectorContext);
-    return codeGenerator.compile(codeRef);
+    ASSERT(compiledSelector.status == SelectorCompilationStatus::NotCompiled);
+
+    if (!JSC::VM::canUseJIT()) {
+        compiledSelector.status = SelectorCompilationStatus::CannotCompile;
+        return;
+    }
+    
+    SelectorCodeGenerator codeGenerator(selector, selectorContext);
+    compiledSelector.status = codeGenerator.compile(compiledSelector.codeRef);
+
+#if defined(CSS_SELECTOR_JIT_PROFILING) && CSS_SELECTOR_JIT_PROFILING
+    compiledSelector.selector = selector;
+#endif
+
+    ASSERT(compiledSelector.status != SelectorCompilationStatus::NotCompiled);
 }
 
 static inline FragmentRelation fragmentRelationForSelectorRelation(CSSSelector::RelationType relation)
@@ -2233,7 +2244,7 @@ void SelectorCodeGenerator::generateAddStyleRelationIfResolvingStyle(Assembler::
 
 static void addStyleRelationFunction(SelectorChecker::CheckingContext* checkingContext, const Element* element)
 {
-    checkingContext->styleRelations.append({ *element, Style::Relation::AffectedByActive, 1 });
+    checkingContext->styleRelations.append({ *element, { }, 1 });
 }
 
 void SelectorCodeGenerator::generateAddStyleRelation(Assembler::RegisterID checkingContext, Assembler::RegisterID element, Style::Relation::Type relationType, Optional<Assembler::RegisterID> value)
@@ -2460,7 +2471,7 @@ Assembler::Jump SelectorCodeGenerator::modulo(Assembler::ResultCondition conditi
     }
 
     // If the input register is used by idiv, save its value to restore it after the operation.
-    Assembler::RegisterID inputDividendCopy;
+    Assembler::RegisterID inputDividendCopy = JSC::InvalidGPRReg;
     StackAllocator::StackReference pushedInputDividendStackReference;
     RegisterAllocationType savedInputDividendAllocationType = RegisterAllocationType::External;
     if (inputDividend == dividend || inputDividend == remainder) {
@@ -3146,8 +3157,6 @@ void SelectorCodeGenerator::generateElementIsActive(Assembler::JumpList& failure
 {
     generateSpecialFailureInQuirksModeForActiveAndHoverIfNeeded(failureCases, fragment);
 
-    generateAddStyleRelationIfResolvingStyle(elementAddressRegister, Style::Relation::AffectedByActive);
-
     FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
     functionCall.setFunctionAddress(elementIsActive);
     functionCall.setOneArgument(elementAddressRegister);
@@ -3259,24 +3268,10 @@ void SelectorCodeGenerator::generateElementIsHovered(Assembler::JumpList& failur
 {
     generateSpecialFailureInQuirksModeForActiveAndHoverIfNeeded(failureCases, fragment);
 
-    generateAddStyleRelationIfResolvingStyle(elementAddressRegister, Style::Relation::AffectedByHover);
-
-    Assembler::JumpList successCases;
-    if (m_selectorContext != SelectorContext::QuerySelector && fragment.relationToRightFragment != FragmentRelation::Rightmost) {
-        // :hover always matches when not in rightmost position when collecting rules for descendant style invalidation optimization.
-        // Resolving style for a matching descendant will set parent childrenAffectedByHover bit even when the element is not currently hovered.
-        // This bit has to be set for the event based :hover invalidation to work.
-        // FIXME: We should just collect style relation bits and apply them as needed when computing style invalidation optimization.
-        LocalRegister checkingContext(m_registerAllocator);
-        successCases.append(branchOnResolvingMode(Assembler::Equal, SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements, checkingContext));
-    }
-
     FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
     functionCall.setFunctionAddress(elementIsHovered);
     functionCall.setOneArgument(elementAddressRegister);
     failureCases.append(functionCall.callAndBranchOnBooleanReturnValue(Assembler::Zero));
-
-    successCases.link(&m_assembler);
 }
 
 void SelectorCodeGenerator::generateElementIsInLanguage(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
@@ -3884,7 +3879,6 @@ void SelectorCodeGenerator::generateElementIsTarget(Assembler::JumpList& failure
 
 void SelectorCodeGenerator::generateElementHasFocusWithin(Assembler::JumpList& failureCases)
 {
-    generateAddStyleRelationIfResolvingStyle(elementAddressRegister, Style::Relation::AffectedByFocusWithin);
     failureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(elementAddressRegister, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagHasFocusWithin())));
 }
 

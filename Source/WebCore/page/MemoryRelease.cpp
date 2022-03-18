@@ -33,6 +33,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CommonVM.h"
+#include "CookieJar.h"
 #include "Document.h"
 #include "FontCache.h"
 #include "Frame.h"
@@ -40,6 +41,7 @@
 #include "HTMLMediaElement.h"
 #include "InlineStyleSheetOwner.h"
 #include "InspectorInstrumentation.h"
+#include "LayoutIntegrationLineLayout.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "Page.h"
@@ -68,8 +70,14 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     clearWidthCaches();
     TextPainter::clearGlyphDisplayLists();
 
-    for (auto* document : Document::allDocuments())
+    for (auto* document : Document::allDocuments()) {
         document->clearSelectorQueryCache();
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+        if (auto* renderView = document->renderView())
+            LayoutIntegration::LineLayout::releaseCaches(*renderView);
+#endif
+    }
 
     if (maintainMemoryCache == MaintainMemoryCache::No)
         MemoryCache::singleton().pruneDeadResourcesToSize(0);
@@ -91,6 +99,10 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
     }
 
     CSSValuePool::singleton().drain();
+
+    Page::forEachPage([](auto& page) {
+        page.cookieJar().clearCache();
+    });
 
     for (auto& document : copyToVectorOf<RefPtr<Document>>(Document::allDocuments())) {
         document->styleScope().releaseMemory();
@@ -180,6 +192,7 @@ void logMemoryStatisticsAtTimeOfDeath()
 #endif
 
     auto& vm = commonVM();
+    JSC::JSLockHolder locker(vm);
     RELEASE_LOG(MemoryPressure, "Memory usage statistics at time of death:");
     RELEASE_LOG(MemoryPressure, "GC heap size: %zu", vm.heap.size());
     RELEASE_LOG(MemoryPressure, "GC heap extra memory size: %zu", vm.heap.extraMemorySize());
@@ -191,7 +204,8 @@ void logMemoryStatisticsAtTimeOfDeath()
     RELEASE_LOG(MemoryPressure, "Page count: %u", pageCount());
     RELEASE_LOG(MemoryPressure, "Document count: %u", Document::allDocuments().size());
     RELEASE_LOG(MemoryPressure, "Live JavaScript objects:");
-    for (auto& it : *vm.heap.objectTypeCounts())
+    auto typeCounts = vm.heap.objectTypeCounts();
+    for (auto& it : *typeCounts)
         RELEASE_LOG(MemoryPressure, "  %s: %d", it.key, it.value);
 #endif
 }

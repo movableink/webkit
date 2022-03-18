@@ -307,6 +307,11 @@ enum CompositingPolicy {
     AutoFillButtonType autoFillButtonType(HTMLInputElement inputElement);
     AutoFillButtonType lastAutoFillButtonType(HTMLInputElement inputElement);
 
+    void setCanShowPlaceholder(Element element, boolean canShowPlaceholder);
+
+    Element insertTextPlaceholder(long width, long height);
+    void removeTextPlaceholder(Element element);
+
     [MayThrowException] Range? rangeOfString(DOMString text, Range? referenceRange, sequence<DOMString> findOptions);
     [MayThrowException] unsigned long countMatchesForText(DOMString text, sequence<DOMString> findOptions, DOMString markMatches);
     [MayThrowException] unsigned long countFindMatches(DOMString text, sequence<DOMString> findOptions);
@@ -328,8 +333,8 @@ enum CompositingPolicy {
 
     [MayThrowException] void setDelegatesScrolling(boolean enabled);
 
-    [MayThrowException] long lastSpellCheckRequestSequence();
-    [MayThrowException] long lastSpellCheckProcessedSequence();
+    [MayThrowException] unsigned long long lastSpellCheckRequestSequence();
+    [MayThrowException] unsigned long long lastSpellCheckProcessedSequence();
 
     sequence<DOMString> userPreferredLanguages();
     void setUserPreferredLanguages(sequence<DOMString> languages);
@@ -528,6 +533,8 @@ enum CompositingPolicy {
 
     attribute CompositingPolicy? compositingPolicyOverride;
 
+    void updateLayoutAndStyleForAllFrames();
+
     // |node| should be Document, HTMLIFrameElement, or unspecified.
     // If |node| is an HTMLIFrameElement, it assumes node.contentDocument is
     // specified without security checks. Unspecified or null means this document.
@@ -546,6 +553,7 @@ enum CompositingPolicy {
     ArrayBuffer serializeObject(SerializedScriptValue object);
 
     boolean isFromCurrentWorld(any obj);
+    any evaluateInWorldIgnoringException(DOMString name, DOMString source);
 
     void setUsesOverlayScrollbars(boolean enabled);
     void setUsesMockScrollAnimator(boolean enabled);
@@ -731,6 +739,8 @@ enum CompositingPolicy {
     unsigned long long documentIdentifier(Document document);
     boolean isDocumentAlive(unsigned long long documentIdentifier);
 
+    readonly attribute unsigned long long storageAreaMapCount;
+
     unsigned long long elementIdentifier(Element element);
     unsigned long long frameIdentifier(Document document);
     unsigned long long pageIdentifier(Document document);
@@ -812,6 +822,7 @@ enum CompositingPolicy {
     void testDictionaryLogging();
 
     void setXHRMaximumIntervalForUserGestureForwarding(XMLHttpRequest xhr, double interval);
+    void setTransientActivationDuration(double seconds);
 
     void setIsPlayingToAutomotiveHeadUnit(boolean value);
 
@@ -830,4 +841,21 @@ enum CompositingPolicy {
 
     boolean hasSandboxMachLookupAccessToGlobalName(DOMString process, DOMString service);
     boolean hasSandboxMachLookupAccessToXPCServiceName(DOMString process, DOMString service);
+    
+    DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
+    DOMString focusRingColor();
+
+    boolean systemHasBattery();
+
+    long readPreferenceInteger(DOMString domain, DOMString key);
+    DOMString encodedPreferenceValue(DOMString domain, DOMString key);
+
+    DOMString mediaMIMETypeForExtension(DOMString extension);
+
+    DOMString getUTIFromMIMEType(DOMString mimeType);
+    DOMString getUTIFromTag(DOMString tagClass, DOMString tag, DOMString conformingToUTI);
+
+    boolean supportsPictureInPicture();
+
+    boolean isRemoteUIAppForAccessibility();
 };

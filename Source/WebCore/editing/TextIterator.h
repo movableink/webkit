@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,66 +25,50 @@
 
 #pragma once
 
-// FIXME: Move each iterator class into a separate header file.
-
 #include "FindOptions.h"
 #include "LineLayoutTraversal.h"
-#include "Range.h"
+#include "SimpleRange.h"
 #include "TextIteratorBehavior.h"
 #include <wtf/Vector.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
-class InlineTextBox;
+class Range;
 class RenderText;
 class RenderTextFragment;
-
-namespace SimpleLineLayout {
-class RunResolver;
-}
 
 WEBCORE_EXPORT String plainText(Position start, Position end, TextIteratorBehavior = TextIteratorDefaultBehavior, bool isDisplayString = false);
 WEBCORE_EXPORT String plainTextReplacingNoBreakSpace(Position start, Position end, TextIteratorBehavior = TextIteratorDefaultBehavior, bool isDisplayString = false);
 
 WEBCORE_EXPORT String plainText(const Range*, TextIteratorBehavior = TextIteratorDefaultBehavior, bool isDisplayString = false);
 WEBCORE_EXPORT String plainTextReplacingNoBreakSpace(const Range*, TextIteratorBehavior = TextIteratorDefaultBehavior, bool isDisplayString = false);
-WEBCORE_EXPORT String plainTextUsingBackwardsTextIteratorForTesting(const Range&);
+WEBCORE_EXPORT String plainTextUsingBackwardsTextIteratorForTesting(const SimpleRange&);
 
-Ref<Range> findPlainText(const Range&, const String&, FindOptions);
-WEBCORE_EXPORT Ref<Range> findClosestPlainText(const Range&, const String&, FindOptions, unsigned);
-WEBCORE_EXPORT bool hasAnyPlainText(const Range&, TextIteratorBehavior = TextIteratorDefaultBehavior);
-bool findPlainText(const String& document, const String&, FindOptions); // Lets us use the search algorithm on a string.
+SimpleRange findPlainText(const SimpleRange&, const String&, FindOptions);
+WEBCORE_EXPORT SimpleRange findClosestPlainText(const SimpleRange&, const String&, FindOptions, unsigned);
+WEBCORE_EXPORT bool hasAnyPlainText(const SimpleRange&, TextIteratorBehavior = TextIteratorDefaultBehavior);
+bool containsPlainText(const String& document, const String&, FindOptions); // Lets us use the search algorithm on a string.
 WEBCORE_EXPORT String foldQuoteMarks(const String&);
 
 // FIXME: Move this somewhere else in the editing directory. It doesn't belong here.
 bool isRendererReplacedElement(RenderObject*);
 
+// FIXME: Move each iterator class into a separate header file.
+
 class BitStack {
 public:
-    BitStack();
-    ~BitStack();
-
     void push(bool);
     void pop();
-
     bool top() const;
-    unsigned size() const;
 
 private:
-    unsigned m_size;
+    unsigned m_size { 0 };
     Vector<unsigned, 1> m_words;
 };
 
 class TextIteratorCopyableText {
 public:
-    TextIteratorCopyableText()
-        : m_singleCharacter(0)
-        , m_offset(0)
-        , m_length(0)
-    {
-    }
-
     StringView text() const { return m_singleCharacter ? StringView(&m_singleCharacter, 1) : StringView(m_string).substring(m_offset, m_length); }
     void appendToStringBuilder(StringBuilder&) const;
 
@@ -94,10 +78,10 @@ public:
     void set(UChar);
 
 private:
-    UChar m_singleCharacter;
+    UChar m_singleCharacter { 0 };
     String m_string;
-    unsigned m_offset;
-    unsigned m_length;
+    unsigned m_offset { 0 };
+    unsigned m_length { 0 };
 };
 
 // Iterates through the DOM range, returning all the text, and 0-length boundaries
@@ -107,7 +91,7 @@ private:
 class TextIterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT explicit TextIterator(Position start, Position end, TextIteratorBehavior = TextIteratorDefaultBehavior);
+    WEBCORE_EXPORT TextIterator(Position start, Position end, TextIteratorBehavior = TextIteratorDefaultBehavior);
     WEBCORE_EXPORT explicit TextIterator(const Range*, TextIteratorBehavior = TextIteratorDefaultBehavior);
     WEBCORE_EXPORT ~TextIterator();
 
@@ -115,7 +99,7 @@ public:
     WEBCORE_EXPORT void advance();
 
     StringView text() const { ASSERT(!atEnd()); return m_text; }
-    WEBCORE_EXPORT Ref<Range> range() const;
+    WEBCORE_EXPORT SimpleRange range() const;
     WEBCORE_EXPORT Node* node() const;
 
     const TextIteratorCopyableText& copyableText() const { ASSERT(!atEnd()); return m_copyableText; }
@@ -199,7 +183,7 @@ public:
     void advance();
 
     StringView text() const { ASSERT(!atEnd()); return m_text; }
-    WEBCORE_EXPORT Ref<Range> range() const;
+    WEBCORE_EXPORT SimpleRange range() const;
     Node* node() const { ASSERT(!atEnd()); return m_node; }
 
 private:
@@ -255,16 +239,16 @@ public:
     WEBCORE_EXPORT void advance(int numCharacters);
     
     StringView text() const { return m_underlyingIterator.text().substring(m_runOffset); }
-    WEBCORE_EXPORT Ref<Range> range() const;
+    WEBCORE_EXPORT SimpleRange range() const;
 
     bool atBreak() const { return m_atBreak; }
-    int characterOffset() const { return m_offset; }
+    unsigned characterOffset() const { return m_offset; }
 
 private:
     TextIterator m_underlyingIterator;
 
-    int m_offset { 0 };
-    int m_runOffset { 0 };
+    unsigned m_offset { 0 };
+    unsigned m_runOffset { 0 };
     bool m_atBreak { true };
 };
     
@@ -275,14 +259,14 @@ public:
     bool atEnd() const { return m_underlyingIterator.atEnd(); }
     void advance(int numCharacters);
 
-    Ref<Range> range() const;
+    SimpleRange range() const;
 
 private:
     SimplifiedBackwardsTextIterator m_underlyingIterator;
 
-    int m_offset;
-    int m_runOffset;
-    bool m_atBreak;
+    unsigned m_offset { 0 };
+    unsigned m_runOffset { 0 };
+    bool m_atBreak { true };
 };
 
 // Similar to the TextIterator, except that the chunks of text returned are "well behaved", meaning
@@ -304,9 +288,9 @@ private:
 
     // Many chunks from text iterator concatenated.
     Vector<UChar> m_buffer;
-    
+
     // Did we have to look ahead in the text iterator to confirm the current chunk?
-    bool m_didLookAhead;
+    bool m_didLookAhead { true };
 };
 
 } // namespace WebCore

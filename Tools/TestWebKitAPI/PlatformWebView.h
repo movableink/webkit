@@ -66,6 +66,9 @@ typedef WPEToolingBackends::HeadlessViewBackend *PlatformWindow;
 #elif PLATFORM(WIN)
 typedef WKViewRef PlatformWKView;
 typedef HWND PlatformWindow;
+#elif PLATFORM(PLAYSTATION)
+typedef void* PlatformWKView;
+typedef void* PlatformWindow;
 #endif
 typedef uint32_t WKEventModifiers;
 
@@ -98,7 +101,7 @@ public:
 private:
 #if PLATFORM(MAC)
     void initialize(WKPageConfigurationRef, Class wkViewSubclass);
-#elif PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(WIN)
+#else
     void initialize(WKPageConfigurationRef);
 #endif
 #if PLATFORM(WIN)

@@ -37,14 +37,14 @@
 
 namespace WebCore {
 
-void WebGLObject::setObject(Platform3DObject object)
+void WebGLObject::setObject(PlatformGLObject object)
 {
     ASSERT(!m_object);
     ASSERT(!m_deleted);
     m_object = object;
 }
 
-void WebGLObject::deleteObject(GraphicsContext3D* context3d)
+void WebGLObject::deleteObject(GraphicsContextGLOpenGL* context3d)
 {
     m_deleted = true;
     if (!m_object)
@@ -53,15 +53,24 @@ void WebGLObject::deleteObject(GraphicsContext3D* context3d)
     if (!hasGroupOrContext())
         return;
 
+    // ANGLE correctly handles object deletion with WebGL semantics.
+    // For other GL implementations, delay deletion until we know
+    // the object is not attached anywhere.
+#if USE(ANGLE)
+    if (!m_calledDelete) {
+        m_calledDelete = true;
+#else
     if (!m_attachmentCount) {
+#endif
         if (!context3d)
-            context3d = getAGraphicsContext3D();
+            context3d = getAGraphicsContextGL();
 
         if (context3d)
             deleteObjectImpl(context3d, m_object);
-
-        m_object = 0;
     }
+
+    if (!m_attachmentCount)
+        m_object = 0;
 }
 
 void WebGLObject::detach()
@@ -69,7 +78,7 @@ void WebGLObject::detach()
     m_attachmentCount = 0; // Make sure OpenGL resource is deleted.
 }
 
-void WebGLObject::onDetached(GraphicsContext3D* context3d)
+void WebGLObject::onDetached(GraphicsContextGLOpenGL* context3d)
 {
     if (m_attachmentCount)
         --m_attachmentCount;

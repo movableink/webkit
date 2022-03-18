@@ -39,13 +39,13 @@ public:
     static Ref<MediaSampleAVFObjC> create(CMSampleBufferRef sample, VideoRotation rotation = VideoRotation::None, bool mirrored = false) { return adoptRef(*new MediaSampleAVFObjC(sample, rotation, mirrored)); }
     static RefPtr<MediaSampleAVFObjC> createImageSample(Vector<uint8_t>&&, unsigned long width, unsigned long height);
 
+    WEBCORE_EXPORT static void setAsDisplayImmediately(MediaSample&);
+
     RefPtr<JSC::Uint8ClampedArray> getRGBAImageData() const override;
 
     MediaTime presentationTime() const override;
-    MediaTime outputPresentationTime() const override;
     MediaTime decodeTime() const override;
     MediaTime duration() const override;
-    MediaTime outputDuration() const override;
 
     AtomString trackID() const override { return m_id; }
     void setTrackID(const String& id) override { m_id = id; }

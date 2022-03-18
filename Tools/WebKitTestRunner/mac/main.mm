@@ -45,6 +45,7 @@ static void setDefaultsToConsistentValuesForTesting()
         @"NSScrollAnimationEnabled": @NO,
         @"NSOverlayScrollersEnabled": @NO,
         @"AppleShowScrollBars": @"Always",
+        @"WebKit2UseRemoteLayerTreeDrawingArea": @NO,
     };
 
     [[NSUserDefaults standardUserDefaults] setValuesForKeysWithDictionary:dict];
@@ -64,8 +65,8 @@ int main(int argc, const char* argv[])
         [NSApplication sharedApplication];
         setDefaultsToConsistentValuesForTesting();
         disableAppNapInUIProcess(); // For secondary processes, app nap is disabled using WKPreferencesSetPageVisibilityBasedProcessSuppressionEnabled().
-        WTR::TestController controller(argc, argv);
     }
+    WTR::TestController controller(argc, argv);
     return 0;
 }
 

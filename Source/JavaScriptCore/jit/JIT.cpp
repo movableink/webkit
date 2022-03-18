@@ -126,7 +126,7 @@ void JIT::emitNotifyWrite(GPRReg pointerToSet)
 
 void JIT::assertStackPointerOffset()
 {
-    if (ASSERT_DISABLED)
+    if (!ASSERT_ENABLED)
         return;
     
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, regT0);
@@ -139,13 +139,18 @@ void JIT::assertStackPointerOffset()
     m_bytecodeIndex = BytecodeIndex(m_bytecodeIndex.offset() + currentInstruction->size()); \
     break;
 
+#define NEXT_OPCODE_IN_MAIN(name) \
+    if (previousSlowCasesSize != m_slowCases.size()) \
+        ++m_bytecodeCountHavingSlowCase; \
+    NEXT_OPCODE(name)
+
 #define DEFINE_SLOW_OP(name) \
     case op_##name: { \
         if (m_bytecodeIndex >= startBytecodeIndex) { \
             JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_##name); \
             slowPathCall.call(); \
         } \
-        NEXT_OPCODE(op_##name); \
+        NEXT_OPCODE_IN_MAIN(op_##name); \
     }
 
 #define DEFINE_OP(name) \
@@ -153,7 +158,7 @@ void JIT::assertStackPointerOffset()
         if (m_bytecodeIndex >= startBytecodeIndex) { \
             emit_##name(currentInstruction); \
         } \
-        NEXT_OPCODE(name); \
+        NEXT_OPCODE_IN_MAIN(name); \
     }
 
 #define DEFINE_SLOWCASE_OP(name) \
@@ -215,7 +220,8 @@ void JIT::privateCompileMainPass()
 
             while (BytecodeBasicBlock* block = worklist.pop()) {
                 startBytecodeIndex = BytecodeIndex(std::min(startBytecodeIndex.offset(), block->leaderOffset()));
-                worklist.pushAll(block->successors());
+                for (unsigned successorIndex : block->successors())
+                    worklist.push(&graph[successorIndex]);
 
                 // Also add catch blocks for bytecodes that throw.
                 if (m_codeBlock->numberOfExceptionHandlers()) {
@@ -231,7 +237,9 @@ void JIT::privateCompileMainPass()
         }
     }
 
+    m_bytecodeCountHavingSlowCase = 0;
     for (m_bytecodeIndex = BytecodeIndex(0); m_bytecodeIndex.offset() < instructionCount; ) {
+        unsigned previousSlowCasesSize = m_slowCases.size();
         if (m_bytecodeIndex == startBytecodeIndex && startBytecodeIndex.offset() > 0) {
             // We've proven all bytecode instructions up until here are unreachable.
             // Let's ensure that by crashing if it's ever hit.
@@ -425,6 +433,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_put_getter_setter_by_id)
         DEFINE_OP(op_put_getter_by_val)
         DEFINE_OP(op_put_setter_by_val)
+        DEFINE_OP(op_to_property_key)
 
         DEFINE_OP(op_get_internal_field)
         DEFINE_OP(op_put_internal_field)
@@ -491,10 +500,17 @@ void JIT::privateCompileSlowCases()
     m_getByIdWithThisIndex = 0;
     m_putByIdIndex = 0;
     m_inByIdIndex = 0;
+    m_delByValIndex = 0;
+    m_delByIdIndex = 0;
     m_instanceOfIndex = 0;
     m_byValInstructionIndex = 0;
     m_callLinkInfoIndex = 0;
+
+    RefCountedArray<RareCaseProfile> rareCaseProfiles;
+    if (shouldEmitProfiling())
+        rareCaseProfiles = RefCountedArray<RareCaseProfile>(m_bytecodeCountHavingSlowCase);
     
+    unsigned bytecodeCountHavingSlowCase = 0;
     for (Vector<SlowCaseEntry>::iterator iter = m_slowCases.begin(); iter != m_slowCases.end();) {
         m_bytecodeIndex = iter->to;
 
@@ -504,9 +520,9 @@ void JIT::privateCompileSlowCases()
 
         const Instruction* currentInstruction = m_codeBlock->instructions().at(m_bytecodeIndex).ptr();
         
-        RareCaseProfile* rareCaseProfile = 0;
+        RareCaseProfile* rareCaseProfile = nullptr;
         if (shouldEmitProfiling())
-            rareCaseProfile = m_codeBlock->addRareCaseProfile(m_bytecodeIndex);
+            rareCaseProfile = &rareCaseProfiles.at(bytecodeCountHavingSlowCase);
 
         if (JITInternal::verbose)
             dataLogLn("Old JIT emitting slow code for ", m_bytecodeIndex, " at offset ", (long)debugOffset());
@@ -566,6 +582,8 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_put_by_id)
         case op_put_by_val_direct:
         DEFINE_SLOWCASE_OP(op_put_by_val)
+        DEFINE_SLOWCASE_OP(op_del_by_val)
+        DEFINE_SLOWCASE_OP(op_del_by_id)
         DEFINE_SLOWCASE_OP(op_sub)
         DEFINE_SLOWCASE_OP(op_has_indexed_property)
         DEFINE_SLOWCASE_OP(op_get_from_scope)
@@ -599,6 +617,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_SLOW_OP(has_structure_property)
         DEFINE_SLOWCASE_SLOW_OP(resolve_scope)
         DEFINE_SLOWCASE_SLOW_OP(check_tdz)
+        DEFINE_SLOWCASE_SLOW_OP(to_property_key)
 
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -614,14 +633,19 @@ void JIT::privateCompileSlowCases()
             add32(TrustedImm32(1), AbsoluteAddress(&rareCaseProfile->m_counter));
 
         emitJumpSlowToHot(jump(), 0);
+        ++bytecodeCountHavingSlowCase;
     }
 
+    RELEASE_ASSERT(bytecodeCountHavingSlowCase == m_bytecodeCountHavingSlowCase);
     RELEASE_ASSERT(m_getByIdIndex == m_getByIds.size());
     RELEASE_ASSERT(m_getByIdWithThisIndex == m_getByIdsWithThis.size());
     RELEASE_ASSERT(m_putByIdIndex == m_putByIds.size());
     RELEASE_ASSERT(m_inByIdIndex == m_inByIds.size());
     RELEASE_ASSERT(m_instanceOfIndex == m_instanceOfs.size());
     RELEASE_ASSERT(m_callLinkInfoIndex == m_callCompilationInfo.size());
+
+    if (shouldEmitProfiling())
+        m_codeBlock->setRareCaseProfiles(WTFMove(rareCaseProfiles));
 
 #ifndef NDEBUG
     // Reset this, in order to guard its use with ASSERTs.
@@ -706,8 +730,6 @@ void JIT::compileWithoutLinking(JITCompilationEffort effort)
 
     move(regT1, stackPointerRegister);
     checkStackPointerAlignment();
-    if (Options::zeroStackFrame())
-        clearStackFrame(callFrameRegister, stackPointerRegister, regT0, maxFrameSize);
 
     emitSaveCalleeSaves();
     emitMaterializeTagCheckRegisters();
@@ -770,7 +792,7 @@ void JIT::compileWithoutLinking(JITCompilationEffort effort)
         move(returnValueGPR, GPRInfo::argumentGPR0);
         emitNakedCall(m_vm->getCTIStub(arityFixupGenerator).retaggedCode<NoPtrTag>());
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         m_bytecodeIndex = BytecodeIndex(); // Reset this, in order to guard its use with ASSERTs.
 #endif
 
@@ -857,6 +879,8 @@ CompilationResult JIT::link()
     finalizeInlineCaches(m_getByVals, patchBuffer);
     finalizeInlineCaches(m_getByIdsWithThis, patchBuffer);
     finalizeInlineCaches(m_putByIds, patchBuffer);
+    finalizeInlineCaches(m_delByIds, patchBuffer);
+    finalizeInlineCaches(m_delByVals, patchBuffer);
     finalizeInlineCaches(m_inByIds, patchBuffer);
     finalizeInlineCaches(m_instanceOfs, patchBuffer);
 
@@ -894,17 +918,18 @@ CompilationResult JIT::link()
             patchBuffer.locationOfNearCall<JSInternalPtrTag>(compilationInfo.hotPathOther));
     }
 
-    JITCodeMap jitCodeMap;
-    for (unsigned bytecodeOffset = 0; bytecodeOffset < m_labels.size(); ++bytecodeOffset) {
-        if (m_labels[bytecodeOffset].isSet())
-            jitCodeMap.append(BytecodeIndex(bytecodeOffset), patchBuffer.locationOf<JSEntryPtrTag>(m_labels[bytecodeOffset]));
+    {
+        JITCodeMapBuilder jitCodeMapBuilder;
+        for (unsigned bytecodeOffset = 0; bytecodeOffset < m_labels.size(); ++bytecodeOffset) {
+            if (m_labels[bytecodeOffset].isSet())
+                jitCodeMapBuilder.append(BytecodeIndex(bytecodeOffset), patchBuffer.locationOf<JSEntryPtrTag>(m_labels[bytecodeOffset]));
+        }
+        m_codeBlock->setJITCodeMap(jitCodeMapBuilder.finalize());
     }
-    jitCodeMap.finish();
-    m_codeBlock->setJITCodeMap(WTFMove(jitCodeMap));
 
     MacroAssemblerCodePtr<JSEntryPtrTag> withArityCheck = patchBuffer.locationOf<JSEntryPtrTag>(m_arityCheck);
 
-    if (Options::dumpDisassembly()) {
+    if (UNLIKELY(Options::dumpDisassembly())) {
         m_disassembler->dump(patchBuffer);
         patchBuffer.didAlreadyDisassemble();
     }
@@ -925,7 +950,10 @@ CompilationResult JIT::link()
         static_cast<double>(result.size()) /
         static_cast<double>(m_codeBlock->instructionsSize()));
 
-    m_codeBlock->shrinkToFit(CodeBlock::LateShrink);
+    {
+        ConcurrentJSLocker locker(m_codeBlock->m_lock);
+        m_codeBlock->shrinkToFit(locker, CodeBlock::ShrinkMode::LateShrink);
+    }
     m_codeBlock->setJITCode(
         adoptRef(*new DirectJITCode(result, withArityCheck, JITType::BaselineJIT)));
 

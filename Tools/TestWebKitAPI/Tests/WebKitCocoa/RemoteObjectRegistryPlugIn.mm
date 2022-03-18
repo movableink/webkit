@@ -108,4 +108,15 @@
 {
 }
 
+- (void)sendRequest:(NSURLRequest *)request response:(NSURLResponse *)response challenge:(NSURLAuthenticationChallenge *)challenge error:(NSError *)error completionHandler:(void (^)(NSURLRequest *, NSURLResponse *, NSURLAuthenticationChallenge *, NSError *))completionHandler
+{
+    completionHandler(request, response, challenge, error);
+}
+
+- (void)callUIProcessMethodWithReplyBlock
+{
+    id <LocalObjectProtocol> localObject = [[_browserContextController _remoteObjectRegistry] remoteObjectProxyWithInterface:localObjectInterface()];
+    [localObject doSomethingWithCompletionHandler:^{ }];
+}
+
 @end

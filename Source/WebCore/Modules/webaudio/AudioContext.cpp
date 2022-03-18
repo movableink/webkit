@@ -63,6 +63,7 @@
 #include "Page.h"
 #include "PannerNode.h"
 #include "PeriodicWave.h"
+#include "PlatformMediaSessionManager.h"
 #include "ScriptController.h"
 #include "ScriptProcessorNode.h"
 #include "WaveShaperNode.h"
@@ -139,7 +140,7 @@ AudioContext::AudioContext(Document& document)
     , m_logger(document.logger())
     , m_logIdentifier(uniqueLogIdentifier())
 #endif
-    , m_mediaSession(PlatformMediaSession::create(*this))
+    , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::sharedManager(), *this))
     , m_eventQueue(MainThreadGenericEventQueue::create(*this))
 {
     // According to spec AudioContext must die only after page navigate.
@@ -165,7 +166,7 @@ AudioContext::AudioContext(Document& document, AudioBuffer* renderTarget)
     , m_logIdentifier(uniqueLogIdentifier())
 #endif
     , m_isOfflineContext(true)
-    , m_mediaSession(PlatformMediaSession::create(*this))
+    , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::sharedManager(), *this))
     , m_eventQueue(MainThreadGenericEventQueue::create(*this))
     , m_renderTarget(renderTarget)
 {
@@ -366,24 +367,10 @@ Document* AudioContext::document() const
     return downcast<Document>(m_scriptExecutionContext);
 }
 
-Document* AudioContext::hostingDocument() const
+DocumentIdentifier AudioContext::hostingDocumentIdentifier() const
 {
-    return downcast<Document>(m_scriptExecutionContext);
-}
-
-String AudioContext::sourceApplicationIdentifier() const
-{
-    Document* document = this->document();
-    if (Frame* frame = document ? document->frame() : nullptr) {
-        if (NetworkingContext* networkingContext = frame->loader().networkingContext())
-            return networkingContext->sourceApplicationIdentifier();
-    }
-    return emptyString();
-}
-
-bool AudioContext::processingUserGestureForMedia() const
-{
-    return document() ? document()->processingUserGestureForMedia() : false;
+    auto* document = downcast<Document>(m_scriptExecutionContext);
+    return document ? document->identifier() : DocumentIdentifier { };
 }
 
 bool AudioContext::isSuspended() const
@@ -1097,11 +1084,12 @@ void AudioContext::nodeWillBeginPlayback()
 
 bool AudioContext::willBeginPlayback()
 {
-    if (!document())
+    auto* document = this->document();
+    if (!document)
         return false;
 
     if (userGestureRequiredForAudioStart()) {
-        if (!processingUserGestureForMedia() && !document()->isCapturing()) {
+        if (!document->processingUserGestureForMedia() && !document->isCapturing()) {
             ALWAYS_LOG(LOGIDENTIFIER, "returning false, not processing user gesture or capturing");
             return false;
         }
@@ -1109,9 +1097,9 @@ bool AudioContext::willBeginPlayback()
     }
 
     if (pageConsentRequiredForAudioStart()) {
-        Page* page = document()->page();
+        auto* page = document->page();
         if (page && !page->canStartMedia()) {
-            document()->addMediaCanStartListener(*this);
+            document->addMediaCanStartListener(*this);
             ALWAYS_LOG(LOGIDENTIFIER, "returning false, page doesn't allow media to start");
             return false;
         }
@@ -1126,19 +1114,20 @@ bool AudioContext::willBeginPlayback()
 
 bool AudioContext::willPausePlayback()
 {
-    if (!document())
+    auto* document = this->document();
+    if (!document)
         return false;
 
     if (userGestureRequiredForAudioStart()) {
-        if (!processingUserGestureForMedia())
+        if (!document->processingUserGestureForMedia())
             return false;
         removeBehaviorRestriction(AudioContext::RequireUserGestureForAudioStartRestriction);
     }
 
     if (pageConsentRequiredForAudioStart()) {
-        Page* page = document()->page();
+        auto* page = document->page();
         if (page && !page->canStartMedia()) {
-            document()->addMediaCanStartListener(*this);
+            document->addMediaCanStartListener(*this);
             return false;
         }
         removeBehaviorRestriction(AudioContext::RequirePageConsentForAudioStartRestriction);

@@ -246,6 +246,8 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
     finalizeInlineCaches(m_getByVals, linkBuffer);
     finalizeInlineCaches(m_putByIds, linkBuffer);
+    finalizeInlineCaches(m_delByIds, linkBuffer);
+    finalizeInlineCaches(m_delByVals, linkBuffer);
     finalizeInlineCaches(m_inByIds, linkBuffer);
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
 
@@ -353,8 +355,6 @@ void JITCompiler::compile()
     emitStackOverflowCheck(*this, stackOverflow);
 
     addPtr(TrustedImm32(-(m_graph.frameRegisterCount() * sizeof(Register))), GPRInfo::callFrameRegister, stackPointerRegister);
-    if (Options::zeroStackFrame())
-        clearStackFrame(GPRInfo::callFrameRegister, stackPointerRegister, GPRInfo::regT0, m_graph.frameRegisterCount() * sizeof(Register));
     checkStackPointerAlignment();
     compileSetupRegistersForEntry();
     compileEntryExecutionFlag();
@@ -394,9 +394,6 @@ void JITCompiler::compile()
     link(*linkBuffer);
     m_speculative->linkOSREntries(*linkBuffer);
 
-    m_jitCode->shrinkToFit();
-    codeBlock()->shrinkToFit(CodeBlock::LateShrink);
-
     disassemble(*linkBuffer);
 
     m_graph.m_plan.setFinalizer(makeUnique<JITFinalizer>(
@@ -422,8 +419,6 @@ void JITCompiler::compileFunction()
 
     // Move the stack pointer down to accommodate locals
     addPtr(TrustedImm32(-(m_graph.frameRegisterCount() * sizeof(Register))), GPRInfo::callFrameRegister, stackPointerRegister);
-    if (Options::zeroStackFrame())
-        clearStackFrame(GPRInfo::callFrameRegister, stackPointerRegister, GPRInfo::regT0, m_graph.frameRegisterCount() * sizeof(Register));
     checkStackPointerAlignment();
 
     compileSetupRegistersForEntry();
@@ -498,9 +493,6 @@ void JITCompiler::compileFunction()
     link(*linkBuffer);
     m_speculative->linkOSREntries(*linkBuffer);
     
-    m_jitCode->shrinkToFit();
-    codeBlock()->shrinkToFit(CodeBlock::LateShrink);
-
     if (requiresArityFixup)
         linkBuffer->link(callArityFixup, FunctionPtr<JITThunkPtrTag>(vm().getCTIStub(arityFixupGenerator).code()));
 

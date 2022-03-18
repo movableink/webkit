@@ -29,7 +29,7 @@
 
 #include "AudioTrackPrivate.h"
 #include "ContentType.h"
-#include "GraphicsTypes3D.h"
+#include "GraphicsTypesGL.h"
 #include "LayoutRect.h"
 #include "LegacyCDMSession.h"
 #include "MediaPlayerEnums.h"
@@ -61,9 +61,10 @@ namespace WebCore {
 class AudioSourceProvider;
 class CDMInstance;
 class CachedResourceLoader;
-class GraphicsContext3D;
+class GraphicsContextGLOpenGL;
 class GraphicsContext;
 class InbandTextTrackPrivate;
+class LegacyCDM;
 class LegacyCDMSessionClient;
 class MediaPlaybackTarget;
 class MediaPlayer;
@@ -77,6 +78,7 @@ class TextTrackRepresentation;
 
 struct Cookie;
 struct GraphicsDeviceAdapter;
+struct SecurityOriginData;
 
 struct MediaEngineSupportParameters {
     ContentType type;
@@ -210,7 +212,7 @@ public:
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     virtual RefPtr<ArrayBuffer> mediaPlayerCachedKeyForKeyId(const String&) const { return nullptr; }
-    virtual bool mediaPlayerKeyNeeded(Uint8Array*) { return false; }
+    virtual void mediaPlayerKeyNeeded(Uint8Array*) { }
     virtual String mediaPlayerMediaKeysStorageDirectory() const { return emptyString(); }
 #endif
 
@@ -220,7 +222,7 @@ public:
 #endif
     
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    virtual void mediaPlayerCurrentPlaybackTargetIsWirelessChanged() { };
+    virtual void mediaPlayerCurrentPlaybackTargetIsWirelessChanged(bool) { };
 #endif
 
     virtual String mediaPlayerReferrer() const { return String(); }
@@ -232,8 +234,6 @@ public:
     virtual bool mediaPlayerIsVideo() const { return false; }
     virtual LayoutRect mediaPlayerContentBoxRect() const { return LayoutRect(); }
     virtual float mediaPlayerContentsScale() const { return 1; }
-    virtual void mediaPlayerPause() { }
-    virtual void mediaPlayerPlay() { }
     virtual bool mediaPlayerPlatformVolumeConfigurationRequired() const { return false; }
     virtual bool mediaPlayerIsLooping() const { return false; }
     virtual CachedResourceLoader* mediaPlayerCachedResourceLoader() { return nullptr; }
@@ -282,6 +282,8 @@ public:
     virtual void mediaPlayerBufferedTimeRangesChanged() { }
     virtual void mediaPlayerSeekableTimeRangesChanged() { }
 
+    virtual SecurityOriginData documentSecurityOrigin() const { return { }; }
+
 #if !RELEASE_LOG_DISABLED
     virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
     virtual const Logger& mediaPlayerLogger() = 0;
@@ -317,6 +319,7 @@ public:
     PlatformLayer* platformLayer() const;
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+    RetainPtr<PlatformLayer> createVideoFullscreenLayer();
     void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler = [] { });
     void setVideoFullscreenFrame(FloatRect);
     void updateVideoFullscreenInlineImage();
@@ -366,6 +369,7 @@ public:
     enum MediaKeyException { NoError, InvalidPlayerState, KeySystemNotSupported };
 
     std::unique_ptr<LegacyCDMSession> createSession(const String& keySystem, LegacyCDMSessionClient*);
+    void setCDM(LegacyCDM*);
     void setCDMSession(LegacyCDMSession*);
     void keyAdded();
 #endif
@@ -374,6 +378,11 @@ public:
     void cdmInstanceAttached(CDMInstance&);
     void cdmInstanceDetached(CDMInstance&);
     void attemptToDecryptWithInstance(CDMInstance&);
+#endif
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
+    void setShouldContinueAfterKeyNeeded(bool);
+    bool shouldContinueAfterKeyNeeded() const { return m_shouldContinueAfterKeyNeeded; }
 #endif
 
     bool paused() const;
@@ -431,7 +440,7 @@ public:
     // The destination texture may need to be resized to to the dimensions of the source texture or re-defined to the required internalFormat.
     // The current restrictions require that format shoud be RGB or RGBA, type should be UNSIGNED_BYTE and level should be 0. It may be lifted in the future.
 
-    bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject texture, GC3Denum target, GC3Dint level, GC3Denum internalFormat, GC3Denum format, GC3Denum type, bool premultiplyAlpha, bool flipY);
+    bool copyVideoTextureToPlatformTexture(GraphicsContextGLOpenGL*, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY);
 
     NativeImagePtr nativeImageForCurrentTime();
 
@@ -465,13 +474,8 @@ public:
     bool hasAvailableVideoFrame() const;
     void prepareForRendering();
 
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-    void enterFullscreen();
-    void exitFullscreen();
-#endif
-
+    using MediaPlayerEnums::WirelessPlaybackTargetType;
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    enum WirelessPlaybackTargetType { TargetTypeNone, TargetTypeAirPlay, TargetTypeTVOut };
     WirelessPlaybackTargetType wirelessPlaybackTargetType() const;
 
     String wirelessPlaybackTargetName() const;
@@ -479,7 +483,7 @@ public:
     bool wirelessVideoPlaybackDisabled() const;
     void setWirelessVideoPlaybackDisabled(bool);
 
-    void currentPlaybackTargetIsWirelessChanged();
+    void currentPlaybackTargetIsWirelessChanged(bool);
     void playbackTargetAvailabilityChanged();
 
     bool isCurrentPlaybackTargetWireless() const;
@@ -492,16 +496,11 @@ public:
     double minFastReverseRate() const;
     double maxFastForwardRate() const;
 
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-    bool canEnterFullscreen() const;
-#endif
-
     // whether accelerated rendering is supported by the media engine for the current media.
     bool supportsAcceleratedRendering() const;
     // called when the rendering system flips the into or out of accelerated rendering mode.
     void acceleratedRenderingStateChanged();
 
-    bool shouldMaintainAspectRatio() const;
     void setShouldMaintainAspectRatio(bool);
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
@@ -529,7 +528,7 @@ public:
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     RefPtr<ArrayBuffer> cachedKeyForKeyId(const String& keyId) const;
-    bool keyNeeded(Uint8Array* initData);
+    void keyNeeded(Uint8Array* initData);
     String mediaKeysStorageDirectory() const;
 #endif
 
@@ -615,12 +614,12 @@ public:
 #if USE(AVFOUNDATION)
     AVPlayer *objCAVFoundationAVPlayer() const;
 #endif
-
+    
 #if USE(QT_MULTIMEDIA)
     MediaPlayerPrivateQt* qtMediaPlayer() const;
 #endif
 
-    bool performTaskAtMediaTime(WTF::Function<void()>&&, MediaTime);
+    bool performTaskAtMediaTime(Function<void()>&&, const MediaTime&);
 
     bool shouldIgnoreIntrinsicSize();
 
@@ -634,13 +633,17 @@ public:
     const String& mediaCacheDirectory() const { return client().mediaPlayerMediaCacheDirectory(); }
     bool isVideoPlayer() const { return client().mediaPlayerIsVideo(); }
     void mediaEngineUpdated() { client().mediaPlayerEngineUpdated(); }
+    void resourceNotSupported() { client().mediaPlayerResourceNotSupported(); }
     bool isLooping() const { return client().mediaPlayerIsLooping(); }
 
     void remoteEngineFailedToLoad();
+    SecurityOriginData documentSecurityOrigin() const;
 
 #if USE(GSTREAMER)
     void requestInstallMissingPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback& callback) { client().requestInstallMissingPlugins(details, description, callback); }
 #endif
+
+    const MediaPlayerPrivateInterface* playerPrivate() const { return m_private.get(); }
 
 private:
     MediaPlayer(MediaPlayerClient&);
@@ -677,6 +680,9 @@ private:
 #endif
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaStreamPrivate> m_mediaStream;
+#endif
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
+    bool m_shouldContinueAfterKeyNeeded { false };
 #endif
 };
 

@@ -38,11 +38,11 @@ class InvalidationState;
 class TableFormattingState;
 // This class implements the layout logic for table formatting contexts.
 // https://www.w3.org/TR/CSS22/tables.html
-class TableFormattingContext : public FormattingContext {
+class TableFormattingContext final : public FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(TableFormattingContext);
 public:
-    TableFormattingContext(const Container& formattingContextRoot, TableFormattingState&);
-    void layoutInFlowContent(InvalidationState&) override;
+    TableFormattingContext(const ContainerBox& formattingContextRoot, TableFormattingState&);
+    void layoutInFlowContent(InvalidationState&, const HorizontalConstraints&, const VerticalConstraints&) override;
 
 private:
     class Geometry : public FormattingContext::Geometry {
@@ -59,14 +59,14 @@ private:
     TableFormattingContext::Geometry geometry() const { return Geometry(*this); }
 
     IntrinsicWidthConstraints computedIntrinsicWidthConstraints() override;
-    void layoutTableCellBox(const Box& cellLayoutBox, const TableGrid::Column&, InvalidationState&);
+    void layoutTableCellBox(const TableGrid::CellInfo&, InvalidationState&, const HorizontalConstraints&);
     void positionTableCells();
     void setComputedGeometryForRows();
     void setComputedGeometryForSections();
 
     void ensureTableGrid();
     void computePreferredWidthForColumns();
-    void computeAndDistributeExtraHorizontalSpace();
+    void computeAndDistributeExtraHorizontalSpace(LayoutUnit containingBlockWidth);
     enum class WidthConstraintsType { Minimum, Maximum };
     void useAsContentLogicalWidth(WidthConstraintsType);
 

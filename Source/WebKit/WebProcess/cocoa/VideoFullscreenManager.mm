@@ -249,8 +249,6 @@ void VideoFullscreenManager::enterVideoFullscreenForVideoElement(HTMLVideoElemen
 
     auto [model, interface] = ensureModelAndInterface(contextId);
     HTMLMediaElementEnums::VideoFullscreenMode oldMode = interface->fullscreenMode();
-    if (oldMode == mode)
-        return;
 
     addClientForContext(contextId);
     if (!interface->layerHostingContext())
@@ -273,10 +271,9 @@ void VideoFullscreenManager::enterVideoFullscreenForVideoElement(HTMLVideoElemen
     bool allowsPictureInPicture = videoElement.webkitSupportsPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
 
     if (!interface->layerHostingContext()->rootLayer()) {
-        PlatformLayer* videoLayer = [CALayer layer];
+        auto videoLayer = model->createVideoFullscreenLayer();
         [videoLayer setDelegate:[WebActionDisablingCALayerDelegate shared]];
-
-        [videoLayer setName:@"Web video fullscreen manager layer"];
+        [videoLayer setName:@"Web Video Fullscreen Layer"];
         [videoLayer setPosition:CGPointMake(0, 0)];
         [videoLayer setBackgroundColor:cachedCGColor(WebCore::Color::transparent)];
 
@@ -285,7 +282,7 @@ void VideoFullscreenManager::enterVideoFullscreenForVideoElement(HTMLVideoElemen
         float hostingScaleFactor = m_page->deviceScaleFactor();
         [videoLayer setTransform:CATransform3DMakeScale(hostingScaleFactor, hostingScaleFactor, 1)];
 
-        interface->layerHostingContext()->setRootLayer(videoLayer);
+        interface->layerHostingContext()->setRootLayer(videoLayer.get());
     }
 
     m_page->send(Messages::VideoFullscreenManagerProxy::SetupFullscreenWithID(contextId, interface->layerHostingContext()->contextID(), videoRect, m_page->deviceScaleFactor(), interface->fullscreenMode(), allowsPictureInPicture, standby));
@@ -299,14 +296,10 @@ void VideoFullscreenManager::exitVideoFullscreenForVideoElement(WebCore::HTMLVid
 
     uint64_t contextId = m_videoElements.get(&videoElement);
     auto& interface = ensureInterface(contextId);
-    HTMLMediaElementEnums::VideoFullscreenMode oldMode = interface.fullscreenMode();
-    if (oldMode == HTMLMediaElementEnums::VideoFullscreenModeNone)
-        return;
-
     interface.setTargetIsFullscreen(false);
-
     if (interface.animationState() != VideoFullscreenInterfaceContext::AnimationType::None)
         return;
+
     interface.setAnimationState(VideoFullscreenInterfaceContext::AnimationType::FromFullscreen);
     m_page->send(Messages::VideoFullscreenManagerProxy::ExitFullscreen(contextId, inlineVideoFrame(videoElement)));
 }

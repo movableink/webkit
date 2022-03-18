@@ -180,7 +180,7 @@ def parse_args(args):
                  "option while others can have a default value that can be overridden here."),
 
         optparse.make_option("--skip-failing-tests", action="store_true",
-            default=False, help="Skip tests that are expected to fail. "
+            default=False, help="Skip tests that are marked as failing or flaky. "
                  "Note: When using this option, you might miss new crashes "
                  "in these tests."),
         optparse.make_option("--additional-drt-flag", action="append",
@@ -302,6 +302,7 @@ def parse_args(args):
             help='"xvfb": Use a virtualized X11 server. "xorg": Use the current X11 session. '
                  '"weston": Use a virtualized Weston server. "wayland": Use the current wayland session.'),
         optparse.make_option("--world-leaks", action="store_true", default=False, help="Check for world leaks (currently, only documents). Differs from --leaks in that this uses internal instrumentation, rather than external tools."),
+        optparse.make_option("--accessibility-isolated-tree", action="store_true", default=False, help="Runs tests in accessibility isolated tree mode."),
     ]))
 
     option_group_definitions.append(("iOS Options", [
@@ -380,6 +381,7 @@ def parse_args(args):
             options.internal_feature = []
         options.internal_feature.append('UseGPUProcessForMedia')
         options.internal_feature.append('CaptureAudioInGPUProcessEnabled')
+        options.internal_feature.append('RenderCanvasInGPUProcessEnabled')
         if options.result_report_flavor:
             raise RuntimeError('--use-gpu-process implicitly sets the result flavor, this should not be overridden')
         options.result_report_flavor = 'gpuprocess'

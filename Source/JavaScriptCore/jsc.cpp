@@ -31,6 +31,7 @@
 #include "CatchScope.h"
 #include "CodeBlock.h"
 #include "CodeCache.h"
+#include "CompilerTimingScope.h"
 #include "Completion.h"
 #include "ConfigFile.h"
 #include "Disassembler.h"
@@ -135,7 +136,7 @@
 #include <windows.h>
 #endif
 
-#if PLATFORM(IOS_FAMILY) && CPU(ARM_THUMB2)
+#if OS(DARWIN) && CPU(ARM_THUMB2)
 #include <fenv.h>
 #include <arm/arch.h>
 #endif
@@ -208,6 +209,12 @@ public:
 
     typedef JSNonFinalObject Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::MasqueradesAsUndefined;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
 
     static Masquerader* create(VM& vm, JSGlobalObject* globalObject)
     {
@@ -1386,6 +1393,12 @@ EncodedJSValue JSC_HOST_CALL functionHeapSize(JSGlobalObject* globalObject, Call
 class JSCMemoryFootprint : public JSDestructibleObject {
     using Base = JSDestructibleObject;
 public:
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.destructibleObjectSpace;
+    }
+
     JSCMemoryFootprint(VM& vm, Structure* structure)
         : Base(vm, structure)
     { }
@@ -2488,7 +2501,7 @@ static void startTimeoutThreadIfNeeded(VM& vm)
 
 int main(int argc, char** argv)
 {
-#if PLATFORM(IOS_FAMILY) && CPU(ARM_THUMB2)
+#if OS(DARWIN) && CPU(ARM_THUMB2)
     // Enabled IEEE754 denormal support.
     fenv_t env;
     fegetenv( &env );
@@ -3097,6 +3110,9 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
         std::sort(compileTimeKeys.begin(), compileTimeKeys.end());
         for (const CString& key : compileTimeKeys)
             printf("%40s: %.3lf ms\n", key.data(), compileTimeStats.get(key).milliseconds());
+
+        if (Options::reportTotalPhaseTimes())
+            logTotalPhaseTimes();
     }
 #endif
 

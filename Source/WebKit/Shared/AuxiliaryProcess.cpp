@@ -26,6 +26,7 @@
 #include "config.h"
 #include "AuxiliaryProcess.h"
 
+#include "ContentWorldShared.h"
 #include "Logging.h"
 #include "SandboxInitializationParameters.h"
 #include <pal/SessionID.h>
@@ -77,8 +78,9 @@ void AuxiliaryProcess::initialize(const AuxiliaryProcessInitializationParameters
 
     initializeProcessName(parameters);
 
-    // In WebKit2, only the UI process should ever be generating non-default PAL::SessionIDs.
+    // In WebKit2, only the UI process should ever be generating certain identifiers.
     PAL::SessionID::enableGenerationProtection();
+    ContentWorldIdentifier::enableGenerationProtection();
 
     m_connection = IPC::Connection::createClientConnection(parameters.connectionIdentifier, *this);
     initializeConnection(m_connection.get());

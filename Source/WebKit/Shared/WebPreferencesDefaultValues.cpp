@@ -28,11 +28,9 @@
 #include <WebCore/RuntimeApplicationChecks.h>
 
 #if PLATFORM(COCOA)
-#include <wtf/spi/darwin/dyldSPI.h>
-#endif
-
-#if PLATFORM(IOS_FAMILY)
 #include "VersionChecks.h"
+#include <pal/spi/cocoa/FeatureFlagsSPI.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 namespace WebKit {
@@ -49,7 +47,7 @@ bool defaultPassiveTouchListenersAsDefaultOnDocument()
 bool defaultCSSOMViewScrollingAPIEnabled()
 {
 #if PLATFORM(IOS_FAMILY)
-    if (WebCore::IOSApplication::isIMDb() && WebCore::applicationSDKVersion() < DYLD_IOS_VERSION_13_0)
+    if (WebCore::IOSApplication::isIMDb() && applicationSDKVersion() < DYLD_IOS_VERSION_13_0)
         return false;
 #endif
     return true;
@@ -63,5 +61,168 @@ bool defaultTextAutosizingUsesIdempotentMode()
 }
 
 #endif // ENABLE(TEXT_AUTOSIZING) && !PLATFORM(IOS_FAMILY)
+
+bool defaultDisallowSyncXHRDuringPageDismissalEnabled()
+{
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    if (CFPreferencesGetAppBooleanValue(CFSTR("allowDeprecatedSynchronousXMLHttpRequestDuringUnload"), CFSTR("com.apple.WebKit"), nullptr)) {
+        WTFLogAlways("Allowing synchronous XHR during page unload due to managed preference");
+        return false;
+    }
+#elif PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+    if (allowsDeprecatedSynchronousXMLHttpRequestDuringUnload()) {
+        WTFLogAlways("Allowing synchronous XHR during page unload due to managed preference");
+        return false;
+    }
+#endif
+    return true;
+}
+
+static bool defaultAsyncFrameAndOverflowScrollingEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    return true;
+#endif
+
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, async_frame_and_overflow_scrolling);
+#endif
+
+    return false;
+}
+
+bool defaultAsyncFrameScrollingEnabled()
+{
+#if USE(NICOSIA)
+    return true;
+#endif
+
+    return defaultAsyncFrameAndOverflowScrollingEnabled();
+}
+
+bool defaultAsyncOverflowScrollingEnabled()
+{
+    return defaultAsyncFrameAndOverflowScrollingEnabled();
+}
+
+#if ENABLE(GPU_PROCESS)
+
+bool defaultUseGPUProcessForMedia()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, canvas_and_media_in_gpu_process);
+#endif
+
+    return false;
+}
+
+#endif // ENABLE(GPU_PROCESS)
+
+bool defaultRenderCanvasInGPUProcessEnabled()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, canvas_and_media_in_gpu_process);
+#endif
+
+    return false;
+}
+
+#if ENABLE(MEDIA_STREAM)
+
+bool defaultCaptureAudioInGPUProcessEnabled()
+{
+#if PLATFORM(MAC) && HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, webrtc_in_gpu_process);
+#endif
+
+#if PLATFORM(IOS_FAMILY) && HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, canvas_and_media_in_gpu_process);
+#endif
+
+    return false;
+}
+
+bool defaultCaptureAudioInUIProcessEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    return false;
+#endif
+
+#if PLATFORM(MAC)
+    return !defaultCaptureAudioInGPUProcessEnabled();
+#endif
+
+    return false;
+}
+
+bool defaultCaptureVideoInGPUProcessEnabled()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, webrtc_in_gpu_process);
+#endif
+
+    return false;
+}
+
+#endif // ENABLE(MEDIA_STREAM)
+
+#if ENABLE(WEB_RTC)
+
+bool defaultWebRTCCodecsInGPUProcess()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, webrtc_in_gpu_process);
+#endif
+
+    return false;
+}
+
+#endif // ENABLE(WEB_RTC)
+
+#if ENABLE(WEBGL2)
+
+bool defaultWebGL2Enabled()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, WebGL2);
+#endif
+
+    return false;
+}
+
+#endif // ENABLE(WEBGL2)
+
+#if ENABLE(WEBGPU)
+
+bool defaultWebGPUEnabled()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, WebGPU);
+#endif
+
+    return false;
+}
+
+#endif // ENABLE(WEBGPU)
+
+bool defaultInAppBrowserPrivacy()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, InAppBrowserPrivacy);
+#endif
+
+    return false;
+}
+
+#if HAVE(INCREMENTAL_PDF_APIS)
+bool defaultIncrementalPDFEnabled()
+{
+#if HAVE(HAVE_SYSTEM_FEATURE_FLAGS)
+    return os_feature_enabled(WebKit, incremental_pdf);
+#endif
+
+    return false;
+}
+#endif
 
 } // namespace WebKit

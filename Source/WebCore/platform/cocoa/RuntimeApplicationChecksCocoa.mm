@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,22 +66,13 @@ void setApplicationBundleIdentifier(const String& bundleIdentifier)
     applicationBundleIdentifierOverride() = bundleIdentifier;
 }
 
-static Optional<uint32_t>& applicationSDKVersionOverride()
+void clearApplicationBundleIdentifierTestingOverride()
 {
-    static NeverDestroyed<Optional<uint32_t>> version;
-    return version;
-}
-
-void setApplicationSDKVersion(uint32_t version)
-{
-    applicationSDKVersionOverride() = version;
-}
-
-uint32_t applicationSDKVersion()
-{
-    if (applicationSDKVersionOverride())
-        return *applicationSDKVersionOverride();
-    return dyld_get_program_sdk_version();
+    ASSERT(RunLoop::isMain());
+    applicationBundleIdentifierOverride() = emptyString();
+#if !ASSERT_MSG_DISABLED
+    applicationBundleIdentifierOverrideWasQueried = false;
+#endif
 }
 
 bool isInWebProcess()
@@ -155,6 +146,12 @@ bool MacApplication::isMicrosoftOutlook()
 {
     static bool isMicrosoftOutlook = applicationBundleIsEqualTo("com.microsoft.Outlook"_s);
     return isMicrosoftOutlook;
+}
+
+bool MacApplication::isMiniBrowser()
+{
+    static bool isMiniBrowser = applicationBundleIsEqualTo("org.webkit.MiniBrowser"_s);
+    return isMiniBrowser;
 }
 
 bool MacApplication::isQuickenEssentials()
@@ -334,6 +331,12 @@ bool IOSApplication::isDataActivation()
 {
     static bool isDataActivation = applicationBundleIsEqualTo("com.apple.DataActivation"_s);
     return isDataActivation;
+}
+
+bool IOSApplication::isMiniBrowser()
+{
+    static bool isMiniBrowser = applicationBundleIsEqualTo("org.webkit.MiniBrowser"_s);
+    return isMiniBrowser;
 }
 
 #endif

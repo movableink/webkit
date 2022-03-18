@@ -892,16 +892,7 @@ static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, R
     auto& autoRepeatTrackSizes = isRowAxis ? style.gridAutoRepeatColumns() : style.gridAutoRepeatRows();
 
     // Handle the 'none' case.
-    bool trackListIsEmpty = trackSizes.isEmpty() && autoRepeatTrackSizes.isEmpty();
-    if (isRenderGrid && trackListIsEmpty) {
-        // For grids we should consider every listed track, whether implicitly or explicitly
-        // created. Empty grids have a sole grid line per axis.
-        auto& grid = downcast<RenderGrid>(*renderer);
-        auto& positions = isRowAxis ? grid.columnPositions() : grid.rowPositions();
-        trackListIsEmpty = positions.size() == 1;
-    }
-
-    if (trackListIsEmpty)
+    if (trackSizes.isEmpty() && autoRepeatTrackSizes.isEmpty())
         return CSSValuePool::singleton().createIdentifierValue(CSSValueNone);
 
     auto list = CSSValueList::createSpaceSeparated();
@@ -1442,7 +1433,6 @@ static Ref<CSSPrimitiveValue> valueForFamily(const AtomString& family)
     return CSSValuePool::singleton().createFontFamilyValue(family);
 }
 
-#if ENABLE(POINTER_EVENTS)
 static Ref<CSSValue> touchActionFlagsToCSSValue(OptionSet<TouchAction> touchActions)
 {
     auto& cssValuePool = CSSValuePool::singleton();
@@ -1466,7 +1456,6 @@ static Ref<CSSValue> touchActionFlagsToCSSValue(OptionSet<TouchAction> touchActi
         return cssValuePool.createIdentifierValue(CSSValueAuto);
     return list;
 }
-#endif
 
 static Ref<CSSValue> renderTextDecorationFlagsToCSSValue(OptionSet<TextDecoration> textDecoration)
 {
@@ -2895,10 +2884,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             if (style.borderFit() == BorderFit::Border)
                 return cssValuePool.createIdentifierValue(CSSValueBorder);
             return cssValuePool.createIdentifierValue(CSSValueLines);
-#if ENABLE(CSS_IMAGE_ORIENTATION)
         case CSSPropertyImageOrientation:
-            return cssValuePool.createValue(style.imageOrientation());
-#endif
+            if (style.imageOrientation() == ImageOrientation::FromImage)
+                return cssValuePool.createIdentifierValue(CSSValueFromImage);
+            return cssValuePool.createIdentifierValue(CSSValueNone);
         case CSSPropertyImageRendering:
             return CSSPrimitiveValue::create(style.imageRendering());
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -3083,7 +3072,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
                 return cssValuePool.createValue(style.textEmphasisCustomMark(), CSSUnitType::CSS_STRING);
             case TextEmphasisMark::Auto:
                 ASSERT_NOT_REACHED();
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
                 FALLTHROUGH;
 #endif
             case TextEmphasisMark::Dot:
@@ -3383,6 +3372,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
                 return cssValuePool.createIdentifierValue(CSSValueAuto);
             return cssValuePool.createIdentifierValue(CSSValueTouch);
 #endif
+        case CSSPropertyScrollBehavior:
+            if (!style.useSmoothScrolling())
+                return cssValuePool.createIdentifierValue(CSSValueAuto);
+            return cssValuePool.createIdentifierValue(CSSValueSmooth);
         case CSSPropertyPerspective:
             if (!style.hasPerspective())
                 return cssValuePool.createIdentifierValue(CSSValueNone);
@@ -3408,10 +3401,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyWebkitTapHighlightColor:
             return currentColorOrValidColor(&style, style.tapHighlightColor());
 #endif
-#if ENABLE(POINTER_EVENTS)
         case CSSPropertyTouchAction:
             return touchActionFlagsToCSSValue(style.touchActions());
-#endif
 #if PLATFORM(IOS_FAMILY)
         case CSSPropertyWebkitTouchCallout:
             return cssValuePool.createIdentifierValue(style.touchCalloutEnabled() ? CSSValueDefault : CSSValueNone);
@@ -3817,14 +3808,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyTransformOriginY:
         case CSSPropertyTransformOriginZ:
             break;
-
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-        case CSSPropertyMaxZoom:
-        case CSSPropertyMinZoom:
-        case CSSPropertyOrientation:
-        case CSSPropertyUserZoom:
-            break;
-#endif
 
         case CSSPropertyBufferedRendering:
         case CSSPropertyClipRule:

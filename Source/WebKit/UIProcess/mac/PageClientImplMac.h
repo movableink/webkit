@@ -32,7 +32,7 @@
 #include "WebFullScreenManagerProxy.h"
 #include <WebCore/DOMPasteAccess.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/RetainPtr.h>
+#include <wtf/Forward.h>
 
 @class WKEditorUndoTarget;
 @class WKView;
@@ -153,7 +153,7 @@ private:
     void exitAcceleratedCompositingMode() override;
     void updateAcceleratedCompositingMode(const LayerTreeContext&) override;
 
-    RefPtr<ViewSnapshot> takeViewSnapshot() override;
+    RefPtr<ViewSnapshot> takeViewSnapshot(Optional<WebCore::IntRect>&&) override;
     void wheelEventWasNotHandledByWebCore(const NativeWebWheelEvent&) override;
 #if ENABLE(MAC_GESTURE_EVENTS)
     void gestureEventWasNotHandledByWebCore(const NativeWebGestureEvent&) override;
@@ -180,11 +180,9 @@ private:
     void intrinsicContentSizeDidChange(const WebCore::IntSize& intrinsicContentSize) override;
 
 #if USE(DICTATION_ALTERNATIVES)
-    uint64_t addDictationAlternatives(const RetainPtr<NSTextAlternatives>&) override;
-    void removeDictationAlternatives(uint64_t dictationContext) override;
     void showDictationAlternativeUI(const WebCore::FloatRect& boundingBoxOfDictatedText, uint64_t dictationContext) override;
-    Vector<String> dictationAlternatives(uint64_t dictationContext) override;
 #endif
+
     void setEditableElementIsFocused(bool) override;
 
 #if USE(INSERTION_UNDO_GROUPING)
@@ -250,8 +248,6 @@ private:
     NSView *inspectorAttachmentView() override;
     _WKRemoteObjectRegistry *remoteObjectRegistry() override;
 
-    void didFinishProcessingAllPendingMouseEvents() final;
-
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     WebCore::WebMediaSessionManager& mediaSessionManager() override;
 #endif
@@ -268,9 +264,6 @@ private:
     WeakPtr<WebViewImpl> m_impl;
 #if USE(AUTOCORRECTION_PANEL)
     CorrectionPanel m_correctionPanel;
-#endif
-#if USE(DICTATION_ALTERNATIVES)
-    std::unique_ptr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
 #endif
 
     bool m_shouldSuppressFirstResponderChanges { false };

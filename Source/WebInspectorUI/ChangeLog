@@ -1,3 +1,3315 @@
+2020-03-15  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Should not use variable-length-array (VLA)
+        https://bugs.webkit.org/show_bug.cgi?id=209043
+
+        Reviewed by Mark Lam.
+
+        * Configurations/Base.xcconfig:
+
+2020-03-10  Devin Rousso  <drousso@apple.com>
+
+        REGRESSION(r253759): Web Inspector: Audits: results folder doesn't get selected by pressing Arrow Down key
+        https://bugs.webkit.org/show_bug.cgi?id=208679
+        <rdar://problem/60108942>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/AuditNavigationSidebarPanel.js:
+        (WI.AuditNavigationSidebarPanel.prototype.initialLayout):
+        (WI.AuditNavigationSidebarPanel.prototype._handleAuditManagerEditingChanged):
+        We do actually want to prevent repeat selection, as we may end up attempting to select the
+        same `WI.TreeElement` twice due to the nature of `WI.SelectionController`, which would call
+        through to `WI.NavigationSidebarPanel.prototype.showDefaultContentView()` which deselects
+        any selected `WI.TreeElement`. Reselecting the previously selected `WI.TreeElement` when
+        exiting edit mode is much more of a special case than any of the ways for moving selection
+        to a `WI.FolderTreeElement`, so add logic just for that case instead of affecting the entire
+        `WI.TreeOutline`. When restoring the selection after leaving edit mode, if the currently
+        selected `WI.TreeElement` was also the previously selected `WI.TreeElement`, deselect and
+        reselect it so we're "reset" back to a fresh state.
+
+2020-03-06  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: AXI: no way to expand/collapse sidebar sections with Tab navigation
+        https://bugs.webkit.org/show_bug.cgi?id=208562
+        <rdar://problem/60028941>
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Views/DetailsSection.css:
+        (.details-section > .header):
+        (.details-section > .header::before):
+        Increase the height of the clickble area so it matches the height
+        of the header section.
+
+        (.details-section .header:focus):
+        (.details-section .header:focus::before):
+        Adjust the focus ring around the expand/collapse triangle so it has rounded corners.
+
+        * UserInterface/Views/DetailsSection.js:
+        (WI.DetailsSection):
+        (WI.DetailsSection.prototype._headerElementClicked):
+        (WI.DetailsSection.prototype._headerElementMouseDown):
+        (WI.DetailsSection.prototype._headerElementKeyPress):
+
+2020-03-06  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: AXI: scope bars should be focusable when navigating by pressing Tab
+        https://bugs.webkit.org/show_bug.cgi?id=208277
+        <rdar://problem/59828111>
+
+        Reviewed by Devin Rousso.
+
+        Make resource type filter in the Network tab and message type filter in the Console tab focusable.
+
+        * UserInterface/Views/AuditTestGroupContentView.css:
+        (.content-view.audit-test-group > header > nav):
+        (.content-view.audit-test-group > header > nav > .scope-bar):
+        Prevent outline of the focused scope bar item from clipping.
+
+        * UserInterface/Views/ScopeBar.css:
+        (.scope-bar > li:focus):
+        (.scope-bar > li:focus::after,):
+        * UserInterface/Views/ScopeBar.js:
+        (WI.ScopeBar):
+        (WI.ScopeBar.prototype._handleKeyDown):
+        Make Arrow Left an Arrow Right keys move focus within the scope bar.
+        This matches the behavior of macOS radio buttons.
+
+        * UserInterface/Views/ScopeBarItem.js:
+        (WI.ScopeBarItem.prototype.get scopeBar):
+        (WI.ScopeBarItem.prototype.set scopeBar):
+        (WI.ScopeBarItem.prototype.toggle):
+        (WI.ScopeBarItem.prototype._updateSelected):
+        (WI.ScopeBarItem.prototype._handleMouseDown):
+
+        (WI.ScopeBarItem.prototype._handleKeyDown):
+        Allow to toggle focused scope bar item by pressing Space or Enter.
+
+2020-03-06  Jon Davis  <jond@apple.com>
+
+        Fixed missing icons for WI.ThreadTreeElement and selected Heap Snapshots
+        https://bugs.webkit.org/show_bug.cgi?id=208719
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Images/InstrumentIcons.svg: Removed.
+        * UserInterface/Images/TypeIcons.svg:
+        * UserInterface/Views/HeapAllocationsTimelineOverviewGraph.css:
+        (.timeline-overview-graph.heap-allocations > img.snapshot.selected):
+        * UserInterface/Views/NetworkTableContentView.css:
+        (.network-table > .table .cell.dom-node.name .icon):
+        * UserInterface/Views/SourcesNavigationSidebarPanel.css:
+        (.sidebar > .panel.navigation.sources > .content > .breakpoints-container .tree-outline .item.event-target-window .icon):
+        (@media (prefers-color-scheme: dark) .sidebar > .panel.navigation.sources > .content > .breakpoints-container .tree-outline .item.event-target-window .icon):
+        * UserInterface/Views/ThreadTreeElement.css:
+        (.tree-outline > .item.thread .icon):
+        (.tree-outline > .item.thread + ol > .item.truncated-call-frames .icon):
+        (@media (prefers-color-scheme: dark) .tree-outline > .item.thread .icon):
+        (@media (prefers-color-scheme: dark) .tree-outline > .item.thread + ol > .item.truncated-call-frames .icon):
+        * UserInterface/Views/TimelineIcons.css:
+        (.network-icon .icon):
+        (.script-icon .icon):
+        (.cpu-icon .icon):
+        (.memory-icon .icon):
+        (.heap-allocations-icon .icon):
+        (.layout-icon .icon):
+        (.rendering-frame-icon .icon):
+        (.media-icon .icon):
+        (@media (prefers-color-scheme: dark) .network-icon .icon):
+        (@media (prefers-color-scheme: dark) .script-icon .icon):
+        (@media (prefers-color-scheme: dark) .cpu-icon .icon):
+        (@media (prefers-color-scheme: dark) .memory-icon .icon):
+        (@media (prefers-color-scheme: dark) .heap-allocations-icon .icon):
+        (@media (prefers-color-scheme: dark) .layout-icon .icon):
+        (@media (prefers-color-scheme: dark) .rendering-frame-icon .icon):
+        (@media (prefers-color-scheme: dark) .media-icon .icon):
+
+2020-03-05  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: AXI: annotate tab panels
+        https://bugs.webkit.org/show_bug.cgi?id=208542
+
+        Reviewed by Devin Rousso.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/Base/Main.js:
+        Remove `role=main` since it was providing very generic and not useful description to VoiceOver.
+
+2020-03-05  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: AXI: can't leave Styles and Computed panels by pressing Tab
+        https://bugs.webkit.org/show_bug.cgi?id=208549
+        <rdar://problem/60020149>
+
+        Reviewed by Devin Rousso.
+
+        Remove focus cycling inside of the Styles and Computed panels.
+
+        * UserInterface/Views/GeneralStyleDetailsSidebarPanel.js:
+        (WI.GeneralStyleDetailsSidebarPanel.prototype._handleForcedPseudoClassCheckboxKeydown):
+        (WI.GeneralStyleDetailsSidebarPanel.prototype._handleFilterBarInputFieldKeyDown):
+
+2020-03-04  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: the execution context picker is shown on pages with only one execution context if there are internal execution contexts
+        https://bugs.webkit.org/show_bug.cgi?id=208502
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/QuickConsole.js:
+        (WI.QuickConsole.prototype._updateActiveExecutionContextDisplay):
+        (WI.QuickConsole.prototype._handleEngineeringShowInternalExecutionContextsSettingChanged):
+
+2020-03-04  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(?): Elements: unable to edit a tag name more than once
+        https://bugs.webkit.org/show_bug.cgi?id=208586
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/DOMTreeElement.js:
+        (WI.DOMTreeElement.prototype._insertInLastAttributePosition):
+        When inserting a new attribute, don't wipe out the existing DOM structure, which is required
+        in order for tag name editing to work (specifically having a `.html-tag-name` node).
+
+2020-03-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: re-add `InspectorFrontendHost` support for moving the inspected window
+        https://bugs.webkit.org/show_bug.cgi?id=208555
+
+        Reviewed by Timothy Hatcher.
+
+        Partially revert r257759, as the design changed enough such that this code is still useful.
+
+        * UserInterface/Base/Main.js:
+        (WI.loaded):
+        (WI.updateDockedState):
+        (WI.resizeDockedFrameMouseDown): Added.
+        (WI.moveUndockedWindowMouseDown): Added.
+        (WI.dockedConfigurationSupportsSplitContentBrowser):
+        (WI._windowFocused):
+        (WI._windowBlurred):
+        (WI._updateDockNavigationItems):
+        (WI._handleDockedResizerMouseDown):
+        (WI._handleUndockedTitleAreaMouseDown):
+        (WI._updateTabBarDividers):
+        (WI.setLayoutDirection):
+        Don't create tab bar navigation items for the various docking configurations if the platform
+        doesn't support that particular configuration.
+
+        * UserInterface/Views/TabBar.js:
+        (WI.TabBar):
+        (WI.TabBar.get horizontalPadding):
+        (WI.TabBar.prototype._handleMouseDown):
+        (WI.TabBar.prototype._handleTabContainerMouseDown): Added.
+        (WI.TabBar.prototype._handleTabContainerClick): Added.
+        (WI.TabBar.prototype._handleTabContainerMouseLeave): Added.
+        (WI.TabBar.prototype._handleTabContainerContextMenu): Added.
+        (WI.TabBar.prototype._handleClick): Deleted.
+        (WI.TabBar.prototype._handleMouseLeave): Deleted.
+        (WI.TabBar.prototype._handleContextMenu): Deleted.
+        * UserInterface/Views/TabBar.css:
+        (body.docked.bottom .tab-bar > .tabs > .flexible-space):
+        Dragging on empty space in the tab bar should adjust Web Inspector's bottom docked height.
+
+        * UserInterface/Views/TabBarItem.js:
+        (WI.TabBarItem.get horizontalMargin):
+
+2020-03-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: the background of the navigation items in the tab bar doesn't match when unfocusing the window
+        https://bugs.webkit.org/show_bug.cgi?id=208538
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/TabBar.css:
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs > .item:nth-child(n + 3 of :not(.hidden)), body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.hide-border-start) > .item:nth-child(2 of :not(.hidden)), body[dir=ltr]:not(.docked) .tab-bar > .tabs.dragging-tab > .item.selected, body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.hide-border-end) > .item:nth-last-child(1 of :not(.hidden))): Added.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.hide-border-end) > .item:nth-last-child(1 of :not(.hidden)), body[dir=rtl]:not(.docked) .tab-bar > .tabs > .item:nth-child(n + 3 of :not(.hidden)), body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.hide-border-start) > .item:nth-child(2 of :not(.hidden)), body[dir=rtl]:not(.docked) .tab-bar > .tabs.dragging-tab > .item.selected): Added.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs > .item:not(:first-child), body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.hide-border-start) > .item:first-child, body[dir=ltr]:not(.docked) .tab-bar > .tabs.dragging-tab > .item.selected, body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.hide-border-end) > .item:last-child): Deleted.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.hide-border-end) > .item:last-child, body[dir=rtl]:not(.docked) .tab-bar > .tabs > .item:not(:first-child), body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.hide-border-start) > .item:first-child, body[dir=rtl]:not(.docked) .tab-bar > .tabs.dragging-tab > .item.selected): Deleted.
+        Use `nth-child` and `nth-last-child` instead of `:first-child` and `:last-child` now that
+        there are `.flexible-space` elements alongside tab bar items.
+
+        (@media (prefers-color-scheme: dark) .tab-bar):
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar): Added.
+        (@media (prefers-color-scheme: dark) body.docked .tab-bar): Added.
+        (@media (prefers-color-scheme: dark) body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar): Added.
+        (@media (prefers-color-scheme: dark) body:matches(.window-inactive, .window-docked-inactive) .tab-bar): Deleted.
+        Ensure completely separate styles for `background-color` and `background-image` when `.docked`
+        vs when `:not(.docked)` so that they don't "bleed" into eachother.
+
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar):
+        (body.docked:matches(.window-inactive, .window-docked-inactive) .tab-bar):
+        (.tab-bar > .navigation-bar > .item.group > .item):
+        (.tab-bar > .navigation-bar > .item.group > .item:nth-child(1 of :not(.hidden))):
+        (.tab-bar > .navigation-bar > .item.group > .item:nth-last-child(1 of :not(.hidden))):
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item):
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected):
+        (.tab-bar > .tabs.static-layout > :matches(.flexible-space, .item)):
+        (.tab-bar > .tabs.animating.inserting-tab > .item.being-inserted):
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.dragging-tab > .item:not(.disabled).selected, body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.static-layout:not(.animating.inserting-tab):not(.dragging-tab) > .item:nth-last-child(1 of :not(.pinned)), body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.animating.closing-tab > .item:not(.disabled).selected):
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar > .tabs > .item:not(.disabled).selected):
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover):
+        (@media (prefers-color-scheme: dark) body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item):
+        (@media (prefers-color-scheme: dark) body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected):
+        Drive-by: remove as many `!important` as possible to make future modification simpler.
+
+2020-03-03  Jon Davis  <jond@apple.com>
+
+        Removed old raster icons for object types and resources
+        https://bugs.webkit.org/show_bug.cgi?id=208458
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Images/ApplicationCache.png: Removed.
+        * UserInterface/Images/ApplicationCache@2x.png: Removed.
+        * UserInterface/Images/ApplicationCacheManifest.png: Removed.
+        * UserInterface/Images/ApplicationCacheManifest@2x.png: Removed.
+        * UserInterface/Images/Assertion.svg: Removed.
+        * UserInterface/Images/AuditTestCase.svg: Removed.
+        * UserInterface/Images/AuditTestCaseResult.svg: Removed.
+        * UserInterface/Images/AuditTestGroup.svg: Removed.
+        * UserInterface/Images/AuditTestGroupResult.svg: Removed.
+        * UserInterface/Images/CPUInstrument.svg: Removed.
+        * UserInterface/Images/CallTrees.svg: Removed.
+        * UserInterface/Images/ClippingCSS.png: Removed.
+        * UserInterface/Images/ClippingCSS@2x.png: Removed.
+        * UserInterface/Images/ClippingCSSLarge.png: Removed.
+        * UserInterface/Images/ClippingCSSLarge@2x.png: Removed.
+        * UserInterface/Images/ClippingGeneric.png: Removed.
+        * UserInterface/Images/ClippingGeneric@2x.png: Removed.
+        * UserInterface/Images/ClippingGenericLarge.png: Removed.
+        * UserInterface/Images/ClippingGenericLarge@2x.png: Removed.
+        * UserInterface/Images/ClippingJS.png: Removed.
+        * UserInterface/Images/ClippingJS@2x.png: Removed.
+        * UserInterface/Images/ClippingJSLarge.png: Removed.
+        * UserInterface/Images/ClippingJSLarge@2x.png: Removed.
+        * UserInterface/Images/Cookie.png: Removed.
+        * UserInterface/Images/Cookie@2x.png: Removed.
+        * UserInterface/Images/DOMBreakpointAttributeModified.svg: Removed.
+        * UserInterface/Images/DOMBreakpointNodeRemoved.svg: Removed.
+        * UserInterface/Images/DOMBreakpointSubtreeModified.svg: Removed.
+        * UserInterface/Images/DOMCharacterData.svg: Removed.
+        * UserInterface/Images/DOMComment.svg: Removed.
+        * UserInterface/Images/DOMDocument.svg: Removed.
+        * UserInterface/Images/DOMDocumentType.svg: Removed.
+        * UserInterface/Images/DOMElement.svg: Removed.
+        * UserInterface/Images/DOMNode.svg: Removed.
+        * UserInterface/Images/DOMTextNode.svg: Removed.
+        * UserInterface/Images/Database.png: Removed.
+        * UserInterface/Images/Database@2x.png: Removed.
+        * UserInterface/Images/DatabaseTable.png: Removed.
+        * UserInterface/Images/DatabaseTable@2x.png: Removed.
+        * UserInterface/Images/DebuggerStatement.svg: Removed.
+        * UserInterface/Images/DocumentCSS.png: Removed.
+        * UserInterface/Images/DocumentCSS@2x.png: Removed.
+        * UserInterface/Images/DocumentCSSLarge.png: Removed.
+        * UserInterface/Images/DocumentCSSLarge@2x.png: Removed.
+        * UserInterface/Images/DocumentFont.png: Removed.
+        * UserInterface/Images/DocumentFont@2x.png: Removed.
+        * UserInterface/Images/DocumentFontLarge.png: Removed.
+        * UserInterface/Images/DocumentFontLarge@2x.png: Removed.
+        * UserInterface/Images/DocumentGL.png: Removed.
+        * UserInterface/Images/DocumentGL@2x.png: Removed.
+        * UserInterface/Images/DocumentGeneric.png: Removed.
+        * UserInterface/Images/DocumentGeneric@2x.png: Removed.
+        * UserInterface/Images/DocumentGenericLarge.png: Removed.
+        * UserInterface/Images/DocumentGenericLarge@2x.png: Removed.
+        * UserInterface/Images/DocumentImage.png: Removed.
+        * UserInterface/Images/DocumentImage@2x.png: Removed.
+        * UserInterface/Images/DocumentImageLarge.png: Removed.
+        * UserInterface/Images/DocumentImageLarge@2x.png: Removed.
+        * UserInterface/Images/DocumentJS.png: Removed.
+        * UserInterface/Images/DocumentJS@2x.png: Removed.
+        * UserInterface/Images/DocumentJSLarge.png: Removed.
+        * UserInterface/Images/DocumentJSLarge@2x.png: Removed.
+        * UserInterface/Images/DocumentMarkup.png: Removed.
+        * UserInterface/Images/DocumentMarkup@2x.png: Removed.
+        * UserInterface/Images/DocumentMarkupLarge.png: Removed.
+        * UserInterface/Images/DocumentMarkupLarge@2x.png: Removed.
+        * UserInterface/Images/EventBreakpointAnimationFrame.svg: Removed.
+        * UserInterface/Images/EventBreakpointInterval.svg: Removed.
+        * UserInterface/Images/EventBreakpointListener.svg: Removed.
+        * UserInterface/Images/EventBreakpointTimeout.svg: Removed.
+        * UserInterface/Images/EventListener.svg: Removed.
+        * UserInterface/Images/Events.svg: Removed.
+        * UserInterface/Images/Exception.svg: Removed.
+        * UserInterface/Images/FolderGeneric.png: Removed.
+        * UserInterface/Images/FolderGeneric@2x.png: Removed.
+        * UserInterface/Images/Function.svg: Removed.
+        * UserInterface/Images/HeapAllocationsInstrument.svg: Removed.
+        * UserInterface/Images/HeapSnapshot.svg: Removed.
+        * UserInterface/Images/HeapSnapshotDiff.svg: Removed.
+        * UserInterface/Images/HeapSnapshotInstances.svg: Removed.
+        * UserInterface/Images/HeapSnapshotObjectGraph.svg: Removed.
+        * UserInterface/Images/HeapSnapshotSelected.svg: Removed.
+        * UserInterface/Images/HeapSnapshotSummary.svg: Removed.
+        * UserInterface/Images/LayoutInstrument.svg: Removed.
+        * UserInterface/Images/LocalStorage.png: Removed.
+        * UserInterface/Images/LocalStorage@2x.png: Removed.
+        * UserInterface/Images/MediaInstrument.svg: Removed.
+        * UserInterface/Images/MemoryInstrument.svg: Removed.
+        * UserInterface/Images/Microtask.svg: Removed.
+        * UserInterface/Images/Native.svg: Removed.
+        * UserInterface/Images/NetworkInstrument.svg: Removed.
+        * UserInterface/Images/Object.svg: Removed.
+        * UserInterface/Images/PausedBreakpoint.svg: Removed.
+        * UserInterface/Images/Program.svg: Removed.
+        * UserInterface/Images/PseudoElement.svg: Removed.
+        * UserInterface/Images/Range.svg: Removed.
+        * UserInterface/Images/RangeLarge.svg: Removed.
+        * UserInterface/Images/Reflection.svg: Removed.
+        * UserInterface/Images/RenderingFrame.svg: Removed.
+        * UserInterface/Images/RenderingFramesInstrument.svg: Removed.
+        * UserInterface/Images/Request.svg: Removed.
+        * UserInterface/Images/Response.svg: Removed.
+        * UserInterface/Images/ScriptsInstrument.svg: Removed.
+        * UserInterface/Images/SessionStorage.png: Removed.
+        * UserInterface/Images/SessionStorage@2x.png: Removed.
+        * UserInterface/Images/Source.svg: Removed.
+        * UserInterface/Images/StyleRuleInheritedElement.svg: Removed.
+        * UserInterface/Images/TailDeletedFunction.svg: Removed.
+        * UserInterface/Images/Thread.svg: Removed.
+        * UserInterface/Images/TimelineRecordAPI.svg: Removed.
+        * UserInterface/Images/TimelineRecordAnimationFrame.svg: Removed.
+        * UserInterface/Images/TimelineRecordCSSAnimation.svg: Removed.
+        * UserInterface/Images/TimelineRecordCSSTransition.svg: Removed.
+        * UserInterface/Images/TimelineRecordComposite.svg: Removed.
+        * UserInterface/Images/TimelineRecordConsoleProfile.svg: Removed.
+        * UserInterface/Images/TimelineRecordEvent.svg: Removed.
+        * UserInterface/Images/TimelineRecordGarbageCollection.svg: Removed.
+        * UserInterface/Images/TimelineRecordLayout.svg: Removed.
+        * UserInterface/Images/TimelineRecordMediaElement.svg: Removed.
+        * UserInterface/Images/TimelineRecordPaint.svg: Removed.
+        * UserInterface/Images/TimelineRecordProbeSampled.svg: Removed.
+        * UserInterface/Images/TimelineRecordScriptEvaluated.svg: Removed.
+        * UserInterface/Images/TimelineRecordStyle.svg: Removed.
+        * UserInterface/Images/TimelineRecordTimer.svg: Removed.
+        * UserInterface/Images/TypeBigInt.svg: Removed.
+        * UserInterface/Images/TypeBoolean.svg: Removed.
+        * UserInterface/Images/TypeNull.svg: Removed.
+        * UserInterface/Images/TypeNumber.svg: Removed.
+        * UserInterface/Images/TypeObject.svg: Removed.
+        * UserInterface/Images/TypeRegex.svg: Removed.
+        * UserInterface/Images/TypeString.svg: Removed.
+        * UserInterface/Images/TypeSymbol.svg: Removed.
+        * UserInterface/Images/TypeUndefined.svg: Removed.
+        * UserInterface/Images/URLBreakpoint.svg: Removed.
+        * UserInterface/Images/WebSocket.png: Removed.
+        * UserInterface/Images/WebSocket@2x.png: Removed.
+        * UserInterface/Images/WebSocketLarge.png: Removed.
+        * UserInterface/Images/WebSocketLarge@2x.png: Removed.
+        * UserInterface/Images/WorkerScript.png: Removed.
+        * UserInterface/Images/WorkerScript@2x.png: Removed.
+        * UserInterface/Images/WorkerScriptLarge.png: Removed.
+        * UserInterface/Images/WorkerScriptLarge@2x.png: Removed.
+
+2020-03-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: visual artifacts in the corner of selected tabs when docked in dark mode
+        https://bugs.webkit.org/show_bug.cgi?id=208498
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/TabBar.css:
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (@media (prefers-color-scheme: dark) body.docked .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (@media (prefers-color-scheme: dark) body.docked:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (@media (prefers-color-scheme: dark) .tab-bar > .tabs > .item:not(.disabled).selected): Deleted.
+        The `background-color` set by `body.docked .tab-bar > .tabs > .item:not(.disabled).selected`
+        in light mode was also being applied in dark mode. When docked, don't use `background-image`
+        and instead exclusively use `background-color` so nothing is still applied.
+
+2020-03-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Items in the toolbar take up to much vertical space
+        https://bugs.webkit.org/show_bug.cgi?id=204627
+        <rdar://problem/59091905>
+
+        Reviewed by Timothy Hatcher.
+
+        Merge the toolbar are and tab bar to waste less vertical space.
+
+        Existing toolbar buttons have been moved to a space before the tab bar, and are only shown
+        when needed (e.g. only show the reload button when remotely inspecting).
+
+        If there are any console warnings/errors, an icon for each type of message is shown between
+        the left buttons and the tabs, and each button's opacity is animated whenever a new message
+        is added.
+
+        Whenever the debugger pauses, change the tab bar icon of the Sources Tab to an image that
+        includes paused iconography to help convey the debugger's state no matter which tab is
+        currently selected, just like the debugger dashboard.
+
+        The dashboard network information has been moved to the Network Tab (described below).
+
+        When undocked, the tab bar and all the content below it are pushed down by 22px to make room
+        for the system close/minimize/maximize buttons and the window title.
+
+        * UserInterface/Base/Main.js:
+        (WI.loaded):
+        (WI._handleSettingsKeyboardShortcut):
+        (WI._tryToRestorePendingTabs):
+        (WI.isNewTabWithTypeAllowed):
+        (WI._openDefaultTab): Deleted.
+        (WI.showNewTabTab): Deleted.
+        * UserInterface/Views/Main.css:
+        (#undocked-title-area): Added.
+        (body.docked #undocked-title-area): Added.
+        (body.window-inactive #undocked-title-area): Added.
+        (#main):
+        (@keyframes tab-bar-console-item-pulse): Added.
+        (.tab-bar > .navigation-bar :matches(.console-warnings, .console-errors):not(.disabled).pulsing): Added.
+        (@media (prefers-color-scheme: dark) #undocked-title-area): Added.
+        (@media (prefers-color-scheme: dark) body.window-inactive #undocked-title-area): Added.
+        (body.docked.bottom): Deleted.
+        (body.docked.bottom #toolbar): Deleted.
+        (body.docked.bottom #toolbar .item:not(.flexible-space)): Deleted.
+
+        * UserInterface/Views/TabBar.js:
+        (WI.TabBar):
+        (WI.TabBar.get horizontalPadding): Added.
+        (WI.TabBar.prototype.addNavigationItemBefore): Added.
+        (WI.TabBar.prototype.addNavigationItemAfter): Added.
+        (WI.TabBar.prototype.insertTabBarItem):
+        (WI.TabBar.prototype.insertTabBarItem.animateTabs):
+        (WI.TabBar.prototype.insertTabBarItem.removeStyles):
+        (WI.TabBar.prototype.removeTabBarItem):
+        (WI.TabBar.prototype.removeTabBarItem.animateTabs):
+        (WI.TabBar.prototype.removeTabBarItem.removeStyles):
+        (WI.TabBar.prototype.set selectedTabBarItem):
+        (WI.TabBar.prototype.get tabCount): Added.
+        (WI.TabBar.prototype.layout):
+        (WI.TabBar.prototype.layout.measureItemWidth):
+        (WI.TabBar.prototype.layout.recalculateItemWidths):
+        (WI.TabBar.prototype.didLayoutSubtree): Added.
+        (WI.TabBar.prototype._recordTabBarItemSizesAndPositions):
+        (WI.TabBar.prototype._recordTabBarItemSizesAndPositions.add): Added.
+        (WI.TabBar.prototype._applyTabBarItemSizesAndPositions):
+        (WI.TabBar.prototype._finishExpandingTabsAfterClose):
+        (WI.TabBar.prototype._finishExpandingTabsAfterClose.animateTabs):
+        (WI.TabBar.prototype._finishExpandingTabsAfterClose.removeStyles):
+        (WI.TabBar.prototype._handleClick):
+        (WI.TabBar.prototype._handleMouseMoved):
+        (WI.TabBar.prototype._handleMouseMoved.inlineStyleValue): Added.
+        (WI.TabBar.prototype._handleMouseUp):
+        (WI.TabBar.prototype._handleMouseLeave):
+        (WI.TabBar.prototype._handleContextMenu):
+        (WI.TabBar.prototype.get saveableTabCount): Deleted.
+        (WI.TabBar.layout.forceItemHidden): Deleted.
+        * UserInterface/Views/TabBar.css:
+        (.tab-bar):
+        (body:not(.docked) .tab-bar): Added.
+        (body.docked .tab-bar): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar): Added.
+        (.tab-bar > .border): Added.
+        (.tab-bar > .border.top): Added.
+        (.tab-bar > .border.bottom): Added.
+        (body.docked.bottom .tab-bar > .border.top): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .border): Added.
+        (.tab-bar > .navigation-bar): Added.
+        (.tab-bar > .navigation-bar > .item.group > .item): Added.
+        (.tab-bar > .navigation-bar > .item.group > .item:nth-child(1 of :not(.hidden))): Added.
+        (.tab-bar > .navigation-bar > .item.group > .item:nth-last-child(1 of :not(.hidden))): Added.
+        (.tab-bar > .navigation-bar .item.divider): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .navigation-bar > .item.divider): Added.
+        (.tab-bar > .tabs): Added.
+        (body.docked .tab-bar .tabs): Added.
+        (.tab-bar > .tabs > .item): Added.
+        (body:not(.docked) .tab-bar > .tabs > .item): Added.
+        (body:not(.docked) .tab-bar > .tabs > .item:not(.pinned)): Added.
+        (body.docked .tab-bar > .tabs > .item): Added.
+        (.tab-bar > .tabs.calculate-width > .item): Added.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs > .item:not(:first-child), body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.hide-border-start) > .item:first-child, body[dir=ltr]:not(.docked) .tab-bar > .tabs.dragging-tab > .item.selected, body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.hide-border-end) > .item:last-child): Added.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.hide-border-end) > .item:last-child, body[dir=rtl]:not(.docked) .tab-bar > .tabs > .item:not(:first-child), body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.hide-border-start) > .item:first-child, body[dir=rtl]:not(.docked) .tab-bar > .tabs.dragging-tab > .item.selected): Added.
+        (.tab-bar > .tabs > .item.pinned): Added.
+        (body.docked .tab-bar > .tabs > .item.pinned): Added.
+        (body:not(.docked) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (body.docked .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (body:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover): Added.
+        (body.docked .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover): Added.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover, body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover + .item, body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.animating) > .item:last-child:not(.selected, .disabled):hover): Added.
+        (body[dir=ltr]:not(.docked) .tab-bar > .tabs:not(.animating) > .item:last-child:not(.selected, .disabled):hover, body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover, body[dir=rtl]:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover + .item): Added.
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item): Added.
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (body.docked:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (.tab-bar > .tabs > .item > .flex-space): Added.
+        (.tab-bar > .tabs > .item > .icon): Added.
+        (.tab-bar > .tabs > .item.pinned > .icon): Added.
+        (.tab-bar > .tabs > .item:not(.selected):hover > .icon): Added.
+        (.tab-bar > .tabs > .item:not(.disabled).selected > .icon): Added.
+        (.tab-bar > .tabs > .item.disabled > .icon): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item > .icon): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected > .icon): Added.
+        (.tab-bar > .tabs > .item > .title): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item > .title): Added.
+        (.tab-bar > .tabs > .item > .title > .content): Added.
+        (.tab-bar > .tabs:not(.animating) > .item:not(.selected):hover > .title): Added.
+        (.tab-bar > .tabs > .item:not(.disabled).selected > .title): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected > .title): Added.
+        (.tab-bar > .tabs.static-layout): Added.
+        (.tab-bar > .tabs.static-layout > :matches(.flexible-space, .item)): Added.
+        (.tab-bar > .tabs.animating.closing-tab > .item): Added.
+        (.tab-bar > .tabs.animating:matches(.expanding-tabs, .inserting-tab) > .item): Added.
+        (.tab-bar > .tabs.animating.inserting-tab > .item.being-inserted): Added.
+        (body:not(.docked) .tab-bar > .tabs.dragging-tab > .item:not(.disabled).selected, body:not(.docked) .tab-bar > .tabs.static-layout:not(.animating.inserting-tab):not(.dragging-tab) > .item:nth-last-child(1 of :not(.pinned)), body:not(.docked) .tab-bar > .tabs.animating.closing-tab > .item:not(.disabled).selected): Added.
+        (body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.dragging-tab > .item:not(.disabled).selected, body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.static-layout:not(.animating.inserting-tab):not(.dragging-tab) > .item:nth-last-child(1 of :not(.pinned)), body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.animating.closing-tab > .item:not(.disabled).selected): Added.
+        (.tab-bar > .tabs.dragging-tab > .item:not(.disabled).selected): Added.
+        (@media (prefers-color-scheme: dark) .tab-bar): Added.
+        (@media (prefers-color-scheme: dark) body.docked.bottom .tab-bar > .border.top): Added.
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar > .tabs > .item): Added.
+        (@media (prefers-color-scheme: dark) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover): Added.
+        (@media (prefers-color-scheme: dark) body.docked .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover): Added.
+        (@media (prefers-color-scheme: dark) .tab-bar > .tabs > .item > .icon): Added.
+        (@media (prefers-color-scheme: dark) body:not(.docked) .tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover > .icon): Added.
+        (@media (prefers-color-scheme: dark) body:matches(.window-inactive, .window-docked-inactive) .tab-bar): Added.
+        (@media (prefers-color-scheme: dark) body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item): Added.
+        (@media (prefers-color-scheme: dark) body:not(.docked):matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item:not(.disabled).selected): Added.
+        (body.window-inactive .tab-bar): Deleted.
+        (.tab-bar > .top-border): Deleted.
+        (body.window-inactive .tab-bar > .top-border): Deleted.
+        (.tab-bar > .item): Deleted.
+        (.tab-bar.calculate-width > .item): Deleted.
+        (body[dir=ltr] .tab-bar > :nth-child(n + 2 of .item),): Deleted.
+        (body[dir=rtl] .tab-bar > :nth-child(n + 2 of .item),): Deleted.
+        (.tab-bar > .item.pinned): Deleted.
+        (.tab-bar > .item.pinned.tab-picker): Deleted.
+        (.tab-bar > .item:not(.disabled).selected): Deleted.
+        (.tab-bar:not(.animating) > .item:not(.selected, .disabled):hover): Deleted.
+        (body[dir=ltr] .tab-bar:not(.animating) > .item:not(.selected, .disabled):hover,): Deleted.
+        (body[dir=rtl] .tab-bar:not(.animating) > .item:not(.selected, .disabled):hover,): Deleted.
+        (body.window-inactive .tab-bar > .item): Deleted.
+        (body[dir=ltr].window-inactive .tab-bar > .item): Deleted.
+        (body[dir=rtl].window-inactive .tab-bar > .item): Deleted.
+        (body.window-inactive .tab-bar > .item.selected): Deleted.
+        (.tab-bar > .item > .close): Deleted.
+        (body:not(.window-inactive) .tab-bar > .item:hover > .close): Deleted.
+        (body:not(.window-inactive) .tab-bar.single-tab > .item.default-tab:hover > .close): Deleted.
+        (.tab-bar.single-tab > .item.default-tab > .close): Deleted.
+        (.tab-bar > .item > .close:hover): Deleted.
+        (.tab-bar > .item > .close:active): Deleted.
+        (.tab-bar > .item > .flex-space): Deleted.
+        (.tab-bar > .item.ephemeral > .flex-space:last-child): Deleted.
+        (.tab-bar > .item > .icon): Deleted.
+        (.tab-bar > .item.pinned > .icon): Deleted.
+        (.tab-bar > .item.selected > .icon): Deleted.
+        (.tab-bar > .item.disabled > .icon): Deleted.
+        (@media not (prefers-color-scheme: dark) .tab-bar:not(.animating) > .item:not(.selected, .disabled):hover > .icon): Deleted.
+        (.tab-bar > .item > .title): Deleted.
+        (.tab-bar:not(.collapsed) > .item > .title): Deleted.
+        (.tab-bar > .item > .title > .content): Deleted.
+        (.tab-bar:not(.animating) > .item:not(.selected):hover > .title): Deleted.
+        (.tab-bar > .item.selected > .title): Deleted.
+        (.tab-bar.collapsed > .item): Deleted.
+        (.tab-bar.collapsed > .item:not(.pinned) > .icon): Deleted.
+        (.tab-bar.collapsed > .item > .flex-space): Deleted.
+        (.tab-bar.collapsed > .item > .close): Deleted.
+        (.tab-bar.collapsed > .item:hover > .close): Deleted.
+        (.tab-bar.collapsed > .item.ephemeral:hover > .icon): Deleted.
+        (.tab-bar.collapsed > .item.ephemeral:hover > .title): Deleted.
+        (.tab-bar.static-layout): Deleted.
+        (.tab-bar.static-layout > .item): Deleted.
+        (.tab-bar.animating.closing-tab > .item): Deleted.
+        (.tab-bar.animating:matches(.expanding-tabs, .inserting-tab) > .item): Deleted.
+        (.tab-bar.animating.inserting-tab > .item.being-inserted): Deleted.
+        (.tab-bar.dragging-tab > .item.selected,): Deleted.
+        (body.window-inactive .tab-bar.dragging-tab > .item.selected,): Deleted.
+        (.tab-bar.dragging-tab > .item.selected): Deleted.
+        (@media (prefers-color-scheme: dark) .tab-bar > .item): Deleted.
+        (@media (prefers-color-scheme: dark) .tab-bar > .item > .title): Deleted.
+        (@media (prefers-color-scheme: dark) .tab-bar > .item:not(.disabled).selected): Deleted.
+        (@media (prefers-color-scheme: dark) .tab-bar:not(.animating) > .item:not(.selected):hover): Deleted.
+        (@media (prefers-color-scheme: dark) .tab-bar > .item > .close,): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive .tab-bar): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive .tab-bar > .item): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive .tab-bar > .item.selected): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive .tab-bar > .item > .title): Deleted.
+
+        * UserInterface/Views/NetworkTableContentView.js:
+        (WI.NetworkTableContentView):
+        (WI.NetworkTableContentView.prototype.reset):
+        (WI.NetworkTableContentView.prototype.tablePopulateCell):
+        (WI.NetworkTableContentView.prototype._changeCollection):
+        (WI.NetworkTableContentView.prototype.initialLayout):
+        (WI.NetworkTableContentView.prototype.processHAR):
+        (WI.NetworkTableContentView.prototype._processPendingEntries):
+        (WI.NetworkTableContentView.prototype._updateEntryForResource):
+        (WI.NetworkTableContentView.prototype._mainResourceDidChange):
+        (WI.NetworkTableContentView.prototype._handleResourceSizeDidChange): Added.
+        (WI.NetworkTableContentView.prototype._resourceTransferSizeDidChange):
+        (WI.NetworkTableContentView.prototype._handleResourceAdded):
+        (WI.NetworkTableContentView.prototype._handleFrameWasAdded):
+        (WI.NetworkTableContentView.prototype._entryForResource):
+        (WI.NetworkTableContentView.prototype._updateStatistics): Added.
+        (WI.NetworkTableContentView.prototype._updateStatistic): Added.
+        (WI.NetworkTableContentView.prototype._startUpdatingLoadTimeStatistic): Added.
+        (WI.NetworkTableContentView.prototype._stopUpdatingLoadTimeStatistic): Added.
+        (WI.NetworkTableContentView.prototype._updateLoadTimeStatistic): Added.
+        * UserInterface/Views/NetworkTableContentView.css:
+        (.content-view.network .network-table): Added.
+        (.network-table > .statistics): Added.
+        (.network-table > .statistics > .statistic): Added.
+        (.network-table > .statistics > .statistic[hidden]): Added.
+        (.network-table > .statistics > .statistic > .icon): Added.
+        (.network-table > .statistics > .statistic > .text): Added.
+        Add a fixed row below the network table that contains statistics information based on the
+        current shown collection (e.g. live data vs HAR):
+         - number of domains
+         - number of resources
+         - total resource size
+         - total transfer size
+         - number of redirects
+         - time to load
+        NOTE: elided renaming CSS changes.
+
+        * UserInterface/Views/TabBrowser.js:
+        (WI.TabBrowser.prototype.addTabForContentView):
+        (WI.TabBrowser.prototype.closeTabForContentView):
+        (WI.TabBrowser.prototype._tabBarItemSelected):
+        (WI.TabBrowser.prototype._tabBarItemRemoved):
+
+        * UserInterface/Views/TabContentView.js:
+        (WI.TabContentView.shouldPinTab): Added.
+        * UserInterface/Views/AuditTabContentView.js:
+        (WI.AuditTabContentView):
+        (WI.AuditTabContentView.tabInfo):
+        * UserInterface/Views/CanvasTabContentView.js:
+        (WI.CanvasTabContentView):
+        (WI.CanvasTabContentView.tabInfo):
+        * UserInterface/Views/ConsoleTabContentView.js:
+        (WI.ConsoleTabContentView):
+        (WI.ConsoleTabContentView.tabInfo):
+        * UserInterface/Views/ContentBrowserTabContentView.js:
+        (WI.ContentBrowserTabContentView):
+        * UserInterface/Views/ElementsTabContentView.js:
+        (WI.ElementsTabContentView):
+        (WI.ElementsTabContentView.tabInfo):
+        * UserInterface/Views/LayersTabContentView.js:
+        (WI.LayersTabContentView):
+        (WI.LayersTabContentView.tabInfo):
+        * UserInterface/Views/NetworkTabContentView.js:
+        (WI.NetworkTabContentView):
+        (WI.NetworkTabContentView.tabInfo):
+        * UserInterface/Views/SearchTabContentView.js:
+        (WI.SearchTabContentView):
+        (WI.SearchTabContentView.tabInfo):
+        (WI.SearchTabContentView.shouldPinTab): Added.
+        (WI.SearchTabContentView.shouldSaveTab): Added.
+        * UserInterface/Views/SettingsTabContentView.js:
+        (WI.SettingsTabContentView):
+        (WI.SettingsTabContentView.tabInfo):
+        (WI.SettingsTabContentView.shouldPinTab): Added.
+        (WI.SettingsTabContentView.prototype._createExperimentalSettingsView):
+        * UserInterface/Views/SourcesTabContentView.js:
+        (WI.SourcesTabContentView):
+        (WI.SourcesTabContentView.tabInfo):
+        (WI.SourcesTabContentView.prototype._handleDebuggerPaused): Added.
+        (WI.SourcesTabContentView.prototype._handleDebuggerResumed): Added.
+        * UserInterface/Views/StorageTabContentView.js:
+        (WI.StorageTabContentView):
+        (WI.StorageTabContentView.tabInfo):
+        * UserInterface/Views/TimelineTabContentView.js:
+        (WI.TimelineTabContentView):
+        (WI.TimelineTabContentView.tabInfo):
+        * UserInterface/Views/TabBarItem.js:
+        (WI.TabBarItem):
+        (WI.TabBarItem.get horizontalMargin): Added.
+        (WI.TabBarItem.prototype.get element):
+        (WI.TabBarItem.prototype.get representedObject):
+        (WI.TabBarItem.prototype.set disabled):
+        (WI.TabBarItem.prototype.get hidden): Added.
+        (WI.TabBarItem.prototype.set hidden): Added.
+        (WI.TabBarItem.prototype.set representedObject): Deleted.
+        (WI.TabBarItem.prototype.get isDefaultTab): Deleted.
+        (WI.TabBarItem.prototype.set isDefaultTab): Deleted.
+        * UserInterface/Views/GeneralTabBarItem.js:
+        (WI.GeneralTabBarItem.fromTabContentView): Added.
+        (WI.GeneralTabBarItem): Deleted.
+        (WI.GeneralTabBarItem.fromTabInfo): Deleted.
+        (WI.GeneralTabBarItem.prototype.get isEphemeral): Deleted.
+        (WI.GeneralTabBarItem.prototype._handleContextMenuEvent): Deleted.
+        * UserInterface/Views/PinnedTabBarItem.js:
+        (WI.PinnedTabBarItem):
+        (WI.PinnedTabBarItem.fromTabContentView): Added.
+        (WI.PinnedTabBarItem.titleDidChange):
+        (WI.PinnedTabBarItem.fromTabInfo): Deleted.
+        (WI.PinnedTabBarItem.prototype.titleDidChange): Deleted.
+        (WI.PinnedTabBarItem.prototype._handleContextMenuEvent): Deleted.
+        Simplify how tab bar items are created.
+
+        * UserInterface/Views/NavigationBar.js:
+        (WI.NavigationBar.prototype.get sizesToFit):
+        (WI.NavigationBar.prototype.addNavigationItem):
+        (WI.NavigationBar.prototype.insertNavigationItem):
+        * UserInterface/Views/SizesToFitNavigationBar.js: Removed.
+        * UserInterface/Views/Sidebar.js:
+        (WI.Sidebar):
+        * UserInterface/Views/GraphicsOverviewContentView.js:
+        (WI.GraphicsOverviewContentView.prototype.initialLayout):
+        Support marking `sizesToFit` during construction, instead of having to make a subclass.
+
+        * UserInterface/Views/ButtonNavigationItem.js:
+        (WI.ButtonNavigationItem):
+        (WI.ButtonNavigationItem.prototype.get imageType): Added.
+        (WI.ButtonNavigationItem.prototype.set imageType): Added.
+        (WI.ButtonNavigationItem.prototype._update):
+        * UserInterface/Views/ButtonNavigationItem.css:
+        (.tab-bar > .navigation-bar .item.button.image-and-text > span): Added.
+        (.navigation-bar .item.button > img): Added.
+        (.navigation-bar .item.button.disabled > img): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .navigation-bar .item.button > img): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .navigation-bar .item.button.disabled > img): Added.
+        (@media (prefers-color-scheme: dark) .navigation-bar .item.button.disabled > img): Added.
+        Allow `WI.ButtonNavigationItem` to use an `<img>` instead of an `<svg>` for it's image. This
+        is to work around a compositing bug <https://webkit.org/b/207022>.
+
+        * UserInterface/Views/GroupNavigationItem.js:
+        (WI.GroupNavigationItem.prototype.get hidden): Added.
+        (WI.GroupNavigationItem.prototype.set hidden): Added.
+        (WI.GroupNavigationItem.prototype.get additionalClassNames): Added.
+        Add a special case where this item is considered `hidden` if all sub-items are also `hidden`.
+
+        * UserInterface/Views/Variables.css:
+        (:root):
+        (body:matches(.window-inactive, .window-docked-inactive)): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) *): Added.
+        (body:not(.docked)): Added.
+        (@media (prefers-color-scheme: dark) :root):
+        (@media (prefers-color-scheme: dark) body:matches(.window-inactive, .window-docked-inactive)): Added.
+        (@media (prefers-color-scheme: dark) body:matches(.window-inactive, .window-docked-inactive) *): Added.
+        (body.window-inactive): Deleted.
+        (body.window-inactive *): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive *): Deleted.
+        Replace `--toolbar-height` with `--undocked-title-area-height`, which is set when docked.
+        Define `--tab-bar-height` in terms of `--navigation-bar-height` so they share the same value.
+
+        * UserInterface/Views/DividerNavigationItem.css:
+        (.navigation-bar .item.divider):
+        (@media (prefers-color-scheme: dark)):
+        Simplify the CSS in order to better support being used in the tab bar.
+
+        * UserInterface/Views/FlexibleSpaceNavigationItem.css:
+        (.navigation-bar .item.flexible-space):
+        (.navigation-bar .item.flexible-space.align-start > .item):
+        (.navigation-bar .item.flexible-space.align-end > .item):
+        (:matches(.navigation-bar, .toolbar) .item.flexible-space): Deleted.
+        (:matches(.navigation-bar, .toolbar) .item.flexible-space.align-start > .item): Deleted.
+        (:matches(.navigation-bar, .toolbar) .item.flexible-space.align-end > .item): Deleted.
+        Remove toolbar styles.
+
+        * UserInterface/Controllers/ConsoleManager.js:
+        (WI.ConsoleManager):
+        (WI.ConsoleManager.prototype.get warningCount): Added.
+        (WI.ConsoleManager.prototype.get errorCount): Added.
+        (WI.ConsoleManager.prototype.messageWasAdded):
+        (WI.ConsoleManager.prototype.messagesCleared):
+        (WI.ConsoleManager.prototype.messageRepeatCountUpdated):
+        (WI.ConsoleManager.prototype._incrementMessageLevelCount): Added.
+        (WI.ConsoleManager.prototype._delayedMessagesCleared):
+        Keep track of the count of warnings and errors so that they can be used to determine when to
+        show Console button navigation items in the tab bar.
+
+        * UserInterface/Views/DOMTreeContentView.css:
+        (body:not(.window-inactive, .window-docked-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint): Added.
+        (body:not(.window-inactive, .window-docked-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint.subtree): Added.
+        (body:not(.window-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint): Deleted.
+        (body:not(.window-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint.subtree): Deleted.
+        * UserInterface/Views/RenderingFrameTimelineOverviewGraph.css:
+        (body:matches(.window-inactive, .window-docked-inactive) .timeline-overview-graph.rendering-frame > .frame-marker): Added.
+        (body.window-inactive .timeline-overview-graph.rendering-frame > .frame-marker): Deleted.
+        * UserInterface/Views/TimelineOverview.css:
+        (.timeline-overview > .tree-outline.timelines .item.selected + .item, body:matches(.window-inactive, .window-docked-inactive) .timeline-overview > .tree-outline.timelines .item.selected + .item): Added.
+        (@media (prefers-color-scheme: dark) .timeline-overview > .tree-outline.timelines .item.selected + .item, body:matches(.window-inactive, .window-docked-inactive) .timeline-overview > .tree-outline.timelines .item.selected + .item): Added.
+        (.timeline-overview > .tree-outline.timelines .item.selected + .item, body.window-inactive .timeline-overview > .tree-outline.timelines .item.selected + .item): Deleted.
+        (@media (prefers-color-scheme: dark) .timeline-overview > .tree-outline.timelines .item.selected + .item, body.window-inactive .timeline-overview > .tree-outline.timelines .item.selected + .item): Deleted.
+        * UserInterface/Views/TimelineRecordFrame.css:
+        (body:matches(.window-inactive, .window-docked-inactive) .timeline-record-frame.selected): Added.
+        (body.window-inactive .timeline-record-frame.selected): Deleted.
+        * UserInterface/Views/TimelineRuler.css:
+        (body:matches(.window-inactive, .window-docked-inactive) .timeline-ruler > .header > .divider): Added.
+        (body.window-inactive .timeline-ruler > .header > .divider): Deleted.
+        Add selectors for `.window-docked-inactive` everywhere that `.window-inactive` exists.
+
+        * UserInterface/Base/Setting.js:
+        Remove new tab bar experimental setting.
+
+        * UserInterface/Debug/Bootstrap.js:
+        (WI.runBootstrapOperations):
+        (WI.runBootstrapOperations.applyDumpMessagesState):
+        (WI.runBootstrapOperations.updateDebugUI):
+
+        * UserInterface/Main.html:
+        * Localizations/en.lproj/localizedStrings.js:
+
+        * UserInterface/Views/ActivateButtonToolbarItem.js: Removed.
+        * UserInterface/Views/ButtonToolbarItem.js: Removed.
+        * UserInterface/Views/ButtonToolbarItem.css: Removed.
+        * UserInterface/Views/ControlToolbarItem.js: Removed.
+        * UserInterface/Views/ControlToolbarItem.css: Removed.
+        * UserInterface/Views/Toolbar.js: Removed.
+        * UserInterface/Views/Toolbar.css: Removed.
+        Remove toolbar related code now that it has been merged into the tab bar.
+
+        * UserInterface/Models/DebuggerDashboard.js: Removed.
+        * UserInterface/Models/DefaultDashboard.js: Removed.
+        * UserInterface/Views/DashboardContainerView.js: Removed.
+        * UserInterface/Views/DashboardContainerView.css: Removed.
+        * UserInterface/Views/DashboardView.js: Removed.
+        * UserInterface/Views/DebuggerDashboardView.js: Removed.
+        * UserInterface/Views/DebuggerDashboardView.css: Removed.
+        * UserInterface/Views/DefaultDashboardView.js: Removed.
+        * UserInterface/Views/DefaultDashboardView.css: Removed.
+        Remove dashboard related code now that it has been merged into the tab bar.
+
+        * UserInterface/Views/LegacyTabBar.js: Removed.
+        * UserInterface/Views/NewTabContentView.js: Removed.
+        * UserInterface/Views/NewTabContentView.css: Removed.
+        * UserInterface/Images/NewTab.svg: Removed.
+        * UserInterface/Images/NewTabPlus.svg: Removed.
+        * UserInterface/Images/SearchResults.svg: Removed.
+        Remove the lebacy tab bar in favor of the new tab bar.
+
+2020-03-02  Jon Davis  <jond@apple.com>
+
+        Updated breakpoint and search type icons
+        https://bugs.webkit.org/show_bug.cgi?id=208453
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Images/ApplicationCacheManifest.svg:
+        * UserInterface/Images/ClippingIcons.svg:
+        * UserInterface/Images/DocumentIcons.svg:
+        * UserInterface/Images/FolderGeneric.svg:
+        * UserInterface/Images/InstrumentIcons.svg:
+        * UserInterface/Images/NavigationItemNetworkOverride.svg:
+        * UserInterface/Images/Origin.svg:
+        * UserInterface/Images/TableIcons.svg:
+        * UserInterface/Images/TypeIcons.svg:
+        * UserInterface/Views/BreakpointTreeElement.css:
+        (.breakpoint-debugger-statement-icon .icon):
+        (.breakpoint-generic-line-icon .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-debugger-statement-icon .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-generic-line-icon .icon):
+        * UserInterface/Views/EventBreakpointTreeElement.css:
+        (.breakpoint.event.breakpoint-for-animation-frame:not(.breakpoint-paused-icon) .icon):
+        (.breakpoint.event.breakpoint-for-interval:not(.breakpoint-paused-icon) .icon):
+        (.breakpoint.event.breakpoint-for-listener:not(.breakpoint-paused-icon) .icon):
+        (.breakpoint.event.breakpoint-for-timeout:not(.breakpoint-paused-icon) .icon):
+        (@media(prefers-color-scheme: dark) .breakpoint.event.breakpoint-for-animation-frame:not(.breakpoint-paused-icon) .icon):
+        (@media(prefers-color-scheme: dark) .breakpoint.event.breakpoint-for-interval:not(.breakpoint-paused-icon) .icon):
+        (@media(prefers-color-scheme: dark) .breakpoint.event.breakpoint-for-listener:not(.breakpoint-paused-icon) .icon):
+        (@media(prefers-color-scheme: dark) .breakpoint.event.breakpoint-for-timeout:not(.breakpoint-paused-icon) .icon):
+        * UserInterface/Views/FolderIcon.css:
+        (.tree-outline .folder-icon.selected:focus .icon):
+        (.tree-outline .origin-icon.selected:focus .icon):
+        (.tree-outline:focus .folder-icon.selected .icon): Deleted.
+        (.tree-outline:focus .origin-icon.selected .icon): Deleted.
+        * UserInterface/Views/RecordingActionTreeElement.css:
+        (.item.recording-action > .icon):
+        (@media (prefers-color-scheme: dark) .item.recording-action > .icon):
+
+2020-03-02  Jon Davis  <jond@apple.com>
+
+        Update the resource override button icon
+        https://bugs.webkit.org/show_bug.cgi?id=208459
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Images/NavigationItemNetworkOverride.svg:
+
+2020-02-28  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        REGRESSION(r257411): Web Inspector: Can't add a breakpoint by pressing the plus button
+        https://bugs.webkit.org/show_bug.cgi?id=208359
+        <rdar://problem/59870712>
+
+        Reviewed by Brian Burg.
+
+        In r257411 I added event.stop() (which is a shortcut for event.preventDefault() and
+        event.stopImmediatePropagation()) to mousedown handler. Calling event.stopImmediatePropagation()
+        prevented other mousedown event handlers from running.
+
+        This patch no longer calls event.stopImmediatePropagation().
+
+        * UserInterface/Views/ButtonNavigationItem.js:
+        (WI.ButtonNavigationItem.prototype._handleMouseDown):
+
+2020-02-27  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: allow use of dark mode theme independently from system-wide theme
+        https://bugs.webkit.org/show_bug.cgi?id=186308
+        <rdar://problem/40785895>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Base/Setting.js:
+        * UserInterface/Views/SettingsTabContentView.js:
+        (WI.SettingsTabContentView.prototype._createGeneralSettingsView):
+        Create a setting for controlling/preserving the theme of the frontend UI.
+
+        * UserInterface/Base/Main.js:
+        (WI.loaded):
+        (WI.contentLoaded):
+        Apply the created setting when Web Inspector is opened or if its value changes.
+
+        * UserInterface/Views/SettingEditor.js:
+        (WI.SettingEditor.prototype._createEditorElement):
+        Allow horizontal dividers in `<select>` setting editors.
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2020-02-27  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: localize the placeholder "Header" and "value" when editing a local override
+        https://bugs.webkit.org/show_bug.cgi?id=208276
+        <rdar://problem/59763619>
+
+        Reviewed by Brian Burg.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/Views/LocalResourceOverridePopover.js:
+        (WI.LocalResourceOverridePopover.prototype.show):
+
+2020-02-26  Devin Rousso  <drousso@apple.com>
+
+        REGRESSION: (257410) [ macOS ] inspector/network/client-blocked-load.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=208251
+        <rdar://problem/59812765>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Models/SourceCode.js:
+        (WI.SourceCode):
+        The test failed because it expected `url` to be an empty string (`""`) instead of `null`.
+        Use the given `url` parameter exactly as provided instead of trying to add a fallback in the
+        case of a falsy value. Given the prevalence of usage of `WI.SourceCode`, it's better to
+        match the existing behavior of before r257410 than change it and risk other subtle bugs.
+
+2020-02-25  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: AXI: buttons should be focusable when navigating by pressing Tab
+        https://bugs.webkit.org/show_bug.cgi?id=208163
+        <rdar://problem/59745448>
+
+        Reviewed by Brian Burg.
+
+        Buttons now accessible with Tab navigation. The focused button has the native focus outline.
+
+        Clicking on the button does NOT move the focus. For example, when you're focused on the
+        console prompt, clicking on the icon to hide the right sidebar keeps you focused where
+        you were — the console prompt. This behavior matches macOS.
+
+        Convert WI.NavigationItem with role=button from `<div>` to `<button>` elements.
+        Button elements have implicit tabIndex=0. When focused, pressing Space or Enter
+        triggers "click" event.
+
+        * UserInterface/Views/ActivateButtonNavigationItem.js:
+        (WI.ActivateButtonNavigationItem.prototype.set activated):
+        Add "aria-pressed" and "aria-label" attributes for VoiceOver.
+
+        * UserInterface/Views/ButtonNavigationItem.css:
+        (.navigation-bar .item.button:not(.image-only):focus,):
+        (.navigation-bar .item.button.image-only:focus):
+        (.navigation-bar .item.button:not(.disabled):matches(.activate.activated, .radio.selected) > .glyph):
+        (.navigation-bar .item.button:not(.disabled):active:matches(.activate.activated, .radio.selected) > .glyph):
+        Before this patch, focused button looked the same as activated buttons.
+        For example, the focused (non-active) bullseye icon looked exactly the
+        same as unfocused active bullseye icon, which was misleading.
+
+        * UserInterface/Views/ButtonNavigationItem.js:
+        (WI.ButtonNavigationItem):
+        (WI.ButtonNavigationItem.prototype._mouseClicked):
+        (WI.ButtonNavigationItem.prototype._handleMouseDown):
+        Clicking on a button shouldn't move focus. For example, when you're focused on the console prompt,
+        clicking on the icon to hide the right sidebar should keep you focused where you were - the console prompt.
+
+        (WI.ButtonNavigationItem.prototype._handleKeyDown):
+        * UserInterface/Views/ButtonToolbarItem.css:
+        (.toolbar .item.button):
+        Adjust outline offset to remove the gap between the outline and the border of the button.
+
+        (.toolbar .item.button:not(.disabled).activate.activated):
+        (@media (prefers-color-scheme: dark) body:not(.window-inactive) .toolbar .item.button:not(.disabled).activate.activated > .glyph):
+        * UserInterface/Views/ControlToolbarItem.css:
+        (.toolbar .item.control:focus):
+        (.toolbar .item.control:focus > .glyph):
+        Draw the outline around the X (close button) glyph, not the button itself (which is much wider than the glyph).
+
+        * UserInterface/Views/NavigationBar.css:
+        (.navigation-bar .item):
+        (.navigation-bar .item:focus):
+        * UserInterface/Views/NavigationBar.js:
+        (WI.NavigationBar):
+        "focus" and "blur" events don't bubble. These event handlers didn't capture the event.
+
+        (WI.NavigationBar.prototype._mouseDown):
+        (WI.NavigationBar.prototype._keyDown):
+        * UserInterface/Views/NavigationItem.js:
+        (WI.NavigationItem):
+        * UserInterface/Views/RadioButtonNavigationItem.css:
+        (.navigation-bar .item.radio.button:focus):
+        * UserInterface/Views/Toolbar.css:
+        (.toolbar .item):
+
+2020-02-25  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: safari app extension isolated worlds and injected files use the extension's identifier instead of its name
+        https://bugs.webkit.org/show_bug.cgi?id=206911
+        <rdar://problem/58026635>
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Controllers/BrowserManager.js: Added.
+        (WI.BrowserManager):
+        (WI.BrowserManager.prototype.initializeTarget):
+        (WI.BrowserManager.prototype.enable):
+        (WI.BrowserManager.prototype.disable):
+        (WI.BrowserManager.prototype.isExtensionScheme):
+        (WI.BrowserManager.prototype.extensionNameForId):
+        (WI.BrowserManager.prototype.extensionNameForURL):
+        * UserInterface/Protocol/BrowserObserver.js: Added.
+        (WI.BrowserObserver.prototype.extensionsEnabled):
+        (WI.BrowserObserver.prototype.extensionsDisabled):
+        * UserInterface/Protocol/Target.js:
+        (WI.Target.prototype.get BrowserAgent): Added.
+        * UserInterface/Base/Main.js:
+        (WI.loaded):
+        * UserInterface/Main.html:
+        * UserInterface/Test/Test.js:
+        (WI.loaded):
+        * UserInterface/Test.html:
+        Add an observer and manager for the `Browser` domain.
+
+        * UserInterface/Protocol/MultiplexingBackendTarget.js:
+        (WI.MultiplexingBackendTarget):
+        (WI.MultiplexingBackendTarget.prototype.initialize):
+        * UserInterface/Controllers/TargetManager.js:
+        (WI.TargetManager.prototype.initializeTarget): Added.
+        The `Browser` agent lives in the UIProcess alongside the `Target` agent (meaning there
+        should only be one per debuggable rather than one per target) and as such is not routed
+        through the `Target` agent.
+
+        * UserInterface/Views/QuickConsole.js:
+        (WI.QuickConsole.prototype._displayNameForExecutionContext):
+        Attempt to match the execution context name against any known extension identifier, and
+        use the extension's display name if one is found.
+
+        * UserInterface/Base/URLUtilities.js:
+        (WI.displayNameForHost):
+        Attempt to match the host against any known extension identifier, and use the extension's
+        display name if one is found.
+
+        * UserInterface/Views/SourcesNavigationSidebarPanel.js:
+        (WI.SourcesNavigationSidebarPanel.prototype._addStyleSheet):
+        (WI.SourcesNavigationSidebarPanel.prototype._addScript):
+        * UserInterface/Base/Utilities.js:
+        (isWebKitExtensionScheme): Deleted.
+        * .eslintrc:
+        Use `WI.BrowserManager.prototype.isExtensionScheme` instead of the global function.
+
+        * UserInterface/Models/SourceCode.js:
+        (WI.SourceCode):
+        (WI.SourceCode.prototype.get url): Added.
+        (WI.SourceCode.prototype.get urlComponents): Added.
+        * UserInterface/Models/CSSStyleSheet.js:
+        (WI.CSSStyleSheet):
+        (WI.CSSStyleSheet.prototype.get injected):
+        (WI.CSSStyleSheet.prototype.get url): Deleted.
+        (WI.CSSStyleSheet.prototype.get urlComponents): Deleted.
+        * UserInterface/Models/Resource.js:
+        (WI.Resource):
+        (WI.Resource.prototype.get url): Deleted.
+        (WI.Resource.prototype.get urlComponents): Deleted.
+        * UserInterface/Models/Script.js:
+        (WI.Script):
+        (WI.Script.prototype.get url): Deleted.
+        (WI.Script.prototype.get urlComponents): Deleted.
+        All subclasses of `WI.SourceCode` have separate `get url` and `get urlComponents` functions,
+        so unify them in the common superclass so that it's guaranteed to exist.
+
+2020-02-25  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: move code for debug outlined focus element to the Debug folder so it isn't shipped
+        https://bugs.webkit.org/show_bug.cgi?id=208217
+
+        Reviewed by Joseph Pecoraro.
+
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded):
+        (WI.contentLoaded.setFocusDebugOutline): Deleted.
+        * UserInterface/Views/Main.css:
+        (body.focus-debug *:focus): Deleted.
+
+        * UserInterface/Debug/Bootstrap.js:
+        (WI.runBootstrapOperations):
+        (WI.runBootstrapOperations.setFocusDebugOutline): Added.
+        * UserInterface/Debug/Bootstrap.css: Added.
+        (body.focus-debug *:focus):
+
+        * UserInterface/Main.html:
+
+2020-02-25  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: VoiceOver should read "Console prompt" when focusing on it
+        https://bugs.webkit.org/show_bug.cgi?id=208028
+        <rdar://problem/59641238>
+
+        Reviewed by Brian Burg.
+
+        Before this change, VoiceOver read "edit text blank" when focusing on the console prompt.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/Views/ConsolePrompt.js:
+        (WI.ConsolePrompt):
+
+2020-02-25  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: VoiceOver: TreeOutline does not correctly indicate selected item
+        https://bugs.webkit.org/show_bug.cgi?id=207968
+
+        Reviewed by Brian Burg.
+
+        Previously, the entire TreeOutline's DOM element had focus. With this patch,
+        selected item DOM element has focus instead. When clicking on the treeElement,
+        set tabIndex to 0 and focus on it.
+
+        * UserInterface/Views/DOMTreeOutline.css:
+        (.tree-outline.dom): Fix indentation.
+
+        (.tree-outline.dom:not(.non-selectable):focus-within li.selected .selection-area):
+        (.tree-outline.dom:not(.non-selectable) li.hovered:not(.selected) .selection-area):
+        (.tree-outline.dom:focus-within li.inspected-node.selected > span::after):
+        (.tree-outline.dom li):
+        Remove outline - selection is already indicated by the background.
+
+        (.tree-outline.dom:focus-within li.selected .pseudo-class-indicator):
+        (.tree-outline.dom:focus-within li.selected):
+        (.tree-outline.dom:focus-within li.selected *):
+        (.tree-outline.dom:focus-within li.parent.selected::before):
+        (.tree-outline.dom:focus-within li.parent.expanded.selected::before):
+        * UserInterface/Views/DOMTreeOutline.js:
+        * UserInterface/Views/TreeElement.js:
+        (WI.TreeElement.prototype._attach):
+        (WI.TreeElement.prototype.collapse):
+        (WI.TreeElement.prototype.expand):
+        (WI.TreeElement.prototype.select):
+        (WI.TreeElement.prototype.deselect):
+        (WI.TreeElement.prototype.focus):
+        (WI.TreeElement.prototype.unfocus):
+        * UserInterface/Views/TreeOutline.css:
+        (.tree-outline .item.selected:focus .disclosure-button):
+        (.tree-outline .item.selected.expanded:focus .disclosure-button):
+        (.tree-outline .item.selected:focus):
+        (.tree-outline .item.selected:focus .subtitle):
+        (.tree-outline:not(.large) .item.selected:focus .status .indeterminate-progress-spinner):
+        * UserInterface/Views/TreeOutline.js:
+        (WI.TreeOutline.prototype._treeKeyDown):
+        (WI.TreeOutline.prototype._handleMouseDown):
+
+2020-02-19  Jon Davis  <jond@apple.com>
+
+        Fixed object trees using the wrong theme of type icon
+        https://bugs.webkit.org/show_bug.cgi?id=207980
+
+        Reviewed by Darin Adler.
+
+        * UserInterface/Views/ObjectTreePropertyTreeElement.css:
+        (.object-tree-property.boolean > .icon):
+        (.object-tree-property.function > .icon):
+        (.object-tree-property.number > .icon):
+        (.object-tree-property.bigint > .icon):
+        (.object-tree-property.object > .icon):
+        (.object-tree-property.object.null > .icon):
+        (.object-tree-property.object.node > .icon):
+        (.object-tree-property.regex > .icon):
+        (.object-tree-property.string > .icon):
+        (.object-tree-property.symbol > .icon):
+        (.object-tree-property.accessor > .icon,):
+        (.object-tree-property.had-error > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.boolean > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.function > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.number > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.bigint > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.object > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.object.null > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.object.node > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.regex > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.string > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.symbol > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.accessor > .icon,):
+        (@media (prefers-color-scheme: dark) .object-tree-property.had-error > .icon):
+
+2020-02-17  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Add "outline focused element" debug setting
+        https://bugs.webkit.org/show_bug.cgi?id=207819
+        <rdar://problem/59489993>
+
+        Reviewed by Timothy Hatcher.
+
+        When debugging accessibility issues of Web Inspector, it's helpful
+        to know what element is focused. Many elements have `outline: none`
+        and no clear indication of what's focused.
+
+        Add a debug setting to display a bright purple outline for all focused
+        elements.
+
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded):
+        * UserInterface/Base/Setting.js:
+        * UserInterface/Views/Main.css:
+        (body.focus-debug *:focus):
+        * UserInterface/Views/SettingsTabContentView.js:
+        (WI.SettingsTabContentView.prototype._createDebugSettingsView):
+
+2020-02-17  Jon Davis  <jond@apple.com>
+
+        Update resource, type, and instrument icons for light, dark, and override colors
+        https://bugs.webkit.org/show_bug.cgi?id=207587
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Images/ApplicationCacheManifest.svg: Added.
+        * UserInterface/Images/Beacon.svg:
+        * UserInterface/Images/ClippingIcons.svg: Added.
+        * UserInterface/Images/Cookie.svg: Added.
+        * UserInterface/Images/Database.svg: Added.
+        * UserInterface/Images/DocumentIcons.svg: Added.
+        * UserInterface/Images/FolderGeneric.svg: Added.
+        * UserInterface/Images/InstrumentIcons.svg: Added.
+        * UserInterface/Images/Origin.svg:
+        * UserInterface/Images/Stopwatch.svg:
+        * UserInterface/Images/TableIcons.svg: Added.
+        * UserInterface/Images/TypeIcons.svg: Added.
+        * UserInterface/Views/AuditTreeElement.css:
+        (.audit.test-case .icon):
+        (.audit.test-group .icon):
+        (.audit.test-case-result .icon):
+        (.audit.test-group-result .icon):
+        (@media (prefers-color-scheme: dark) .audit.test-case .icon):
+        (@media (prefers-color-scheme: dark) .audit.test-group .icon):
+        (@media (prefers-color-scheme: dark) .audit.test-case-result .icon):
+        (@media (prefers-color-scheme: dark) .audit.test-group-result .icon):
+        * UserInterface/Views/BreakpointTreeElement.css:
+        (.breakpoint-exception-icon .icon):
+        (.breakpoint-assertion-icon .icon):
+        (.breakpoint-microtask-icon .icon):
+        (.breakpoint-paused-icon .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-exception-icon .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-assertion-icon .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-microtask-icon .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-paused-icon .icon):
+        * UserInterface/Views/CallFrameIcons.css:
+        (.program-icon .icon):
+        (.function-icon .icon):
+        (.event-listener-icon .icon):
+        (.native-icon .icon):
+        (.tail-deleted .icon):
+        (@media (prefers-color-scheme: dark) .program-icon .icon):
+        (@media (prefers-color-scheme: dark) .function-icon .icon):
+        (@media (prefers-color-scheme: dark) .event-listener-icon .icon):
+        (@media (prefers-color-scheme: dark) .native-icon .icon):
+        (@media (prefers-color-scheme: dark) .tail-deleted .icon):
+        * UserInterface/Views/CanvasSidebarPanel.css:
+        (.sidebar > .panel.navigation.canvas > .content > .recording-content > .tree-outline .item.folder-icon > .icon):
+        (@media (prefers-color-scheme: dark) .sidebar > .panel.navigation.canvas > .content > .recording-content > .tree-outline .item.folder-icon > .icon):
+        * UserInterface/Views/DOMBreakpointTreeElement.css:
+        (.breakpoint.dom.breakpoint-for-subtree-modified:not(.breakpoint-paused-icon) .icon):
+        (.breakpoint.dom.breakpoint-for-attribute-modified:not(.breakpoint-paused-icon) .icon):
+        (.breakpoint.dom.breakpoint-for-node-removed:not(.breakpoint-paused-icon) .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint.dom.breakpoint-for-subtree-modified:not(.breakpoint-paused-icon) .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint.dom.breakpoint-for-attribute-modified:not(.breakpoint-paused-icon) .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint.dom.breakpoint-for-node-removed:not(.breakpoint-paused-icon) .icon):
+        * UserInterface/Views/DOMNodeTreeElement.css:
+        (.tree-outline .item.dom-node .icon):
+        (@media (prefers-color-scheme: dark) .tree-outline .item.dom-node .icon):
+        * UserInterface/Views/FolderIcon.css:
+        (.folder-icon .icon):
+        (.tree-outline:focus .folder-icon.selected .icon):
+        (.origin-icon .icon):
+        (.tree-outline:focus .origin-icon.selected .icon):
+        (@media (prefers-color-scheme: dark) .folder-icon .icon):
+        (@media (prefers-color-scheme: dark) .origin-icon .icon):
+        * UserInterface/Views/HeapAllocationsTimelineOverviewGraph.css:
+        (.timeline-overview-graph.heap-allocations > img.snapshot):
+        (@media (prefers-color-scheme: dark) .timeline-overview-graph.heap-allocations > img.snapshot):
+        * UserInterface/Views/HeapAllocationsTimelineView.css:
+        (.timeline-view.heap-allocations > .data-grid td .icon.heap-snapshot):
+        (@media (prefers-color-scheme: dark) .timeline-view.heap-allocations > .data-grid td .icon.heap-snapshot):
+        * UserInterface/Views/HeapSnapshotInstancesContentView.css:
+        (.heap-snapshot .icon):
+        (.heap-snapshot .icon.native):
+        (.heap-snapshot .icon.boolean):
+        (.heap-snapshot .icon.function):
+        (.heap-snapshot .icon.number):
+        (.heap-snapshot .icon.bigint):
+        (.heap-snapshot .icon.object):
+        (.heap-snapshot .icon.node):
+        (.heap-snapshot .icon.regex):
+        (.heap-snapshot .icon.string):
+        (.heap-snapshot .icon.symbol):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.native):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.boolean):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.function):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.number):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.bigint):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.object):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.node):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.regex):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.string):
+        (@media (prefers-color-scheme: dark) .heap-snapshot .icon.symbol):
+        * UserInterface/Views/IdleTreeElement.css:
+        (.details-section.call-stack .idle .icon):
+        (@media (prefers-color-scheme: dark) .details-section.call-stack .idle .icon):
+        * UserInterface/Views/LayerDetailsSidebarPanel.css:
+        (.panel.details.layer .name-column .icon):
+        (.panel.details.layer tr.reflection .name-column .icon):
+        (.panel.details.layer tr.pseudo-element .name-column .icon):
+        (@media (prefers-color-scheme: dark) .panel.details.layer .name-column .icon):
+        (@media (prefers-color-scheme: dark) .panel.details.layer tr.reflection .name-column .icon):
+        (@media (prefers-color-scheme: dark) .panel.details.layer tr.pseudo-element .name-column .icon):
+        * UserInterface/Views/LayerTreeDetailsSidebarPanel.css:
+        (.panel.details.layer-tree .name-column .icon):
+        (.panel.details.layer-tree tr.reflection .name-column .icon):
+        (.panel.details.layer-tree tr.pseudo-element .name-column .icon):
+        (@media (prefers-color-scheme: dark) .panel.details.layer-tree .name-column .icon):
+        (@media (prefers-color-scheme: dark) .panel.details.layer-tree tr.reflection .name-column .icon):
+        (@media (prefers-color-scheme: dark) .panel.details.layer-tree tr.pseudo-element .name-column .icon):
+        * UserInterface/Views/NetworkTableContentView.css:
+        (.network-table > .table li:not(.selected) .cell:not(.current-session)):
+        (.network-table > .table .cell.dom-node.name .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint-assertion-icon .icon):
+        (@media (prefers-color-scheme: dark) .network-table > .table .cell.dom-node.name .icon):
+        (.network-table .cell.dom-node.name .icon): Deleted.
+        * UserInterface/Views/ObjectTreePropertyTreeElement.css:
+        (.object-tree-property.boolean > .icon):
+        (.object-tree-property.function > .icon):
+        (.object-tree-property.number > .icon):
+        (.object-tree-property.bigint > .icon):
+        (.object-tree-property.object > .icon):
+        (.object-tree-property.object.null > .icon):
+        (.object-tree-property.object.node > .icon):
+        (.object-tree-property.regex > .icon):
+        (.object-tree-property.string > .icon):
+        (.object-tree-property.symbol > .icon):
+        (.object-tree-property.accessor > .icon,):
+        (.object-tree-property.had-error > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.boolean > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.function > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.number > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.bigint > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.object > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.object.null > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.object.node > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.regex > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.string > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.symbol > .icon):
+        (@media (prefers-color-scheme: dark) .object-tree-property.accessor > .icon,):
+        (@media (prefers-color-scheme: dark) .object-tree-property.had-error > .icon):
+        * UserInterface/Views/PathComponentIcons.css:
+        (.request-icon .icon):
+        (.response-icon .icon):
+        (.heap-snapshot-summary-icon .icon):
+        (.heap-snapshot-instances-icon .icon):
+        (.heap-snapshot-object-graph-icon .icon):
+        (.dom-element-icon .icon):
+        (.dom-pseudo-element-icon .icon):
+        (.dom-text-node-icon .icon):
+        (.dom-comment-icon .icon):
+        (.dom-document-type-icon .icon):
+        (.dom-document-icon .icon):
+        (.dom-character-data-icon .icon):
+        (.dom-node-icon .icon):
+        (.object-icon .icon):
+        (.function-icon .icon):
+        (.native-icon .icon):
+        (.program-icon .icon):
+        (.events-icon .icon):
+        (.call-trees-icon .icon):
+        (.snapshot-list-icon .icon):
+        (.snapshot-diff-icon .icon):
+        (.image-icon .icon):
+        (.source-icon .icon):
+        (@media (prefers-color-scheme: dark) .request-icon .icon):
+        (@media (prefers-color-scheme: dark) .response-icon .icon):
+        (@media (prefers-color-scheme: dark) .heap-snapshot-summary-icon .icon):
+        (@media (prefers-color-scheme: dark) .heap-snapshot-instances-icon .icon):
+        (@media (prefers-color-scheme: dark) .heap-snapshot-object-graph-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-element-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-pseudo-element-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-text-node-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-comment-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-document-type-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-document-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-character-data-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-node-icon .icon):
+        (@media (prefers-color-scheme: dark) .object-icon .icon):
+        (@media (prefers-color-scheme: dark) .function-icon .icon):
+        (@media (prefers-color-scheme: dark) .native-icon .icon):
+        (@media (prefers-color-scheme: dark) .program-icon .icon):
+        (@media (prefers-color-scheme: dark) .events-icon .icon):
+        (@media (prefers-color-scheme: dark) .call-trees-icon .icon):
+        (@media (prefers-color-scheme: dark) .snapshot-list-icon .icon):
+        (@media (prefers-color-scheme: dark) .snapshot-diff-icon .icon):
+        (@media (prefers-color-scheme: dark) .source-icon .icon):
+        * UserInterface/Views/ProfileView.css:
+        (.profile > .data-grid td .icon.function-icon):
+        (.profile > .data-grid td .icon.native-icon):
+        (.profile > .data-grid td .icon.program-icon):
+        (@media (prefers-color-scheme: dark) .profile > .data-grid td .icon.function-icon):
+        (@media (prefers-color-scheme: dark) .profile > .data-grid td .icon.native-icon):
+        (@media (prefers-color-scheme: dark) .profile > .data-grid td .icon.program-icon):
+        * UserInterface/Views/ResourceIcons.css:
+        (.resource-icon .icon):
+        (.resource-icon.override .icon):
+        (.resource-icon.resource-type-document .icon):
+        (.resource-icon.resource-type-document.override .icon):
+        (.resource-icon.resource-type-image .icon):
+        (.resource-icon.resource-type-image.override .icon):
+        (.resource-icon.resource-type-font .icon):
+        (.resource-icon.resource-type-font.override .icon):
+        (:matches(.resource-icon.resource-type-style-sheet, .style-sheet-icon) .icon):
+        (:matches(.resource-icon.resource-type-style-sheet.override, .style-sheet-icon.override) .icon):
+        (.resource-icon.resource-type-script .icon):
+        (.resource-icon.resource-type-script.override .icon):
+        (.anonymous-script-icon .icon):
+        (.source-map-resource.resource-icon .icon):
+        (.source-map-resource.resource-icon.resource-type-style-sheet .icon):
+        (.source-map-resource.resource-icon.resource-type-script .icon):
+        (.script.worker-icon .icon):
+        (.script.worker-icon.override .icon):
+        (.resource-icon.resource-type-websocket .icon):
+        (.resource-icon.resource-type-ping .icon,):
+        (.resource-icon.resource-type-range .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.override .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-document .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-document.override .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-image .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-image.override .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-font .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-font.override .icon):
+        (@media (prefers-color-scheme: dark) :matches(.resource-icon.resource-type-style-sheet, .style-sheet-icon) .icon):
+        (@media (prefers-color-scheme: dark) :matches(.resource-icon.resource-type-style-sheet.override, .style-sheet-icon.override) .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-script .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-script.override .icon):
+        (@media (prefers-color-scheme: dark) .anonymous-script-icon .icon):
+        (@media (prefers-color-scheme: dark) .source-map-resource.resource-icon .icon):
+        (@media (prefers-color-scheme: dark) .source-map-resource.resource-icon.resource-type-style-sheet .icon):
+        (@media (prefers-color-scheme: dark) .source-map-resource.resource-icon.resource-type-script .icon):
+        (@media (prefers-color-scheme: dark) .script.worker-icon .icon):
+        (@media (prefers-color-scheme: dark) .script.worker-icon.override .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-websocket .icon):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-ping .icon,):
+        (@media (prefers-color-scheme: dark) .resource-icon.resource-type-range .icon):
+        (.large .resource-icon .icon): Deleted.
+        (.large .resource-icon.resource-type-document .icon): Deleted.
+        (.large .resource-icon.resource-type-image .icon): Deleted.
+        (.large .resource-icon.resource-type-font .icon): Deleted.
+        (.large :matches(.resource-icon.resource-type-style-sheet, .style-sheet-icon) .icon): Deleted.
+        (.large .resource-icon.resource-type-script .icon): Deleted.
+        (.large .anonymous-script-icon .icon): Deleted.
+        (.large .source-map-resource.resource-icon .icon): Deleted.
+        (.large .source-map-resource.resource-icon.resource-type-style-sheet .icon): Deleted.
+        (.large .source-map-resource.resource-icon.resource-type-script .icon): Deleted.
+        (.large .script.worker-icon .icon): Deleted.
+        (.large .resource-icon.resource-type-websocket .icon): Deleted.
+        (.large .resource-icon.resource-type-range .icon): Deleted.
+        * UserInterface/Views/SearchIcons.css:
+        (.dom-match-element-icon .icon):
+        (.dom-match-text-node-icon .icon):
+        (.dom-match-comment-icon .icon):
+        (.dom-match-document-type-icon .icon):
+        (.dom-match-character-data-icon .icon):
+        (.dom-match-node-icon .icon):
+        (.source-code-match .icon):
+        (@media (prefers-color-scheme: dark) .dom-match-element-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-match-text-node-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-match-comment-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-match-document-type-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-match-character-data-icon .icon):
+        (@media (prefers-color-scheme: dark) .dom-match-node-icon .icon):
+        (@media (prefers-color-scheme: dark) .source-code-match .icon):
+        * UserInterface/Views/StorageIcons.css:
+        (.application-cache-manifest .icon):
+        (.application-cache-frame .icon):
+        (.cookie-icon .icon):
+        (.local-storage-icon .icon):
+        (.session-storage-icon .icon):
+        (.database-icon .icon):
+        (.database-table-icon .icon):
+        (@media (prefers-color-scheme: dark) .application-cache-manifest .icon):
+        (@media (prefers-color-scheme: dark) .application-cache-frame .icon):
+        (@media (prefers-color-scheme: dark) .local-storage-icon .icon):
+        (@media (prefers-color-scheme: dark) .session-storage-icon .icon):
+        (@media (prefers-color-scheme: dark) .database-icon .icon):
+        (@media (prefers-color-scheme: dark) .database-table-icon .icon):
+        * UserInterface/Views/StyleRuleIcons.css:
+        (.author-style-rule-icon .icon):
+        (.author-style-rule-icon.pseudo-selector .icon):
+        (.user-style-rule-icon .icon):
+        (.user-style-rule-icon.pseudo-selector .icon):
+        (.user-agent-style-rule-icon .icon):
+        (.user-agent-style-rule-icon.pseudo-selector .icon):
+        (.inspector-style-rule-icon .icon):
+        (.inspector-style-rule-icon.pseudo-selector .icon):
+        (.inherited-style-rule-icon .icon):
+        (.inherited-element-style-rule-icon .icon):
+        (@media (prefers-color-scheme: dark) .author-style-rule-icon .icon):
+        (@media (prefers-color-scheme: dark) .author-style-rule-icon.pseudo-selector .icon):
+        (@media (prefers-color-scheme: dark) .user-style-rule-icon .icon):
+        (@media (prefers-color-scheme: dark) .user-style-rule-icon.pseudo-selector .icon):
+        (@media (prefers-color-scheme: dark) .user-agent-style-rule-icon .icon):
+        (@media (prefers-color-scheme: dark) .user-agent-style-rule-icon.pseudo-selector .icon):
+        (@media (prefers-color-scheme: dark) .inspector-style-rule-icon .icon):
+        (@media (prefers-color-scheme: dark) .inspector-style-rule-icon.pseudo-selector .icon):
+        (@media (prefers-color-scheme: dark) .inherited-style-rule-icon .icon):
+        (@media (prefers-color-scheme: dark) .inherited-element-style-rule-icon .icon):
+        * UserInterface/Views/TimelineIcons.css:
+        (.network-icon .icon):
+        (.script-icon .icon):
+        (.cpu-icon .icon):
+        (.memory-icon .icon):
+        (.heap-allocations-icon .icon):
+        (.layout-icon .icon):
+        (.rendering-frame-icon .icon):
+        (.media-icon .icon):
+        (.stopwatch-icon .icon):
+        (.style-record .icon):
+        (.layout-record .icon):
+        (.paint-record .icon):
+        (.composite-record .icon):
+        (.rendering-frame-record .icon):
+        (.api-record .icon):
+        (.evaluated-record .icon):
+        (.event-record .icon):
+        (.probe-record .icon):
+        (.console-profile-record .icon):
+        (.garbage-collection-profile-record .icon):
+        (.timer-record .icon):
+        (.animation-frame-record .icon):
+        (.css-animation-record .icon):
+        (.css-transition-record .icon):
+        (.media-element-record .icon):
+        (.heap-snapshot-record .icon):
+        (@media (prefers-color-scheme: dark) .network-icon .icon):
+        (@media (prefers-color-scheme: dark) .script-icon .icon):
+        (@media (prefers-color-scheme: dark) .cpu-icon .icon):
+        (@media (prefers-color-scheme: dark) .memory-icon .icon):
+        (@media (prefers-color-scheme: dark) .heap-allocations-icon .icon):
+        (@media (prefers-color-scheme: dark) .layout-icon .icon):
+        (@media (prefers-color-scheme: dark) .rendering-frame-icon .icon):
+        (@media (prefers-color-scheme: dark) .media-icon .icon):
+        (@media (prefers-color-scheme: dark) .stopwatch-icon .icon):
+        (@media (prefers-color-scheme: dark) .style-record .icon):
+        (@media (prefers-color-scheme: dark) .layout-record .icon):
+        (@media (prefers-color-scheme: dark) .paint-record .icon):
+        (@media (prefers-color-scheme: dark) .composite-record .icon):
+        (@media (prefers-color-scheme: dark) .rendering-frame-record .icon):
+        (@media (prefers-color-scheme: dark) .api-record .icon):
+        (@media (prefers-color-scheme: dark) .evaluated-record .icon):
+        (@media (prefers-color-scheme: dark) .event-record .icon):
+        (@media (prefers-color-scheme: dark) .probe-record .icon):
+        (@media (prefers-color-scheme: dark) .console-profile-record .icon):
+        (@media (prefers-color-scheme: dark) .garbage-collection-profile-record .icon):
+        (@media (prefers-color-scheme: dark) .timer-record .icon):
+        (@media (prefers-color-scheme: dark) .animation-frame-record .icon):
+        (@media (prefers-color-scheme: dark) .css-animation-record .icon):
+        (@media (prefers-color-scheme: dark) .css-transition-record .icon):
+        (@media (prefers-color-scheme: dark) .media-element-record .icon):
+        (@media (prefers-color-scheme: dark) .heap-snapshot-record .icon):
+        * UserInterface/Views/URLBreakpointTreeElement.css:
+        (.breakpoint.url:not(.breakpoint-paused-icon) .icon):
+        (@media (prefers-color-scheme: dark) .breakpoint.url:not(.breakpoint-paused-icon) .icon):
+
+2020-02-14  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: VoiceOver doesn't read selected panel tab
+        https://bugs.webkit.org/show_bug.cgi?id=207735
+        <rdar://problem/59445157>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/NavigationBar.js:
+        (WI.NavigationBar):
+        (WI.NavigationBar.prototype._mouseDown):
+        (WI.NavigationBar.prototype._mouseUp):
+        Navigation bar itself shouldn't receive focus - its items should.
+
+        * UserInterface/Views/RadioButtonNavigationItem.js:
+        (WI.RadioButtonNavigationItem):
+        "tab" was passed as a label by mistake. VoiceOver read every tab as "tab" instead of it's actual label.
+
+        (WI.RadioButtonNavigationItem.prototype.set selected):
+        When clicking on a tab, focus on it so VoiceOver could read it.
+
+2020-02-14  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Bezier editor popover should be strictly LTR
+        https://bugs.webkit.org/show_bug.cgi?id=206968
+        <rdar://problem/59007065>
+
+        Reviewed by Timothy Hatcher.
+
+        webkitConvertPointFromPageToNode does not work correctly with the zoom level other than 1.
+        Replace all uses of webkitConvertPointFromPageToNode with getBoundingClientRect.
+
+        * UserInterface/Models/Geometry.js:
+        (WI.Point.fromEventInElement):
+        * UserInterface/Views/ColorSquare.js:
+        (WI.ColorSquare.prototype._updateColorForMouseEvent):
+        * UserInterface/Views/GradientSlider.js:
+        (WI.GradientSlider.prototype._updateShadowKnob):
+        * UserInterface/Views/Slider.js:
+        (WI.Slider.prototype._localPointForEvent):
+        (WI.Slider):
+
+2020-02-12  Pavel Feldman  <pavel.feldman@gmail.com>
+
+        Web Inspector: encode binary web socket frames using base64
+        https://bugs.webkit.org/show_bug.cgi?id=207448
+        
+        Previous representation of binary frames is lossy using fromUTF8WithLatin1Fallback,
+        this patch consistently encodes binary data using base64.
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Models/WebSocketResource.js:
+        (WI.WebSocketResource.prototype.addFrame):
+
+2020-02-11  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector RTL: Elements closing tag is reversed
+        https://bugs.webkit.org/show_bug.cgi?id=207214
+
+        Reviewed by Timothy Hatcher.
+
+        Wrap text nodes in `unicode-bidi: isolate-override`. From MDN:
+
+        isolate-override:
+            This keyword applies the isolation behavior of the isolate
+            keyword to the surrounding content and the override behavior
+            of the bidi-override keyword to the inner content.
+
+        * UserInterface/Views/DOMTreeOutline.css:
+        (.tree-outline.dom li > span > .html-text-node):
+
+2020-02-09  Keith Rollin  <krollin@apple.com>
+
+        Re-enable LTO for ARM builds
+        https://bugs.webkit.org/show_bug.cgi?id=207402
+        <rdar://problem/49190767>
+
+        Reviewed by Sam Weinig.
+
+        Bug 190758 re-enabled LTO for Production builds for x86-family CPUs.
+        Enabling it for ARM was left out due to a compiler issue. That issue
+        has been fixed, and so now we can re-enable LTO for ARM.
+
+        * Configurations/Base.xcconfig:
+
+2020-02-07  Jon Lee  <jonlee@apple.com>
+
+        Web Inspector: Revert slim toolbar
+        https://bugs.webkit.org/show_bug.cgi?id=207422
+
+        Reviewed by Timothy Hatcher.
+
+        The slim toolbar needs a little more work before landing.
+
+        This patch reverts r255547, r255557, r255890, r255892, r255893, r255901, r255980.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/Base/Main.js:
+        * UserInterface/Base/Setting.js:
+        * UserInterface/Controllers/ConsoleManager.js:
+        * UserInterface/Debug/Bootstrap.js:
+        * UserInterface/Images/NewTab.svg: Added.
+        * UserInterface/Images/NewTabPlus.svg: Added.
+        * UserInterface/Images/Origin.svg:
+        * UserInterface/Images/SearchResults.svg: Added.
+        * UserInterface/Images/SourcesPaused.svg: Removed.
+        * UserInterface/Main.html:
+        * UserInterface/Models/DebuggerDashboard.js: Copied from Source/WebInspectorUI/UserInterface/Views/FlexibleSpaceNavigationItem.css.
+        * UserInterface/Models/DefaultDashboard.js: Added.
+        * UserInterface/Views/ActivateButtonToolbarItem.js: Copied from Source/WebInspectorUI/UserInterface/Views/FlexibleSpaceNavigationItem.css.
+        * UserInterface/Views/AuditTabContentView.js:
+        * UserInterface/Views/ButtonNavigationItem.css:
+        * UserInterface/Views/ButtonNavigationItem.js:
+        * UserInterface/Views/ButtonToolbarItem.css: Copied from Source/WebInspectorUI/UserInterface/Views/DividerNavigationItem.css.
+        * UserInterface/Views/ButtonToolbarItem.js: Copied from Source/WebInspectorUI/UserInterface/Views/FlexibleSpaceNavigationItem.css.
+        * UserInterface/Views/ConsoleTabContentView.js:
+        * UserInterface/Views/ContentBrowserTabContentView.js:
+        * UserInterface/Views/ControlToolbarItem.css: Copied from Source/WebInspectorUI/UserInterface/Views/DividerNavigationItem.css.
+        * UserInterface/Views/ControlToolbarItem.js: Copied from Source/WebInspectorUI/UserInterface/Views/DividerNavigationItem.css.
+        * UserInterface/Views/DOMTreeContentView.css:
+        * UserInterface/Views/DashboardContainerView.css: Added.
+        * UserInterface/Views/DashboardContainerView.js: Added.
+        * UserInterface/Views/DashboardView.js: Copied from Source/WebInspectorUI/UserInterface/Views/PinnedTabBarItem.js.
+        * UserInterface/Views/DebuggerDashboardView.css: Added.
+        * UserInterface/Views/DebuggerDashboardView.js: Added.
+        * UserInterface/Views/DefaultDashboardView.css: Added.
+        * UserInterface/Views/DefaultDashboardView.js: Added.
+        * UserInterface/Views/DividerNavigationItem.css:
+        * UserInterface/Views/ElementsTabContentView.js:
+        * UserInterface/Views/FlexibleSpaceNavigationItem.css:
+        * UserInterface/Views/GeneralTabBarItem.js:
+        * UserInterface/Views/GraphicsTabContentView.js:
+        * UserInterface/Views/GroupNavigationItem.js:
+        * UserInterface/Views/LayersTabContentView.js:
+        * UserInterface/Views/LegacyTabBar.js: Copied from Source/WebInspectorUI/UserInterface/Views/TabBar.js.
+        * UserInterface/Views/Main.css:
+        * UserInterface/Views/NavigationBar.js:
+        * UserInterface/Views/NetworkDetailView.css:
+        * UserInterface/Views/NetworkTabContentView.js:
+        * UserInterface/Views/NetworkTableContentView.css:
+        * UserInterface/Views/NetworkTableContentView.js:
+        * UserInterface/Views/NewTabContentView.css: Copied from Source/WebInspectorUI/UserInterface/Views/RenderingFrameTimelineOverviewGraph.css.
+        * UserInterface/Views/NewTabContentView.js: Added.
+        * UserInterface/Views/PinnedTabBarItem.js:
+        * UserInterface/Views/QuickConsole.js:
+        * UserInterface/Views/RenderingFrameTimelineOverviewGraph.css:
+        * UserInterface/Views/SearchTabContentView.js:
+        * UserInterface/Views/SettingsTabContentView.js:
+        * UserInterface/Views/Sidebar.js:
+        * UserInterface/Views/SizesToFitNavigationBar.js: Copied from Source/WebInspectorUI/UserInterface/Views/FlexibleSpaceNavigationItem.css.
+        * UserInterface/Views/SourcesTabContentView.js:
+        * UserInterface/Views/StorageTabContentView.js:
+        * UserInterface/Views/TabBar.css:
+        * UserInterface/Views/TabBar.js:
+        * UserInterface/Views/TabBarItem.js:
+        * UserInterface/Views/TabBrowser.js:
+        * UserInterface/Views/TabContentView.js:
+        * UserInterface/Views/TimelineOverview.css:
+        * UserInterface/Views/TimelineRecordFrame.css:
+        * UserInterface/Views/TimelineRuler.css:
+        * UserInterface/Views/TimelineTabContentView.js:
+        * UserInterface/Views/Toolbar.css: Added.
+        * UserInterface/Views/Toolbar.js: Added.
+        * UserInterface/Views/Variables.css:
+
+2020-02-07  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Add another Protocol Version (iOS 13.4)
+        https://bugs.webkit.org/show_bug.cgi?id=207213
+        <rdar://problem/52846208>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Protocol/Legacy/13.4/InspectorBackendCommands.js: Added.
+        * Versions/Inspector-iOS-13.4.json: Added.
+
+2020-02-06  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Web Inspector][WinCairo] Selecting an error message in Console causes "TypeError:​ selection.focusNode.closest is not a function."
+        https://bugs.webkit.org/show_bug.cgi?id=207248
+
+        Reviewed by Devin Rousso.
+
+        r242174 replaced Node.enclosingNodeOrSelfWithClass with
+        Element.closest. However, selection.focusNode isn't necessarily an
+        Element, but can be a Text node.
+
+        * UserInterface/Views/LogContentView.js:
+        (WI.LogContentView.prototype._mousemove): Use selection.focusNode.parentElement.closest
+        if selection.focusNode is not a instance of Element.
+
+2020-02-06  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(r249831): Sources: endless spinner when trying to view a resource
+        https://bugs.webkit.org/show_bug.cgi?id=207346
+        <rdar://problem/59209016>
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Workers/Formatter/HTMLParser.js:
+        (HTMLParser.prototype._parseAttr):
+        Attributes are allowed to contain "/".
+        https://html.spec.whatwg.org/multipage/parsing.html#before-attribute-value-state
+
+2020-02-06  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: REGRESSION(?): Search: selecting a DOM node search result switches to the Elements Tab
+        https://bugs.webkit.org/show_bug.cgi?id=207322
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/TabBrowser.js:
+        (WI.TabBrowser.prototype._tabBarItemSelected):
+        The Search Tab is marked such that it isn't saved to `WI._openTabsSetting`, as otherwise
+        more than one Search Tab could be added to the tab bar (one from the setting and one from
+        the default pinned tab). It is also marked as being pinned, however, meaning that we know it
+        will always be in the tab bar, even if we also know it won't be in `WI._openTabsSetting`. As
+        such, we should update it's position in the `_recentTabContentViews` list so that we can use
+        it when showing represented objects (if able) via `bestTabContentViewForRepresentedObject`.
+
+2020-02-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: the height of the undocked title area shouldn't change when zoomed
+        https://bugs.webkit.org/show_bug.cgi?id=207228
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded):
+        (WI.contentLoaded.updateZoomFactorCSSVariable): Added.
+        Save the zoom factor as a number in a CSS variable on the `<body>`.
+
+        * UserInterface/Views/Variables.css:
+        (body.mac-platform:not(.docked)): Added.
+        (body:not(.docked)): Deleted.
+        Divide the default `22px` by the current zoom factor so that it cancels out when rendered.
+        Make it so that the undocked title area is only shown on macOS <https://webkit.org/b/204627#c47>
+
+2020-02-05  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Some cookie table column headers should not be localizable
+        https://bugs.webkit.org/show_bug.cgi?id=206920
+
+        Reviewed by Timothy Hatcher.
+
+        Keep headers that match cookie directives always in English.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/Views/CookieStorageContentView.js:
+        (WI.CookieStorageContentView.prototype.initialLayout):
+
+2020-02-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: slightly increase the horizontal padding around scope bar items
+        https://bugs.webkit.org/show_bug.cgi?id=207321
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/ScopeBar.css:
+        (.scope-bar):
+        (body[dir=ltr] .scope-bar > li.multiple > select):
+        (body[dir=rtl] .scope-bar > li.multiple > select):
+        * UserInterface/Views/RadioButtonNavigationItem.css:
+        (.navigation-bar .item.radio.button.text-only):
+
+2020-02-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Tab Bar: move window management items to the left and don't show reload/download unless remotely inspecting
+        https://bugs.webkit.org/show_bug.cgi?id=207318
+
+        Reviewed by Timothy Hatcher.
+
+        Move the window management buttons to the left side to match the system look/feel.
+
+        Hide the reload/download buttons when inspecting locally, as there are other ways of
+        reloading the inspected page or downloading a Web Archive.
+
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded):
+        (WI._updateDockNavigationItems):
+        (WI._updateReloadTabBarButton):
+        (WI._updateDownloadTabBarButton):
+        (WI._updateInspectModeTabBarButton):
+        (WI._updateTabBarDividers): Added.
+        (WI._updateConsoleTabBarButtons):
+
+        * UserInterface/Debug/Bootstrap.js:
+        (updateDebugUI):
+        (WI.runBootstrapOperations):
+
+2020-02-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Network: the resource detail view cuts off the bottom statistics bar
+        https://bugs.webkit.org/show_bug.cgi?id=207320
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/Variables.css:
+        (:root):
+        Add a `--network-statistics-height` variable.
+
+        * UserInterface/Views/NetworkDetailView.css:
+        (.network-detail):
+        * UserInterface/Views/NetworkTableContentView.css:
+        (.network-table > .statistics):
+        Use the `--network-statistics-height` variable to make sure the statistics row and the
+        details view for the selected network entry don't overlap.
+        Drive-by: center the content of the statistics row to better match the system look/feel.
+
+2020-02-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: increase the height of the tab bar to match other navigation bars
+        https://bugs.webkit.org/show_bug.cgi?id=207317
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/Variables.css:
+        (:root):
+        Define `--tab-bar-height` in terms of `--navigation-bar-height` so they share the same value.
+
+        * UserInterface/Views/TabBar.css:
+        (.tab-bar > .tabs > .item):
+        (.tab-bar > .tabs > .item.pinned):
+        (.tab-bar > .tabs > .item.pinned.tab-picker): Deleted.
+        Increase the width to match the `--tab-bar-height` so that pinned tab bar items are square.
+
+2020-02-05  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Dragging handles in the easing popover selects sidebar text
+        https://bugs.webkit.org/show_bug.cgi?id=207316
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/BezierEditor.js:
+        (WI.BezierEditor.prototype._handleMousedown):
+
+2020-02-05  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Sources: add a special breakpoint for controlling whether `debugger` statements pause
+        https://bugs.webkit.org/show_bug.cgi?id=206818
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Controllers/DebuggerManager.js:
+        (WI.DebuggerManager):
+        (WI.DebuggerManager.prototype.async initializeTarget):
+        (WI.DebuggerManager.prototype.get debuggerStatementsBreakpoint): Added.
+        (WI.DebuggerManager.prototype.isBreakpointRemovable):
+        (WI.DebuggerManager.prototype._breakpointDisabledStateDidChange):
+
+        * UserInterface/Views/SourcesNavigationSidebarPanel.js:
+        (WI.SourcesNavigationSidebarPanel):
+        (WI.SourcesNavigationSidebarPanel.prototype._insertDebuggerTreeElement):
+        (WI.SourcesNavigationSidebarPanel.prototype._addBreakpoint):
+
+        * UserInterface/Views/BreakpointTreeElement.css:
+        (.breakpoint-debugger-statement-icon .icon): Added.
+        * UserInterface/Images/DebuggerStatement.svg: Added.
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2020-02-05  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Bezier editor popover should be strictly LTR
+        https://bugs.webkit.org/show_bug.cgi?id=206968
+        <rdar://problem/59007065>
+
+        Reviewed by Timothy Hatcher.
+
+        - Don't mirror the coordinate system.
+        - Don't reverste the order of the cubic bezier values, e.g. `cubic-bezier(0, 0.5, 1, 0.5)`.
+
+        * UserInterface/Views/BezierEditor.css:
+        (90%):
+        (to):
+        (body[dir=ltr] .bezier-editor): Deleted.
+        (body[dir=rtl] .bezier-editor): Deleted.
+        (body[dir=rtl] .bezier-editor > .bezier-container): Deleted.
+        * UserInterface/Views/BezierEditor.js:
+
+2020-02-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix the inspector files combination after r255547
+
+        * UserInterface/Main.html: Remove Views/SizesToFitNavigationBar.js that was removed in r255547
+
+2020-02-01  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: move the items in the toolbar into the tab bar to save vertical space
+        https://bugs.webkit.org/show_bug.cgi?id=204627
+
+        Reviewed by Timothy Hatcher.
+
+        Merge the toolbar are and tab bar to waste less vertical space.
+
+        The inspect, download, reload, and device settings buttons are pinned before the tabs.
+
+        If there are any console warnings/errors, an icon for each type of message is shown between
+        the left buttons and the tabs, and each button's opacity is animated whenever a new message
+        is added.
+
+        Whenever the debugger pauses, change the tab bar icon of the Sources Tab to an image that
+        includes paused iconography (||) to help convey the debugger's state no matter which tab is
+        currently selected, just like the debugger dashboard.
+
+        The docking configuration, debug, and close buttons are pinned after the tabs.
+
+        The dashboard network information has been moved to the Network Tab (described below).
+
+        When undocked, the tab bar and all the content below it are pushed down by 22px to make room
+        for the system close/minimize/maximize buttons and the window title.
+
+        * UserInterface/Base/Main.js:
+        (WI.loaded):
+        (WI._handleSettingsKeyboardShortcut):
+        (WI._tryToRestorePendingTabs):
+        (WI.isNewTabWithTypeAllowed):
+        (WI._openDefaultTab): Deleted.
+        (WI.showNewTabTab): Deleted.
+        * UserInterface/Views/Main.css:
+        (#undocked-title-area): Added.
+        (body.docked #undocked-title-area): Added.
+        (body.window-inactive #undocked-title-area): Added.
+        (#main):
+        (@keyframes tab-bar-console-item-pulse): Added.
+        (.tab-bar > .navigation-bar :matches(.console-warnings, .console-errors):not(.disabled).pulsing): Added.
+        (@media (prefers-color-scheme: dark) #undocked-title-area): Added.
+        (@media (prefers-color-scheme: dark) body.window-inactive #undocked-title-area): Added.
+        (body.docked.bottom): Deleted.
+        (body.docked.bottom #toolbar): Deleted.
+        (body.docked.bottom #toolbar .item:not(.flexible-space)): Deleted.
+
+        * UserInterface/Views/TabBar.js:
+        (WI.TabBar):
+        (WI.TabBar.prototype.addNavigationItemBefore): Added.
+        (WI.TabBar.prototype.addNavigationItemAfter): Added.
+        (WI.TabBar.prototype.insertTabBarItem):
+        (WI.TabBar.prototype.insertTabBarItem.animateTabs):
+        (WI.TabBar.prototype.insertTabBarItem.removeStyles):
+        (WI.TabBar.prototype.removeTabBarItem):
+        (WI.TabBar.prototype.removeTabBarItem.animateTabs):
+        (WI.TabBar.prototype.removeTabBarItem.removeStyles):
+        (WI.TabBar.prototype.set selectedTabBarItem):
+        (WI.TabBar.prototype.get tabCount): Added.
+        (WI.TabBar.prototype.layout):
+        (WI.TabBar.prototype.didLayoutSubtree): Added.
+        (WI.TabBar.prototype._recordTabBarItemSizesAndPositions):
+        (WI.TabBar.prototype._finishExpandingTabsAfterClose):
+        (WI.TabBar.prototype._finishExpandingTabsAfterClose.animateTabs):
+        (WI.TabBar.prototype._finishExpandingTabsAfterClose.removeStyles):
+        (WI.TabBar.prototype._handleClick):
+        (WI.TabBar.prototype._handleMouseMoved):
+        (WI.TabBar.prototype._handleMouseUp):
+        (WI.TabBar.prototype._handleMouseLeave):
+        (WI.TabBar.prototype._handleContextMenu):
+        (WI.TabBar.prototype.get saveableTabCount): Deleted.
+        (WI.TabBar.layout.forceItemHidden): Deleted.
+        * UserInterface/Views/TabBar.css:
+        (.tab-bar):
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar): Added.
+        (.tab-bar > .border): Added.
+        (.tab-bar > .border.top): Added.
+        (.tab-bar > .border.bottom): Added.
+        (body.docked.bottom .tab-bar > .border.top): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .border): Added.
+        (@media (-webkit-max-device-pixel-ratio: 1) body.docked:matches(.right, .left):not(.window-docked-inactive) .tab-bar > .border.top): Added.
+        (@media (-webkit-min-device-pixel-ratio: 2) body.docked:matches(.right, .left):not(.window-docked-inactive) .tab-bar > .border.top): Added.
+        (.tab-bar > .tabs > .item):
+        (.tab-bar > .tabs > .item:not(.disabled).selected):
+        (.tab-bar > .tabs:not(.animating) > .item:not(.selected, .disabled):hover):
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item):
+        (.tab-bar > .navigation-bar): Added.
+        (.tab-bar > .navigation-bar > .item.group > .item): Added.
+        (.tab-bar > .navigation-bar > .item.group > .item:nth-child(1 of :not(.hidden))): Added.
+        (.tab-bar > .navigation-bar > .item.group > .item:nth-last-child(1 of :not(.hidden))): Added.
+        (.tab-bar > .navigation-bar .item.divider): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .navigation-bar > .item.divider): Added.
+        (.tab-bar > .tabs): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs > .item): Added.
+        (.tab-bar > .tabs.dragging-tab > .item.selected, .tab-bar > .tabs.static-layout:not(.animating.inserting-tab):not(.dragging-tab) > .item:nth-last-child(1 of :not(.pinned)), .tab-bar > .tabs.animating.closing-tab > .item.selected): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.dragging-tab > .item.selected, body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.static-layout:not(.animating.inserting-tab):not(.dragging-tab) > .item:nth-last-child(1 of :not(.pinned)), body:matches(.window-inactive, .window-docked-inactive) .tab-bar > .tabs.animating.closing-tab > .item.selected): Added.
+        (@media (prefers-color-scheme: dark) body.docked.bottom .tab-bar > .border.top): Added.
+        (@media (prefers-color-scheme: dark) .tab-bar > .tabs > .item:not(.disabled).selected):
+        (body:not(.window-inactive) .tab-bar.single-tab > .item.default-tab:hover > .close): Deleted.
+        (.tab-bar.single-tab > .item.default-tab > .close): Deleted.
+        (body[dir=ltr].window-inactive .tab-bar > .item): Deleted.
+        (body[dir=rtl].window-inactive .tab-bar > .item): Deleted.
+        NOTE: elided renaming CSS changes.
+
+        * UserInterface/Views/NetworkTableContentView.js:
+        (WI.NetworkTableContentView):
+        (WI.NetworkTableContentView.prototype.reset):
+        (WI.NetworkTableContentView.prototype.tablePopulateCell):
+        (WI.NetworkTableContentView.prototype._changeCollection):
+        (WI.NetworkTableContentView.prototype.initialLayout):
+        (WI.NetworkTableContentView.prototype.processHAR):
+        (WI.NetworkTableContentView.prototype._processPendingEntries):
+        (WI.NetworkTableContentView.prototype._updateEntryForResource):
+        (WI.NetworkTableContentView.prototype._mainResourceDidChange):
+        (WI.NetworkTableContentView.prototype._handleResourceSizeDidChange): Added.
+        (WI.NetworkTableContentView.prototype._resourceTransferSizeDidChange):
+        (WI.NetworkTableContentView.prototype._handleResourceAdded):
+        (WI.NetworkTableContentView.prototype._handleFrameWasAdded):
+        (WI.NetworkTableContentView.prototype._entryForResource):
+        (WI.NetworkTableContentView.prototype._updateStatistics): Added.
+        (WI.NetworkTableContentView.prototype._updateStatistic): Added.
+        (WI.NetworkTableContentView.prototype._startUpdatingLoadTimeStatistic): Added.
+        (WI.NetworkTableContentView.prototype._stopUpdatingLoadTimeStatistic): Added.
+        (WI.NetworkTableContentView.prototype._updateLoadTimeStatistic): Added.
+        * UserInterface/Views/NetworkTableContentView.css:
+        (.network-table > .statistics): Added.
+        (.network-table > .statistics > .statistic): Added.
+        (.network-table > .statistics > .statistic[hidden]): Added.
+        (.network-table > .statistics > .statistic > .icon): Added.
+        (.network-table > .statistics > .statistic > .text): Added.
+        (@media (prefers-color-scheme: dark) .network-table > .statistics > .statistic.domain-count > .icon): Added.
+        Add a fixed row below the network table that contains statistics information based on the
+        current shown collection (e.g. live data vs HAR):
+         - number of domains
+         - number of resources
+         - total resource size
+         - total transfer size
+         - number of redirects
+         - time to load
+        Slightly dim entries for previous sessions if Preserve Log is checked, since the statistics
+        data is calculated from the current session.
+        NOTE: elided renaming CSS changes.
+
+        * UserInterface/Views/TabBrowser.js:
+        (WI.TabBrowser.prototype.addTabForContentView):
+        (WI.TabBrowser.prototype.closeTabForContentView):
+        (WI.TabBrowser.prototype._tabBarItemSelected):
+        (WI.TabBrowser.prototype._tabBarItemRemoved):
+
+        * UserInterface/Views/TabContentView.js:
+        (WI.TabContentView.shouldPinTab): Added.
+        * UserInterface/Views/AuditTabContentView.js:
+        (WI.AuditTabContentView):
+        (WI.AuditTabContentView.tabInfo):
+        * UserInterface/Views/CanvasTabContentView.js:
+        (WI.CanvasTabContentView):
+        (WI.CanvasTabContentView.tabInfo):
+        * UserInterface/Views/ConsoleTabContentView.js:
+        (WI.ConsoleTabContentView):
+        (WI.ConsoleTabContentView.tabInfo):
+        * UserInterface/Views/ContentBrowserTabContentView.js:
+        (WI.ContentBrowserTabContentView):
+        * UserInterface/Views/ElementsTabContentView.js:
+        (WI.ElementsTabContentView):
+        (WI.ElementsTabContentView.tabInfo):
+        * UserInterface/Views/LayersTabContentView.js:
+        (WI.LayersTabContentView):
+        (WI.LayersTabContentView.tabInfo):
+        * UserInterface/Views/NetworkTabContentView.js:
+        (WI.NetworkTabContentView):
+        (WI.NetworkTabContentView.tabInfo):
+        * UserInterface/Views/SearchTabContentView.js:
+        (WI.SearchTabContentView):
+        (WI.SearchTabContentView.tabInfo):
+        (WI.SearchTabContentView.shouldPinTab): Added.
+        (WI.SearchTabContentView.shouldSaveTab): Added.
+        * UserInterface/Views/SettingsTabContentView.js:
+        (WI.SettingsTabContentView):
+        (WI.SettingsTabContentView.tabInfo):
+        (WI.SettingsTabContentView.shouldPinTab): Added.
+        (WI.SettingsTabContentView.prototype._createExperimentalSettingsView):
+        * UserInterface/Views/SourcesTabContentView.js:
+        (WI.SourcesTabContentView):
+        (WI.SourcesTabContentView.tabInfo):
+        (WI.SourcesTabContentView.prototype._handleDebuggerPaused): Added.
+        (WI.SourcesTabContentView.prototype._handleDebuggerResumed): Added.
+        * UserInterface/Views/StorageTabContentView.js:
+        (WI.StorageTabContentView):
+        (WI.StorageTabContentView.tabInfo):
+        * UserInterface/Views/TimelineTabContentView.js:
+        (WI.TimelineTabContentView):
+        (WI.TimelineTabContentView.tabInfo):
+        * UserInterface/Views/TabBarItem.js:
+        (WI.TabBarItem):
+        (WI.TabBarItem.prototype.get element):
+        (WI.TabBarItem.prototype.get representedObject):
+        (WI.TabBarItem.prototype.set disabled):
+        (WI.TabBarItem.prototype.get hidden): Added.
+        (WI.TabBarItem.prototype.set hidden): Added.
+        (WI.TabBarItem.prototype.set representedObject): Deleted.
+        (WI.TabBarItem.prototype.get isDefaultTab): Deleted.
+        (WI.TabBarItem.prototype.set isDefaultTab): Deleted.
+        * UserInterface/Views/GeneralTabBarItem.js:
+        (WI.GeneralTabBarItem.fromTabContentView): Added.
+        (WI.GeneralTabBarItem.fromTabInfo): Deleted.
+        * UserInterface/Views/PinnedTabBarItem.js:
+        (WI.PinnedTabBarItem):
+        (WI.PinnedTabBarItem.fromTabContentView): Added.
+        (WI.PinnedTabBarItem.titleDidChange):
+        (WI.PinnedTabBarItem.fromTabInfo): Deleted.
+        (WI.PinnedTabBarItem.prototype.titleDidChange): Deleted.
+        (WI.PinnedTabBarItem.prototype._handleContextMenuEvent): Deleted.
+        Simplify how tab bar items are created.
+
+        * UserInterface/Views/NavigationBar.js:
+        (WI.NavigationBar.prototype.get sizesToFit):
+        (WI.NavigationBar.prototype.addNavigationItem):
+        (WI.NavigationBar.prototype.insertNavigationItem):
+        * UserInterface/Views/SizesToFitNavigationBar.js: Removed.
+        * UserInterface/Views/Sidebar.js:
+        (WI.Sidebar):
+        Support marking `sizesToFit` during construction, instead of having to make a subclass.
+
+        * UserInterface/Views/ButtonNavigationItem.js:
+        (WI.ButtonNavigationItem):
+        (WI.ButtonNavigationItem.prototype.get imageType): Added.
+        (WI.ButtonNavigationItem.prototype.set imageType): Added.
+        (WI.ButtonNavigationItem.prototype._update):
+        * UserInterface/Views/ButtonNavigationItem.css:
+        (.tab-bar > .navigation-bar .item.button.image-and-text > span): Added.
+        (.navigation-bar .item.button > img): Added.
+        (.navigation-bar .item.button.disabled > img): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .navigation-bar .item.button > img): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) .navigation-bar .item.button.disabled > img): Added.
+        (@media (prefers-color-scheme: dark) .navigation-bar .item.button.disabled > img): Added.
+        Allow `WI.ButtonNavigationItem` to use an `<img>` instead of an `<svg>` for it's image. This
+        is to work around a compositing bug <https://webkit.org/b/207022>.
+
+        * UserInterface/Views/GroupNavigationItem.js:
+        (WI.GroupNavigationItem.prototype.get hidden): Added.
+        (WI.GroupNavigationItem.prototype.set hidden): Added.
+        (WI.GroupNavigationItem.prototype.get additionalClassNames): Added.
+        Add a special case where this item is considered `hidden` if all sub-items are also `hidden`.
+
+        * UserInterface/Views/Variables.css:
+        (:root):
+        (body:matches(.window-inactive, .window-docked-inactive)): Added.
+        (body:matches(.window-inactive, .window-docked-inactive) *): Added.
+        (body:not(.docked)): Added.
+        (@media (prefers-color-scheme: dark) :root):
+        (@media (prefers-color-scheme: dark) body:matches(.window-inactive, .window-docked-inactive)): Added.
+        (@media (prefers-color-scheme: dark) body:matches(.window-inactive, .window-docked-inactive) *): Added.
+        (body.window-inactive): Deleted.
+        (body.window-inactive *): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive): Deleted.
+        (@media (prefers-color-scheme: dark) body.window-inactive *): Deleted.
+        Replace `--toolbar-height` with `--undocked-title-area-height`, which is set when docked.
+
+        * UserInterface/Views/DividerNavigationItem.css:
+        (.navigation-bar .item.divider):
+        (@media (prefers-color-scheme: dark)):
+        Simplify the CSS in order to better support being used in the tab bar.
+
+        * UserInterface/Views/FlexibleSpaceNavigationItem.css:
+        (.navigation-bar .item.flexible-space):
+        (.navigation-bar .item.flexible-space.align-start > .item):
+        (.navigation-bar .item.flexible-space.align-end > .item):
+        (:matches(.navigation-bar, .toolbar) .item.flexible-space): Deleted.
+        (:matches(.navigation-bar, .toolbar) .item.flexible-space.align-start > .item): Deleted.
+        (:matches(.navigation-bar, .toolbar) .item.flexible-space.align-end > .item): Deleted.
+        Remove toolbar styles.
+
+        * UserInterface/Controllers/ConsoleManager.js:
+        (WI.ConsoleManager):
+        (WI.ConsoleManager.prototype.get warningCount): Added.
+        (WI.ConsoleManager.prototype.get errorCount): Added.
+        (WI.ConsoleManager.prototype.messageWasAdded):
+        (WI.ConsoleManager.prototype.messagesCleared):
+        (WI.ConsoleManager.prototype.messageRepeatCountUpdated):
+        (WI.ConsoleManager.prototype._incrementMessageLevelCount): Added.
+        (WI.ConsoleManager.prototype._delayedMessagesCleared):
+        Keep track of the count of warnings and errors so that they can be used to determine when to
+        show Console button navigation items in the tab bar.
+
+        * UserInterface/Views/DOMTreeContentView.css:
+        (body:not(.window-inactive, .window-docked-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint): Added.
+        (body:not(.window-inactive, .window-docked-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint.subtree): Added.
+        (body:not(.window-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint): Deleted.
+        (body:not(.window-inactive) .content-view.dom-tree .tree-outline.dom:focus li:matches(.selected, .hovered) .status-image.breakpoint.subtree): Deleted.
+        * UserInterface/Views/RenderingFrameTimelineOverviewGraph.css:
+        (body:matches(.window-inactive, .window-docked-inactive) .timeline-overview-graph.rendering-frame > .frame-marker): Added.
+        (body.window-inactive .timeline-overview-graph.rendering-frame > .frame-marker): Deleted.
+        * UserInterface/Views/TimelineOverview.css:
+        (.timeline-overview > .tree-outline.timelines .item.selected + .item, body:matches(.window-inactive, .window-docked-inactive) .timeline-overview > .tree-outline.timelines .item.selected + .item): Added.
+        (@media (prefers-color-scheme: dark) .timeline-overview > .tree-outline.timelines .item.selected + .item, body:matches(.window-inactive, .window-docked-inactive) .timeline-overview > .tree-outline.timelines .item.selected + .item): Added.
+        (.timeline-overview > .tree-outline.timelines .item.selected + .item, body.window-inactive .timeline-overview > .tree-outline.timelines .item.selected + .item): Deleted.
+        (@media (prefers-color-scheme: dark) .timeline-overview > .tree-outline.timelines .item.selected + .item, body.window-inactive .timeline-overview > .tree-outline.timelines .item.selected + .item): Deleted.
+        * UserInterface/Views/TimelineRecordFrame.css:
+        (body:matches(.window-inactive, .window-docked-inactive) .timeline-record-frame.selected): Added.
+        (body.window-inactive .timeline-record-frame.selected): Deleted.
+        * UserInterface/Views/TimelineRuler.css:
+        (body:matches(.window-inactive, .window-docked-inactive) .timeline-ruler > .header > .divider): Added.
+        (body.window-inactive .timeline-ruler > .header > .divider): Deleted.
+        Add selectors for `.window-docked-inactive` everywhere that `.window-inactive` exists.
+
+        * UserInterface/Base/Setting.js:
+        Remove new tab bar experimental setting.
+
+        * UserInterface/Debug/Bootstrap.js:
+        (WI.runBootstrapOperations):
+        (WI.runBootstrapOperations.applyDumpMessagesState):
+        (WI.runBootstrapOperations.updateDebugUI):
+
+        * UserInterface/Images/Origin.svg:
+        Add `id="root"` so this can be used with `WI.ImageUtilities.useSVGSymbol`.
+
+        * UserInterface/Main.html:
+        * Localizations/en.lproj/localizedStrings.js:
+
+        * UserInterface/Views/ActivateButtonToolbarItem.js: Removed.
+        * UserInterface/Views/ButtonToolbarItem.js: Removed.
+        * UserInterface/Views/ButtonToolbarItem.css: Removed.
+        * UserInterface/Views/ControlToolbarItem.js: Removed.
+        * UserInterface/Views/ControlToolbarItem.css: Removed.
+        * UserInterface/Views/Toolbar.js: Removed.
+        * UserInterface/Views/Toolbar.css: Removed.
+        Remove toolbar related code now that it has been merged into the tab bar.
+
+        * UserInterface/Models/DebuggerDashboard.js: Removed.
+        * UserInterface/Models/DefaultDashboard.js: Removed.
+        * UserInterface/Views/DashboardContainerView.js: Removed.
+        * UserInterface/Views/DashboardContainerView.css: Removed.
+        * UserInterface/Views/DashboardView.js: Removed.
+        * UserInterface/Views/DebuggerDashboardView.js: Removed.
+        * UserInterface/Views/DebuggerDashboardView.css: Removed.
+        * UserInterface/Views/DefaultDashboardView.js: Removed.
+        * UserInterface/Views/DefaultDashboardView.css: Removed.
+        Remove dashboard related code now that it has been merged into the tab bar.
+
+        * UserInterface/Views/LegacyTabBar.js: Removed.
+        * UserInterface/Views/NewTabContentView.js: Removed.
+        * UserInterface/Views/NewTabContentView.css: Removed.
+        * UserInterface/Images/NewTab.svg: Removed.
+        * UserInterface/Images/NewTabPlus.svg: Removed.
+        * UserInterface/Images/SearchResults.svg: Removed.
+        Remove the lebacy tab bar in favor of the new tab bar.
+
+2020-01-29  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: add instrumentation for showing existing Web Animations
+        https://bugs.webkit.org/show_bug.cgi?id=205434
+        <rdar://problem/28328087>
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Controllers/AnimationManager.js: Added.
+        (WI.AnimationManager):
+        (WI.AnimationManager.prototype.get domains):
+        (WI.AnimationManager.prototype.activateExtraDomain):
+        (WI.AnimationManager.prototype.initializeTarget):
+        (WI.AnimationManager.prototype.get animationCollection):
+        (WI.AnimationManager.prototype.get supported):
+        (WI.AnimationManager.prototype.enable):
+        (WI.AnimationManager.prototype.disable):
+        (WI.AnimationManager.prototype.animationCreated):
+        (WI.AnimationManager.prototype.effectChanged):
+        (WI.AnimationManager.prototype.targetChanged):
+        (WI.AnimationManager.prototype.animationDestroyed):
+        (WI.AnimationManager.prototype._handleMainResourceDidChange):
+        * UserInterface/Protocol/AnimationObserver.js:
+        (WI.AnimationObserver.prototype.animationCreated): Added.
+        (WI.AnimationObserver.prototype.effectChanged): Added.
+        (WI.AnimationObserver.prototype.targetChanged): Added.
+        (WI.AnimationObserver.prototype.animationDestroyed): Added.
+
+        * UserInterface/Models/AnimationCollection.js: Added.
+        (WI.AnimationCollection):
+        (WI.AnimationCollection.prototype.get animationType):
+        (WI.AnimationCollection.prototype.get displayName):
+        (WI.AnimationCollection.prototype.objectIsRequiredType):
+        (WI.AnimationCollection.prototype.animationCollectionForType):
+        (WI.AnimationCollection.prototype.itemAdded):
+        (WI.AnimationCollection.prototype.itemRemoved):
+        (WI.AnimationCollection.prototype.itemsCleared):
+        Similar to `WI.ResourceCollection`, create a subclass of `WI.Collection` that maintains it's
+        own sub-`WI.AnimationCollection`s for each type of `WI.Animation.Type`.
+
+        * UserInterface/Models/Animation.js: Added.
+        (WI.Animation):
+        (WI.Animation.fromPayload):
+        (WI.Animation.displayNameForAnimationType):
+        (WI.Animation.displayNameForPlaybackDirection):
+        (WI.Animation.displayNameForFillMode):
+        (WI.Animation.resetUniqueDisplayNameNumbers):
+        (WI.Animation.prototype.get animationId):
+        (WI.Animation.prototype.get backtrace):
+        (WI.Animation.prototype.get animationType):
+        (WI.Animation.prototype.get startDelay):
+        (WI.Animation.prototype.get endDelay):
+        (WI.Animation.prototype.get iterationCount):
+        (WI.Animation.prototype.get iterationStart):
+        (WI.Animation.prototype.get iterationDuration):
+        (WI.Animation.prototype.get timingFunction):
+        (WI.Animation.prototype.get playbackDirection):
+        (WI.Animation.prototype.get fillMode):
+        (WI.Animation.prototype.get keyframes):
+        (WI.Animation.prototype.get displayName):
+        (WI.Animation.prototype.requestEffectTarget):
+        (WI.Animation.prototype.effectChanged):
+        (WI.Animation.prototype.targetChanged):
+        (WI.Animation.prototype._updateEffect):
+        * UserInterface/Protocol/RemoteObject.js:
+        (WI.RemoteObject.resolveAnimation): Added.
+
+        * UserInterface/Views/GraphicsTabContentView.js: Renamed from Source/WebInspectorUI/UserInterface/Views/CanvasTabContentView.js.
+        (WI.GraphicsTabContentView):
+        (WI.GraphicsTabContentView.tabInfo):
+        (WI.GraphicsTabContentView.isTabAllowed):
+        (WI.GraphicsTabContentView.prototype.get type):
+        (WI.GraphicsTabContentView.prototype.showRepresentedObject): Added.
+        (WI.GraphicsTabContentView.prototype.canShowRepresentedObject):
+        (WI.GraphicsTabContentView.prototype.closed):
+        (WI.GraphicsTabContentView.prototype.attached):
+        (WI.GraphicsTabContentView.prototype.detached):
+        (WI.GraphicsTabContentView.prototype.initialLayout): Added.
+        (WI.GraphicsTabContentView.prototype._handleOverviewTreeOutlineSelectionDidChange): Added.
+        * UserInterface/Views/GraphicsTabContentView.css: Renamed from Source/WebInspectorUI/UserInterface/Views/CanvasTabContentView.css.
+        Rename the Canvas Tab to Graphics Tab and display four sections:
+         - Canvases
+         - Web Animations
+         - CSS Animations
+         - CSS Transitions
+
+        * UserInterface/Views/CanvasSidebarPanel.js:
+        (WI.CanvasSidebarPanel.prototype.canShowRepresentedObject):
+        Only appear if a `WI.Canvas` or `WI.Recording` is selected.
+
+        * UserInterface/Views/GraphicsOverviewContentView.js: Added.
+        (WI.GraphicsOverviewContentView):
+        (WI.GraphicsOverviewContentView.prototype.get supplementalRepresentedObjects):
+        (WI.GraphicsOverviewContentView.prototype.get navigationItems):
+        (WI.GraphicsOverviewContentView.prototype.attached):
+        (WI.GraphicsOverviewContentView.prototype.detached):
+        (WI.GraphicsOverviewContentView.prototype.initialLayout):
+        (WI.GraphicsOverviewContentView.prototype.dropZoneShouldAppearForDragEvent):
+        (WI.GraphicsOverviewContentView.prototype.dropZoneHandleDrop):
+        (WI.GraphicsOverviewContentView.prototype._handleRefreshButtonClicked):
+        (WI.GraphicsOverviewContentView.prototype._handleShowGridButtonClicked):
+        (WI.GraphicsOverviewContentView.prototype._handleShowImageGridSettingChanged):
+        (WI.GraphicsOverviewContentView.prototype._handleImportButtonNavigationItemClicked):
+        (WI.GraphicsOverviewContentView.prototype._handleOverviewViewSelectedItemChanged):
+        (WI.GraphicsOverviewContentView.prototype._handleOverviewViewSupplementalRepresentedObjectsDidChange):
+        (WI.GraphicsOverviewContentView.prototype._handleClick):
+        * UserInterface/Views/GraphicsOverviewContentView.css: Added.
+        (.content-view.graphics-overview):
+        (.content-view.graphics-overview > section):
+        (.content-view.graphics-overview > section:not(:first-child)):
+        (.content-view.graphics-overview > section > .header):
+        (.content-view.graphics-overview > section:not(:first-of-type) > .header):
+        (.content-view.graphics-overview > section > .header > h1):
+        (.content-view.graphics-overview > section > .header > .navigation-bar):
+        (.content-view.graphics-overview > .content-view.canvas-overview):
+        (@media (prefers-color-scheme: light) .content-view.graphics-overview):
+        (@media (prefers-color-scheme: light) .content-view.graphics-overview > section > .header):
+        Add sticky headers for each of the sections described above.
+
+        * UserInterface/Views/AnimationCollectionContentView.js: Added.
+        (WI.AnimationCollectionContentView):
+        (WI.AnimationCollectionContentView.prototype.handleRefreshButtonClicked):
+        (WI.AnimationCollectionContentView.prototype.contentViewAdded):
+        (WI.AnimationCollectionContentView.prototype.contentViewRemoved):
+        (WI.AnimationCollectionContentView.prototype.detached):
+        (WI.AnimationCollectionContentView.prototype._handleContentViewMouseEnter):
+        (WI.AnimationCollectionContentView.prototype._handleContentViewMouseLeave):
+        * UserInterface/Views/AnimationCollectionContentView.css: Added.
+        (.content-view.animation-collection):
+
+        * UserInterface/Views/AnimationContentView.js: Added.
+        (WI.AnimationContentView):
+        (WI.AnimationContentView.get previewHeight):
+        (WI.AnimationContentView.prototype.handleRefreshButtonClicked):
+        (WI.AnimationContentView.prototype.initialLayout):
+        (WI.AnimationContentView.prototype.layout):
+        (WI.AnimationContentView.prototype.sizeDidChange):
+        (WI.AnimationContentView.prototype.attached):
+        (WI.AnimationContentView.prototype.detached):
+        (WI.AnimationContentView.prototype._refreshSubtitle):
+        (WI.AnimationContentView.prototype._refreshPreview.addTitle):
+        (WI.AnimationContentView.prototype._refreshPreview):
+        (WI.AnimationContentView.prototype._handleEffectChanged):
+        (WI.AnimationContentView.prototype._handleTargetChanged):
+        (WI.AnimationContentView.prototype._populateAnimationTargetButtonContextMenu):
+        * UserInterface/Views/AnimationContentView.css: Added.
+        (.content-view.animation):
+        (.content-view.animation.selected):
+        (.content-view.animation > header):
+        (.content-view.animation > header > .titles):
+        (.content-view.animation > header > .titles > .title):
+        (.content-view.animation > header > .titles > .subtitle):
+        (.content-view.animation > header > .titles > .subtitle:not(:empty)::before):
+        (.content-view.animation > header > .navigation-bar):
+        (.content-view.animation:hover > header > .navigation-bar):
+        (.content-view.animation > .preview):
+        (.content-view.animation > .preview > svg):
+        (body[dir=rtl] .content-view.animation > .preview > svg):
+        (.content-view.animation > .preview > svg rect):
+        (.content-view.animation > .preview > svg > .delay line):
+        (.content-view.animation > .preview > svg > .active path):
+        (.content-view.animation > .preview > svg > .active circle):
+        (.content-view.animation > .preview > svg > .active line):
+        (.content-view.animation > .preview > span):
+        (@media (prefers-color-scheme: dark) .content-view.animation > header > .titles > .title):
+        (@media (prefers-color-scheme: dark) .content-view.animation > header > .titles > .subtitle):
+        (@media (prefers-color-scheme: dark) .content-view.animation > .preview):
+        Visualize the start/end delay and keyframes of the given animation as a series of bezier
+        curves separated by markers.
+
+        * UserInterface/Views/AnimationDetailsSidebarPanel.js: Added.
+        (WI.AnimationDetailsSidebarPanel):
+        (WI.AnimationDetailsSidebarPanel.prototype.inspect):
+        (WI.AnimationDetailsSidebarPanel.prototype.get animation):
+        (WI.AnimationDetailsSidebarPanel.prototype.set animation):
+        (WI.AnimationDetailsSidebarPanel.prototype.initialLayout):
+        (WI.AnimationDetailsSidebarPanel.prototype.layout):
+        (WI.AnimationDetailsSidebarPanel.prototype._refreshIdentitySection):
+        (WI.AnimationDetailsSidebarPanel.prototype._refreshEffectSection):
+        (WI.AnimationDetailsSidebarPanel.prototype._refreshBacktraceSection):
+        (WI.AnimationDetailsSidebarPanel.prototype._handleAnimationEffectChanged):
+        (WI.AnimationDetailsSidebarPanel.prototype._handleAnimationTargetChanged):
+        (WI.AnimationDetailsSidebarPanel.prototype._handleDetailsSectionCollapsedStateChanged):
+        * UserInterface/Views/AnimationDetailsSidebarPanel.css: Added.
+        (.sidebar > .panel.details.animation > .content > .details-section.animation-keyframes .header > .subtitle):
+        (.sidebar > .panel.details.animation > .content > .details-section.animation-keyframes .details-section):
+        (.sidebar > .panel.details.animation > .content > .details-section.animation-keyframes .details-section .row.styles):
+        (.sidebar > .panel.details.animation > .content > .details-section.animation-keyframes .details-section .row.styles .CodeMirror):
+        (.sidebar > .panel.details.animation > .content > .details-section.animation-keyframes .details-section):
+        Show collected information about the selected animation, its effect, and its target.
+
+        * UserInterface/Controllers/CanvasManager.js:
+        (WI.CanvasManager):
+        (WI.CanvasManager.prototype.get canvasCollection): Added.
+        (WI.CanvasManager.prototype.disable):
+        (WI.CanvasManager.prototype.canvasAdded):
+        (WI.CanvasManager.prototype.canvasRemoved):
+        (WI.CanvasManager.prototype._saveRecordings): Added.
+        (WI.CanvasManager.prototype._mainResourceDidChange):
+        (WI.CanvasManager.prototype.get canvases): Deleted.
+        (WI.CanvasManager.prototype._removeCanvas): Deleted.
+        Rather than have the `WI.CanvasTabContentView` mainain the `WI.CanvasCollection` and have to
+        listen for events from the `WI.CanvasManager`, just have the `WI.CanvasManager` hold on to
+        it instead and provide a getter for it.
+
+        * UserInterface/Views/CanvasOverviewContentView.js:
+        (WI.CanvasOverviewContentView):
+        (WI.CanvasOverviewContentView.prototype.get navigationItems):
+        (WI.CanvasOverviewContentView.prototype.handleRefreshButtonClicked):
+        (WI.CanvasOverviewContentView.prototype.contentViewAdded):
+        (WI.CanvasOverviewContentView.prototype.contentViewRemoved):
+        (WI.CanvasOverviewContentView.prototype.attached):
+        (WI.CanvasOverviewContentView.prototype.detached):
+        (WI.CanvasOverviewContentView.prototype._addSavedRecording):
+        (WI.CanvasOverviewContentView.prototype.hidden): Deleted.
+        (WI.CanvasOverviewContentView.prototype.get _itemMargin): Deleted.
+        (WI.CanvasOverviewContentView.prototype._refreshPreviews): Deleted.
+        (WI.CanvasOverviewContentView.prototype._updateNavigationItems): Deleted.
+        (WI.CanvasOverviewContentView.prototype._showGridButtonClicked): Deleted.
+        (WI.CanvasOverviewContentView.prototype._updateShowImageGrid): Deleted.
+        * UserInterface/Views/CanvasOverviewContentView.css:
+        (.content-view.canvas-overview):
+        (.content-view.canvas-overview > .content-view.canvas):
+        (@media (prefers-color-scheme: dark) .content-view.canvas-overview): Deleted.
+
+        * UserInterface/Views/CanvasContentView.js:
+        (WI.CanvasContentView):
+        (WI.CanvasContentView.prototype.handleRefreshButtonClicked): Added.
+        (WI.CanvasContentView.prototype.dropZoneShouldAppearForDragEvent): Added.
+        (WI.CanvasContentView.prototype.dropZoneHandleDrop): Added.
+        (WI.CanvasContentView.prototype.initialLayout):
+        (WI.CanvasContentView.prototype.attached):
+        (WI.CanvasContentView.prototype._populateCanvasElementButtonContextMenu):
+        (WI.CanvasContentView.prototype.shown): Deleted.
+        Move the "Log Canvas Context" to be the first item in the canvas element button context menu.
+        Drive-by: add a `WI.DropZoneView` for when recording JSON files are dragged on top.
+
+        * UserInterface/Views/CanvasContentView.css:
+        Drive-by: drop `:not(.tab)` from all selectors since the Canvas Tab doesn't exist anymore.
+
+        * UserInterface/Views/CollectionContentView.js:
+        (WI.CollectionContentView):
+        (WI.CollectionContentView.prototype.get selectedItem): Added.
+        (WI.CollectionContentView.prototype.set selectedItem): Added.
+        (WI.CollectionContentView.prototype.addContentViewForItem):
+        (WI.CollectionContentView.prototype.removeContentViewForItem):
+        (WI.CollectionContentView.prototype.showContentPlaceholder):
+        (WI.CollectionContentView.prototype.initialLayout):
+        (WI.CollectionContentView.prototype._selectItem):
+        (WI.CollectionContentView.prototype._handleClick): Added.
+        (WI.CollectionContentView.prototype.setSelectedItem): Deleted.
+        * UserInterface/Views/CollectionContentView.css:
+        (.content-view.collection > .placeholder:not(.message-text-view)): Added.
+        (.content-view.collection .resource.image img): Deleted.
+        (.content-view.collection .resource.image img:hover): Deleted.
+        When selection is enabled, clicking outside of any of the content views should dismiss the
+        current selection. Clients should also be able to get the currently selected item.
+
+        * UserInterface/Views/DetailsSectionSimpleRow.js:
+        (WI.DetailsSectionSimpleRow.prototype.set value):
+        Ensure that `0` is considered as a valid value.
+
+        * UserInterface/Base/Main.js:
+        (WI.loaded):
+        (WI.contentLoaded):
+        (WI.tabContentViewClassForRepresentedObject):
+        * UserInterface/Views/ContentView.js:
+        (WI.ContentView.createFromRepresentedObject):
+        (WI.ContentView.isViewable):
+        Allow `WI.Animation` to be viewable.
+
+        * UserInterface/Views/Main.css:
+        (.navigation-item-help): Added.
+        (.navigation-item-help > .navigation-bar): Added.
+        (.navigation-item-help > .navigation-bar > .item): Added.
+        (.message-text-view .navigation-item-help): Deleted.
+        (.message-text-view .navigation-item-help .navigation-bar): Deleted.
+        (.message-text-view .navigation-item-help .navigation-bar > .item): Deleted.
+        Allow `WI.createNavigationItemHelp` to be used independently of `WI.createMessageTextView`.
+
+        * UserInterface/Controllers/DOMManager.js:
+        (WI.DOMManager.prototype.nodeForId):
+        * UserInterface/Controllers/TimelineManager.js:
+        (WI.TimelineManager.prototype.animationTrackingUpdated):
+        * UserInterface/Models/AuditTestCaseResult.js:
+        (WI.AuditTestCaseResult.async fromPayload):
+        Add a fallback so callers don't need to.
+
+        * UserInterface/Views/ResourceCollectionContentView.js:
+        (WI.ResourceCollectionContentView):
+        * UserInterface/Views/ResourceCollectionContentView.css:
+        (.content-view.resource-collection > .resource.image img): Added.
+        (.content-view.resource-collection > .resource.image img:hover): Added.
+        Drive-by: move these styles to the right file and make them more specific.
+
+        * UserInterface/Models/Canvas.js:
+        (WI.Canvas.displayNameForContextType):
+        * UserInterface/Models/Recording.js:
+        (WI.Recording.displayNameForRecordingType): Added.
+        Drive-by: fix localized strings.
+
+        * UserInterface/Views/RecordingContentView.css:
+        Drive-by: drop `:not(.tab)` from all selectors since the Recording Tab doesn't exist anymore.
+
+        * UserInterface/Main.html:
+        * UserInterface/Images/Graphics.svg: Renamed from Source/WebInspectorUI/UserInterface/Images/Canvas.svg.
+        * Localizations/en.lproj/localizedStrings.js:
+
+        * UserInterface/Test.html:
+        * UserInterface/Test/Test.js:
+        (WI.loaded):
+
+        * UserInterface/Test/TestHarness.js:
+        (TestHarness.prototype.expectEmpty): Added.
+        (TestHarness.prototype.expectNotEmpty): Added.
+        (TestHarness.prototype._expectationMessageFormat):
+        (TestHarness.prototype._expectedValueFormat):
+        Add utility function for checking whether the given value is empty:
+         - Array `length === 0`
+         - String `length === 0`
+         - Set `size === 0`
+         - Map `size === 0`
+         - Object `isEmptyObject`
+        Any other type will automatically fail, as non-objects can't be "empty" (e.g. `42`).
+
+2020-01-27  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: don't use `:matches(:before, :after)` after r255059
+        https://bugs.webkit.org/show_bug.cgi?id=206848
+
+        Reviewed by Antti Koivisto.
+
+        * UserInterface/Views/SpringEditor.css:
+        (.spring-editor > .spring-timing::before, .spring-editor > .spring-timing::after): Added.
+        (.spring-editor > .spring-timing:matches(::before, ::after)): Deleted.
+
+2020-01-27  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: unable to evaluate in the isolated world of content scripts injected by safari app extensions
+        https://bugs.webkit.org/show_bug.cgi?id=206110
+        <rdar://problem/16945643>
+
+        Reviewed by Timothy Hatcher, Joseph Pecoraro, and Brian Burg.
+
+        In addition to evaluating in subframe execution contexts, add the ability for Web Inspector
+        to evaluate in non-normal isolated worlds.
+
+        * UserInterface/Models/ExecutionContext.js:
+        (WI.ExecutionContext):
+        (WI.ExecutionContext.typeFromPayload): Added.
+        (WI.ExecutionContext.prototype.get type): Added.
+        (WI.ExecutionContext.prototype.get isPageContext): Deleted.
+
+        * UserInterface/Models/ExecutionContextList.js:
+        (WI.ExecutionContextList.prototype.add):
+        * UserInterface/Models/Frame.js:
+        (WI.Frame.prototype.addExecutionContext):
+        * UserInterface/Controllers/NetworkManager.js:
+        (WI.NetworkManager.prototype.executionContextCreated):
+        The `Normal` execution context (of which there should only be one) is considered the "page"
+        execution context.
+
+        * UserInterface/Protocol/DirectBackendTarget.js:
+        (WI.DirectBackendTarget):
+        * UserInterface/Protocol/PageTarget.js:
+        (WI.PageTarget):
+        * UserInterface/Protocol/WorkerTarget.js:
+        (WI.WorkerTarget):
+        Default to a `Normal` execution context.
+
+        * UserInterface/Views/QuickConsole.js:
+        (WI.QuickConsole):
+        (WI.QuickConsole.prototype._displayNameForExecutionContext): Added.
+        (WI.QuickConsole.prototype._resolveDesiredActiveExecutionContext): Added.
+        (WI.QuickConsole.prototype._setActiveExecutionContext): Added.
+        (WI.QuickConsole.prototype._updateActiveExecutionContextDisplay): Added.
+        (WI.QuickConsole.prototype._populateActiveExecutionContextNavigationItemContextMenu): Added.
+        (WI.QuickConsole.prototype._handleConsoleSavedResultAliasSettingChanged): Added.
+        (WI.QuickConsole.prototype._handleEngineeringShowInternalExecutionContextsSettingChanged): Added.
+        (WI.QuickConsole.prototype._handleFramePageExecutionContextChanged): Added.
+        (WI.QuickConsole.prototype._handleFrameExecutionContextsCleared): Added.
+        (WI.QuickConsole.prototype._handleDebuggerActiveCallFrameDidChange): Added.
+        (WI.QuickConsole.prototype._handleActiveExecutionContextChanged): Added.
+        (WI.QuickConsole.prototype._handleTransitionPageTarget): Added.
+        (WI.QuickConsole.prototype._handleTargetRemoved): Added.
+        (WI.QuickConsole.prototype._handleInspectedNodeChanged): Added.
+        (WI.QuickConsole.prototype._updateStyles):
+        (WI.QuickConsole.prototype.get navigationBar): Deleted.
+        (WI.QuickConsole.prototype._pageTargetTransitioned): Deleted.
+        (WI.QuickConsole.prototype._initializeMainExecutionContextPathComponent): Deleted.
+        (WI.QuickConsole.prototype.layout): Deleted.
+        (WI.QuickConsole.prototype._preferredNameForFrame): Deleted.
+        (WI.QuickConsole.prototype._selectExecutionContext): Deleted.
+        (WI.QuickConsole.prototype._updateAutomaticExecutionContextPathComponentTooltip): Deleted.
+        (WI.QuickConsole.prototype._executionContextPathComponentsToDisplay): Deleted.
+        (WI.QuickConsole.prototype._rebuildExecutionContextPathComponents): Deleted.
+        (WI.QuickConsole.prototype._framePageExecutionContextsChanged): Deleted.
+        (WI.QuickConsole.prototype._frameExecutionContextsCleared): Deleted.
+        (WI.QuickConsole.prototype._activeExecutionContextChanged): Deleted.
+        (WI.QuickConsole.prototype._createExecutionContextPathComponent): Deleted.
+        (WI.QuickConsole.prototype._compareExecutionContextPathComponents): Deleted.
+        (WI.QuickConsole.prototype._insertOtherExecutionContextPathComponent): Deleted.
+        (WI.QuickConsole.prototype._removeOtherExecutionContextPathComponent): Deleted.
+        (WI.QuickConsole.prototype._insertExecutionContextPathComponentForFrame): Deleted.
+        (WI.QuickConsole.prototype._removeExecutionContextPathComponentForFrame): Deleted.
+        (WI.QuickConsole.prototype._targetAdded): Deleted.
+        (WI.QuickConsole.prototype._targetRemoved): Deleted.
+        (WI.QuickConsole.prototype._pathComponentSelected): Deleted.
+        (WI.QuickConsole.prototype._pathComponentClicked): Deleted.
+        (WI.QuickConsole.prototype._debuggerActiveCallFrameDidChange): Deleted.
+        * UserInterface/Views/QuickConsole.css:
+        (.quick-console > .console-prompt):
+        (.quick-console > .navigation-bar):
+        (.quick-console > .navigation-bar .active-execution-context): Added.
+        (.quick-console > .navigation-bar .active-execution-context > .selector-arrows): Added.
+        (.quick-console > .navigation-bar .active-execution-context:not(.automatic)): Added.
+        (.quick-console > .navigation-bar .active-execution-context:not(.automatic) > .selector-arrows): Added.
+        (.quick-console .execution-context): Deleted.
+        (.quick-console > .navigation-bar > .hierarchical-path .execution-context): Deleted.
+        (.quick-console > .navigation-bar > .hierarchical-path .execution-context .separator): Deleted.
+        (.quick-console > .navigation-bar > .hierarchical-path:not(.automatic-execution-context)): Deleted.
+        (.quick-console > .navigation-bar > .hierarchical-path:not(.automatic-execution-context) .execution-context): Deleted.
+        (.quick-console > .navigation-bar > .hierarchical-path:not(.automatic-execution-context) .execution-context .selector-arrows): Deleted.
+        Replace the `WI.HierarchicalPathNavigationItem` with a plain `WI.NavigationItem` that shows
+        a `WI.ContextMenu` with all valid execution contexts organized as follows:
+
+            Auto - <display name for execution context of inspected DOM node>
+            ----------
+            Main Frame Normal Execution Context
+                All User Exection Contexts for the Main Frame
+                All Internal Exection Contexts for the Main Frame (with the engineering setting)
+            Frames
+                Frame Normal Execution Context
+                    All User Exection Contexts for the Frame
+                    All Internal Exection Contexts for the Frame (with the engineering setting)
+                ...
+            Workers
+                Worker Execution Context
+                ...
+
+        Everything is checkmark selectable other than the separator, "Frames", and "Workers".
+
+        * UserInterface/Controllers/RuntimeManager.js:
+        (WI.RuntimeManager):
+        (WI.RuntimeManager.prototype._frameExecutionContextsCleared): Deleted.
+        Let the UI (`WI.QuickConsole`) decide when to automatically update the active execution
+        context when a frame is removed that owned the active execution context.
+
+        * UserInterface/Controllers/TargetManager.js:
+        (WI.TargetManager.prototype.get workerTargets): Added.
+        (WI.TargetManager.prototype._terminatePageTarget):
+        Convenience function for getting the list of worker targets.
+
+        * UserInterface/Views/GroupNavigationItem.js:
+        (WI.GroupNavigationItem.prototype.update):
+        (WI.GroupNavigationItem.prototype.didAttach):
+        Update the items whenever the group updates.
+
+        * UserInterface/Main.html:
+        * UserInterface/Views/SizesToFitNavigationBar.js: Renamed from Source/WebInspectorUI/UserInterface/Views/QuickConsoleNavigationBar.js.
+        (WI.SizesToFitNavigationBar):
+        (WI.SizesToFitNavigationBar.prototype.get sizesToFit):
+        Rename to allow for other use cases.
+
+        * UserInterface/Views/ContextMenu.js:
+        (WI.ContextSubMenuItem.prototype.appendHeader): Added.
+        Convenience method for creating a disabled item.
+
+        * UserInterface/Base/Setting.js:
+        * UserInterface/Views/SettingsTabContentView.js:
+        (WI.SettingsTabContentView.prototype._createEngineeringSettingsView):
+        Create an engineering setting that controls whether `Internal` execution contexts are shown.
+
+        * UserInterface/Test/InspectorProtocol.js:
+        (InspectorProtocol.addEventListener):
+        (InspectorProtocol.removeEventListener): Added.
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2020-01-21  Keith Rollin  <krollin@apple.com>
+
+        Fix tvOS values in SUPPORTED_PLATFORMS
+        https://bugs.webkit.org/show_bug.cgi?id=206435
+        <rdar://problem/58674587>
+
+        Reviewed by Alexey Proskuryakov.
+
+        A number of targets in WebKit have 'tvos' and 'tvsimulator' in
+        SUPPORTED_PLATFORMS. The correct values are 'appletvos' and
+        'appletvsimulator'. These should be updated to the correct ones as the
+        wrong values prevent the tvOS run destination from being usable in the
+        UI to build for tvOS.
+
+        * Configurations/Base.xcconfig:
+
+2020-01-17  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Unchecking Enable Preview Features on Engineering and Preview builds does not affect WI.arePreviewFeaturesEnabled()
+        https://bugs.webkit.org/show_bug.cgi?id=204026
+
+        Reviewed by Brian Burg.
+
+        Make `WI.arePreviewFeaturesEnabled()` return false when Enable Preview Features is unchecked.
+
+        * UserInterface/Base/Setting.js:
+        (WI.canShowPreviewFeatures):
+        (WI.arePreviewFeaturesEnabled):
+        (WI.isTechnologyPreviewBuild): Deleted.
+        (WI.canShowPreviewFeatures): Added.
+        * UserInterface/Views/SettingsTabContentView.js:
+
+2020-01-16  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: add links to reference pages
+        https://bugs.webkit.org/show_bug.cgi?id=206309
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Base/Main.js:
+        (WI._handleDeviceSettingsToolbarButtonClicked):
+        (WI.createReferencePageLink): Added.
+        * UserInterface/Views/Main.css:
+        (.reference-page-link): Added.
+        (.reference-page-link:active): Added.
+        (@media (-webkit-device-pixel-ratio: 1) .reference-page-link): Added.
+        (@media (prefers-color-scheme: dark) .reference-page-link): Added.
+        (@media (prefers-color-scheme: dark) .reference-page-link:active): Added.
+        (.device-settings-content):
+        (.device-settings-content > table): Added.
+        (.device-settings-content > table > tr > td:first-child): Added.
+        (.device-settings-content > .reference-page-link-container): Added.
+        (body[dir=ltr] .device-settings-content > .reference-page-link-container): Added.
+        (body[dir=rtl] .device-settings-content > .reference-page-link-container): Added.
+        (.device-settings-content > tr > td:first-child): Deleted.
+
+        * UserInterface/Controllers/NetworkManager.js:
+        (WI.NetworkManager.prototype.async createBootstrapScript):
+
+        * UserInterface/Controllers/BreakpointPopoverController.js:
+        (WI.BreakpointPopoverController.prototype._createPopoverContent):
+        (WI.BreakpointPopoverController.prototype._popoverActionsCreateAddActionButton):
+        * UserInterface/Views/BreakpointPopoverController.css:
+        (.popover .edit-breakpoint-popover-content > table > tr > td.options): Added.
+        (.popover .edit-breakpoint-popover-content > table > tr > td.options > .reference-page-link-container): Added.
+        (body[dir=ltr] .popover .edit-breakpoint-popover-content > table > tr > td.options > .reference-page-link-container): Added.
+        (body[dir=rtl] .popover .edit-breakpoint-popover-content > table > tr > td.options > .reference-page-link-container): Added.
+        (body[dir=ltr] .popover .edit-breakpoint-popover-content .reference-page-link-container): Added.
+        (body[dir=rtl] .popover .edit-breakpoint-popover-content .reference-page-link-container): Added.
+        * UserInterface/Views/EventBreakpointPopover.js:
+        (WI.EventBreakpointPopover.prototype.show):
+        * UserInterface/Views/EventBreakpointPopover.css:
+        (.popover .event-breakpoint-content .reference-page-link-container): Added.
+        * UserInterface/Views/URLBreakpointPopover.js:
+        (WI.URLBreakpointPopover.prototype.show):
+        * UserInterface/Views/URLBreakpointPopover.css:
+        (.popover .url-breakpoint-content .reference-page-link-container): Added.
+
+        * UserInterface/Views/LocalResourceOverridePopover.js:
+        (WI.LocalResourceOverridePopover.prototype.show):
+        * UserInterface/Views/LocalResourceOverridePopover.css:
+        (.popover .local-resource-override-popover-content .reference-page-link-container): Added.
+        (body[dir=ltr] .popover .local-resource-override-popover-content .reference-page-link-container): Added.
+        (body[dir=rtl] .popover .local-resource-override-popover-content .reference-page-link-container): Added.
+
+        * UserInterface/Views/SettingsTabContentView.js:
+        (WI.SettingsTabContentView.prototype.initialLayout):
+        (WI.SettingsTabContentView.prototype._createGeneralSettingsView):
+        (WI.SettingsTabContentView.prototype._createElementsSettingsView):
+        (WI.SettingsTabContentView.prototype._createSourcesSettingsView):
+        (WI.SettingsTabContentView.prototype._createConsoleSettingsView):
+        (WI.SettingsTabContentView.prototype._createExperimentalSettingsView):
+        (WI.SettingsTabContentView.prototype._createReferenceLink): Added.
+        * UserInterface/Views/SettingsTabContentView.css:
+        (.content-view.tab.settings): Added.
+        (.content-view.tab.settings .navigation-bar): Added.
+        (.content-view.tab.settings .navigation-bar.invisible): Added.
+        (.content-view.tab.settings .navigation-bar .item.radio.button.text-only): Added.
+        (.content-view.tab.settings .navigation-bar .item.radio.button.text-only:before): Added.
+        (.content-view.tab.settings .navigation-bar .item.radio.button.text-only.selected): Added.
+        (.content-view.tab.settings > .settings-view): Added.
+        (.content-view.tab.settings > .settings-view > .separator): Added.
+        (.content-view.tab.settings > .settings-view > .container): Added.
+        (.content-view.tab.settings > .settings-view > .container.hidden): Added.
+        (.content-view.tab.settings > .settings-view > .container-centered): Added.
+        (.content-view.tab.settings > .settings-view > .container button): Added.
+        (.content-view.tab.settings > .settings-view > .container > .title): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor:first-child > *): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor input): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor input[type="checkbox"]): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor select): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor input[type="number"]): Added.
+        (.content-view.tab.settings > .settings-view > .container > .editor-group > .editor input[type="text"]): Added.
+        (.content-view.tab.settings > .settings-view > .container.reference): Added.
+        (.content-view.tab.settings > .settings-view > .container.reference > .reference-page-link): Added.
+        (.content-view.tab.settings > .settings-view > .container.reference > .reference-page-link > .go-to-arrow): Added.
+        (.content-view.settings .navigation-bar): Deleted.
+        (.content-view.settings .navigation-bar.invisible): Deleted.
+        (.content-view.settings .navigation-bar .item.radio.button.text-only): Deleted.
+        (.content-view.settings .navigation-bar .item.radio.button.text-only:before): Deleted.
+        (.content-view.settings .navigation-bar .item.radio.button.text-only.selected): Deleted.
+        (.content-view.settings > .settings-view): Deleted.
+        (.content-view.settings > .settings-view > .separator): Deleted.
+        (.content-view.settings > .settings-view > .container): Deleted.
+        (.content-view.settings > .settings-view > .container.hidden): Deleted.
+        (.content-view.settings > .settings-view > .container-centered): Deleted.
+        (.content-view.settings > .settings-view > .container button): Deleted.
+        (.content-view.settings > .settings-view > .container > .title): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor:first-child > *): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor input): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor input[type="checkbox"]): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor select): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor input[type="number"]): Deleted.
+        (.content-view.settings > .settings-view > .container > .editor-group > .editor input[type="text"]): Deleted.
+        (@media (prefers-color-scheme: dark) .content-view.settings .navigation-bar): Deleted.
+        (@media (prefers-color-scheme: dark) .content-view.settings .navigation-bar .item.radio.button.text-only.selected): Deleted.
+        * UserInterface/Views/BlackboxSettingsView.js:
+        (WI.BlackboxSettingsView.prototype.initialLayout):
+        * UserInterface/Views/BlackboxSettingsView.css:
+        (.settings-view.blackbox > table > tbody td.url): Added.
+        (.settings-view.blackbox > table > tbody td.url > .CodeMirror):
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2020-01-16  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: show the device settings menu when Web Inspector's debug mode is enabled
+        https://bugs.webkit.org/show_bug.cgi?id=206311
+
+        Reviewed by Brian Burg.
+
+        This only has an effect when Web Inspector is opened and the debug mode is enabled. If so,
+        the device settings toolbar icon will appear regardless of whether the inspected target is
+        a remote device or not. Disabling debug mode will not immediately remove the device settings
+        toolbar icon, but it will not reappear when Web Inspector is next opened (to allow for taking
+        screenshots and other such things).
+
+        * UserInterface/Base/Main.js:
+        (WI.contentLoaded):
+
+2020-01-16  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        REGRESSION(r251487): Web Inspector: selected color in color picker has wrong lightness
+        https://bugs.webkit.org/show_bug.cgi?id=206202
+
+        Reviewed by Devin Rousso.
+
+        Currently, tintedColor setter has two code paths:
+        - rgb2hsv convertion if the color is defined using color(...) syntax.
+        - HSL to HSV convertion for any other color.
+
+        The latter was defined in the view, was untested, and incorrect.
+        This patch uses WI.Color.rgb2hsv convertion for all colors. This method is
+        already covered by tests.
+
+        * UserInterface/Views/ColorSquare.js:
+        (WI.ColorSquare.prototype.set tintedColor):
+
+2020-01-16  David Kilzer  <ddkilzer@apple.com>
+
+        Enable -Wconditional-uninitialized in WebInspectorUI, WebKitLegacy, WebKit projects
+        <https://webkit.org/b/206270>
+        <rdar://problem/58589767>
+
+        Reviewed by Tim Horton.
+
+        * Configurations/Base.xcconfig:
+        (WARNING_CFLAGS): Add -Wconditional-uninitialized switch.
+
+2020-01-15  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: collapsing a virtualized folder in a `WI.TreeOutline` doesn't updated the DOM
+        https://bugs.webkit.org/show_bug.cgi?id=206302
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Views/TreeOutline.js:
+        (WI.TreeOutline.prototype._updateVirtualizedElements):
+        When collapsing a currently visible `WI.TreeElement`, it will still be in the cached set of
+        visible and attached `WI.TreeElement`s, meaning that `_updateVirtualizedElements` will early
+        return since it thinks that the same `WI.TreeElement` are being shown. Add another check to
+        ensure that it only thinks that if the same number of `WI.TreeElement` are visible.
+
+2020-01-13  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: "Enable Local Override" and "Delete Local Override" are displayed twice in the contextual menu
+        https://bugs.webkit.org/show_bug.cgi?id=206184
+        <rdar://problem/58409880>
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/ContextMenuUtilities.js:
+        (WI.appendContextMenuItemsForSourceCode):
+        * UserInterface/Views/LocalResourceOverrideTreeElement.js:
+        (WI.LocalResourceOverrideTreeElement.prototype.populateContextMenu):
+        Add an expando flag  that can be set by `WI.LocalResourceOverrideTreeElement` to ensure that
+        the local override context menu items aren't added again by `WI.ResourceTreeElement`.
+
+2020-01-09  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: suggest "color()" when defining color in CSS value
+        https://bugs.webkit.org/show_bug.cgi?id=205976
+
+        Reviewed by Devin Rousso.
+
+        * UserInterface/Models/CSSKeywordCompletions.js:
+
+2020-01-08  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Sources: not all injected scripts and style sheets are from extensions
+        https://bugs.webkit.org/show_bug.cgi?id=205955
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Base/Utilities.js:
+        (isWebKitExtensionScheme): Added.
+        * UserInterface/Models/CSSStyleSheet.js:
+        (WI.CSSStyleSheet.prototype.get injected):
+        * .eslintrc:
+        Move the logic for detecting an extension injected resource to its own function.
+
+        * UserInterface/Views/SourcesNavigationSidebarPanel.js:
+        (WI.SourcesNavigationSidebarPanel.prototype.treeElementForRepresentedObject):
+        (WI.SourcesNavigationSidebarPanel.prototype._addStyleSheet):
+        (WI.SourcesNavigationSidebarPanel.prototype._addScript):
+        Only show the Anonymous Style Sheets folder once the user tries to show a style sheet that
+        would be in it.
+
+        * UserInterface/Views/OpenResourceDialog.js:
+        (WI.OpenResourceDialog.prototype.didPresentDialog):
+        (WI.OpenResourceDialog.prototype._addScriptsForTarget):
+        (WI.OpenResourceDialog.prototype._handleStyleSheetAdded):
+        (WI.OpenResourceDialog.prototype._handleStyleSheetRemoved):
+        Ignore anonymous scripts, and allow injected style sheets to be added after presenting.
+
+2020-01-08  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Show RGBA input fields for p3 color picker
+        https://bugs.webkit.org/show_bug.cgi?id=203928
+        <rdar://problem/56963805>
+
+        Reviewed by Brian Burg.
+
+        Display numeric input fields for colors defined via `color(...)` CSS syntax.
+
+        * UserInterface/Controllers/CodeMirrorColorEditingController.js:
+        (WI.CodeMirrorColorEditingController.prototype.popoverWillPresent):
+        Remove unnecessary WI.ColorPicker.Event.FormatChanged event.
+
+        * UserInterface/Views/ColorPicker.css:
+        (.color-picker > .color-inputs > div + div):
+        * UserInterface/Views/ColorPicker.js:
+        (WI.ColorPicker):
+        Don't append inputs of all possible color formats to DOM on instantiation.
+
+        (WI.ColorPicker.prototype.set color):
+        (WI.ColorPicker.prototype.set enableColorComponentInputs):
+        (WI.ColorPicker.prototype._updateColor):
+        (WI.ColorPicker.prototype._updateColorGamut):
+        (WI.ColorPicker.prototype._createColorInputsIfNeeded):
+        (WI.ColorPicker.prototype._showColorComponentInputs):
+        (WI.ColorPicker.prototype._handleColorInputsContainerInput):
+        * UserInterface/Views/InlineSwatch.js:
+        Remove unnecessary WI.ColorPicker.Event.FormatChanged event.
+
+2020-01-08  Devin Rousso  <drousso@apple.com>
+
+        REGRESSION: (r254186) [ Mac ] inspector/css/add-rule.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=205938
+        <rdar://problem/58413597>
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Models/CSSStyleSheet.js:
+        (WI.CSSStyleSheet.prototype.get injected):
+        `scheme` can be `null`, so check that it exists before calling `String.prototype` functions.
+
+2020-01-07  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: unable to edit or view the source of style sheets injected by safari app extensions
+        https://bugs.webkit.org/show_bug.cgi?id=205900
+        <rdar://problem/57898773>
+
+        Reviewed by Timothy Hatcher.
+
+        Remove the restrictions around `CSS.StyleSheetOrigin.User` style sheets, thereby allowing
+        Web Inspector to get the source information that is necessary to show the "resource" in the
+        Sources Tab.
+
+        * UserInterface/Models/CSSStyleSheet.js:
+        (WI.CSSStyleSheet.prototype.get displayName):
+        (WI.CSSStyleSheet.prototype.get injected): Added.
+        (WI.CSSStyleSheet.prototype.get anonymous): Added.
+
+        * UserInterface/Models/DOMNodeStyles.js:
+        (WI.DOMNodeStyles.prototype._parseRulePayload):
+        * UserInterface/Models/CSSRule.js:
+        (WI.CSSRule):
+        (WI.CSSRule.prototype.get editable):
+        (WI.CSSRule.prototype._selectorResolved):
+        Attempt to create a source code location for any style sheet with a source range, not just
+        for the Inspector Style Sheet.
+
+        * UserInterface/Views/CSSStyleSheetTreeElement.js:
+        (WI.CSSStyleSheetTreeElement):
+        Instead of hardcoding "Inspector Style Sheet", use the associated `WI.CSSStyleSheet`'s info.
+
+        * UserInterface/Views/FrameTreeElement.js:
+        (WI.FrameTreeElement):
+        (WI.FrameTreeElement.prototype.onattach):
+        (WI.FrameTreeElement.prototype.ondetach):
+        (WI.FrameTreeElement.prototype._styleSheetAdded):
+        (WI.FrameTreeElement.prototype._styleSheetRemoved): Added.
+        Ensure that only non-injected non-anonymous style sheets are shown under frames.
+
+        * UserInterface/Views/SourcesNavigationSidebarPanel.js:
+        (WI.SourcesNavigationSidebarPanel):
+        (WI.SourcesNavigationSidebarPanel.prototype._compareTreeElements):
+        (WI.SourcesNavigationSidebarPanel.prototype._addResource):
+        (WI.SourcesNavigationSidebarPanel.prototype._addStyleSheet): Added.
+        (WI.SourcesNavigationSidebarPanel.prototype._handleResourceGroupingModeChanged):
+        (WI.SourcesNavigationSidebarPanel.prototype._handleCSSStyleSheetAdded): Added.
+        (WI.SourcesNavigationSidebarPanel.prototype._handleCSSStyleSheetRemoved): Added.
+        Add "Extension Style Sheets", "Extra Style Sheets", and "Anonymous Style Sheets" folders,
+        just like for scripts, with a similar logic as to when style sheets are added to each.
+
+        * UserInterface/Views/OpenResourceDialog.js:
+        (WI.OpenResourceDialog):
+        (WI.OpenResourceDialog.prototype.representedObjectIsValid): Added.
+        (WI.OpenResourceDialog.prototype._populateResourceTreeOutline):
+        (WI.OpenResourceDialog.prototype._populateResourceTreeOutline.createTreeElement):
+        (WI.OpenResourceDialog.prototype.didDismissDialog):
+        (WI.OpenResourceDialog.prototype.didPresentDialog):
+        (WI.OpenResourceDialog.prototype._removeResource): Added.
+        (WI.OpenResourceDialog.prototype._resourceWasRemoved): Added.
+        (WI.OpenResourceDialog.prototype._scriptAdded):
+        (WI.OpenResourceDialog.prototype._scriptRemoved): Added.
+        (WI.OpenResourceDialog.prototype._handleStyleSheetAdded): Added.
+        (WI.OpenResourceDialog.prototype._handleStyleSheetRemoved): Added.
+        Add any non-injected non-anonymous style sheets when populating the list of resources.
+        Drive-by: remove listings for any resources that are removed from the inspected page.
+
+        * UserInterface/Views/ResourceTreeElement.js:
+        (WI.ResourceTreeElement.compareResourceTreeElements):
+        (WI.ResourceTreeElement.compareResourceTreeElements.resolvedType): Added.
+        Support comparisons against non-resource tree elements.
+
+        * Localizations/en.lproj/localizedStrings.js:
+
+2020-01-07  Devin Rousso  <drousso@apple.com>
+
+        REGRESSION: [ Mac Debug ] inspector/page/setBootstrapScript-main-frame.html is a flaky failure
+        https://bugs.webkit.org/show_bug.cgi?id=205807
+        <rdar://problem/58344669>
+
+        Reviewed by Dean Jackson.
+
+        * UserInterface/Controllers/NetworkManager.js:
+        (WI.NetworkManager.prototype.async createBootstrapScript):
+        (WI.NetworkManager.prototype._handleBootstrapScriptContentDidChange):
+        Ensure that `Page.setBootstrapScript` is called when restoring the bootstrap script from the
+        IndexedDB storage. Otherwise, in situations like when Web Inspector is first opened, we will
+        show the Inspector Bootstrap Script in the UI, but not actually set it on the inspected page.
+
+2020-01-06  Yury Semikhatsky  <yurys@chromium.org>
+
+        REGRESSION: [ Mac wk2 ] http/tests/inspector/target/provisional-load-cancels-previous-load.html is a flaky failure
+        https://bugs.webkit.org/show_bug.cgi?id=205473
+        <rdar://problem/58093690>
+
+        The failure was due to attempts to add output to the test page which could be not fully
+        loaded after navigation. To make it deterministic it is now possible to keep provisional
+        navigation paused and to defer output until the test page is ready.
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Protocol/Target.js:
+        (WI.Target.prototype.initialize):
+        (WI.Target.prototype._resumeIfPaused): extracted resume logic in a method that
+        can be overridden in the tests.
+
+        * UserInterface/Test/FrontendTestHarness.js:
+        (FrontendTestHarness.prototype.deferOutputUntilTestPageIsReloaded): allow to pause
+        output when navigation is started via protocol commands rather than the test harness.
+
+2020-01-06  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        Web Inspector: Color picker: make it keyboard accessible
+        https://bugs.webkit.org/show_bug.cgi?id=205572
+        <rdar://problem/58169943>
+
+        Reviewed by Brian Burg.
+
+        For the color square, make up, down, left, and right keys move the crosshair.
+
+        For the hue and opacity sliders:
+        - Pressing up and down keys should adjust the value by 1%.
+        - When holding Shift, up and down keys adjust the value by 10%.
+
+        * UserInterface/Views/ColorPicker.js:
+        (WI.ColorPicker.prototype.focus):
+        * UserInterface/Views/ColorSquare.css:
+        (.color-square):
+        Match the border of the hue and opacity sliders.
+
+        * UserInterface/Views/ColorSquare.js:
+        (WI.ColorSquare):
+        Make the color square focusable.
+
+        (WI.ColorSquare.prototype._handleMousedown):
+        (WI.ColorSquare.prototype._handleKeyDown):
+        * UserInterface/Views/InlineSwatch.js:
+        * UserInterface/Views/Slider.css:
+        (.slider:focus):
+        * UserInterface/Views/Slider.js:
+        (WI.Slider):
+        (WI.Slider.prototype._handleMousedown):
+        Drive-by: right clicking the slider shouldn't move the thumb.
+
+        (WI.Slider.prototype._handleKeyDown):
+
+2020-01-06  Nikita Vasilyev  <nvasilyev@apple.com>
+
+        REGRESSION(r218839): Web Inspector: Color picker: pressing Esc should hide color picker
+        https://bugs.webkit.org/show_bug.cgi?id=205570
+        <rdar://problem/58169820>
+
+        Reviewed by Brian Burg.
+
+        * UserInterface/Views/QuickConsole.js:
+        (WI.QuickConsole.prototype.set keyboardShortcutDisabled):
+        (WI.QuickConsole.prototype._toggleOrFocus):
+        Restore keyboardShortcutDisabled setter, which was removed in r218839 without any explanation.
+
+2020-01-06  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Canvas: unable to see recording actions for WebGL canvases that have lots of shader programs
+        https://bugs.webkit.org/show_bug.cgi?id=205659
+
+        Reviewed by Brian Burg.
+
+        Limit the height of the canvas and shader program tree a recording is selected.
+
+        * UserInterface/Views/CanvasSidebarPanel.js:
+        (WI.CanvasSidebarPanel.prototype._updateRecordingScopeBar):
+        * UserInterface/Views/CanvasSidebarPanel.css:
+        (.sidebar > .panel.navigation.canvas.showing-recording > .content > .tree-outline.canvas): Added.
+
 2019-12-21  Brian Burg  <bburg@apple.com>
 
         Web Inspector: add InspectedTargetTypes diagnostic event and related hooks

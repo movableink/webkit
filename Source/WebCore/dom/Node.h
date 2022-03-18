@@ -489,7 +489,7 @@ public:
     bool hasOneRef() const;
     unsigned refCount() const;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool m_deletionHasBegun { false };
     mutable bool m_inRemovedLastRefFunction { false };
     bool m_adoptionIsRequired { true };
@@ -544,7 +544,7 @@ protected:
         IsShadowRootFlag = 1 << 7,
         IsConnectedFlag = 1 << 8,
         IsInShadowTreeFlag = 1 << 9,
-        StyleAffectedByFocusWithinFlag = 1 << 10,
+        // UnusedFlag = 1 << 10,
         HasEventTargetDataFlag = 1 << 11,
 
         // These bits are used by derived classes, pulled up here so they can
@@ -568,7 +568,7 @@ protected:
 
         ChildrenAffectedByFirstChildRulesFlag = 1 << 25,
         ChildrenAffectedByLastChildRulesFlag = 1 << 26,
-        ChildrenAffectedByHoverRulesFlag = 1 << 27,
+        // UnusedFlag = 1 << 27,
 
         AffectsNextSiblingElementStyle = 1 << 28,
         StyleIsAffectedByPreviousSibling = 1 << 29,
@@ -608,18 +608,15 @@ protected:
     static constexpr uint32_t s_refCountMask = ~static_cast<uint32_t>(1);
 
     enum class ElementStyleFlag : uint8_t {
-        StyleAffectedByActive = 1 << 0,
-        StyleAffectedByEmpty = 1 << 1,
-        ChildrenAffectedByDrag = 1 << 2,
-
+        StyleAffectedByEmpty                                    = 1 << 0,
         // Bits for dynamic child matching.
         // We optimize for :first-child and :last-child. The other positional child selectors like nth-child or
         // *-child-of-type, we will just give up and re-evaluate whenever children change at all.
-        ChildrenAffectedByForwardPositionalRules = 1 << 3,
-        DescendantsAffectedByForwardPositionalRules = 1 << 4,
-        ChildrenAffectedByBackwardPositionalRules = 1 << 5,
-        DescendantsAffectedByBackwardPositionalRules = 1 << 6,
-        ChildrenAffectedByPropertyBasedBackwardPositionalRules = 1 << 7,
+        ChildrenAffectedByForwardPositionalRules                = 1 << 1,
+        DescendantsAffectedByForwardPositionalRules             = 1 << 2,
+        ChildrenAffectedByBackwardPositionalRules               = 1 << 3,
+        DescendantsAffectedByBackwardPositionalRules            = 1 << 4,
+        ChildrenAffectedByPropertyBasedBackwardPositionalRules  = 1 << 5,
     };
 
     bool hasStyleFlag(ElementStyleFlag state) const { return m_rendererWithStyleFlags.type() & static_cast<uint8_t>(state); }
@@ -686,7 +683,7 @@ private:
     std::unique_ptr<NodeRareData, NodeRareDataDeleter> m_rareData;
 };
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 inline void adopted(Node* node)
 {
     if (!node)
@@ -695,7 +692,7 @@ inline void adopted(Node* node)
     ASSERT(!node->m_inRemovedLastRefFunction);
     node->m_adoptionIsRequired = false;
 }
-#endif
+#endif // ASSERT_ENABLED
 
 ALWAYS_INLINE void Node::ref() const
 {
@@ -717,7 +714,7 @@ ALWAYS_INLINE void Node::deref() const
     if (!updatedRefCount) {
         // Don't update m_refCountAndParentBit to avoid double destruction through use of Ref<T>/RefPtr<T>.
         // (This is a security mitigation in case of programmer error. It will ASSERT in debug builds.)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         m_inRemovedLastRefFunction = true;
 #endif
         const_cast<Node&>(*this).removedLastRef();

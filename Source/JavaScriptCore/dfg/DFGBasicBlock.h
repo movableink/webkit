@@ -44,7 +44,10 @@ class InsertionSet;
 typedef Vector<BasicBlock*, 2> PredecessorList;
 typedef Vector<Node*, 8> BlockNodeList;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BasicBlock);
+
 struct BasicBlock : RefCounted<BasicBlock> {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock);
     BasicBlock(
         BytecodeIndex bytecodeBegin, unsigned numArguments, unsigned numLocals, unsigned numTmps,
         float executionCount);
@@ -172,7 +175,7 @@ struct BasicBlock : RefCounted<BasicBlock> {
     
     void didLink()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         isLinked = true;
 #endif
     }
@@ -194,7 +197,7 @@ struct BasicBlock : RefCounted<BasicBlock> {
     bool isOSRTarget;
     bool isCatchEntrypoint;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool isLinked;
 #endif
     bool isReachable;

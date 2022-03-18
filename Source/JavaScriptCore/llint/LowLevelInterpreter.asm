@@ -74,8 +74,6 @@
 #  - lr is defined on non-X86 architectures (ARM64, ARM64E, ARMv7, MIPS and CLOOP)
 #  and holds the return PC
 #
-#  - pc holds the (native) program counter on 32-bits ARM architectures (ARMv7)
-#
 #  - t0, t1, t2, t3, t4, and optionally t5, t6, and t7 are temporary registers that can get trashed on
 #  calls, and are pairwise distinct registers. t4 holds the JS program counter, so use
 #  with caution in opcodes (actually, don't use it in opcodes at all, except as PC).
@@ -106,9 +104,9 @@
 #  - t4 and t5 are never argument registers, t3 can only be a3, t1 can only be
 #  a1; but t0 and t2 can be either a0 or a2.
 #
-#  - On 64 bits, there are callee-save registers named csr0, csr1, ... csrN.
+#  - There are callee-save registers named csr0, csr1, ... csrN.
 #  The last three csr registers are used used to store the PC base and
-#  two special tag values. Don't use them for anything else.
+#  two special tag values (on 64-bits only). Don't use them for anything else.
 #
 # Additional platform-specific details (you shouldn't rely on this remaining
 # true):
@@ -257,12 +255,12 @@ const NoPtrTag = constexpr NoPtrTag
 const SlowPathPtrTag = constexpr SlowPathPtrTag
 
 # Some register conventions.
+# - We use a pair of registers to represent the PC: one register for the
+#   base of the bytecodes, and one register for the index.
+# - The PC base (or PB for short) must be stored in a callee-save register.
+# - C calls are still given the Instruction* rather than the PC index.
+#   This requires an add before the call, and a sub after.
 if JSVALUE64
-    # - Use a pair of registers to represent the PC: one register for the
-    #   base of the bytecodes, and one register for the index.
-    # - The PC base (or PB for short) must be stored in a callee-save register.
-    # - C calls are still given the Instruction* rather than the PC index.
-    #   This requires an add before the call, and a sub after.
     const PC = t4 # When changing this, make sure LLIntPC is up to date in LLIntPCRanges.h
     if ARM64 or ARM64E
         const metadataTable = csr6
@@ -289,11 +287,14 @@ if JSVALUE64
 else
     const PC = t4 # When changing this, make sure LLIntPC is up to date in LLIntPCRanges.h
     if C_LOOP or C_LOOP_WIN
+        const PB = csr0
         const metadataTable = csr3
     elsif ARMv7
         const metadataTable = csr0
+        const PB = csr1
     elsif MIPS
         const metadataTable = csr0
+        const PB = csr1
     else
         error
     end
@@ -309,6 +310,24 @@ const OpcodeIDNarrowSize = 1 # OpcodeID
 const OpcodeIDWide16Size = 2 # Wide16 Prefix + OpcodeID
 const OpcodeIDWide32Size = 2 # Wide32 Prefix + OpcodeID
 
+
+macro nextInstruction()
+    loadb [PB, PC, 1], t0
+    leap _g_opcodeMap, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag
+end
+
+macro nextInstructionWide16()
+    loadb OpcodeIDNarrowSize[PB, PC, 1], t0
+    leap _g_opcodeMapWide16, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag
+end
+
+macro nextInstructionWide32()
+    loadb OpcodeIDNarrowSize[PB, PC, 1], t0
+    leap _g_opcodeMapWide32, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag
+end
 
 macro dispatch(advanceReg)
     addp advanceReg, PC
@@ -633,7 +652,7 @@ if X86_64 or ARM64 or ARM64E or ARMv7
             push csr6, csr7
             push csr8, csr9
         elsif ARMv7
-            push csr0
+            push csr0, csr1
         end
 
         action()
@@ -646,7 +665,7 @@ if X86_64 or ARM64 or ARM64E or ARMv7
             pop csr3, csr2
             pop csr1, csr0
         elsif ARMv7
-            pop csr0
+            pop csr1, csr0
         end
         pop t5, t4
         pop t3, t2
@@ -689,7 +708,7 @@ if C_LOOP or C_LOOP_WIN or ARM64 or ARM64E or X86_64 or X86_64_WIN
 elsif ARMv7
     const CalleeSaveRegisterCount = 7
 elsif MIPS
-    const CalleeSaveRegisterCount = 2
+    const CalleeSaveRegisterCount = 3
 elsif X86 or X86_WIN
     const CalleeSaveRegisterCount = 3
 end
@@ -705,9 +724,10 @@ macro pushCalleeSaves()
     elsif ARMv7
         emit "push {r4-r6, r8-r11}"
     elsif MIPS
-        emit "addiu $sp, $sp, -8"
+        emit "addiu $sp, $sp, -12"
         emit "sw $s0, 0($sp)" # csr0/metaData
-        emit "sw $s4, 4($sp)"
+        emit "sw $s1, 4($sp)" # csr1/PB
+        emit "sw $s4, 8($sp)"
         # save $gp to $s4 so that we can restore it after a function call
         emit "move $s4, $gp"
     elsif X86
@@ -727,8 +747,9 @@ macro popCalleeSaves()
         emit "pop {r4-r6, r8-r11}"
     elsif MIPS
         emit "lw $s0, 0($sp)"
-        emit "lw $s4, 4($sp)"
-        emit "addiu $sp, $sp, 8"
+        emit "lw $s1, 4($sp)"
+        emit "lw $s4, 8($sp)"
+        emit "addiu $sp, $sp, 12"
     elsif X86
         emit "pop %ebx"
         emit "pop %edi"
@@ -770,8 +791,20 @@ macro preserveCalleeSavesUsedByLLInt()
     subp CalleeSaveSpaceStackAligned, sp
     if C_LOOP or C_LOOP_WIN
         storep metadataTable, -PtrSize[cfr]
-    elsif ARMv7 or MIPS
+
+    # Next ARMv7 and MIPS differ in how we store metadataTable and PB,
+    # because this codes needs to be in sync with how registers are
+    # restored in Baseline JIT (specifically in emitRestoreCalleeSavesFor).
+    # emitRestoreCalleeSavesFor restores registers in order instead of by name.
+    # However, ARMv7 and MIPS differ in the order in which registers are assigned
+    # to metadataTable and PB, therefore they can also not have the same saving
+    # order.
+    elsif ARMv7
         storep metadataTable, -4[cfr]
+        storep PB, -8[cfr]
+    elsif MIPS
+        storep PB, -4[cfr]
+        storep metadataTable, -8[cfr]
     elsif ARM64 or ARM64E
         emit "stp x27, x28, [x29, #-16]"
         emit "stp x25, x26, [x29, #-32]"
@@ -793,8 +826,14 @@ end
 macro restoreCalleeSavesUsedByLLInt()
     if C_LOOP or C_LOOP_WIN
         loadp -PtrSize[cfr], metadataTable
-    elsif ARMv7 or MIPS
+    # To understand why ARMv7 and MIPS differ in restore order,
+    # see comment in preserveCalleeSavesUsedByLLInt
+    elsif ARMv7
         loadp -4[cfr], metadataTable
+        loadp -8[cfr], PB
+    elsif MIPS
+        loadp -4[cfr], PB
+        loadp -8[cfr], metadataTable
     elsif ARM64 or ARM64E
         emit "ldp x25, x26, [x29, #-32]"
         emit "ldp x27, x28, [x29, #-16]"
@@ -852,6 +891,7 @@ macro copyCalleeSavesToEntryFrameCalleeSavesBuffer(entryFrame)
             storeq csr6, 48[entryFrame]
         elsif ARMv7 or MIPS
             storep csr0, [entryFrame]
+            storep csr1, 4[entryFrame]
         end
     end
 end
@@ -903,6 +943,7 @@ macro restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(vm, temp)
             loadq 48[temp], csr6
         elsif ARMv7 or MIPS
             loadp [temp], csr0
+            loadp 4[temp], csr1
         end
     end
 end
@@ -1238,12 +1279,8 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
     preserveCalleeSavesUsedByLLInt()
 
     # Set up the PC.
-    if JSVALUE64
-        loadp CodeBlock::m_instructionsRawPointer[t1], PB
-        move 0, PC
-    else
-        loadp CodeBlock::m_instructionsRawPointer[t1], PC
-    end
+    loadp CodeBlock::m_instructionsRawPointer[t1], PB
+    move 0, PC
 
     # Get new sp in t0 and check stack height.
     getFrameRegisterSizeForCodeBlock(t1, t0)
@@ -1693,11 +1730,11 @@ equalityComparisonOp(neq, OpNeq,
 
 
 compareUnsignedOp(below, OpBelow,
-        macro (left, right, result) cib left, right, result end)
+    macro (left, right, result) cib left, right, result end)
 
 
 compareUnsignedOp(beloweq, OpBeloweq,
-        macro (left, right, result) cibeq left, right, result end)
+    macro (left, right, result) cibeq left, right, result end)
 
 
 llintOpWithJump(op_jmp, OpJmp, macro (size, get, jump, dispatch)
@@ -1705,14 +1742,18 @@ llintOpWithJump(op_jmp, OpJmp, macro (size, get, jump, dispatch)
 end)
 
 
-llintJumpTrueOrFalseOp(
-    jtrue, OpJtrue,
-    macro (value, target) btinz value, 1, target end)
+llintJumpTrueOrFalseOp(jtrue, OpJtrue, 
+    # Misc primitive
+    macro (value, target) btinz value, 1, target end,
+    # Truthy Cell
+    macro (dispatch) end)
 
 
-llintJumpTrueOrFalseOp(
-    jfalse, OpJfalse,
-    macro (value, target) btiz value, 1, target end)
+llintJumpTrueOrFalseOp(jfalse, OpJfalse,
+    # Misc primitive
+    macro (value, target) btiz value, 1, target end,
+    # Truthy Cell
+    macro (dispatch) dispatch() end)
 
 
 compareJumpOp(
@@ -2016,13 +2057,27 @@ end)
 
 
 op(checkpoint_osr_exit_from_inlined_call_trampoline, macro ()
-    if JSVALUE64 and not (C_LOOP or C_LOOP_WIN)
+    if (JSVALUE64 and not (C_LOOP or C_LOOP_WIN)) or ARMv7 or MIPS
         restoreStackPointerAfterCall()
 
-        move cfr, a0
-        move r0, a1
-        # We don't call saveStateForCCall() because we are going to use the bytecodeIndex from our side state.
-        cCall2(_slow_path_checkpoint_osr_exit_from_inlined_call)
+        # Make sure we move r0 to a1 first since r0 might be the same as a0, for instance, on arm.
+        if ARMv7 or MIPS
+            # Given _slow_path_checkpoint_osr_exit_from_inlined_call has
+            # parameters as CallFrame* and EncodedJSValue,
+            # we need to store call result on a2, a3 and call frame on a0,
+            # leaving a1 as dummy value.
+            move r1, a3
+            move r0, a2
+            move cfr, a0
+            # We don't call saveStateForCCall() because we are going to use the bytecodeIndex from our side state.
+            cCall4(_slow_path_checkpoint_osr_exit_from_inlined_call)
+        else
+            move r0, a1
+            move cfr, a0
+            # We don't call saveStateForCCall() because we are going to use the bytecodeIndex from our side state.
+            cCall2(_slow_path_checkpoint_osr_exit_from_inlined_call)
+        end
+
         restoreStateAfterCCall()
         branchIfException(_llint_throw_from_slow_path_trampoline)
         jmp r1, JSEntryPtrTag
@@ -2034,7 +2089,7 @@ end)
 op(checkpoint_osr_exit_trampoline, macro ()
     # FIXME: We can probably dispatch to the checkpoint handler directly but this was easier 
     # and probably doesn't matter for performance.
-    if JSVALUE64 and not (C_LOOP or C_LOOP_WIN)
+    if (JSVALUE64 and not (C_LOOP or C_LOOP_WIN)) or ARMv7 or MIPS
         restoreStackPointerAfterCall()
 
         move cfr, a0

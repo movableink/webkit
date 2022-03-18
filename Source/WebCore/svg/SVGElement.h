@@ -141,6 +141,8 @@ public:
     RefPtr<SVGAttributeAnimator> createAnimator(const QualifiedName&, AnimationMode, CalcMode, bool isAccumulated, bool isAdditive);
     void animatorWillBeDeleted(const QualifiedName&);
 
+    const RenderStyle* computedStyle(PseudoId = PseudoId::None) final;
+
     // These are needed for the RenderTree, animation and DOM.
     String className() const { return m_className->currentValue(); }
     SVGAnimatedString& classNameAnimated() { return m_className; }
@@ -164,6 +166,7 @@ protected:
     bool isPresentationAttribute(const QualifiedName&) const override;
     void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
+    void didFinishInsertingNode() override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
     void childrenChanged(const ChildChange&) override;
     virtual bool selfHasRelativeLengths() const { return false; }
@@ -173,8 +176,6 @@ protected:
     void willRecalcStyle(Style::Change) override;
 
 private:
-    const RenderStyle* computedStyle(PseudoId = PseudoId::None) final;
-
     virtual void clearTarget() { }
 
     void buildPendingResourcesIfNeeded();

@@ -43,13 +43,8 @@
 namespace WebCore {
 namespace IDBServer {
 
-// The IndexedDB spec states the value you can get from the key generator is 2^53
-static uint64_t maxGeneratedKeyValue = 0x20000000000000;
-
-std::unique_ptr<MemoryIDBBackingStore> MemoryIDBBackingStore::create(PAL::SessionID sessionID, const IDBDatabaseIdentifier& identifier)
-{
-    return makeUnique<MemoryIDBBackingStore>(sessionID, identifier);
-}
+// The IndexedDB spec states the maximum value you can get from the key generator is 2^53.
+constexpr uint64_t maxGeneratedKeyValue = 0x20000000000000;
 
 MemoryIDBBackingStore::MemoryIDBBackingStore(PAL::SessionID sessionID, const IDBDatabaseIdentifier& identifier)
     : m_identifier(identifier)
@@ -62,7 +57,7 @@ MemoryIDBBackingStore::~MemoryIDBBackingStore() = default;
 IDBError MemoryIDBBackingStore::getOrEstablishDatabaseInfo(IDBDatabaseInfo& info)
 {
     if (!m_databaseInfo)
-        m_databaseInfo = makeUnique<IDBDatabaseInfo>(m_identifier.databaseName(), 0);
+        m_databaseInfo = makeUnique<IDBDatabaseInfo>(m_identifier.databaseName(), 0, 0);
 
     info = *m_databaseInfo;
     return IDBError { };
@@ -241,8 +236,10 @@ IDBError MemoryIDBBackingStore::createIndex(const IDBResourceIdentifier& transac
         return IDBError { ConstraintError };
 
     auto error = objectStore->createIndex(*rawTransaction, info);
-    if (error.isNull())
+    if (error.isNull()) {
         objectStoreInfo->addExistingIndex(info);
+        m_databaseInfo->setMaxIndexID(info.identifier());
+    }
 
     return error;
 }

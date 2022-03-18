@@ -67,7 +67,7 @@ struct MockWebAuthenticationConfiguration {
         String privateKeyBase64;
         String userCertificateBase64;
         String intermediateCACertificateBase64;
-        String preferredUserhandleBase64;
+        String preferredCredentialIdBase64;
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static Optional<LocalConfiguration> decode(Decoder&);
@@ -84,6 +84,7 @@ struct MockWebAuthenticationConfiguration {
         bool continueAfterErrorData { false };
         bool canDowngrade { false };
         bool expectCancel { false };
+        bool supportClientPin { false };
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static Optional<HidConfiguration> decode(Decoder&);
@@ -111,7 +112,7 @@ struct MockWebAuthenticationConfiguration {
 template<class Encoder>
 void MockWebAuthenticationConfiguration::LocalConfiguration::encode(Encoder& encoder) const
 {
-    encoder << acceptAuthentication << acceptAttestation << privateKeyBase64 << userCertificateBase64 << intermediateCACertificateBase64 << preferredUserhandleBase64;
+    encoder << acceptAuthentication << acceptAttestation << privateKeyBase64 << userCertificateBase64 << intermediateCACertificateBase64 << preferredCredentialIdBase64;
 }
 
 template<class Decoder>
@@ -149,11 +150,11 @@ Optional<MockWebAuthenticationConfiguration::LocalConfiguration> MockWebAuthenti
         return WTF::nullopt;
     result.intermediateCACertificateBase64 = WTFMove(*intermediateCACertificateBase64);
 
-    Optional<String> preferredUserhandleBase64;
-    decoder >> preferredUserhandleBase64;
-    if (!preferredUserhandleBase64)
+    Optional<String> preferredCredentialIdBase64;
+    decoder >> preferredCredentialIdBase64;
+    if (!preferredCredentialIdBase64)
         return WTF::nullopt;
-    result.preferredUserhandleBase64 = WTFMove(*preferredUserhandleBase64);
+    result.preferredCredentialIdBase64 = WTFMove(*preferredCredentialIdBase64);
 
     return result;
 }
@@ -161,7 +162,7 @@ Optional<MockWebAuthenticationConfiguration::LocalConfiguration> MockWebAuthenti
 template<class Encoder>
 void MockWebAuthenticationConfiguration::HidConfiguration::encode(Encoder& encoder) const
 {
-    encoder << payloadBase64 << stage << subStage << error << isU2f << keepAlive << fastDataArrival << continueAfterErrorData << canDowngrade << expectCancel;
+    encoder << payloadBase64 << stage << subStage << error << isU2f << keepAlive << fastDataArrival << continueAfterErrorData << canDowngrade << expectCancel << supportClientPin;
 }
 
 template<class Decoder>
@@ -187,6 +188,8 @@ Optional<MockWebAuthenticationConfiguration::HidConfiguration> MockWebAuthentica
     if (!decoder.decode(result.canDowngrade))
         return WTF::nullopt;
     if (!decoder.decode(result.expectCancel))
+        return WTF::nullopt;
+    if (!decoder.decode(result.supportClientPin))
         return WTF::nullopt;
     return result;
 }

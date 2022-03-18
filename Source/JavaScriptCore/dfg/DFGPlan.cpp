@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,7 +79,6 @@
 #include "ProfilerDatabase.h"
 #include "TrackedReferences.h"
 #include "VMInlines.h"
-#include <wtf/Threading.h>
 
 #if ENABLE(FTL_JIT)
 #include "FTLCapabilities.h"
@@ -155,14 +154,13 @@ Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
 
 Plan::~Plan()
 {
-    RELEASE_ASSERT(unnukedVM()->currentThreadIsHoldingAPILock());
 }
 
 bool Plan::computeCompileTimes() const
 {
     return reportCompileTimes()
         || Options::reportTotalCompileTimes()
-        || unnukedVM()->m_perBytecodeProfiler;
+        || (m_vm && m_vm->m_perBytecodeProfiler);
 }
 
 bool Plan::reportCompileTimes() const
@@ -240,7 +238,10 @@ void Plan::compileInThread(ThreadData* threadData)
 
 Plan::CompilationPath Plan::compileInThreadImpl()
 {
-    cleanMustHandleValuesIfNecessary();
+    {
+        CompilerTimingScope timingScope("DFG", "clean must handle values");
+        cleanMustHandleValuesIfNecessary();
+    }
 
     if (verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex) {
         dataLog("\n");
@@ -249,7 +250,11 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     }
 
     Graph dfg(*m_vm, *this);
-    parse(dfg);
+
+    {
+        CompilerTimingScope timingScope("DFG", "bytecode parser");
+        parse(dfg);
+    }
 
     m_codeBlock->setCalleeSaveRegisters(RegisterSet::dfgCalleeSaveRegisters());
 
@@ -274,7 +279,10 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     // in the CodeBlock. This is a good time to perform an early shrink, which is more
     // powerful than a late one. It's safe to do so because we haven't generated any code
     // that references any of the tables directly, yet.
-    m_codeBlock->shrinkToFit(CodeBlock::EarlyShrink);
+    {
+        ConcurrentJSLocker locker(m_codeBlock->m_lock);
+        m_codeBlock->shrinkToFit(locker, CodeBlock::ShrinkMode::EarlyShrink);
+    }
 
     if (validationEnabled())
         validate(dfg);
@@ -383,11 +391,15 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         RUN_PHASE(performWatchpointCollection);
         dumpAndVerifyGraph(dfg, "Graph after optimization:");
         
-        JITCompiler dataFlowJIT(dfg);
-        if (m_codeBlock->codeType() == FunctionCode)
-            dataFlowJIT.compileFunction();
-        else
-            dataFlowJIT.compile();
+        {
+            CompilerTimingScope timingScope("DFG", "machine code generation");
+
+            JITCompiler dataFlowJIT(dfg);
+            if (m_codeBlock->codeType() == FunctionCode)
+                dataFlowJIT.compileFunction();
+            else
+                dataFlowJIT.compile();
+        }
         
         return DFGPath;
     }
@@ -498,7 +510,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (UNLIKELY(computeCompileTimes()))
             m_timeBeforeFTL = MonotonicTime::now();
         
-        if (Options::b3AlwaysFailsBeforeCompile()) {
+        if (UNLIKELY(Options::b3AlwaysFailsBeforeCompile())) {
             FTL::fail(state);
             return FTLPath;
         }
@@ -507,7 +519,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (safepointResult.didGetCancelled())
             return CancelPath;
         
-        if (Options::b3AlwaysFailsBeforeLink()) {
+        if (UNLIKELY(Options::b3AlwaysFailsBeforeLink())) {
             FTL::fail(state);
             return FTLPath;
         }
@@ -605,14 +617,19 @@ CompilationResult Plan::finalizeWithoutNotifyingCallback()
         }
 
         reallyAdd(m_codeBlock->jitCode()->dfgCommon());
+        {
+            ConcurrentJSLocker locker(m_codeBlock->m_lock);
+            m_codeBlock->jitCode()->shrinkToFit(locker);
+            m_codeBlock->shrinkToFit(locker, CodeBlock::ShrinkMode::LateShrink);
+        }
 
         if (validationEnabled()) {
             TrackedReferences trackedReferences;
 
             for (WriteBarrier<JSCell>& reference : m_codeBlock->jitCode()->dfgCommon()->weakReferences)
                 trackedReferences.add(reference.get());
-            for (WriteBarrier<Structure>& reference : m_codeBlock->jitCode()->dfgCommon()->weakStructureReferences)
-                trackedReferences.add(reference.get());
+            for (StructureID structureID : m_codeBlock->jitCode()->dfgCommon()->weakStructureReferences)
+                trackedReferences.add(m_vm->getStructure(structureID));
             for (WriteBarrier<Unknown>& constant : m_codeBlock->constants())
                 trackedReferences.add(constant.get());
 
@@ -657,6 +674,7 @@ void Plan::checkLivenessAndVisitChildren(SlotVisitor& visitor)
             visitor.appendUnbarriered(value.value());
     }
 
+    m_recordedStatuses.visitAggregate(visitor);
     m_recordedStatuses.markIfCheap(visitor);
 
     visitor.appendUnbarriered(m_codeBlock);
@@ -696,28 +714,8 @@ bool Plan::isKnownToBeLiveDuringGC()
 void Plan::cancel()
 {
     RELEASE_ASSERT(m_stage != Cancelled);
-
-    // When we cancel a plan, there's a chance that the compiler thread may have
-    // already ref'ed it and is working on it. This results in a race where the
-    // compiler thread may hold the last reference to the plan. We require that
-    // the plan is only destructed on the mutator thread because we piggy back
-    // on the plan to ensure certain other objects are only destructed on the
-    // mutator thread. For example, see Plan::m_identifiersKeptAliveForCleanUp.
-    //
-    // To ensure that the plan is destructed on the mutator and not the compiler
-    // thread, the compiler thread will enqueue any cancelled plan it sees in
-    // the worklist's m_cancelledPlansPendingDestruction. The mutator will later
-    // delete the cancelled plans in m_cancelledPlansPendingDestruction.
-    // However, a mutator should only delete cancelled plans that belong to its
-    // VM. Hence, a cancelled plan needs to keep its m_vm pointer to let the
-    // mutator know which VM it belongs to.
-    // Ref: See Worklist::deleteCancelledPlansForVM().
     ASSERT(m_vm);
-
-    // Nuke the VM pointer so that pointer comparisons against it will fail.
-    // We rely on VM pointer comparison in many places to filter out Cancelled
-    // plans.
-    m_vm = nuke(m_vm);
+    m_vm = nullptr;
 
     m_codeBlock = nullptr;
     m_profiledDFGCodeBlock = nullptr;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,8 @@
 
 #include "ArithProfile.h"
 #include "ArrayConstructor.h"
-#include "CommonSlowPaths.h"
+#include "CacheableIdentifierInlines.h"
+#include "CommonSlowPathsInlines.h"
 #include "DFGCompilationMode.h"
 #include "DFGDriver.h"
 #include "DFGOSREntry.h"
@@ -213,7 +214,7 @@ EncodedJSValue JIT_OPERATION operationTryGetByIdOptimize(JSGlobalObject* globalO
 
     CodeBlock* codeBlock = callFrame->codeBlock();
     if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull()) && !slot.isTaintedByOpaqueObject() && (slot.isCacheableValue() || slot.isCacheableGetter() || slot.isUnset()))
-        repatchGetBy(globalObject, codeBlock, baseValue, ident, slot, *stubInfo, GetByKind::Try);
+        repatchGetBy(globalObject, codeBlock, baseValue, CacheableIdentifier::createFromIdentifierOwnedByCodeBlock(ident), slot, *stubInfo, GetByKind::Try);
 
     return JSValue::encode(slot.getPureResult());
 }
@@ -269,7 +270,7 @@ EncodedJSValue JIT_OPERATION operationGetByIdDirectOptimize(JSGlobalObject* glob
 
     CodeBlock* codeBlock = callFrame->codeBlock();
     if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull()))
-        repatchGetBy(globalObject, codeBlock, baseValue, ident, slot, *stubInfo, GetByKind::Direct);
+        repatchGetBy(globalObject, codeBlock, baseValue, CacheableIdentifier::createFromIdentifierOwnedByCodeBlock(ident), slot, *stubInfo, GetByKind::Direct);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(found ? slot.getValue(globalObject, ident) : jsUndefined()));
 }
@@ -329,7 +330,7 @@ EncodedJSValue JIT_OPERATION operationGetByIdOptimize(JSGlobalObject* globalObje
         
         CodeBlock* codeBlock = callFrame->codeBlock();
         if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull()))
-            repatchGetBy(globalObject, codeBlock, baseValue, ident, slot, *stubInfo, GetByKind::Normal);
+            repatchGetBy(globalObject, codeBlock, baseValue, CacheableIdentifier::createFromIdentifierOwnedByCodeBlock(ident), slot, *stubInfo, GetByKind::Normal);
         return found ? slot.getValue(globalObject, ident) : jsUndefined();
     }));
 }
@@ -386,7 +387,7 @@ EncodedJSValue JIT_OPERATION operationGetByIdWithThisOptimize(JSGlobalObject* gl
         
         CodeBlock* codeBlock = callFrame->codeBlock();
         if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull()))
-            repatchGetBy(globalObject, codeBlock, baseValue, ident, slot, *stubInfo, GetByKind::WithThis);
+            repatchGetBy(globalObject, codeBlock, baseValue, CacheableIdentifier::createFromIdentifierOwnedByCodeBlock(ident), slot, *stubInfo, GetByKind::WithThis);
         return found ? slot.getValue(globalObject, ident) : jsUndefined();
     }));
 }
@@ -677,11 +678,6 @@ void JIT_OPERATION operationPutByIdDirectNonStrictOptimize(JSGlobalObject* globa
         repatchPutByID(globalObject, codeBlock, baseObject, structure, ident, slot, *stubInfo, Direct);
 }
 
-ALWAYS_INLINE static bool isStringOrSymbol(JSValue value)
-{
-    return value.isString() || value.isSymbol();
-}
-
 static void putByVal(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSValue baseValue, JSValue subscript, JSValue value, ByValInfo* byValInfo)
 {
     VM& vm = globalObject->vm();
@@ -715,7 +711,7 @@ static void putByVal(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSValue
     // Don't put to an object if toString threw an exception.
     RETURN_IF_EXCEPTION(scope, void());
 
-    if (byValInfo->stubInfo && (!isStringOrSymbol(subscript) || byValInfo->cachedId != property))
+    if (byValInfo->stubInfo && (!CacheableIdentifier::isCacheableIdentifierCell(subscript) || byValInfo->cachedId.uid() != property))
         byValInfo->tookSlowPath = true;
 
     scope.release();
@@ -775,7 +771,7 @@ static void directPutByVal(JSGlobalObject* globalObject, CodeBlock* codeBlock, J
         return;
     }
 
-    if (byValInfo->stubInfo && (!isStringOrSymbol(subscript) || byValInfo->cachedId != property))
+    if (byValInfo->stubInfo && (!CacheableIdentifier::isCacheableIdentifierCell(subscript) || byValInfo->cachedId.uid() != property))
         byValInfo->tookSlowPath = true;
 
     scope.release();
@@ -826,14 +822,14 @@ static OptimizationResult tryPutByValOptimize(JSGlobalObject* globalObject, Call
             optimizationResult = OptimizationResult::GiveUp;
     }
 
-    if (baseValue.isObject() && isStringOrSymbol(subscript)) {
+    if (baseValue.isObject() && CacheableIdentifier::isCacheableIdentifierCell(subscript)) {
         const Identifier propertyName = subscript.toPropertyKey(globalObject);
         RETURN_IF_EXCEPTION(scope, OptimizationResult::GiveUp);
         if (subscript.isSymbol() || !parseIndex(propertyName)) {
             ASSERT(callFrame->bytecodeIndex() != BytecodeIndex(0));
             ASSERT(!byValInfo->stubRoutine);
             if (byValInfo->seen) {
-                if (byValInfo->cachedId == propertyName) {
+                if (byValInfo->cachedId.uid() == propertyName) {
                     JIT::compilePutByValWithCachedId<OpPutByVal>(vm, codeBlock, byValInfo, returnAddress, NotDirect, propertyName);
                     optimizationResult = OptimizationResult::Optimized;
                 } else {
@@ -841,12 +837,13 @@ static OptimizationResult tryPutByValOptimize(JSGlobalObject* globalObject, Call
                     optimizationResult = OptimizationResult::GiveUp;
                 }
             } else {
-                ConcurrentJSLocker locker(codeBlock->m_lock);
-                byValInfo->seen = true;
-                byValInfo->cachedId = propertyName;
-                if (subscript.isSymbol())
-                    byValInfo->cachedSymbol.set(vm, codeBlock, asSymbol(subscript));
-                optimizationResult = OptimizationResult::SeenOnce;
+                {
+                    ConcurrentJSLocker locker(codeBlock->m_lock);
+                    byValInfo->seen = true;
+                    byValInfo->cachedId = CacheableIdentifier::createFromCell(subscript.asCell());
+                    optimizationResult = OptimizationResult::SeenOnce;
+                }
+                vm.heap.writeBarrier(codeBlock, subscript.asCell());
             }
         }
     }
@@ -915,14 +912,14 @@ static OptimizationResult tryDirectPutByValOptimize(JSGlobalObject* globalObject
         // If we failed to patch and we have some object that intercepts indexed get, then don't even wait until 10 times.
         if (optimizationResult != OptimizationResult::Optimized && object->structure(vm)->typeInfo().interceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero())
             optimizationResult = OptimizationResult::GiveUp;
-    } else if (isStringOrSymbol(subscript)) {
+    } else if (CacheableIdentifier::isCacheableIdentifierCell(subscript)) {
         const Identifier propertyName = subscript.toPropertyKey(globalObject);
         RETURN_IF_EXCEPTION(scope, OptimizationResult::GiveUp);
         if (subscript.isSymbol() || !parseIndex(propertyName)) {
             ASSERT(callFrame->bytecodeIndex() != BytecodeIndex(0));
             ASSERT(!byValInfo->stubRoutine);
             if (byValInfo->seen) {
-                if (byValInfo->cachedId == propertyName) {
+                if (byValInfo->cachedId.uid() == propertyName) {
                     JIT::compilePutByValWithCachedId<OpPutByValDirect>(vm, codeBlock, byValInfo, returnAddress, Direct, propertyName);
                     optimizationResult = OptimizationResult::Optimized;
                 } else {
@@ -930,12 +927,13 @@ static OptimizationResult tryDirectPutByValOptimize(JSGlobalObject* globalObject
                     optimizationResult = OptimizationResult::GiveUp;
                 }
             } else {
-                ConcurrentJSLocker locker(codeBlock->m_lock);
-                byValInfo->seen = true;
-                byValInfo->cachedId = propertyName;
-                if (subscript.isSymbol())
-                    byValInfo->cachedSymbol.set(vm, codeBlock, asSymbol(subscript));
-                optimizationResult = OptimizationResult::SeenOnce;
+                {
+                    ConcurrentJSLocker locker(codeBlock->m_lock);
+                    byValInfo->seen = true;
+                    byValInfo->cachedId = CacheableIdentifier::createFromCell(subscript.asCell());
+                    optimizationResult = OptimizationResult::SeenOnce;
+                }
+                vm.heap.writeBarrier(codeBlock, subscript.asCell());
             }
         }
     }
@@ -1538,8 +1536,7 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
     if (!codeBlock->checkIfOptimizationThresholdReached()) {
         CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("counter = ", codeBlock->jitExecuteCounter()));
         codeBlock->updateAllPredictions();
-        if (UNLIKELY(Options::verboseOSR()))
-            dataLog("Choosing not to optimize ", *codeBlock, " yet, because the threshold hasn't been reached.\n");
+        dataLogLnIf(Options::verboseOSR(), "Choosing not to optimize ", *codeBlock, " yet, because the threshold hasn't been reached.");
         return encodeResult(0, 0);
     }
     
@@ -1553,8 +1550,7 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
     if (codeBlock->m_shouldAlwaysBeInlined) {
         CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("should always be inlined"));
         updateAllPredictionsAndOptimizeAfterWarmUp(codeBlock);
-        if (UNLIKELY(Options::verboseOSR()))
-            dataLog("Choosing not to optimize ", *codeBlock, " yet, because m_shouldAlwaysBeInlined == true.\n");
+        dataLogLnIf(Options::verboseOSR(), "Choosing not to optimize ", *codeBlock, " yet, because m_shouldAlwaysBeInlined == true.");
         return encodeResult(0, 0);
     }
 
@@ -1609,14 +1605,12 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
         if (!codeBlock->hasOptimizedReplacement()) {
             CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("compiled and failed"));
             codeBlock->updateAllPredictions();
-            if (UNLIKELY(Options::verboseOSR()))
-                dataLog("Code block ", *codeBlock, " was compiled but it doesn't have an optimized replacement.\n");
+            dataLogLnIf(Options::verboseOSR(), "Code block ", *codeBlock, " was compiled but it doesn't have an optimized replacement.");
             return encodeResult(0, 0);
         }
     } else if (codeBlock->hasOptimizedReplacement()) {
         CodeBlock* replacement = codeBlock->replacement();
-        if (UNLIKELY(Options::verboseOSR()))
-            dataLog("Considering OSR ", codeBlock, " -> ", replacement, ".\n");
+        dataLogLnIf(Options::verboseOSR(), "Considering OSR ", codeBlock, " -> ", replacement, ".");
         // If we have an optimized replacement, then it must be the case that we entered
         // cti_optimize from a loop. That's because if there's an optimized replacement,
         // then all calls to this function will be relinked to the replacement and so
@@ -1632,27 +1626,22 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
         // additional checking anyway, to reduce the amount of recompilation thrashing.
         if (replacement->shouldReoptimizeFromLoopNow()) {
             CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("should reoptimize from loop now"));
-            if (UNLIKELY(Options::verboseOSR())) {
-                dataLog(
-                    "Triggering reoptimization of ", codeBlock,
-                    "(", replacement, ") (in loop).\n");
-            }
+            dataLogLnIf(Options::verboseOSR(),
+                "Triggering reoptimization of ", codeBlock,
+                "(", replacement, ") (in loop).");
             replacement->jettison(Profiler::JettisonDueToBaselineLoopReoptimizationTrigger, CountReoptimization);
             return encodeResult(0, 0);
         }
     } else {
         if (!codeBlock->shouldOptimizeNow()) {
             CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("insufficient profiling"));
-            if (UNLIKELY(Options::verboseOSR())) {
-                dataLog(
-                    "Delaying optimization for ", *codeBlock,
-                    " because of insufficient profiling.\n");
-            }
+            dataLogLnIf(Options::verboseOSR(),
+                "Delaying optimization for ", *codeBlock,
+                " because of insufficient profiling.");
             return encodeResult(0, 0);
         }
 
-        if (UNLIKELY(Options::verboseOSR()))
-            dataLog("Triggering optimized compilation of ", *codeBlock, "\n");
+        dataLogLnIf(Options::verboseOSR(), "Triggering optimized compilation of ", *codeBlock);
 
         unsigned numVarsWithValues = 0;
         if (bytecodeIndex)
@@ -1684,10 +1673,7 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
     
     if (void* dataBuffer = DFG::prepareOSREntry(vm, callFrame, optimizedCodeBlock, bytecodeIndex)) {
         CODEBLOCK_LOG_EVENT(optimizedCodeBlock, "osrEntry", ("at bc#", bytecodeIndex));
-        if (UNLIKELY(Options::verboseOSR())) {
-            dataLog(
-                "Performing OSR ", codeBlock, " -> ", optimizedCodeBlock, ".\n");
-        }
+        dataLogLnIf(Options::verboseOSR(), "Performing OSR ", codeBlock, " -> ", optimizedCodeBlock);
 
         codeBlock->optimizeSoon();
         codeBlock->unlinkedCodeBlock()->setDidOptimize(TrueTriState);
@@ -1696,12 +1682,10 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
         return encodeResult(targetPC, dataBuffer);
     }
 
-    if (UNLIKELY(Options::verboseOSR())) {
-        dataLog(
-            "Optimizing ", codeBlock, " -> ", codeBlock->replacement(),
-            " succeeded, OSR failed, after a delay of ",
-            codeBlock->optimizationDelayCounter(), ".\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        "Optimizing ", codeBlock, " -> ", codeBlock->replacement(),
+        " succeeded, OSR failed, after a delay of ",
+        codeBlock->optimizationDelayCounter());
 
     // Count the OSR failure as a speculation failure. If this happens a lot, then
     // reoptimize.
@@ -1717,11 +1701,9 @@ SlowPathReturnType JIT_OPERATION operationOptimize(VM* vmPointer, uint32_t bytec
     // reoptimization trigger.
     if (optimizedCodeBlock->shouldReoptimizeNow()) {
         CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("should reoptimize now"));
-        if (UNLIKELY(Options::verboseOSR())) {
-            dataLog(
-                "Triggering reoptimization of ", codeBlock, " -> ",
-                codeBlock->replacement(), " (after OSR fail).\n");
-        }
+        dataLogLnIf(Options::verboseOSR(),
+            "Triggering reoptimization of ", codeBlock, " -> ",
+            codeBlock->replacement(), " (after OSR fail).");
         optimizedCodeBlock->jettison(Profiler::JettisonDueToBaselineLoopReoptimizationTriggerOnOSREntryFail, CountReoptimization);
         return encodeResult(0, 0);
     }
@@ -2028,7 +2010,7 @@ EncodedJSValue JIT_OPERATION operationGetByValOptimize(JSGlobalObject* globalObj
         }
     }
 
-    if (baseValue.isCell() && isStringOrSymbol(subscript)) {
+    if (baseValue.isCell() && CacheableIdentifier::isCacheableIdentifierCell(subscript)) {
         const Identifier propertyName = subscript.toPropertyKey(globalObject);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
         if (subscript.isSymbol() || !parseIndex(propertyName)) {
@@ -2037,7 +2019,7 @@ EncodedJSValue JIT_OPERATION operationGetByValOptimize(JSGlobalObject* globalObj
                 LOG_IC((ICEvent::OperationGetByValOptimize, baseValue.classInfoOrNull(vm), propertyName, baseValue == slot.slotBase())); 
                 
                 if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull(), propertyName.impl()))
-                    repatchGetBy(globalObject, codeBlock, baseValue, propertyName, slot, *stubInfo, GetByKind::NormalByVal);
+                    repatchGetBy(globalObject, codeBlock, baseValue, CacheableIdentifier::createFromCell(subscript.asCell()), slot, *stubInfo, GetByKind::NormalByVal);
                 return found ? slot.getValue(globalObject, propertyName) : jsUndefined();
             }));
         }
@@ -2157,7 +2139,7 @@ EncodedJSValue JIT_OPERATION operationHasIndexedPropertyGeneric(JSGlobalObject* 
     return JSValue::encode(jsBoolean(object->hasPropertyGeneric(globalObject, index, PropertySlot::InternalMethodType::GetOwnProperty)));
 }
     
-static bool deleteById(JSGlobalObject* globalObject, CallFrame* callFrame, VM& vm, JSValue base, UniquedStringImpl* uid)
+static bool deleteById(JSGlobalObject* globalObject, CallFrame* callFrame, VM& vm, DeletePropertySlot& slot, JSValue base, UniquedStringImpl* uid)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -2165,31 +2147,51 @@ static bool deleteById(JSGlobalObject* globalObject, CallFrame* callFrame, VM& v
     RETURN_IF_EXCEPTION(scope, false);
     if (!baseObj)
         return false;
-    bool couldDelete = baseObj->methodTable(vm)->deleteProperty(baseObj, globalObject, Identifier::fromUid(vm, uid));
+    bool couldDelete = baseObj->methodTable(vm)->deleteProperty(baseObj, globalObject, Identifier::fromUid(vm, uid), slot);
     RETURN_IF_EXCEPTION(scope, false);
     if (!couldDelete && callFrame->codeBlock()->isStrictMode())
         throwTypeError(globalObject, scope, UnableToDeletePropertyError);
     return couldDelete;
 }
 
-
-EncodedJSValue JIT_OPERATION operationDeleteByIdJSResult(JSGlobalObject* globalObject, EncodedJSValue encodedBase, UniquedStringImpl* uid)
+size_t JIT_OPERATION operationDeleteByIdOptimize(JSGlobalObject* globalObject, StructureStubInfo* stubInfo, EncodedJSValue encodedBase, UniquedStringImpl* uid)
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    return JSValue::encode(jsBoolean(deleteById(globalObject, callFrame, vm, JSValue::decode(encodedBase), uid)));
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue baseValue = JSValue::decode(encodedBase);
+
+    DeletePropertySlot slot;
+    Structure* oldStructure = baseValue.structureOrNull();
+
+    bool result = deleteById(globalObject, callFrame, vm, slot, baseValue, uid);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    if (baseValue.isObject()) {
+        const Identifier ident = Identifier::fromUid(vm, uid);
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+        if (!parseIndex(ident)) {
+            CodeBlock* codeBlock = callFrame->codeBlock();
+            if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull()))
+                repatchDeleteBy(globalObject, codeBlock, slot, baseValue, oldStructure, CacheableIdentifier::createFromIdentifierOwnedByCodeBlock(ident), *stubInfo, DelByKind::Normal);
+        }
+    }
+
+    return result;
 }
 
-size_t JIT_OPERATION operationDeleteById(JSGlobalObject* globalObject, EncodedJSValue encodedBase, UniquedStringImpl* uid)
+size_t JIT_OPERATION operationDeleteByIdGeneric(JSGlobalObject* globalObject, StructureStubInfo*, EncodedJSValue encodedBase, UniquedStringImpl* uid)
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    return deleteById(globalObject, callFrame, vm, JSValue::decode(encodedBase), uid);
+    DeletePropertySlot slot;
+    return deleteById(globalObject, callFrame, vm, slot, JSValue::decode(encodedBase), uid);
 }
 
-static bool deleteByVal(JSGlobalObject* globalObject, CallFrame* callFrame, VM& vm, JSValue base, JSValue key)
+static bool deleteByVal(JSGlobalObject* globalObject, CallFrame* callFrame, VM& vm, DeletePropertySlot& slot, JSValue base, JSValue key)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -2205,7 +2207,7 @@ static bool deleteByVal(JSGlobalObject* globalObject, CallFrame* callFrame, VM& 
     else {
         Identifier property = key.toPropertyKey(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
-        couldDelete = baseObj->methodTable(vm)->deleteProperty(baseObj, globalObject, property);
+        couldDelete = baseObj->methodTable(vm)->deleteProperty(baseObj, globalObject, property, slot);
     }
     RETURN_IF_EXCEPTION(scope, false);
     if (!couldDelete && callFrame->codeBlock()->isStrictMode())
@@ -2213,20 +2215,42 @@ static bool deleteByVal(JSGlobalObject* globalObject, CallFrame* callFrame, VM& 
     return couldDelete;
 }
 
-EncodedJSValue JIT_OPERATION operationDeleteByValJSResult(JSGlobalObject* globalObject, EncodedJSValue encodedBase,  EncodedJSValue encodedKey)
+size_t JIT_OPERATION operationDeleteByValOptimize(JSGlobalObject* globalObject, StructureStubInfo* stubInfo, EncodedJSValue encodedBase, EncodedJSValue encodedSubscript)
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    return JSValue::encode(jsBoolean(deleteByVal(globalObject, callFrame, vm, JSValue::decode(encodedBase), JSValue::decode(encodedKey))));
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue baseValue = JSValue::decode(encodedBase);
+    JSValue subscript = JSValue::decode(encodedSubscript);
+
+    DeletePropertySlot slot;
+    Structure* oldStructure = baseValue.structureOrNull();
+
+    bool result = deleteByVal(globalObject, callFrame, vm, slot, baseValue, subscript);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    if (baseValue.isObject() && CacheableIdentifier::isCacheableIdentifierCell(subscript)) {
+        const Identifier propertyName = subscript.toPropertyKey(globalObject);
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+        if (subscript.isSymbol() || !parseIndex(propertyName)) {
+            CodeBlock* codeBlock = callFrame->codeBlock();
+            if (stubInfo->considerCaching(vm, codeBlock, baseValue.structureOrNull()))
+                repatchDeleteBy(globalObject, codeBlock, slot, baseValue, oldStructure, CacheableIdentifier::createFromCell(subscript.asCell()), *stubInfo, DelByKind::NormalByVal);
+        }
+    }
+
+    return result;
 }
 
-size_t JIT_OPERATION operationDeleteByVal(JSGlobalObject* globalObject, EncodedJSValue encodedBase, EncodedJSValue encodedKey)
+size_t JIT_OPERATION operationDeleteByValGeneric(JSGlobalObject* globalObject, StructureStubInfo*, EncodedJSValue encodedBase, EncodedJSValue encodedSubscript)
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    return deleteByVal(globalObject, callFrame, vm, JSValue::decode(encodedBase), JSValue::decode(encodedKey));
+    DeletePropertySlot slot;
+    return deleteByVal(globalObject, callFrame, vm, slot, JSValue::decode(encodedBase), JSValue::decode(encodedSubscript));
 }
 
 JSCell* JIT_OPERATION operationPushWithScope(JSGlobalObject* globalObject, JSCell* currentScopeCell, EncodedJSValue objectValue)

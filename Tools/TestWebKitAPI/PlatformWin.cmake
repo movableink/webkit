@@ -54,8 +54,8 @@ list(APPEND TestWebCore_LIBRARIES
 
 if (${WTF_PLATFORM_WIN_CAIRO})
     list(APPEND TestWebCore_LIBRARIES
-        ${CAIRO_LIBRARIES}
-        ${OPENSSL_LIBRARIES}
+        Cairo::Cairo
+        OpenSSL::SSL
         mfuuid
         strmiids
         vcruntime
@@ -73,10 +73,10 @@ else ()
         CFNetwork${DEBUG_SUFFIX}
         CoreGraphics${DEBUG_SUFFIX}
         CoreText${DEBUG_SUFFIX}
+        LibXslt::LibExslt
         QuartzCore${DEBUG_SUFFIX}
         WebKitQuartzCoreAdditions${DEBUG_SUFFIX}
         libdispatch${DEBUG_SUFFIX}
-        libexslt${DEBUG_SUFFIX}
     )
 endif ()
 
@@ -128,7 +128,6 @@ if (ENABLE_WEBKIT)
     add_dependencies(TestWebKitAPIInjectedBundle WebKitFrameworkHeaders)
 
     target_sources(TestWebKitAPIInjectedBundle PRIVATE
-        win/InjectedBundleControllerWin.cpp
         win/PlatformUtilitiesWin.cpp
         win/UtilitiesWin.cpp
     )

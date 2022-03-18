@@ -78,7 +78,7 @@ public:
 
     void setMenuItemElementEnabled(bool isEnabled) { m_isMenuItemElementEnabled = isEnabled; }
     bool menuItemElementEnabled() const { return m_isMenuItemElementEnabled; }
-    
+
     void setDirectoryUploadEnabled(bool isEnabled) { m_isDirectoryUploadEnabled = isEnabled; }
     bool directoryUploadEnabled() const { return m_isDirectoryUploadEnabled; }
 
@@ -87,7 +87,7 @@ public:
 
     void setCustomPasteboardDataEnabled(bool isEnabled) { m_isCustomPasteboardDataEnabled = isEnabled; }
     bool customPasteboardDataEnabled() const { return m_isCustomPasteboardDataEnabled; }
-    
+
     void setWebShareEnabled(bool isEnabled) { m_isWebShareEnabled = isEnabled; }
     bool webShareEnabled() const { return m_isWebShareEnabled; }
 
@@ -112,6 +112,9 @@ public:
     void setWebAnimationsCompositeOperationsEnabled(bool areEnabled) { m_areWebAnimationsCompositeOperationsEnabled = areEnabled; }
     bool webAnimationsCompositeOperationsEnabled() const { return m_areWebAnimationsCompositeOperationsEnabled; }
 
+    void setWebAnimationsMutableTimelinesEnabled(bool areEnabled) { m_areWebAnimationsMutableTimelinesEnabled = areEnabled; }
+    bool webAnimationsMutableTimelinesEnabled() const { return m_areWebAnimationsMutableTimelinesEnabled; }
+
     void setImageBitmapEnabled(bool isEnabled) { m_isImageBitmapEnabled = isEnabled; }
     bool imageBitmapEnabled() const { return m_isImageBitmapEnabled; }
 
@@ -132,13 +135,8 @@ public:
     bool fetchAPIKeepAliveEnabled() const { return m_fetchAPIKeepAliveEnabled; }
     void setFetchAPIKeepAliveEnabled(bool isEnabled) { m_fetchAPIKeepAliveEnabled = isEnabled; }
 
-    bool spectreGadgetsEnabled() const;
-
     void setInspectorAdditionsEnabled(bool isEnabled) { m_inspectorAdditionsEnabled = isEnabled; }
     bool inspectorAdditionsEnabled() const { return m_inspectorAdditionsEnabled; }
-
-    void setWebVREnabled(bool isEnabled) { m_webVREnabled = isEnabled; }
-    bool webVREnabled() const { return m_webVREnabled; }
 
     void setAccessibilityObjectModelEnabled(bool isEnabled) { m_accessibilityObjectModelEnabled = isEnabled; }
     bool accessibilityObjectModelEnabled() const { return m_accessibilityObjectModelEnabled; }
@@ -176,16 +174,13 @@ public:
     void setCSSCustomPropertiesAndValuesEnabled(bool isEnabled) { m_CSSCustomPropertiesAndValuesEnabled = isEnabled; }
     bool cssCustomPropertiesAndValuesEnabled() const { return m_CSSCustomPropertiesAndValuesEnabled; }
 
-    void setPointerEventsEnabled(bool isEnabled) { m_pointerEventsEnabled = isEnabled; }
-    bool pointerEventsEnabled() const { return m_pointerEventsEnabled; }
-    
     void setSyntheticEditingCommandsEnabled(bool isEnabled) { m_syntheticEditingCommandsEnabled = isEnabled; }
     bool syntheticEditingCommandsEnabled() const { return m_syntheticEditingCommandsEnabled; }
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     void setLayoutFormattingContextEnabled(bool isEnabled) { m_layoutFormattingContextEnabled = isEnabled; }
     bool layoutFormattingContextEnabled() const { return m_layoutFormattingContextEnabled; }
-    
+
     void setLayoutFormattingContextIntegrationEnabled(bool isEnabled) { m_layoutFormattingContextIntegrationEnabled = isEnabled; }
     bool layoutFormattingContextIntegrationEnabled() const { return m_layoutFormattingContextIntegrationEnabled; }
 #endif
@@ -208,7 +203,7 @@ public:
 
     void setKeygenElementEnabled(bool isEnabled) { m_keygenElementEnabled = isEnabled; }
     bool keygenElementEnabled() const { return m_keygenElementEnabled; }
-    
+
     void setHighlightAPIEnabled(bool isEnabled) { m_highlightAPIEnabled = isEnabled; }
     bool highlightAPIEnabled() const { return m_highlightAPIEnabled; }
 
@@ -244,6 +239,8 @@ public:
     void setWebRTCMDNSICECandidatesEnabled(bool isEnabled) { m_isWebRTCMDNSICECandidatesEnabled = isEnabled; }
     bool webRTCH264SimulcastEnabled() const { return m_isWebRTCH264SimulcastEnabled; }
     void setWebRTCH264SimulcastEnabled(bool isEnabled) { m_isWebRTCH264SimulcastEnabled = isEnabled; }
+    bool webRTCPlatformCodecsInGPUProcessEnabled() const { return m_isWebRTCPlatformCodecsInGPUProcessEnabled; }
+    void setWebRTCPlatformCodecsInGPUProcessEnabled(bool isEnabled) { m_isWebRTCPlatformCodecsInGPUProcessEnabled = isEnabled; }
 #endif
 
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
@@ -300,10 +297,15 @@ public:
     void setWebGL2Enabled(bool isEnabled) { m_isWebGL2Enabled = isEnabled; }
     bool webGL2Enabled() const { return m_isWebGL2Enabled; }
 #endif
-    
+
 #if ENABLE(WEBGPU)
     void setWebGPUEnabled(bool isEnabled) { m_isWebGPUEnabled = isEnabled; }
     bool webGPUEnabled() const { return m_isWebGPUEnabled; }
+#endif
+
+#if ENABLE(WEBGL) || ENABLE(WEBGL2)
+    void setMaskWebGLStringsEnabled(bool isEnabled) { m_isMaskWebGLStringsEnabled = isEnabled; }
+    bool maskWebGLStringsEnabled() const { return m_isMaskWebGLStringsEnabled; }
 #endif
 
 #if ENABLE(STREAMS_API)
@@ -312,7 +314,7 @@ public:
     void setWritableStreamAPIEnabled(bool isEnabled) { m_isWritableStreamAPIEnabled = isEnabled; }
     bool writableStreamAPIEnabled() const { return m_isWritableStreamAPIEnabled; }
 #endif
-    
+
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
     void setDownloadAttributeEnabled(bool isEnabled) { m_isDownloadAttributeEnabled = isEnabled; }
     bool downloadAttributeEnabled() const { return m_isDownloadAttributeEnabled; }
@@ -360,7 +362,7 @@ public:
     bool touchEventsEnabled() const;
     void setTouchEventsEnabled(bool isEnabled) { m_touchEventsEnabled = isEnabled; }
 #endif
-    
+
     bool referrerPolicyAttributeEnabled() const { return m_referrerPolicyAttributeEnabled; }
     void setReferrerPolicyAttributeEnabled(bool isEnabled) { m_referrerPolicyAttributeEnabled = isEnabled; }
 
@@ -392,6 +394,22 @@ public:
     void setIsInAppBrowserPrivacyEnabled(bool isEnabled) { m_isInAppBrowserPrivacyEnabled = isEnabled; }
     bool isInAppBrowserPrivacyEnabled() const { return m_isInAppBrowserPrivacyEnabled; }
 
+    void setNeedsInAppBrowserPrivacyQuirks(bool isEnabled) { m_needsInAppBrowserPrivacyQuirks = isEnabled; }
+    bool needsInAppBrowserPrivacyQuirks() const { return m_needsInAppBrowserPrivacyQuirks; }
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void setIsAccessibilityIsolatedTreeEnabled(bool isEnabled) { m_accessibilityIsolatedTree = isEnabled; }
+    bool isAccessibilityIsolatedTreeEnabled() const { return m_accessibilityIsolatedTree; }
+#endif
+    
+    void setWebShareFileAPIEnabled(bool isEnabled) { m_webShareFileAPIEnabled = isEnabled; }
+    bool webShareFileAPIEnabled() const { return m_webShareFileAPIEnabled; }
+
+#if HAVE(INCREMENTAL_PDF_APIS)
+    void setIncrementalPDFLoadingEnabled(bool isEnabled) { m_incrementalPDFLoadingEnabled = isEnabled; }
+    bool incrementalPDFLoadingEnabled() const { return m_incrementalPDFLoadingEnabled; }
+#endif
+
 private:
     // Never instantiate.
     RuntimeEnabledFeatures();
@@ -418,6 +436,7 @@ private:
     bool m_areWebAnimationsEnabled { true };
     bool m_isWebAnimationsCSSIntegrationEnabled { true };
     bool m_areWebAnimationsCompositeOperationsEnabled { false };
+    bool m_areWebAnimationsMutableTimelinesEnabled { false };
     bool m_isImageBitmapEnabled { true };
 #if ENABLE(OFFSCREEN_CANVAS)
     bool m_isOffscreenCanvasEnabled { false };
@@ -427,7 +446,6 @@ private:
     bool m_isWebSocketEnabled { true };
     bool m_fetchAPIKeepAliveEnabled { false };
     bool m_inspectorAdditionsEnabled { false };
-    bool m_webVREnabled { false };
     bool m_accessibilityObjectModelEnabled { false };
     bool m_ariaReflectionEnabled { true };
     bool m_itpDebugMode { false };
@@ -439,17 +457,16 @@ private:
     bool m_attrStyleEnabled { false };
     bool m_webAPIStatisticsEnabled { false };
     bool m_CSSCustomPropertiesAndValuesEnabled { false };
-    bool m_pointerEventsEnabled { true };
     bool m_syntheticEditingCommandsEnabled { true };
     bool m_dialogElementEnabled { false };
-    bool m_webSQLEnabled { true };
+    bool m_webSQLEnabled { false };
     bool m_keygenElementEnabled { false };
     bool m_pageAtRuleSupportEnabled { false };
     bool m_highlightAPIEnabled { false };
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     bool m_layoutFormattingContextEnabled { false };
-    bool m_layoutFormattingContextIntegrationEnabled { false };
+    bool m_layoutFormattingContextIntegrationEnabled { true };
 #endif
 
 #if ENABLE(CSS_PAINTING_API)
@@ -481,6 +498,7 @@ private:
     bool m_isPeerConnectionEnabled { true };
     bool m_isWebRTCMDNSICECandidatesEnabled { false };
     bool m_isWebRTCH264SimulcastEnabled { true };
+    bool m_isWebRTCPlatformCodecsInGPUProcessEnabled { true };
 #endif
 
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
@@ -531,9 +549,13 @@ private:
 #if ENABLE(WEBGL2)
     bool m_isWebGL2Enabled { false };
 #endif
-    
+
 #if ENABLE(WEBGPU)
     bool m_isWebGPUEnabled { false };
+#endif
+
+#if ENABLE(WEBGL) || ENABLE(WEBGL2)
+    bool m_isMaskWebGLStringsEnabled { false };
 #endif
 
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
@@ -588,6 +610,16 @@ private:
     bool m_isCSSShadowPartsEnabled { true };
 
     bool m_isInAppBrowserPrivacyEnabled { false };
+    bool m_needsInAppBrowserPrivacyQuirks { false };
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    bool m_accessibilityIsolatedTree { false };
+#endif
+    bool m_webShareFileAPIEnabled { false };
+
+#if HAVE(INCREMENTAL_PDF_APIS)
+    bool m_incrementalPDFLoadingEnabled { false };
+#endif
 
     friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;
 };

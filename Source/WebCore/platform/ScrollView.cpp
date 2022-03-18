@@ -197,11 +197,6 @@ void ScrollView::setDelegatesScrolling(bool delegatesScrolling)
     delegatesScrollingDidChange();
 }
 
-void ScrollView::setDelegatesPageScaling(bool delegatesPageScaling)
-{
-    m_delegatesPageScaling = delegatesPageScaling;
-}
-
 IntPoint ScrollView::contentsScrollPosition() const
 {
 #if PLATFORM(IOS_FAMILY)
@@ -211,13 +206,13 @@ IntPoint ScrollView::contentsScrollPosition() const
     return scrollPosition();
 }
 
-void ScrollView::setContentsScrollPosition(const IntPoint& position)
+void ScrollView::setContentsScrollPosition(const IntPoint& position, ScrollClamping clamping)
 {
 #if PLATFORM(IOS_FAMILY)
     if (platformWidget())
         setActualScrollPosition(position);
 #endif
-    setScrollPosition(position);
+    setScrollPosition(position, clamping);
 }
 
 FloatRect ScrollView::exposedContentRect() const
@@ -518,7 +513,7 @@ void ScrollView::completeUpdatesAfterScrollTo(const IntSize& scrollDelta)
     updateCompositingLayersAfterScrolling();
 }
 
-void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition)
+void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition, ScrollClamping clamping, bool/* animated*/)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollView::setScrollPosition " << scrollPosition);
 
@@ -530,15 +525,18 @@ void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition)
         return;
     }
 
-    ScrollPosition newScrollPosition = !delegatesScrolling() ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
+    ScrollPosition newScrollPosition = (!delegatesScrolling() && clamping == ScrollClamping::Clamped) ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
 
-    if ((!delegatesScrolling() || currentScrollType() == ScrollType::User) && newScrollPosition == this->scrollPosition())
+    if ((!delegatesScrolling() || currentScrollType() == ScrollType::User) && currentScrollBehaviorStatus() == ScrollBehaviorStatus::NotInAnimation && newScrollPosition == this->scrollPosition())
         return;
 
-    if (requestScrollPositionUpdate(newScrollPosition))
-        return;
+    if (currentScrollBehaviorStatus() == ScrollBehaviorStatus::InNonNativeAnimation)
+        scrollAnimator().cancelAnimations();
 
-    updateScrollbars(newScrollPosition);
+    if (!requestScrollPositionUpdate(newScrollPosition, currentScrollType(), clamping))
+        updateScrollbars(newScrollPosition);
+
+    setScrollBehaviorStatus(ScrollBehaviorStatus::NotInAnimation);
 }
 
 bool ScrollView::scroll(ScrollDirection direction, ScrollGranularity granularity)
@@ -1517,7 +1515,7 @@ void ScrollView::setScrollOrigin(const IntPoint& origin, bool updatePositionAtAl
         updateScrollbars(scrollPosition());
 }
 
-void ScrollView::styleDidChange()
+void ScrollView::styleAndRenderTreeDidChange()
 {
     if (m_horizontalScrollbar)
         m_horizontalScrollbar->styleChanged();

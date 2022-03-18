@@ -40,9 +40,11 @@ API/JSValueRef.cpp
 API/JSWeakObjectMapRefPrivate.cpp
 API/JSWeakPrivate.cpp
 API/JSWeakValue.cpp
+API/MarkedJSValueRefArray.cpp
 API/OpaqueJSString.cpp
 
 assembler/AbstractMacroAssembler.cpp
+assembler/AssemblerBuffer.cpp
 assembler/CPU.cpp
 assembler/LinkBuffer.cpp
 assembler/MacroAssembler.cpp
@@ -194,6 +196,7 @@ bytecode/AdaptiveInferredPropertyValueWatchpointBase.cpp
 bytecode/ArithProfile.cpp
 bytecode/ArrayAllocationProfile.cpp
 bytecode/ArrayProfile.cpp
+bytecode/ByValInfo.cpp
 bytecode/BytecodeBasicBlock.cpp
 bytecode/BytecodeDumper.cpp
 bytecode/BytecodeGeneratorification.cpp
@@ -274,6 +277,7 @@ bytecode/SuperSampler.cpp
 bytecode/ToThisStatus.cpp
 bytecode/TrackedReferences.cpp
 bytecode/UnlinkedCodeBlock.cpp
+bytecode/UnlinkedCodeBlockGenerator.cpp
 bytecode/UnlinkedEvalCodeBlock.cpp
 bytecode/UnlinkedFunctionCodeBlock.cpp
 bytecode/UnlinkedFunctionExecutable.cpp
@@ -512,6 +516,7 @@ heap/GCActivityCallback.cpp
 heap/GCConductor.cpp
 heap/GCLogging.cpp
 heap/GCRequest.cpp
+heap/GCSegmentedArray.cpp
 heap/GigacageAlignedMemoryAllocator.cpp
 heap/HandleSet.cpp
 heap/Heap.cpp
@@ -727,6 +732,7 @@ runtime/BytecodeCacheError.cpp
 runtime/CallData.cpp
 runtime/CachePayload.cpp
 runtime/CacheUpdate.cpp
+runtime/CacheableIdentifier.cpp
 runtime/CachedBytecode.cpp
 runtime/CachedTypes.cpp
 runtime/CatchScope.cpp
@@ -818,6 +824,7 @@ runtime/JSArrayBufferView.cpp
 runtime/JSAsyncFunction.cpp
 runtime/JSAsyncGenerator.cpp
 runtime/JSAsyncGeneratorFunction.cpp
+runtime/JSArrayIterator.cpp
 runtime/JSBigInt.cpp
 runtime/JSBoundFunction.cpp
 runtime/JSCConfig.cpp
@@ -851,7 +858,6 @@ runtime/JSModuleLoader.cpp
 runtime/JSModuleNamespaceObject.cpp
 runtime/JSModuleRecord.cpp
 runtime/JSNativeStdFunction.cpp
-runtime/JSNonDestructibleProxy.cpp
 runtime/JSONObject.cpp
 runtime/JSObject.cpp
 runtime/JSPromise.cpp
@@ -895,6 +901,7 @@ runtime/MathCommon.cpp
 runtime/MathObject.cpp
 runtime/MemoryStatistics.cpp
 runtime/ModuleProgramExecutable.cpp
+runtime/NarrowingNumberPredictionFuzzerAgent.cpp
 runtime/NativeErrorConstructor.cpp
 runtime/NativeErrorPrototype.cpp
 runtime/NativeExecutable.cpp
@@ -902,6 +909,7 @@ runtime/NullGetterFunction.cpp
 runtime/NullSetterFunction.cpp
 runtime/NumberConstructor.cpp
 runtime/NumberObject.cpp
+runtime/NumberPredictionFuzzerAgent.cpp
 runtime/NumberPrototype.cpp
 runtime/ObjectConstructor.cpp
 runtime/ObjectInitializationScope.cpp
@@ -981,6 +989,7 @@ runtime/WeakObjectRefConstructor.cpp
 runtime/WeakObjectRefPrototype.cpp
 runtime/WeakSetConstructor.cpp
 runtime/WeakSetPrototype.cpp
+runtime/WideningNumberPredictionFuzzerAgent.cpp
 
 // Derived Sources
 // FIXME: We should move this to runtime but it kept breaking the Windows build in weird ways... https://bugs.webkit.org/show_bug.cgi?id=177486

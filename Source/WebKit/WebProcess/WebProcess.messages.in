@@ -67,7 +67,6 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
 
     SetEnhancedAccessibility(bool flag)
 
-    GetWebCoreStatistics(uint64_t callbackID)
     GarbageCollectJavaScriptObjects()
     SetJavaScriptGarbageCollectorTimerEnabled(bool enable)
 
@@ -106,14 +105,12 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
 #endif
 
 #if ENABLE(SERVICE_WORKER)
-    EstablishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier pageID, struct WebKit::WebPreferencesStore store, WebCore::RegistrableDomain domain, struct WebKit::ServiceWorkerInitializationData initializationData)
-    RegisterServiceWorkerClients()
+    EstablishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier pageID, struct WebKit::WebPreferencesStore store, WebCore::RegistrableDomain domain, struct WebKit::ServiceWorkerInitializationData initializationData) -> () Async
 #endif
 
     SetHasSuspendedPageProxy(bool hasSuspendedPageProxy);
     SetIsInProcessCache(bool isInProcessCache)
     MarkIsNoLongerPrewarmed()
-    UpdateActivePages()
     GetActivePagesOriginsForTesting() -> (Vector<String> activeOrigins) Async
 
 #if PLATFORM(MAC)
@@ -125,7 +122,7 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
 #endif
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     BacklightLevelDidChange(float backlightLevel)
 #endif
 
@@ -133,6 +130,9 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
 
 #if PLATFORM(COCOA)
     SetMediaMIMETypes(Vector<String> types)
+#if ENABLE(REMOTE_INSPECTOR)
+    EnableRemoteWebInspector(WebKit::SandboxExtension::Handle handle);
+#endif
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -152,15 +152,23 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
     SetBackForwardCacheCapacity(unsigned capacity);
     ClearCachedPage(struct WebCore::BackForwardItemIdentifier backForwardItemID) -> () Async
 
-#if PLATFORM(IOS_FAMILY)
-    UnblockAccessibilityServer(WebKit::SandboxExtension::Handle handle)
-#endif
-
 #if PLATFORM(GTK) || PLATFORM(WPE)
     SendMessageToWebExtension(struct WebKit::UserMessage userMessage)
 #endif
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     SeedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain firstPartyDomain, WebCore::RegistrableDomain thirdPartyDomain, bool shouldScheduleNotification) -> () Async
+    SetShouldBlockThirdPartyCookiesForTesting(enum:uint8_t WebCore::ThirdPartyCookieBlockingMode blockingMode) -> () Async
+#endif
+
+#if PLATFORM(IOS)
+    GrantAccessToAssetServices(WebKit::SandboxExtension::Handle mobileAssetHandle, WebKit::SandboxExtension::Handle mobileAssetV2Handle)
+    RevokeAccessToAssetServices()
+#endif
+
+#if PLATFORM(COCOA)
+    NotifyPreferencesChanged(String domain, String key, Optional<String> encodedValue)
+    UnblockAccessibilityServer(WebKit::SandboxExtension::Handle handle)
+    UnblockPreferenceService(WebKit::SandboxExtension::Handle handle)
 #endif
 }

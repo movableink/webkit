@@ -163,6 +163,7 @@ enum {
     PROP_ENABLE_MEDIA_CAPABILITIES,
     PROP_ALLOW_FILE_ACCESS_FROM_FILE_URLS,
     PROP_ALLOW_UNIVERSAL_ACCESS_FROM_FILE_URLS,
+    PROP_ALLOW_TOP_NAVIGATION_TO_DATA_URLS,
 #if PLATFORM(GTK)
     PROP_HARDWARE_ACCELERATION_POLICY,
     PROP_ENABLE_BACK_FORWARD_NAVIGATION_GESTURES,
@@ -382,6 +383,9 @@ static void webKitSettingsSetProperty(GObject* object, guint propId, const GValu
     case PROP_ALLOW_UNIVERSAL_ACCESS_FROM_FILE_URLS:
         webkit_settings_set_allow_universal_access_from_file_urls(settings, g_value_get_boolean(value));
         break;
+    case PROP_ALLOW_TOP_NAVIGATION_TO_DATA_URLS:
+        webkit_settings_set_allow_top_navigation_to_data_urls(settings, g_value_get_boolean(value));
+        break;
 #if PLATFORM(GTK)
     case PROP_HARDWARE_ACCELERATION_POLICY:
         webkit_settings_set_hardware_acceleration_policy(settings, static_cast<WebKitHardwareAccelerationPolicy>(g_value_get_enum(value)));
@@ -569,6 +573,9 @@ static void webKitSettingsGetProperty(GObject* object, guint propId, GValue* val
         break;
     case PROP_ALLOW_UNIVERSAL_ACCESS_FROM_FILE_URLS:
         g_value_set_boolean(value, webkit_settings_get_allow_universal_access_from_file_urls(settings));
+        break;
+    case PROP_ALLOW_TOP_NAVIGATION_TO_DATA_URLS:
+        g_value_set_boolean(value, webkit_settings_get_allow_top_navigation_to_data_urls(settings));
         break;
 #if PLATFORM(GTK)
     case PROP_HARDWARE_ACCELERATION_POLICY:
@@ -1045,34 +1052,35 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
      *
      *
      * Enable or disable support for WebAudio on pages. WebAudio is an
-     * experimental proposal for allowing web pages to generate Audio
-     * WAVE data from JavaScript. The standard is currently a
-     * work-in-progress by the W3C Audio Working Group.
+     * API for processing and synthesizing audio in web applications
      *
-     * See also https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+     * See also https://webaudio.github.io/web-audio-api
      */
-    g_object_class_install_property(gObjectClass,
-                                    PROP_ENABLE_WEBAUDIO,
-                                    g_param_spec_boolean("enable-webaudio",
-                                                         _("Enable WebAudio"),
-                                                         _("Whether WebAudio content should be handled"),
-                                                         FALSE,
-                                                         readWriteConstructParamFlags));
+    g_object_class_install_property(
+        gObjectClass,
+        PROP_ENABLE_WEBAUDIO,
+        g_param_spec_boolean(
+            "enable-webaudio",
+            _("Enable WebAudio"),
+            _("Whether WebAudio content should be handled"),
+            TRUE,
+            readWriteConstructParamFlags));
 
     /**
     * WebKitSettings:enable-webgl:
     *
-    * Enable or disable support for WebGL on pages. WebGL is an experimental
-    * proposal for allowing web pages to use OpenGL ES-like calls directly. The
-    * standard is currently a work-in-progress by the Khronos Group.
+    * Enable or disable support for WebGL on pages. WebGL enables web
+    * content to use an API based on OpenGL ES 2.0.
     */
-    g_object_class_install_property(gObjectClass,
-                                    PROP_ENABLE_WEBGL,
-                                    g_param_spec_boolean("enable-webgl",
-                                                         _("Enable WebGL"),
-                                                         _("Whether WebGL content should be rendered"),
-                                                         FALSE,
-                                                         readWriteConstructParamFlags));
+    g_object_class_install_property(
+        gObjectClass,
+        PROP_ENABLE_WEBGL,
+        g_param_spec_boolean(
+            "enable-webgl",
+            _("Enable WebGL"),
+            _("Whether WebGL content should be rendered"),
+            TRUE,
+            readWriteConstructParamFlags));
 
     /**
      * WebKitSettings:allow-modal-dialogs:
@@ -1435,14 +1443,32 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
             FALSE,
             readWriteConstructParamFlags));
 
+    /**
+     * WebKitSettings:allow-top-navigation-to-data-urls:
+     *
+     * Whether or not the top frame is allowed to navigate to data URLs. It is disabled by default
+     * due to the risk it poses when loading untrusted URLs, with data URLs being used in scamming
+     * and phishing attacks. In contrast, a scenario where it could be enabled could be an app that
+     * embeds a WebView and you have control of the pages being show instead of a generic browser.
+     *
+     * Since: 2.28
+     */
+    g_object_class_install_property(gObjectClass,
+        PROP_ALLOW_TOP_NAVIGATION_TO_DATA_URLS,
+        g_param_spec_boolean("allow-top-navigation-to-data-urls",
+            _("Allow top frame navigation to data URLs"),
+            _("Whether or not top frame navigation is allowed to data URLs"),
+            FALSE,
+            readWriteConstructParamFlags));
+
 #if PLATFORM(GTK)
     /**
      * WebKitSettings:hardware-acceleration-policy:
      *
      * The #WebKitHardwareAccelerationPolicy to decide how to enable and disable
      * hardware acceleration. The default value %WEBKIT_HARDWARE_ACCELERATION_POLICY_ON_DEMAND
-     * enables the hardware acceleration when the web contents request it, disabling it again
-     * when no longer needed. It's possible to enforce hardware acceleration to be always enabled
+     * enables the hardware acceleration when the web contents request it.
+     * It's possible to enforce hardware acceleration to be always enabled
      * by using %WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS. And it's also possible to disable it
      * completely using %WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER. Note that disabling hardware
      * acceleration might cause some websites to not render correctly or consume more CPU.
@@ -3497,6 +3523,45 @@ void webkit_settings_set_allow_universal_access_from_file_urls(WebKitSettings* s
 
     priv->preferences->setAllowUniversalAccessFromFileURLs(allowed);
     g_object_notify(G_OBJECT(settings), "allow-universal-access-from-file-urls");
+}
+
+/**
+ * webkit_settings_get_allow_top_navigation_to_data_urls:
+ * @settings: a #WebKitSettings
+ *
+ * Get the #WebKitSettings:allow-top-navigation-to-data-urls property.
+ *
+ * Returns: %TRUE If navigation to data URLs from the top frame is allowed or %FALSE\
+ * otherwise.
+ *
+ * Since: 2.28
+ */
+gboolean webkit_settings_get_allow_top_navigation_to_data_urls(WebKitSettings* settings)
+{
+    g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), FALSE);
+
+    return settings->priv->preferences->allowTopNavigationToDataURLs();
+}
+
+/**
+ * webkit_settings_set_allow_top_navigation_to_data_urls:
+ * @settings: a #WebKitSettings
+ * @allowed: Value to be set
+ *
+ * Set the #WebKitSettings:allow-top-navigation-to-data-urls property.
+ *
+ * Since: 2.28
+ */
+void webkit_settings_set_allow_top_navigation_to_data_urls(WebKitSettings* settings, gboolean allowed)
+{
+    g_return_if_fail(WEBKIT_IS_SETTINGS(settings));
+
+    WebKitSettingsPrivate* priv = settings->priv;
+    if (priv->preferences->allowTopNavigationToDataURLs() == allowed)
+        return;
+
+    priv->preferences->setAllowTopNavigationToDataURLs(allowed);
+    g_object_notify(G_OBJECT(settings), "allow-top-navigation-to-data-urls");
 }
 
 #if PLATFORM(GTK)

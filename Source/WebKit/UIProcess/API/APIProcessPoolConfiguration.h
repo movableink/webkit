@@ -104,15 +104,6 @@ public:
     bool shouldTakeUIBackgroundAssertion() const { return m_shouldTakeUIBackgroundAssertion; }
     void setShouldTakeUIBackgroundAssertion(bool shouldTakeUIBackgroundAssertion) { m_shouldTakeUIBackgroundAssertion = shouldTakeUIBackgroundAssertion; }
 
-    bool shouldCaptureAudioInUIProcess() const { return m_shouldCaptureAudioInUIProcess; }
-    void setShouldCaptureAudioInUIProcess(bool shouldCaptureAudioInUIProcess) { m_shouldCaptureAudioInUIProcess = shouldCaptureAudioInUIProcess; }
-
-    bool shouldCaptureAudioInGPUProcess() const { return m_shouldCaptureAudioInGPUProcess; }
-    void setShouldCaptureAudioInGPUProcess(bool shouldCaptureAudioInGPUProcess) { m_shouldCaptureAudioInGPUProcess = shouldCaptureAudioInGPUProcess; }
-
-    bool shouldCaptureVideoInUIProcess() const { return m_shouldCaptureVideoInUIProcess; }
-    void setShouldCaptureVideoInUIProcess(bool shouldCaptureVideoInUIProcess) { m_shouldCaptureVideoInUIProcess = shouldCaptureVideoInUIProcess; }
-
     bool shouldCaptureDisplayInUIProcess() const { return m_shouldCaptureDisplayInUIProcess; }
     void setShouldCaptureDisplayInUIProcess(bool shouldCaptureDisplayInUIProcess) { m_shouldCaptureDisplayInUIProcess = shouldCaptureDisplayInUIProcess; }
 
@@ -120,11 +111,6 @@ public:
     void setShouldConfigureJSCForTesting(bool value) { m_shouldConfigureJSCForTesting = value; }
     bool isJITEnabled() const { return m_isJITEnabled; }
     void setJITEnabled(bool enabled) { m_isJITEnabled = enabled; }
-
-#if PLATFORM(IOS_FAMILY)
-    const WTF::String& ctDataConnectionServiceType() const { return m_ctDataConnectionServiceType; }
-    void setCTDataConnectionServiceType(const WTF::String& ctDataConnectionServiceType) { m_ctDataConnectionServiceType = ctDataConnectionServiceType; }
-#endif
 
     ProcessID presentingApplicationPID() const { return m_presentingApplicationPID; }
     void setPresentingApplicationPID(ProcessID pid) { m_presentingApplicationPID = pid; }
@@ -145,11 +131,6 @@ public:
     const WTF::String& customWebContentServiceBundleIdentifier() const { return m_customWebContentServiceBundleIdentifier; }
     void setCustomWebContentServiceBundleIdentifier(const WTF::String& customWebContentServiceBundleIdentifier) { m_customWebContentServiceBundleIdentifier = customWebContentServiceBundleIdentifier; }
 
-#if PLATFORM(COCOA)
-    bool suppressesConnectionTerminationOnSystemChange() const { return m_suppressesConnectionTerminationOnSystemChange; }
-    void setSuppressesConnectionTerminationOnSystemChange(bool suppressesConnectionTerminationOnSystemChange) { m_suppressesConnectionTerminationOnSystemChange = suppressesConnectionTerminationOnSystemChange; }
-#endif
-
 private:
     WTF::String m_injectedBundlePath;
     Vector<WTF::String> m_customClassesForParameterCoder;
@@ -162,9 +143,6 @@ private:
     Vector<WTF::String> m_overrideLanguages;
     bool m_alwaysRunsAtBackgroundPriority { false };
     bool m_shouldTakeUIBackgroundAssertion { true };
-    bool m_shouldCaptureAudioInUIProcess { false };
-    bool m_shouldCaptureAudioInGPUProcess { false };
-    bool m_shouldCaptureVideoInUIProcess { false };
     bool m_shouldCaptureDisplayInUIProcess { DEFAULT_CAPTURE_DISPLAY_IN_UI_PROCESS };
     ProcessID m_presentingApplicationPID { getCurrentProcessID() };
     Optional<bool> m_processSwapsOnNavigationFromClient;
@@ -179,13 +157,6 @@ private:
     bool m_shouldConfigureJSCForTesting { false };
     bool m_isJITEnabled { true };
     bool m_usesSingleWebProcess { false };
-
-#if PLATFORM(IOS_FAMILY)
-    WTF::String m_ctDataConnectionServiceType;
-#endif
-#if PLATFORM(COCOA)
-    bool m_suppressesConnectionTerminationOnSystemChange { false };
-#endif
 };
 
 } // namespace API

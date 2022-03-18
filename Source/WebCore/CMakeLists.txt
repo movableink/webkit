@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 include(WebKitCommon)
+include(target/TargetWTF)
+include(target/TargetJavaScriptCore)
 include(WebCoreMacros.cmake)
 include(Headers.cmake)
 
@@ -14,10 +16,6 @@ endif ()
 
 list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
     "Sources.txt"
-)
-
-set(WebCore_INCLUDE_DIRECTORIES
-    "${PAL_FRAMEWORK_HEADERS_DIR}"
 )
 
 set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
@@ -66,7 +64,6 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/webgpu/WHLSL"
     "${WEBCORE_DIR}/Modules/webgpu/WHLSL/AST"
     "${WEBCORE_DIR}/Modules/websockets"
-    "${WEBCORE_DIR}/Modules/webvr"
     "${WEBCORE_DIR}/accessibility"
     "${WEBCORE_DIR}/accessibility/isolatedtree"
     "${WEBCORE_DIR}/animation"
@@ -107,7 +104,9 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/layout/inlineformatting"
     "${WEBCORE_DIR}/layout/inlineformatting/text"
     "${WEBCORE_DIR}/layout/integration"
+    "${WEBCORE_DIR}/layout/invalidation"
     "${WEBCORE_DIR}/layout/layouttree"
+    "${WEBCORE_DIR}/layout/tableformatting"
     "${WEBCORE_DIR}/loader"
     "${WEBCORE_DIR}/loader/appcache"
     "${WEBCORE_DIR}/loader/archive"
@@ -169,13 +168,6 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/xml/parser"
 )
 
-set(WebCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${LIBXML2_INCLUDE_DIR}
-    ${LIBXSLT_INCLUDE_DIR}
-    ${SQLITE_INCLUDE_DIR}
-    ${ZLIB_INCLUDE_DIRS}
-)
-
 set(WebCore_IDL_INCLUDES
     css
     dom
@@ -211,7 +203,6 @@ set(WebCore_IDL_INCLUDES
     Modules/webdatabase
     Modules/webgpu
     Modules/websockets
-    Modules/webvr
 
     bindings/js
 
@@ -554,20 +545,6 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/websockets/CloseEvent.idl
     Modules/websockets/WebSocket.idl
 
-    Modules/webvr/DOMWindowWebVR.idl
-    Modules/webvr/NavigatorWebVR.idl
-    Modules/webvr/VRDisplay.idl
-    Modules/webvr/VRDisplayCapabilities.idl
-    Modules/webvr/VRDisplayEvent.idl
-    Modules/webvr/VRDisplayEventReason.idl
-    Modules/webvr/VREye.idl
-    Modules/webvr/VREyeParameters.idl
-    Modules/webvr/VRFieldOfView.idl
-    Modules/webvr/VRFrameData.idl
-    Modules/webvr/VRLayerInit.idl
-    Modules/webvr/VRPose.idl
-    Modules/webvr/VRStageParameters.idl
-
     accessibility/AccessibilityRole.idl
     accessibility/AriaAttributes.idl
 
@@ -585,6 +562,7 @@ set(WebCore_NON_SVG_IDL_FILES
     animation/DocumentTimeline.idl
     animation/DocumentTimelineOptions.idl
     animation/FillMode.idl
+    animation/GetAnimationsOptions.idl
     animation/IterationCompositeOperation.idl
     animation/KeyframeAnimationOptions.idl
     animation/KeyframeEffect.idl
@@ -673,7 +651,6 @@ set(WebCore_NON_SVG_IDL_FILES
     css/typedom/TypedOMCSSUnparsedValue.idl
 
     css/WebKitCSSMatrix.idl
-    css/WebKitCSSViewportRule.idl
 
     dom/AbortController.idl
     dom/AbortSignal.idl
@@ -716,6 +693,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/DocumentOrShadowRoot.idl
     dom/DocumentTouch.idl
     dom/DocumentType.idl
+    dom/DragEvent.idl
     dom/Element.idl
     dom/ErrorEvent.idl
     dom/Event.idl
@@ -761,7 +739,6 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/ShadowRoot.idl
     dom/ShadowRootMode.idl
     dom/Slotable.idl
-    dom/SpectreGadget.idl
     dom/StaticRange.idl
     dom/StringCallback.idl
     dom/Text.idl
@@ -967,8 +944,10 @@ set(WebCore_NON_SVG_IDL_FILES
     page/ResizeObserverCallback.idl
     page/ResizeObserverEntry.idl
     page/Screen.idl
+    page/ScrollBehavior.idl
     page/ScrollIntoViewOptions.idl
     page/ScrollLogicalPosition.idl
+    page/ScrollOptions.idl
     page/ScrollToOptions.idl
     page/ShareData.idl
     page/UndoItem.idl
@@ -1186,8 +1165,6 @@ if (ENABLE_GAMEPAD)
         Modules/gamepad/GamepadButton.idl
         Modules/gamepad/GamepadEvent.idl
         Modules/gamepad/NavigatorGamepad.idl
-
-        Modules/webvr/GamepadWebVR.idl
     )
 
     list(APPEND WebCore_SOURCES
@@ -1232,15 +1209,20 @@ set(WebCore_PLUG_INS_RESOURCES
 )
 
 set(WebCore_LIBRARIES
-    ${LIBXML2_LIBRARIES}
-    ${LIBXSLT_LIBRARIES}
-    ${SQLITE_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    PAL${DEBUG_SUFFIX}
+    LibXml2::LibXml2
+    SQLite::SQLite3
+    WebKit::JavaScriptCore
+    WebKit::PAL
+    ZLIB::ZLIB
 )
+
+if (ENABLE_XSLT)
+    list(APPEND WebCore_LIBRARIES LibXslt::LibXslt)
+endif ()
 
 set(WebCoreTestSupport_LIBRARIES
     WebKit::JavaScriptCore
+    WebKit::PAL
 )
 if (NOT WTF_OS_WINDOWS)
     list(APPEND WebCoreTestSupport_LIBRARIES WebCore)
@@ -1487,11 +1469,11 @@ if (ENABLE_QUOTA)
     )
 endif ()
 
-if (ENABLE_GRAPHICS_CONTEXT_3D)
+if (ENABLE_GRAPHICS_CONTEXT_GL)
     list(APPEND WebCore_SOURCES
         platform/graphics/ANGLEWebKitBridge.cpp
         platform/graphics/FormatConverter.cpp
-        platform/graphics/GraphicsContext3D.cpp
+        platform/graphics/opengl/GraphicsContextGLOpenGL.cpp
     )
 
     list(APPEND WebCore_LIBRARIES ANGLEFramework)
@@ -1555,12 +1537,6 @@ if (ENABLE_USER_MESSAGE_HANDLERS)
         page/UserMessageHandlersNamespace.cpp
         page/WebKitNamespace.cpp
     )
-endif ()
-
-if (USE_OPENVR)
-  list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/openvr/headers")
-  list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES "${WEBCORE_DIR}/platform/vr/openvr")
-  list(APPEND WebCore_LIBRARIES openvr_api)
 endif ()
 
 if (USE_WOFF2)
@@ -1660,6 +1636,7 @@ set(MAKE_NAMES_DEPENDENCIES
     ${WEBCORE_DIR}/bindings/scripts/StaticString.pm
 )
 set(SUPPLEMENTAL_DEPENDENCY_FILE ${WebCore_DERIVED_SOURCES_DIR}/supplemental_dependency.tmp)
+set(ISO_SUBSPACES_HEADER_FILE ${WebCore_DERIVED_SOURCES_DIR}/DOMIsoSubspaces.h)
 set(WINDOW_CONSTRUCTORS_FILE ${WebCore_DERIVED_SOURCES_DIR}/DOMWindowConstructors.idl)
 set(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${WebCore_DERIVED_SOURCES_DIR}/WorkerGlobalScopeConstructors.idl)
 set(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${WebCore_DERIVED_SOURCES_DIR}/DedicatedWorkerGlobalScopeConstructors.idl)
@@ -1823,11 +1800,17 @@ list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/PlugInsResourcesData.
 ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES(${WEBCORE_DIR}/css/StyleResolver.cpp PlugInsResourcesData.cpp PlugInsResources.h)
 
 set(FEATURE_DEFINES_JAVASCRIPT "LANGUAGE_JAVASCRIPT ${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}")
+
+GENERATE_SETTINGS_MACROS(${WEBCORE_DIR}/page/Settings.yaml Settings.h)
+list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Settings.h)
+list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Settings.cpp)
+list(APPEND WebCoreTestSupport_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/InternalSettingsGenerated.cpp)
 list(APPEND WebCoreTestSupport_IDL_FILES ${WebCore_DERIVED_SOURCES_DIR}/InternalSettingsGenerated.idl)
 
 GENERATE_BINDINGS(WebCoreBindings
     OUTPUT_SOURCE WebCore_SOURCES
     INPUT_FILES ${WebCore_IDL_FILES}
+    PP_INPUT_FILES ${WebCore_IDL_FILES} ${WebCoreTestSupport_IDL_FILES}
     BASE_DIR ${WEBCORE_DIR}
     IDL_INCLUDES ${WebCore_IDL_INCLUDES} ${WebCore_DERIVED_SOURCES_DIR}
     FEATURES ${FEATURE_DEFINES_JAVASCRIPT}
@@ -1835,8 +1818,9 @@ GENERATE_BINDINGS(WebCoreBindings
     GENERATOR JS
     SUPPLEMENTAL_DEPFILE ${SUPPLEMENTAL_DEPENDENCY_FILE}
     PP_EXTRA_OUTPUT
-        ${WINDOW_CONSTRUCTORS_FILE} ${WORKERGLOBALSCOPE_CONSTRUCTORS_FILE} ${DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
+        ${ISO_SUBSPACES_HEADER_FILE} ${WINDOW_CONSTRUCTORS_FILE} ${WORKERGLOBALSCOPE_CONSTRUCTORS_FILE} ${DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
     PP_EXTRA_ARGS
+        --isoSubspacesHeaderFile ${ISO_SUBSPACES_HEADER_FILE}
         --windowConstructorsFile ${WINDOW_CONSTRUCTORS_FILE}
         --workerGlobalScopeConstructorsFile ${WORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
         --dedicatedWorkerGlobalScopeConstructorsFile ${DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
@@ -1853,8 +1837,11 @@ GENERATE_BINDINGS(WebCoreTestSupportBindings
     DESTINATION ${WebCore_DERIVED_SOURCES_DIR}
     GENERATOR JS)
 
-# WebCoreTestSupportBindings needs InternalSettingsGenerated.idl
-add_dependencies(WebCoreTestSupportBindings WebCore)
+# WebCoreTestSupportBindings needs to have a direct or indirect
+# dependency to WebCoreBindings for CMake Visual Studio generator to
+# eliminate duplicated custom commands. Otherwise,
+# GenerateSettings.rb will be triggered in both projects.
+add_dependencies(WebCoreTestSupportBindings WebCoreBindings)
 
 # WebCore JS Builtins
 
@@ -1938,11 +1925,6 @@ list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/EventTargetInterfaces
 list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/EventTargetFactory.cpp)
 
 
-GENERATE_SETTINGS_MACROS(${WEBCORE_DIR}/page/Settings.yaml Settings.h)
-list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Settings.h)
-list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Settings.cpp)
-list(APPEND WebCoreTestSupport_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/InternalSettingsGenerated.cpp)
-
 GENERATE_FONT_NAMES(${WEBCORE_DIR}/css/WebKitFontFamilyNames.in)
 list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/WebKitFontFamilyNames.cpp)
 
@@ -2020,6 +2002,7 @@ endif ()
 include_directories(${WebCoreTestSupport_INCLUDE_DIRECTORIES})
 add_library(WebCoreTestSupport ${WebCoreTestSupport_LIBRARY_TYPE} ${WebCoreTestSupport_SOURCES})
 add_dependencies(WebCoreTestSupport WebCore WebCoreTestSupportBindings)
+target_compile_definitions(WebCoreTestSupport PRIVATE "BUILDING_WebCoreTestSupport")
 target_include_directories(WebCoreTestSupport PUBLIC ${WebCoreTestSupport_INCLUDE_DIRECTORIES} ${WebCore_INCLUDE_DIRECTORIES})
 target_include_directories(WebCoreTestSupport PRIVATE ${WebCoreTestSupport_PRIVATE_INCLUDE_DIRECTORIES} ${WebCore_PRIVATE_INCLUDE_DIRECTORIES})
 target_include_directories(WebCoreTestSupport SYSTEM PUBLIC ${WebCoreTestSupport_SYSTEM_INCLUDE_DIRECTORIES} ${WebCore_SYSTEM_INCLUDE_DIRECTORIES})

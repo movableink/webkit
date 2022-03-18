@@ -32,19 +32,19 @@
 
 namespace JSC {
 
-inline void StructureRareData::setPreviousID(VM& vm, Structure* structure)
+inline void StructureRareData::setCachedPrototypeChain(VM& vm, StructureChain* chain)
 {
-    m_previous.set(vm, this, structure);
-}
-
-inline void StructureRareData::clearPreviousID()
-{
-    m_previous.clear();
+    m_cachedPrototypeChain.setMayBeNull(vm, this, chain);
 }
 
 inline JSString* StructureRareData::objectToStringValue() const
 {
-    return m_objectToStringValue.get();
+    auto* value = m_objectToStringValue.unvalidatedGet();
+    if (value == objectToStringCacheGiveUpMarker())
+        return nullptr;
+    if (value)
+        validateCell(value);
+    return value;
 }
 
 inline JSPropertyNameEnumerator* StructureRareData::cachedPropertyNameEnumerator() const

@@ -69,6 +69,7 @@ SWServerWorker::SWServerWorker(SWServer& server, SWServerRegistration& registrat
 
 SWServerWorker::~SWServerWorker()
 {
+    ASSERT(m_whenActivatedHandlers.isEmpty());
     callWhenActivatedHandler(false);
 
     auto taken = allWorkers().take(identifier());
@@ -171,13 +172,6 @@ String SWServerWorker::userAgent() const
     return m_server->serviceWorkerClientUserAgent(origin());
 }
 
-void SWServerWorker::claim()
-{
-    ASSERT(m_server);
-    if (m_server)
-        m_server->claim(*this);
-}
-
 void SWServerWorker::setScriptResource(URL&& url, ServiceWorkerContextData::ImportedScript&& script)
 {
     m_scriptResourceMap.set(WTFMove(url), WTFMove(script));
@@ -210,12 +204,13 @@ void SWServerWorker::setHasPendingEvents(bool hasPendingEvents)
     m_registration->tryActivate();
 }
 
-void SWServerWorker::whenActivated(WTF::Function<void(bool)>&& handler)
+void SWServerWorker::whenActivated(CompletionHandler<void(bool)>&& handler)
 {
     if (state() == ServiceWorkerState::Activated) {
         handler(true);
         return;
     }
+    ASSERT(state() == ServiceWorkerState::Activating);
     m_whenActivatedHandlers.append(WTFMove(handler));
 }
 
@@ -249,8 +244,20 @@ void SWServerWorker::setState(State state)
     ASSERT(state != State::Running || m_registration);
     m_state = state;
 
-    if (state == State::Running)
+    switch (state) {
+    case State::Running:
         m_shouldSkipHandleFetch = false;
+        break;
+    case State::Terminating:
+        callWhenActivatedHandler(false);
+        break;
+    case State::NotRunning:
+        callWhenActivatedHandler(false);
+        // As per https://w3c.github.io/ServiceWorker/#activate, a worker goes to activated even if activating fails.
+        if (m_data.state == ServiceWorkerState::Activating)
+            didFinishActivation();
+        break;
+    }
 }
 
 SWServerRegistration* SWServerWorker::registration() const

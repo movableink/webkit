@@ -69,7 +69,7 @@ public:
     void prepareCallOperation(VM& vm)
     {
         UNUSED_PARAM(vm);
-#if !USE(BUILTIN_FRAME_ADDRESS) || !ASSERT_DISABLED
+#if !USE(BUILTIN_FRAME_ADDRESS) || ASSERT_ENABLED
         storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
 #endif
     }
@@ -500,30 +500,6 @@ public:
         move(MacroAssembler::TrustedImm64(JSValue::NumberTag), GPRInfo::numberTagRegister);
         orPtr(MacroAssembler::TrustedImm32(JSValue::OtherTag), GPRInfo::numberTagRegister, GPRInfo::notCellMaskRegister);
 #endif
-    }
-
-    void clearStackFrame(GPRReg currentTop, GPRReg newTop, GPRReg temp, unsigned frameSize)
-    {
-        ASSERT(frameSize % stackAlignmentBytes() == 0);
-        if (frameSize <= 128) {
-            for (unsigned offset = 0; offset < frameSize; offset += sizeof(CPURegister))
-                storePtr(TrustedImm32(0), Address(currentTop, -8 - offset));
-        } else {
-            constexpr unsigned storeBytesPerIteration = stackAlignmentBytes();
-            constexpr unsigned storesPerIteration = storeBytesPerIteration / sizeof(CPURegister);
-
-            move(currentTop, temp);
-            Label zeroLoop = label();
-            subPtr(TrustedImm32(storeBytesPerIteration), temp);
-#if CPU(ARM64)
-            static_assert(storesPerIteration == 2, "clearStackFrame() for ARM64 assumes stack is 16 byte aligned");
-            storePair64(ARM64Registers::zr, ARM64Registers::zr, temp);
-#else
-            for (unsigned i = storesPerIteration; i-- != 0;)
-                storePtr(TrustedImm32(0), Address(temp, sizeof(CPURegister) * i));
-#endif
-            branchPtr(NotEqual, temp, newTop).linkTo(zeroLoop, this);
-        }
     }
 
 #if CPU(X86_64)
@@ -1117,7 +1093,7 @@ public:
 
     Jump branchIfNotNaN(FPRReg fpr)
     {
-        return branchDouble(DoubleEqual, fpr, fpr);
+        return branchDouble(DoubleEqualAndOrdered, fpr, fpr);
     }
 
     Jump branchIfRopeStringImpl(GPRReg stringImplGPR)
@@ -1196,7 +1172,7 @@ public:
     // Access to our fixed callee CallFrame.
     static Address calleeArgumentSlot(int argument)
     {
-        return calleeFrameSlot(virtualRegisterForArgument(argument));
+        return calleeFrameSlot(virtualRegisterForArgumentIncludingThis(argument));
     }
 
     static Address calleeFrameTagSlot(VirtualRegister slot)
@@ -1277,7 +1253,7 @@ public:
     void debugCall(VM&, V_DebugOperation_EPP function, void* argument);
 
     // These methods JIT generate dynamic, debug-only checks - akin to ASSERTs.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     void jitAssertIsInt32(GPRReg);
     void jitAssertIsJSInt32(GPRReg);
     void jitAssertIsJSNumber(GPRReg);
@@ -1540,6 +1516,14 @@ public:
     }
     
     void emitLoadStructure(VM&, RegisterID source, RegisterID dest, RegisterID scratch);
+
+    void emitLoadClassInfoFromStructure(RegisterID structure, RegisterID dst)
+    {
+        loadPtr(Address(structure, Structure::offsetOfClassInfo()), dst);
+#if CPU(ADDRESS64)
+        andPtr(TrustedImmPtr(bitwise_cast<void*>(Structure::classInfoMask)), dst);
+#endif
+    }
 
     void emitStoreStructureWithTypeInfo(TrustedImmPtr structure, RegisterID dest, RegisterID)
     {

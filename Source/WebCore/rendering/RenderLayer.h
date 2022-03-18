@@ -50,8 +50,10 @@
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderPtr.h"
+#include "ScrollBehavior.h"
 #include "ScrollableArea.h"
 #include <memory>
+#include <wtf/Markable.h>
 #include <wtf/WeakPtr.h>
 
 namespace WTF {
@@ -134,10 +136,14 @@ struct ScrollRectToVisibleOptions {
     const ScrollAlignment& alignX { ScrollAlignment::alignCenterIfNeeded };
     const ScrollAlignment& alignY { ScrollAlignment::alignCenterIfNeeded };
     ShouldAllowCrossOriginScrolling shouldAllowCrossOriginScrolling { ShouldAllowCrossOriginScrolling::No };
+    ScrollBehavior behavior { ScrollBehavior::Auto };
 };
 
+using ScrollingScope = uint64_t;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderLayer);
 class RenderLayer final : public ScrollableArea {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RenderLayer);
 public:
     friend class RenderReplica;
     friend class RenderLayerFilters;
@@ -211,7 +217,7 @@ public:
     bool normalFlowListDirty() const { return m_normalFlowListDirty; }
     bool zOrderListsDirty() const { return m_zOrderListsDirty; }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool layerListMutationAllowed() const { return m_layerListMutationAllowed; }
     void setLayerListMutationAllowed(bool flag) { m_layerListMutationAllowed = flag; }
 #endif
@@ -438,10 +444,14 @@ public:
     // Scrolling methods for layers that can scroll their overflow.
     void scrollByRecursively(const IntSize& delta, ScrollableArea** scrolledArea = nullptr);
 
-    WEBCORE_EXPORT void scrollToOffset(const ScrollOffset&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped);
+    bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) override;
 
-    void scrollToXPosition(int x, ScrollType, ScrollClamping = ScrollClamping::Clamped);
-    void scrollToYPosition(int y, ScrollType, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT void scrollToOffset(const ScrollOffset&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT void scrollToOffsetWithAnimation(const ScrollOffset&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped);
+
+    void scrollToXPosition(int x, ScrollType, ScrollClamping = ScrollClamping::Clamped, bool animated = false);
+    void scrollToYPosition(int y, ScrollType, ScrollClamping = ScrollClamping::Clamped, bool animated = false);
+    void scrollToPosition(const ScrollPosition&, ScrollType, ScrollClamping = ScrollClamping::Clamped, bool animated = false);
 
     // These are only used by marquee.
     void scrollToXOffset(int x) { scrollToOffset(ScrollOffset(x, scrollOffset().y()), ScrollType::Programmatic, ScrollClamping::Unclamped); }
@@ -452,8 +462,9 @@ public:
 
     void availableContentSizeChanged(AvailableSizeChangeReason) override;
 
+    enum AutoscrollStatus { NotInProgress, InProgress };
     // "absoluteRect" is in scaled document coordinates.
-    void scrollRectToVisible(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&);
+    void scrollRectToVisible(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&, AutoscrollStatus = AutoscrollStatus::NotInProgress);
 
     bool scrollsOverflow() const;
     bool hasScrollableHorizontalOverflow() const;
@@ -793,7 +804,6 @@ public:
     bool has3DTransform() const { return m_transform && !m_transform->isAffine(); }
     bool hasTransformedAncestor() const { return m_hasTransformedAncestor; }
 
-    void filterNeedsRepaint();
     bool hasFilter() const { return renderer().hasFilter(); }
     bool hasFilterOutsets() const { return !filterOutsets().isZero(); }
     IntOutsets filterOutsets() const;
@@ -853,6 +863,10 @@ public:
 
     bool hasCompositedScrollingAncestor() const { return m_hasCompositedScrollingAncestor; }
     void setHasCompositedScrollingAncestor(bool hasCompositedScrollingAncestor) { m_hasCompositedScrollingAncestor = hasCompositedScrollingAncestor; }
+
+    // Layers with the same ScrollingScope are scrolled by some common ancestor scroller. Used for async scrolling.
+    Optional<ScrollingScope> boxScrollingScope() const { return m_boxScrollingScope; }
+    Optional<ScrollingScope> contentsScrollingScope() const { return m_contentsScrollingScope; }
 
     bool paintsWithTransparency(OptionSet<PaintBehavior> paintBehavior) const
     {
@@ -1260,7 +1274,7 @@ private:
     bool m_containsDirtyOverlayScrollbars : 1;
     bool m_updatingMarqueePosition : 1;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_layerListMutationAllowed : 1;
 #endif
 
@@ -1313,6 +1327,9 @@ private:
     std::unique_ptr<ClipRectsCache> m_clipRectsCache;
     
     IntPoint m_cachedOverlayScrollbarOffset;
+
+    Markable<ScrollingScope, IntegralMarkableTraits<ScrollingScope, 0>> m_boxScrollingScope;
+    Markable<ScrollingScope, IntegralMarkableTraits<ScrollingScope, 0>> m_contentsScrollingScope;
 
     std::unique_ptr<RenderMarquee> m_marquee; // Used for <marquee>.
     
@@ -1368,7 +1385,7 @@ inline RenderLayer* RenderLayer::paintOrderParent() const
     return m_isNormalFlowOnly ? m_parent : stackingContext();
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 class LayerListMutationDetector {
 public:
     LayerListMutationDetector(RenderLayer& layer)
@@ -1387,7 +1404,7 @@ private:
     RenderLayer& m_layer;
     bool m_previousMutationAllowedState;
 };
-#endif
+#endif // ASSERT_ENABLED
 
 void makeMatrixRenderable(TransformationMatrix&, bool has3DRendering);
 

@@ -42,6 +42,7 @@
 #include <ColorSync/ColorSyncPriv.h>
 #endif
 #include <CoreGraphics/CGFontCache.h>
+#include <CoreGraphics/CGPathPrivate.h>
 #include <CoreGraphics/CoreGraphicsPrivate.h>
 
 #else
@@ -249,6 +250,10 @@ bool CGContextGetAllowsFontSubpixelPositioning(CGContextRef);
 bool CGContextDrawsWithCorrectShadowOffsets(CGContextRef);
 CGPatternRef CGPatternCreateWithImage2(CGImageRef, CGAffineTransform, CGPatternTiling);
 
+#if HAVE(CGPATH_GET_NUMBER_OF_ELEMENTS)
+size_t CGPathGetNumberOfElements(CGPathRef);
+#endif
+
 #if HAVE(IOSURFACE)
 CGContextRef CGIOSurfaceContextCreate(IOSurfaceRef, size_t, size_t, size_t, size_t, CGColorSpaceRef, CGBitmapInfo);
 CGImageRef CGIOSurfaceContextCreateImage(CGContextRef);
@@ -282,7 +287,7 @@ void CGContextSetStyle(CGContextRef, CGStyleRef);
 
 void CGContextDrawConicGradient(CGContextRef, CGGradientRef, CGPoint center, CGFloat angle);
 
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400) || (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 120000)
+#if HAVE(CG_PATH_UNEVEN_CORNERS_ROUNDEDRECT)
 void CGPathAddUnevenCornersRoundedRect(CGMutablePathRef, const CGAffineTransform *, CGRect, const CGSize corners[4]);
 #endif
 

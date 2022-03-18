@@ -29,8 +29,7 @@
 #include "config.h"
 #include "FormDataStreamCFNet.h"
 
-#include "BlobData.h"
-#include "BlobRegistry.h"
+#include "BlobRegistryImpl.h"
 #include "FormData.h"
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -105,7 +104,7 @@ struct FormStreamFields {
     Vector<FormDataElement> remainingElements; // in reverse order
     CFReadStreamRef currentStream { nullptr };
     long long currentStreamRangeLength { BlobDataItem::toEndOfFile };
-    MallocPtr<char> currentData;
+    MallocPtr<char, WTF::VectorMalloc> currentData;
     CFReadStreamRef formStream { nullptr };
     unsigned long long streamLength { 0 };
     unsigned long long bytesSent { 0 };
@@ -123,7 +122,6 @@ static void closeCurrentStream(FormStreamFields* form)
         form->currentStream = 0;
         form->currentStreamRangeLength = BlobDataItem::toEndOfFile;
     }
-
     form->currentData = nullptr;
 }
 
@@ -143,7 +141,7 @@ static bool advanceCurrentStream(FormStreamFields* form)
     bool success = switchOn(nextInput.data,
         [form] (Vector<char>& bytes) {
             size_t size = bytes.size();
-            MallocPtr<char> data = bytes.releaseBuffer();
+            MallocPtr<char, WTF::VectorMalloc> data = bytes.releaseBuffer();
             form->currentStream = CFReadStreamCreateWithBytesNoCopy(0, reinterpret_cast<const UInt8*>(data.get()), size, kCFAllocatorNull);
             form->currentData = WTFMove(data);
             return true;
@@ -372,14 +370,16 @@ static void formEventCallback(CFReadStreamRef stream, CFStreamEventType type, vo
 
 RetainPtr<CFReadStreamRef> createHTTPBodyCFReadStream(FormData& formData)
 {
-    auto resolvedFormData = formData.resolveBlobReferences(blobRegistry().blobRegistryImpl());
+    auto resolvedFormData = formData.resolveBlobReferences();
     auto dataForUpload = resolvedFormData->prepareForUpload();
 
     // Precompute the content length so CFNetwork doesn't use chunked mode.
     unsigned long long length = 0;
-    for (auto& element : dataForUpload.data().elements())
-        length += element.lengthInBytes(blobRegistry().blobRegistryImpl());
-
+    for (auto& element : dataForUpload.data().elements()) {
+        length += element.lengthInBytes([](auto& url) {
+            return blobRegistry().blobRegistryImpl()->blobSize(url);
+        });
+    }
     FormCreationContext* formContext = new FormCreationContext { WTFMove(dataForUpload), length };
     CFReadStreamCallBacksV1 callBacks = { 1, formCreate, formFinalize, nullptr, formOpen, nullptr, formRead, nullptr, formCanRead, formClose, formCopyProperty, nullptr, nullptr, formSchedule, formUnschedule };
     return adoptCF(CFReadStreamCreate(nullptr, static_cast<const void*>(&callBacks), formContext));

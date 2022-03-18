@@ -28,6 +28,25 @@ window.UIHelper = class UIHelper {
         eventSender.mouseMoveTo(x2, y2);
         eventSender.mouseUp();
     }
+    
+    static async mouseWheelScrollAt(x, y)
+    {
+        eventSender.monitorWheelEvents();
+        eventSender.mouseMoveTo(x, y);
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, "began", "none");
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -10, "changed", "none");
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(0, 0, "ended", "none");
+        return new Promise(resolve => {
+            eventSender.callAfterScrollingCompletes(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+    }
+
+    static async animationFrame()
+    {
+        return new Promise(requestAnimationFrame);
+    }
 
     static sendEventStream(eventStream)
     {
@@ -356,7 +375,7 @@ window.UIHelper = class UIHelper {
                     uiController.uiScriptComplete(JSON.stringify(uiController.contentsOfUserInterfaceItem('contextMenu')));
                 };
                 uiController.longPressAtPoint(${x}, ${y}, function() { });
-            })();`, resolve);
+            })();`, result => resolve(JSON.parse(result)));
         });
     }
 
@@ -789,12 +808,12 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static setDefaultCalendarType(calendarIdentifier)
+    static setDefaultCalendarType(calendarIdentifier, localeIdentifier)
     {
         if (!this.isWebKit2())
             return Promise.resolve();
 
-        return new Promise(resolve => testRunner.runUIScript(`uiController.setDefaultCalendarType('${calendarIdentifier}')`, resolve));
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setDefaultCalendarType('${calendarIdentifier}', '${localeIdentifier}')`, resolve));
 
     }
 
@@ -975,8 +994,10 @@ window.UIHelper = class UIHelper {
     {
         return new Promise(resolve => {
             testRunner.runUIScript(`
-                const rect = uiController.rectForMenuAction("${action}");
-                uiController.uiScriptComplete(rect ? JSON.stringify(rect) : "");
+                (() => {
+                    const rect = uiController.rectForMenuAction("${action}");
+                    uiController.uiScriptComplete(rect ? JSON.stringify(rect) : "");
+                })();
             `, stringResult => {
                 resolve(stringResult.length ? JSON.parse(stringResult) : null);
             });

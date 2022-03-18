@@ -165,8 +165,11 @@ bool AuxiliaryProcessProxy::sendMessage(std::unique_ptr<IPC::Encoder> encoder, O
         break;
     }
 
-    if (asyncReplyInfo)
-        asyncReplyInfo->first(nullptr);
+    if (asyncReplyInfo) {
+        RunLoop::current().dispatch([completionHandler = WTFMove(asyncReplyInfo->first)]() mutable {
+            completionHandler(nullptr);
+        });
+    }
     
     return false;
 }
@@ -273,6 +276,11 @@ void AuxiliaryProcessProxy::setProcessSuppressionEnabled(bool processSuppression
 
 void AuxiliaryProcessProxy::connectionWillOpen(IPC::Connection&)
 {
+}
+
+void AuxiliaryProcessProxy::logInvalidMessage(IPC::Connection& connection, IPC::StringReference messageReceiverName, IPC::StringReference messageName)
+{
+    RELEASE_LOG_FAULT(IPC, "Received an invalid message '%" PUBLIC_LOG_STRING "::%" PUBLIC_LOG_STRING "' from the %" PUBLIC_LOG_STRING " process.", messageReceiverName.toString().data(), messageName.toString().data(), processName().characters());
 }
 
 } // namespace WebKit

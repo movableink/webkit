@@ -182,11 +182,17 @@ void ViewGestureController::beginSwipeGesture(_UINavigationInteractiveTransition
     RefPtr<WebPageProxy> alternateBackForwardListSourcePage = m_alternateBackForwardListSourcePage.get();
     m_webPageProxyForBackForwardListForCurrentSwipe = alternateBackForwardListSourcePage ? alternateBackForwardListSourcePage.get() : &m_webPageProxy;
 
+    auto& backForwardList = m_webPageProxyForBackForwardListForCurrentSwipe->backForwardList();
+    auto targetItem = makeRefPtr(direction == SwipeDirection::Back ? backForwardList.backItem() : backForwardList.forwardItem());
+    if (!targetItem) {
+        RELEASE_LOG_ERROR(ViewGestures, "Failed to find %s item when beginning swipe.", direction == SwipeDirection::Back ? "back" : "forward");
+        didEndGesture();
+        return;
+    }
+
     m_webPageProxyForBackForwardListForCurrentSwipe->navigationGestureDidBegin();
     if (&m_webPageProxy != m_webPageProxyForBackForwardListForCurrentSwipe)
         m_webPageProxy.navigationGestureDidBegin();
-
-    auto& backForwardList = m_webPageProxyForBackForwardListForCurrentSwipe->backForwardList();
 
     // Copy the snapshot from this view to the one that owns the back forward list, so that
     // swiping forward will have the correct snapshot.
@@ -194,8 +200,6 @@ void ViewGestureController::beginSwipeGesture(_UINavigationInteractiveTransition
         if (auto* currentViewHistoryItem = m_webPageProxy.backForwardList().currentItem())
             backForwardList.currentItem()->setSnapshot(currentViewHistoryItem->snapshot());
     }
-
-    RefPtr<WebBackForwardListItem> targetItem = direction == SwipeDirection::Back ? backForwardList.backItem() : backForwardList.forwardItem();
 
     CGRect liveSwipeViewFrame = [m_liveSwipeView frame];
 
@@ -258,6 +262,8 @@ void ViewGestureController::beginSwipeGesture(_UINavigationInteractiveTransition
     [m_swipeTransitionContext _setInteractor:transition];
     [m_swipeTransitionContext _setTransitionIsInFlight:YES];
     m_didCallWillEndSwipeGesture = false;
+    m_didCallEndSwipeGesture = false;
+    m_removeSnapshotImmediatelyWhenGestureEnds = false;
     [m_swipeTransitionContext _setInteractiveUpdateHandler:^(BOOL finish, CGFloat percent, BOOL transitionCompleted, _UIViewControllerTransitionContext *) {
         if (finish)
             willEndSwipeGesture(*targetItem, !transitionCompleted);
@@ -316,6 +322,8 @@ void ViewGestureController::endSwipeGesture(WebBackForwardListItem* targetItem, 
     if (!m_didCallWillEndSwipeGesture)
         willEndSwipeGesture(*targetItem, cancelled);
 
+    m_didCallEndSwipeGesture = true;
+
     [context _setTransitionIsInFlight:NO];
     [context _setInteractor:nil];
     [context _setAnimator:nil];
@@ -342,6 +350,13 @@ void ViewGestureController::endSwipeGesture(WebBackForwardListItem* targetItem, 
         m_webPageProxy.navigationGestureDidEnd();
 
     if (!m_webPageProxy.provisionalDrawingArea()) {
+        removeSwipeSnapshot();
+        return;
+    }
+
+    // removeSwipeSnapshot() was called between willEndSwipeGesture() and endSwipeGesture().
+    // We couldn't remove it then, because the animation was still running, but now we can!
+    if (m_removeSnapshotImmediatelyWhenGestureEnds) {
         removeSwipeSnapshot();
         return;
     }
@@ -397,6 +412,11 @@ void ViewGestureController::removeSwipeSnapshot()
 
     if (m_activeGestureType != ViewGestureType::Swipe)
         return;
+
+    if (!m_didCallEndSwipeGesture) {
+        m_removeSnapshotImmediatelyWhenGestureEnds = true;
+        return;
+    }
 
     [m_snapshotView removeFromSuperview];
     m_snapshotView = nullptr;

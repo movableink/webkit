@@ -43,9 +43,31 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(OffscreenCanvas);
 
+DetachedOffscreenCanvas::DetachedOffscreenCanvas(std::unique_ptr<ImageBuffer>&& buffer, const IntSize& size, bool originClean)
+    : m_buffer(WTFMove(buffer))
+    , m_size(size)
+    , m_originClean(originClean)
+{
+}
+
+std::unique_ptr<ImageBuffer> DetachedOffscreenCanvas::takeImageBuffer()
+{
+    return WTFMove(m_buffer);
+}
+
 Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& context, unsigned width, unsigned height)
 {
     return adoptRef(*new OffscreenCanvas(context, width, height));
+}
+
+Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& context, std::unique_ptr<DetachedOffscreenCanvas>&& detachedCanvas)
+{
+    Ref<OffscreenCanvas> clone = adoptRef(*new OffscreenCanvas(context, detachedCanvas->size().width(), detachedCanvas->size().height()));
+    clone->setImageBuffer(detachedCanvas->takeImageBuffer());
+    if (!detachedCanvas->originClean())
+        clone->setOriginTainted();
+
+    return clone;
 }
 
 OffscreenCanvas::OffscreenCanvas(ScriptExecutionContext& context, unsigned width, unsigned height)
@@ -62,13 +84,31 @@ OffscreenCanvas::~OffscreenCanvas()
     setImageBuffer(nullptr);
 }
 
+unsigned OffscreenCanvas::width() const
+{
+    if (m_detached)
+        return 0;
+    return CanvasBase::width();
+}
+
+unsigned OffscreenCanvas::height() const
+{
+    if (m_detached)
+        return 0;
+    return CanvasBase::height();
+}
+
 void OffscreenCanvas::setWidth(unsigned newWidth)
 {
+    if (m_detached)
+        return;
     setSize(IntSize(newWidth, height()));
 }
 
 void OffscreenCanvas::setHeight(unsigned newHeight)
 {
+    if (m_detached)
+        return;
     setSize(IntSize(width(), newHeight));
 }
 
@@ -80,6 +120,9 @@ void OffscreenCanvas::setSize(const IntSize& newSize)
 
 ExceptionOr<OffscreenRenderingContext> OffscreenCanvas::getContext(JSC::JSGlobalObject& state, RenderingContextType contextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
+    if (m_detached)
+        return Exception { InvalidStateError };
+
     if (contextType == RenderingContextType::_2d) {
         if (m_context) {
             if (!is<OffscreenCanvasRenderingContext2D>(*m_context))
@@ -118,7 +161,7 @@ ExceptionOr<OffscreenRenderingContext> OffscreenCanvas::getContext(JSC::JSGlobal
 
 ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
 {
-    if (!m_context)
+    if (m_detached || !m_context)
         return Exception { InvalidStateError };
 
     if (is<OffscreenCanvasRenderingContext2D>(*m_context)) {
@@ -126,7 +169,7 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
             return { RefPtr<ImageBitmap> { nullptr } };
 
         if (!m_hasCreatedImageBuffer)
-            return { ImageBitmap::create({ ImageBuffer::create(size(), Unaccelerated), true }) };
+            return { ImageBitmap::create({ ImageBuffer::create(size(), RenderingMode::Unaccelerated), true }) };
 
         auto buffer = takeImageBuffer();
         if (!buffer)
@@ -147,17 +190,17 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
         if (!imageBitmap->buffer())
             return { RefPtr<ImageBitmap> { nullptr } };
 
-        auto* gc3d = webGLContext->graphicsContext3D();
+        auto* gc3d = webGLContext->graphicsContextGL();
         gc3d->paintRenderingResultsToCanvas(imageBitmap->buffer());
 
         // FIXME: The transfer algorithm requires that the canvas effectively
         // creates a new backing store. Since we're not doing that yet, we
         // need to erase what's there.
 
-        GC3Dfloat clearColor[4];
-        gc3d->getFloatv(GraphicsContext3D::COLOR_CLEAR_VALUE, clearColor);
+        GCGLfloat clearColor[4];
+        gc3d->getFloatv(GraphicsContextGL::COLOR_CLEAR_VALUE, clearColor);
         gc3d->clearColor(0, 0, 0, 0);
-        gc3d->clear(GraphicsContext3D::COLOR_BUFFER_BIT | GraphicsContext3D::DEPTH_BUFFER_BIT | GraphicsContext3D::STENCIL_BUFFER_BIT);
+        gc3d->clear(GraphicsContextGL::COLOR_BUFFER_BIT | GraphicsContextGL::DEPTH_BUFFER_BIT | GraphicsContextGL::STENCIL_BUFFER_BIT);
         gc3d->clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
 
         return { WTFMove(imageBitmap) };
@@ -192,7 +235,7 @@ void OffscreenCanvas::convertToBlob(ImageEncodeOptions&& options, Ref<DeferredPr
         promise->reject(IndexSizeError);
         return;
     }
-    if (!buffer()) {
+    if (m_detached || !buffer()) {
         promise->reject(InvalidStateError);
         return;
     }
@@ -214,7 +257,26 @@ void OffscreenCanvas::convertToBlob(ImageEncodeOptions&& options, Ref<DeferredPr
 
 void OffscreenCanvas::didDraw(const FloatRect& rect)
 {
+    clearCopiedImage();
     notifyObserversCanvasChanged(rect);
+}
+
+Image* OffscreenCanvas::copiedImage() const
+{
+    if (m_detached)
+        return nullptr;
+
+    if (!m_copiedImage && buffer()) {
+        if (m_context)
+            m_context->paintRenderingResultsToCanvas();
+        m_copiedImage = buffer()->copyImage(CopyBackingStore, PreserveResolution::Yes);
+    }
+    return m_copiedImage.get();
+}
+
+void OffscreenCanvas::clearCopiedImage() const
+{
+    m_copiedImage = nullptr;
 }
 
 SecurityOrigin* OffscreenCanvas::securityOrigin() const
@@ -224,6 +286,21 @@ SecurityOrigin* OffscreenCanvas::securityOrigin() const
         return &downcast<WorkerGlobalScope>(context).topOrigin();
 
     return &downcast<Document>(context).securityOrigin();
+}
+
+bool OffscreenCanvas::canDetach() const
+{
+    return !m_detached && !m_context;
+}
+
+std::unique_ptr<DetachedOffscreenCanvas> OffscreenCanvas::detach()
+{
+    if (!canDetach())
+        return nullptr;
+
+    m_detached = true;
+
+    return makeUnique<DetachedOffscreenCanvas>(takeImageBuffer(), size(), originClean());
 }
 
 CSSValuePool& OffscreenCanvas::cssValuePool()
@@ -243,12 +320,13 @@ void OffscreenCanvas::createImageBuffer() const
     if (!width() || !height())
         return;
 
-    setImageBuffer(ImageBuffer::create(size(), Unaccelerated));
+    setImageBuffer(ImageBuffer::create(size(), RenderingMode::Unaccelerated));
 }
 
 std::unique_ptr<ImageBuffer> OffscreenCanvas::takeImageBuffer() const
 {
-    m_hasCreatedImageBuffer = true;
+    if (!m_detached)
+        m_hasCreatedImageBuffer = true;
 
     // This function is primarily for use with transferToImageBitmap, which
     // requires that the canvas bitmap refer to a new, blank bitmap of the same
@@ -257,7 +335,8 @@ std::unique_ptr<ImageBuffer> OffscreenCanvas::takeImageBuffer() const
     if (size().isEmpty())
         return nullptr;
 
-    return setImageBuffer(ImageBuffer::create(size(), Unaccelerated));
+    clearCopiedImage();
+    return setImageBuffer(m_detached ? nullptr : ImageBuffer::create(size(), RenderingMode::Unaccelerated));
 }
 
 void OffscreenCanvas::reset()
@@ -268,6 +347,7 @@ void OffscreenCanvas::reset()
 
     m_hasCreatedImageBuffer = false;
     setImageBuffer(nullptr);
+    clearCopiedImage();
 
     notifyObserversCanvasResized();
 }

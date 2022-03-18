@@ -43,6 +43,7 @@
 #include "ServiceWorkerFetchResult.h"
 #include "ServiceWorkerJobData.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/WTFString.h>
 
@@ -356,6 +357,17 @@ void SWServer::scheduleJob(ServiceWorkerJobData&& jobData)
         jobQueue.runNextJob();
 }
 
+void SWServer::scheduleUnregisterJob(ServiceWorkerJobDataIdentifier jobDataIdentifier, SWServerRegistration& registration, DocumentOrWorkerIdentifier contextIdentifier, URL&& clientCreationURL)
+{
+    ServiceWorkerJobData jobData { jobDataIdentifier, contextIdentifier };
+    jobData.clientCreationURL = WTFMove(clientCreationURL);
+    jobData.topOrigin = registration.data().key.topOrigin();
+    jobData.type = ServiceWorkerJobType::Unregister;
+    jobData.scopeURL = registration.data().scopeURL;
+
+    scheduleJob(WTFMove(jobData));
+}
+
 void SWServer::rejectJob(const ServiceWorkerJobData& jobData, const ExceptionData& exceptionData)
 {
     LOG(ServiceWorker, "Rejected ServiceWorker job %s in server", jobData.identifier().loggingString().utf8().data());
@@ -547,8 +559,11 @@ void SWServer::forEachClientForOrigin(const ClientOrigin& origin, const WTF::Fun
     }
 }
 
-void SWServer::claim(SWServerWorker& worker)
+Optional<ExceptionData> SWServer::claim(SWServerWorker& worker)
 {
+    if (!worker.isActive())
+        return ExceptionData { InvalidStateError, "Service worker is not active"_s };
+
     auto& origin = worker.origin();
     forEachClientForOrigin(origin, [&](auto& clientData) {
         auto* registration = this->doRegistrationMatching(origin.topOrigin, clientData.url);
@@ -566,6 +581,7 @@ void SWServer::claim(SWServerWorker& worker)
         }
         registration->controlClient(clientData.identifier);
     });
+    return { };
 }
 
 void SWServer::didResolveRegistrationPromise(Connection* connection, const ServiceWorkerRegistrationKey& registrationKey)
@@ -912,7 +928,7 @@ void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, S
 
             m_clientIdentifiersPerOrigin.remove(clientOrigin);
         });
-        iterator->value.terminateServiceWorkersTimer->startOneShot(m_isProcessTerminationDelayEnabled ? terminationDelay : 0_s);
+        iterator->value.terminateServiceWorkersTimer->startOneShot(m_isProcessTerminationDelayEnabled && !MemoryPressureHandler::singleton().isUnderMemoryPressure() ? terminationDelay : 0_s);
     }
 
     auto clientsByRegistrableDomainIterator = m_clientsByRegistrableDomain.find(clientRegistrableDomain);
@@ -930,6 +946,17 @@ void SWServer::unregisterServiceWorkerClient(const ClientOrigin& clientOrigin, S
         registration->removeClientUsingRegistration(clientIdentifier);
 
     m_clientToControllingRegistration.remove(registrationIterator);
+}
+
+void SWServer::handleLowMemoryWarning()
+{
+    // Accelerating the delayed termination of unused service workers due to memory pressure.
+    if (m_isProcessTerminationDelayEnabled) {
+        for (auto& clients : m_clientIdentifiersPerOrigin.values()) {
+            if (clients.terminateServiceWorkersTimer)
+                clients.terminateServiceWorkersTimer->startOneShot(0_s);
+        }
+    }
 }
 
 void SWServer::removeFromScopeToRegistrationMap(const ServiceWorkerRegistrationKey& key)
@@ -1008,9 +1035,10 @@ void SWServer::performGetOriginsWithRegistrationsCallbacks()
 
 void SWServer::addContextConnection(SWServerToContextConnection& connection)
 {
+    RELEASE_LOG(ServiceWorker, "SWServer::addContextConnection");
+
     ASSERT(!m_contextConnections.contains(connection.registrableDomain()));
 
-    m_pendingConnectionDomains.remove(connection.registrableDomain());
     m_contextConnections.add(connection.registrableDomain(), &connection);
 
     contextConnectionCreated(connection);
@@ -1018,6 +1046,8 @@ void SWServer::addContextConnection(SWServerToContextConnection& connection)
 
 void SWServer::removeContextConnection(SWServerToContextConnection& connection)
 {
+    RELEASE_LOG(ServiceWorker, "SWServer::removeContextConnection");
+
     auto& registrableDomain = connection.registrableDomain();
 
     ASSERT(m_contextConnections.get(registrableDomain) == &connection);
@@ -1034,8 +1064,24 @@ void SWServer::createContextConnection(const RegistrableDomain& registrableDomai
     if (m_pendingConnectionDomains.contains(registrableDomain))
         return;
 
+    RELEASE_LOG(ServiceWorker, "SWServer::createContextConnection will create a connection");
+
     m_pendingConnectionDomains.add(registrableDomain);
-    m_createContextConnectionCallback(registrableDomain);
+    m_createContextConnectionCallback(registrableDomain, [this, weakThis = makeWeakPtr(this), registrableDomain] {
+        if (!weakThis)
+            return;
+
+        RELEASE_LOG(ServiceWorker, "SWServer::createContextConnection should now have created a connection");
+
+        ASSERT(m_pendingConnectionDomains.contains(registrableDomain));
+        m_pendingConnectionDomains.remove(registrableDomain);
+
+        if (m_contextConnections.contains(registrableDomain))
+            return;
+
+        if (needsContextConnectionForRegistrableDomain(registrableDomain))
+            createContextConnection(registrableDomain);
+    });
 }
 
 bool SWServer::canHandleScheme(StringView scheme) const

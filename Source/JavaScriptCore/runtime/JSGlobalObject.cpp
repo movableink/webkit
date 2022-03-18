@@ -79,7 +79,9 @@
 #include "JSArrayBuffer.h"
 #include "JSArrayBufferConstructor.h"
 #include "JSArrayBufferPrototype.h"
+#include "JSArrayIterator.h"
 #include "JSAsyncFunction.h"
+#include "JSAsyncGenerator.h"
 #include "JSAsyncGeneratorFunction.h"
 #include "JSBigInt.h"
 #include "JSBoundFunction.h"
@@ -92,6 +94,7 @@
 #include "JSDataViewPrototype.h"
 #include "JSDollarVM.h"
 #include "JSFunction.h"
+#include "JSGenerator.h"
 #include "JSGeneratorFunction.h"
 #include "JSGenericTypedArrayViewConstructorInlines.h"
 #include "JSGenericTypedArrayViewInlines.h"
@@ -109,7 +112,6 @@
 #include "JSModuleNamespaceObject.h"
 #include "JSModuleRecord.h"
 #include "JSNativeStdFunction.h"
-#include "JSNonDestructibleProxy.h"
 #include "JSONObject.h"
 #include "JSPromise.h"
 #include "JSPromiseConstructor.h"
@@ -217,9 +219,6 @@
 #include "IntlObject.h"
 #include "IntlPluralRules.h"
 #include "IntlPluralRulesPrototype.h"
-#include <unicode/ucol.h>
-#include <unicode/udat.h>
-#include <unicode/unum.h>
 #endif // ENABLE(INTL)
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -291,15 +290,22 @@ static EncodedJSValue JSC_HOST_CALL makeBoundFunction(JSGlobalObject* globalObje
 static EncodedJSValue JSC_HOST_CALL hasOwnLengthProperty(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* target = asObject(callFrame->uncheckedArgument(0));
     JSFunction* function = jsDynamicCast<JSFunction*>(vm, target);
-    if (function)
-        return JSValue::encode(jsBoolean(function->areNameAndLengthOriginal(vm)));
-    return JSValue::encode(jsBoolean(target->hasOwnProperty(globalObject, vm.propertyNames->length)));
+    if (function && function->canAssumeNameAndLengthAreOriginal(vm)) {
+#if ASSERT_ENABLED
+        bool result = target->hasOwnProperty(globalObject, vm.propertyNames->length);
+        RETURN_IF_EXCEPTION(scope, { });
+        ASSERT(result);
+#endif
+        return JSValue::encode(jsBoolean(true));
+    }
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(target->hasOwnProperty(globalObject, vm.propertyNames->length))));
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 static EncodedJSValue JSC_HOST_CALL assertCall(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     RELEASE_ASSERT(callFrame->argument(0).isBoolean());
@@ -325,7 +331,7 @@ static EncodedJSValue JSC_HOST_CALL assertCall(JSGlobalObject* globalObject, Cal
     RELEASE_ASSERT_WITH_MESSAGE(false, "JS assertion failed at line %u in:\n%s\n", line, codeBlock->sourceCodeForTools().data());
     return JSValue::encode(jsUndefined());
 }
-#endif
+#endif // ASSERT_ENABLED
 
 } // namespace JSC
 
@@ -558,7 +564,7 @@ void JSGlobalObject::init(VM& vm)
         });
     m_arrayProtoValuesFunction.initLater(
         [] (const Initializer<JSFunction>& init) {
-            init.set(JSFunction::create(init.vm, arrayPrototypeValuesCodeGenerator(init.vm), init.owner));
+            init.set(JSFunction::create(init.vm, init.owner, 0, init.vm.propertyNames->values.string(), arrayProtoFuncValues, ArrayValuesIntrinsic));
         });
 
     m_iteratorProtocolFunction.initLater(
@@ -754,6 +760,10 @@ void JSGlobalObject::init(VM& vm)
 
     m_generatorPrototype.set(vm, this, GeneratorPrototype::create(vm, this, GeneratorPrototype::createStructure(vm, this, m_iteratorPrototype.get())));
     m_asyncGeneratorPrototype.set(vm, this, AsyncGeneratorPrototype::create(vm, this, AsyncGeneratorPrototype::createStructure(vm, this, m_asyncIteratorPrototype.get())));
+
+    auto* arrayIteratorPrototype = ArrayIteratorPrototype::create(vm, this, ArrayIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
+    m_arrayIteratorPrototype.set(vm, this, arrayIteratorPrototype);
+    m_arrayIteratorStructure.set(vm, this, JSArrayIterator::createStructure(vm, this, arrayIteratorPrototype));
 
     JSFunction* defaultPromiseThen = JSFunction::create(vm, promisePrototypeThenCodeGenerator(vm), this);
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::defaultPromiseThen)].set(vm, this, defaultPromiseThen);
@@ -992,9 +1002,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
 
     // FIXME: Initializing them lazily.
     // https://bugs.webkit.org/show_bug.cgi?id=203795
-    JSObject* arrayIteratorPrototype = ArrayIteratorPrototype::create(vm, this, ArrayIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
-    jsCast<JSObject*>(linkTimeConstant(LinkTimeConstant::ArrayIterator))->putDirect(vm, vm.propertyNames->prototype, arrayIteratorPrototype);
-
     JSObject* asyncFromSyncIteratorPrototype = AsyncFromSyncIteratorPrototype::create(vm, this, AsyncFromSyncIteratorPrototype::createStructure(vm, this, m_iteratorPrototype.get()));
     jsCast<JSObject*>(linkTimeConstant(LinkTimeConstant::AsyncFromSyncIterator))->putDirect(vm, vm.propertyNames->prototype, asyncFromSyncIteratorPrototype);
 
@@ -1168,7 +1175,7 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
         GlobalPropertyInfo(vm.propertyNames->NaN, jsNaN(), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         GlobalPropertyInfo(vm.propertyNames->Infinity, jsNumber(std::numeric_limits<double>::infinity()), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         GlobalPropertyInfo(vm.propertyNames->undefinedKeyword, jsUndefined(), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         GlobalPropertyInfo(vm.propertyNames->builtinNames().assertPrivateName(), JSFunction::create(vm, this, 1, String(), assertCall), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
 #endif
     };
@@ -1215,6 +1222,7 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
 #endif // ENABLE(WEBASSEMBLY)
 
 #undef CREATE_PROTOTYPE_FOR_LAZY_TYPE
+
 
     {
         ObjectPropertyCondition condition = setupAdaptiveWatchpoint(this, arrayIteratorPrototype, vm.propertyNames->next);
@@ -1313,7 +1321,7 @@ void JSGlobalObject::addFunction(JSGlobalObject* globalObject, const Identifier&
 {
     VM& vm = globalObject->vm();
     VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);
-    methodTable(vm)->deleteProperty(this, globalObject, propertyName);
+    JSCell::deleteProperty(this, globalObject, propertyName);
     addGlobalVar(propertyName);
 }
 
@@ -1703,7 +1711,7 @@ void JSGlobalObject::resetPrototype(VM& vm, JSValue prototype)
     setPrototypeDirect(vm, prototype);
     fixupPrototypeChainWithObjectPrototype(vm);
     // Whenever we change the prototype of the global object, we need to create a new JSProxy with the correct prototype.
-    setGlobalThis(vm, JSNonDestructibleProxy::create(vm, JSNonDestructibleProxy::createStructure(vm, this, prototype, PureForwardingProxyType), this));
+    setGlobalThis(vm, JSProxy::create(vm, JSProxy::createStructure(vm, this, prototype, PureForwardingProxyType), this));
 }
 
 void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -1762,6 +1770,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_iteratorPrototype);
     visitor.append(thisObject->m_generatorFunctionPrototype);
     visitor.append(thisObject->m_generatorPrototype);
+    visitor.append(thisObject->m_arrayIteratorPrototype);
     visitor.append(thisObject->m_asyncFunctionPrototype);
     visitor.append(thisObject->m_asyncGeneratorPrototype);
     visitor.append(thisObject->m_asyncIteratorPrototype);
@@ -1812,6 +1821,7 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_asyncGeneratorFunctionStructure);
     visitor.append(thisObject->m_generatorStructure);
     visitor.append(thisObject->m_asyncGeneratorStructure);
+    visitor.append(thisObject->m_arrayIteratorStructure);
     thisObject->m_iteratorResultObjectStructure.visit(visitor);
     visitor.append(thisObject->m_regExpMatchesArrayStructure);
     thisObject->m_moduleRecordStructure.visit(visitor);
@@ -2063,79 +2073,6 @@ void JSGlobalObject::setName(const String& name)
 #endif
 }
 
-# if ENABLE(INTL)
-static void addMissingScriptLocales(HashSet<String>& availableLocales)
-{
-    if (availableLocales.contains("pa-Arab-PK"))
-        availableLocales.add("pa-PK"_s);
-    if (availableLocales.contains("zh-Hans-CN"))
-        availableLocales.add("zh-CN"_s);
-    if (availableLocales.contains("zh-Hant-HK"))
-        availableLocales.add("zh-HK"_s);
-    if (availableLocales.contains("zh-Hans-SG"))
-        availableLocales.add("zh-SG"_s);
-    if (availableLocales.contains("zh-Hant-TW"))
-        availableLocales.add("zh-TW"_s);
-}
-
-const HashSet<String>& JSGlobalObject::intlCollatorAvailableLocales()
-{
-    if (m_intlCollatorAvailableLocales.isEmpty()) {
-        int32_t count = ucol_countAvailable();
-        for (int32_t i = 0; i < count; ++i) {
-            String locale = convertICULocaleToBCP47LanguageTag(ucol_getAvailable(i));
-            if (!locale.isEmpty())
-                m_intlCollatorAvailableLocales.add(locale);
-        }
-        addMissingScriptLocales(m_intlCollatorAvailableLocales);
-    }
-    return m_intlCollatorAvailableLocales;
-}
-
-const HashSet<String>& JSGlobalObject::intlDateTimeFormatAvailableLocales()
-{
-    if (m_intlDateTimeFormatAvailableLocales.isEmpty()) {
-        int32_t count = udat_countAvailable();
-        for (int32_t i = 0; i < count; ++i) {
-            String locale = convertICULocaleToBCP47LanguageTag(udat_getAvailable(i));
-            if (!locale.isEmpty())
-                m_intlDateTimeFormatAvailableLocales.add(locale);
-        }
-        addMissingScriptLocales(m_intlDateTimeFormatAvailableLocales);
-    }
-    return m_intlDateTimeFormatAvailableLocales;
-}
-
-const HashSet<String>& JSGlobalObject::intlNumberFormatAvailableLocales()
-{
-    if (m_intlNumberFormatAvailableLocales.isEmpty()) {
-        int32_t count = unum_countAvailable();
-        for (int32_t i = 0; i < count; ++i) {
-            String locale = convertICULocaleToBCP47LanguageTag(unum_getAvailable(i));
-            if (!locale.isEmpty())
-                m_intlNumberFormatAvailableLocales.add(locale);
-        }
-        addMissingScriptLocales(m_intlNumberFormatAvailableLocales);
-    }
-    return m_intlNumberFormatAvailableLocales;
-}
-
-const HashSet<String>& JSGlobalObject::intlPluralRulesAvailableLocales()
-{
-    if (m_intlPluralRulesAvailableLocales.isEmpty()) {
-        int32_t count = uloc_countAvailable();
-        for (int32_t i = 0; i < count; ++i) {
-            String locale = convertICULocaleToBCP47LanguageTag(uloc_getAvailable(i));
-            if (!locale.isEmpty())
-                m_intlPluralRulesAvailableLocales.add(locale);
-        }
-        addMissingScriptLocales(m_intlPluralRulesAvailableLocales);
-    }
-    return m_intlPluralRulesAvailableLocales;
-}
-
-#endif // ENABLE(INTL)
-
 void JSGlobalObject::bumpGlobalLexicalBindingEpoch(VM& vm)
 {
     if (++m_globalLexicalBindingEpoch == Options::thresholdForGlobalLexicalBindingEpoch()) {
@@ -2205,7 +2142,7 @@ void JSGlobalObject::finishCreation(VM& vm)
     structure(vm)->setGlobalObject(vm, this);
     m_runtimeFlags = m_globalObjectMethodTable->javaScriptRuntimeFlags(this);
     init(vm);
-    setGlobalThis(vm, JSNonDestructibleProxy::create(vm, JSNonDestructibleProxy::createStructure(vm, this, getPrototypeDirect(vm), PureForwardingProxyType), this));
+    setGlobalThis(vm, JSProxy::create(vm, JSProxy::createStructure(vm, this, getPrototypeDirect(vm), PureForwardingProxyType), this));
     ASSERT(type() == GlobalObjectType);
 }
 

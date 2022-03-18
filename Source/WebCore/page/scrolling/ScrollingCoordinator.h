@@ -121,7 +121,7 @@ public:
 
     // These virtual functions are currently unique to the threaded scrolling architecture. 
     virtual void commitTreeStateIfNeeded() { }
-    virtual bool requestScrollPositionUpdate(ScrollableArea&, const IntPoint&) { return false; }
+    virtual bool requestScrollPositionUpdate(ScrollableArea&, const IntPoint&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped) { return false; }
     virtual ScrollingEventResult handleWheelEvent(FrameView&, const PlatformWheelEvent&) { return ScrollingEventResult::DidNotHandleEvent; }
 
     // Create an unparented node.
@@ -152,7 +152,6 @@ public:
     };
     virtual void setNodeLayers(ScrollingNodeID, const NodeLayers&) { }
 
-    virtual void setRectRelativeToParentNode(ScrollingNodeID, const LayoutRect&) { }
     virtual void setScrollingNodeScrollableAreaGeometry(ScrollingNodeID, ScrollableArea&) { }
     virtual void setFrameScrollingNodeState(ScrollingNodeID, const FrameView&) { }
     virtual void setViewportConstraintedNodeConstraints(ScrollingNodeID, const ViewportConstraints&) { }
@@ -169,21 +168,13 @@ public:
     // Generated a unique id for scrolling nodes.
     ScrollingNodeID uniqueScrollingNodeID();
 
-    enum MainThreadScrollingReasonFlags {
-        ForcedOnMainThread                                          = 1 << 0,
-        HasSlowRepaintObjects                                       = 1 << 1,
-        HasViewportConstrainedObjectsWithoutSupportingFixedLayers   = 1 << 2,
-        HasNonLayerViewportConstrainedObjects                       = 1 << 3,
-        IsImageDocument                                             = 1 << 4
-    };
-
-    SynchronousScrollingReasons synchronousScrollingReasons(const FrameView&) const;
+    OptionSet<SynchronousScrollingReason> synchronousScrollingReasons(const FrameView&) const;
     bool shouldUpdateScrollLayerPositionSynchronously(const FrameView&) const;
 
     virtual void willDestroyScrollableArea(ScrollableArea&) { }
     virtual void scrollableAreaScrollbarLayerDidChange(ScrollableArea&, ScrollbarOrientation) { }
 
-    static String synchronousScrollingReasonsAsText(SynchronousScrollingReasons);
+    static String synchronousScrollingReasonsAsText(OptionSet<SynchronousScrollingReason>);
     String synchronousScrollingReasonsAsText() const;
 
     EventTrackingRegions absoluteEventTrackingRegions() const;
@@ -206,7 +197,7 @@ protected:
     Page* m_page; // FIXME: ideally this would be a reference but it gets nulled on async teardown.
 
 private:
-    virtual void setSynchronousScrollingReasons(FrameView&, SynchronousScrollingReasons) { }
+    virtual void setSynchronousScrollingReasons(ScrollingNodeID, OptionSet<SynchronousScrollingReason>) { }
 
     virtual bool hasVisibleSlowRepaintViewportConstrainedObjects(const FrameView&) const;
     void updateSynchronousScrollingReasons(FrameView&);
@@ -221,7 +212,6 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollableAreaParam
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingNodeType);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingLayerPositionAction);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ViewportRectStability);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollType);
 
 } // namespace WebCore
 

@@ -74,6 +74,7 @@
 #include "Logging.h"
 #include "LowPowerModeNotifier.h"
 #include "MediaCanStartListener.h"
+#include "MediaRecorderProvider.h"
 #include "Navigator.h"
 #include "PageConfiguration.h"
 #include "PageConsoleClient.h"
@@ -119,14 +120,15 @@
 #include "TextIterator.h"
 #include "TextResourceDecoder.h"
 #include "UserContentProvider.h"
+#include "UserContentURLPattern.h"
 #include "UserInputBridge.h"
+#include "UserStyleSheet.h"
 #include "ValidationMessageClient.h"
 #include "VisitedLinkState.h"
 #include "VisitedLinkStore.h"
 #include "VoidCallback.h"
 #include "WheelEventDeltaFilter.h"
 #include "Widget.h"
-#include <wtf/Deque.h>
 #include <wtf/FileSystem.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
@@ -149,10 +151,6 @@
 
 #if ENABLE(INDEXED_DATABASE)
 #include "IDBConnectionToServer.h"
-#endif
-
-#if ENABLE(DATA_INTERACTION)
-#include "SelectionRect.h"
 #endif
 
 #if ENABLE(WEBGL)
@@ -224,16 +222,14 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #endif
     , m_userInputBridge(makeUnique<UserInputBridge>(*this))
     , m_inspectorController(makeUnique<InspectorController>(*this, pageConfiguration.inspectorClient))
-#if ENABLE(POINTER_EVENTS)
     , m_pointerCaptureController(makeUnique<PointerCaptureController>(*this))
-#endif
 #if ENABLE(POINTER_LOCK)
     , m_pointerLockController(makeUnique<PointerLockController>(*this))
 #endif
     , m_settings(Settings::create(this))
     , m_progress(makeUnique<ProgressTracker>(WTFMove(pageConfiguration.progressTrackerClient)))
     , m_backForwardController(makeUnique<BackForwardController>(*this, WTFMove(pageConfiguration.backForwardClient)))
-    , m_mainFrame(Frame::create(this, nullptr, pageConfiguration.loaderClientForMainFrame))
+    , m_mainFrame(Frame::create(this, nullptr, WTFMove(pageConfiguration.loaderClientForMainFrame)))
     , m_editorClient(WTFMove(pageConfiguration.editorClient))
     , m_plugInClient(WTFMove(pageConfiguration.plugInClient))
     , m_validationMessageClient(WTFMove(pageConfiguration.validationMessageClient))
@@ -245,6 +241,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #if ENABLE(SPEECH_SYNTHESIS)
     , m_speechSynthesisClient(WTFMove(pageConfiguration.speechSynthesisClient))
 #endif
+    , m_mediaRecorderProvider((WTFMove(pageConfiguration.mediaRecorderProvider)))
     , m_libWebRTCProvider(WTFMove(pageConfiguration.libWebRTCProvider))
     , m_verticalScrollElasticity(ScrollElasticityAllowed)
     , m_horizontalScrollElasticity(ScrollElasticityAllowed)
@@ -327,6 +324,14 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #if USE(LIBWEBRTC)
     m_libWebRTCProvider->supportsVP8(RuntimeEnabledFeatures::sharedFeatures().webRTCVP8CodecEnabled());
 #endif
+
+    m_corsDisablingPatterns.reserveInitialCapacity(pageConfiguration.corsDisablingPatterns.size());
+    for (auto&& pattern : WTFMove(pageConfiguration.corsDisablingPatterns)) {
+        UserContentURLPattern parsedPattern(WTFMove(pattern));
+        if (parsedPattern.isValid())
+            m_corsDisablingPatterns.uncheckedAppend(WTFMove(parsedPattern));
+    }
+    m_corsDisablingPatterns.shrinkToFit();
 }
 
 Page::~Page()
@@ -920,26 +925,29 @@ static bool isEditableTextInputElement(const Element& element)
 
 Vector<Ref<Element>> Page::editableElementsInRect(const FloatRect& searchRectInRootViewCoordinates) const
 {
+    auto frameView = makeRefPtr(mainFrame().view());
+    if (!frameView)
+        return { };
+
+    auto document = makeRefPtr(mainFrame().document());
+    if (!document)
+        return { };
+
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::CollectMultipleElements, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowVisibleChildFrameContentOnly };
+    LayoutRect searchRectInMainFrameCoordinates = frameView->rootViewToContents(roundedIntRect(searchRectInRootViewCoordinates));
+    HitTestResult hitTestResult { searchRectInMainFrameCoordinates };
+    if (!document->hitTest(hitType, hitTestResult))
+        return { };
+
     Vector<Ref<Element>> result;
-    forEachDocument([&] (Document& document) {
-        Deque<Node*> nodesToSearch;
-        nodesToSearch.append(&document);
-        while (!nodesToSearch.isEmpty()) {
-            auto* node = nodesToSearch.takeFirst();
-
-            // It is possible to have nested text input contexts (e.g. <input type='text'> inside contenteditable) but
-            // in this case we just take the outermost context and skip the rest.
-            if (!is<Element>(node) || !isEditableTextInputElement(downcast<Element>(*node))) {
-                for (auto* child = node->firstChild(); child; child = child->nextSibling())
-                    nodesToSearch.append(child);
-                continue;
-            }
-
-            auto& element = downcast<Element>(*node);
-            if (searchRectInRootViewCoordinates.intersects(element.clientRect()))
-                result.append(element);
+    auto& nodeSet = hitTestResult.listBasedTestResult();
+    result.reserveInitialCapacity(nodeSet.size());
+    for (auto& node : nodeSet) {
+        if (is<Element>(node) && isEditableTextInputElement(downcast<Element>(*node))) {
+            ASSERT(searchRectInRootViewCoordinates.intersects(downcast<Element>(*node).clientRect()));
+            result.uncheckedAppend(downcast<Element>(*node));
         }
-    });
+    }
     return result;
 }
 
@@ -1026,12 +1034,12 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
     RefPtr<FrameView> view = document->view();
 
     if (scale == m_pageScaleFactor) {
-        if (view && view->scrollPosition() != origin && !view->delegatesPageScaling())
+        if (view && view->scrollPosition() != origin && !delegatesScaling())
             document->updateLayoutIgnorePendingStylesheets();
     } else {
         m_pageScaleFactor = scale;
 
-        if (view && !view->delegatesPageScaling()) {
+        if (view && !delegatesScaling()) {
             view->setNeedsLayoutAfterViewConfigurationChange();
             view->setNeedsCompositingGeometryUpdate();
 
@@ -1046,7 +1054,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
         if (view && view->fixedElementsLayoutRelativeToFrame())
             view->setViewportConstrainedObjectsNeedLayout();
 
-        if (view && view->scrollPosition() != origin && !view->delegatesPageScaling() && document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
+        if (view && view->scrollPosition() != origin && !delegatesScaling() && document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layoutContext().layout();
     }
 
@@ -1068,6 +1076,11 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
 #else
     UNUSED_PARAM(inStableState);
 #endif
+}
+
+void Page::setDelegatesScaling(bool delegatesScaling)
+{
+    m_delegatesScaling = delegatesScaling;
 }
 
 void Page::setViewScaleFactor(float scale)
@@ -1319,6 +1332,8 @@ void Page::updateRendering()
     });
 
     forEachDocument([] (Document& document) {
+        if (!document.domWindow())
+            return;
         DOMHighResTimeStamp timestamp = document.domWindow()->nowTimestamp();
         document.updateAnimationsAndSendEvents(timestamp);
         // FIXME: Run the fullscreen steps.
@@ -1340,6 +1355,16 @@ void Page::updateRendering()
 #endif
 
     layoutIfNeeded();
+
+    forEachDocument([] (Document& document) {
+        document.updateHighlightPositions();
+    });
+
+#if ENABLE(VIDEO_TRACK)
+    forEachDocument([] (Document& document) {
+        document.updateTextTrackRepresentationImageIfNeeded();
+    });
+#endif
 }
 
 void Page::suspendScriptedAnimations()
@@ -1838,7 +1863,7 @@ void Page::pluginVisibilityChanged(bool visible)
 }
 #endif // PLATFORM(QT)
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 
 void Page::checkSubframeCountConsistency() const
 {
@@ -1851,7 +1876,7 @@ void Page::checkSubframeCountConsistency() const
     ASSERT(m_subframeCount + 1 == subframeCount);
 }
 
-#endif
+#endif // ASSERT_ENABLED
 
 void Page::resumeAnimatingImages()
 {
@@ -2706,7 +2731,7 @@ void Page::setUseSystemAppearance(bool value)
 
 void Page::effectiveAppearanceDidChange(bool useDarkAppearance, bool useElevatedUserInterfaceLevel)
 {
-#if HAVE(OS_DARK_MODE_SUPPORT)
+#if ENABLE(DARK_MODE_CSS)
     if (m_useDarkAppearance == useDarkAppearance && m_useElevatedUserInterfaceLevel == useElevatedUserInterfaceLevel)
         return;
 
@@ -2730,7 +2755,7 @@ void Page::effectiveAppearanceDidChange(bool useDarkAppearance, bool useElevated
 
 bool Page::useDarkAppearance() const
 {
-#if HAVE(OS_DARK_MODE_SUPPORT)
+#if ENABLE(DARK_MODE_CSS)
     FrameView* view = mainFrame().view();
     if (!view || !equalLettersIgnoringASCIICase(view->mediaType(), "screen"))
         return false;
@@ -2791,28 +2816,6 @@ void Page::setFullscreenControlsHidden(bool hidden)
 #endif
 }
 
-#if ENABLE(DATA_INTERACTION)
-
-bool Page::hasSelectionAtPosition(const FloatPoint& position) const
-{
-    auto currentSelection = m_mainFrame->selection().selection();
-    if (!currentSelection.isRange())
-        return false;
-
-    if (auto selectedRange = currentSelection.toNormalizedRange()) {
-        Vector<SelectionRect> selectionRects;
-        selectedRange->collectSelectionRects(selectionRects);
-        for (auto selectionRect : selectionRects) {
-            if (FloatRect(selectionRect.rect()).contains(position))
-                return true;
-        }
-    }
-
-    return false;
-}
-
-#endif
-
 void Page::disableICECandidateFiltering()
 {
     m_shouldEnableICECandidateFilteringByDefault = false;
@@ -2834,9 +2837,7 @@ void Page::didChangeMainDocument()
 #if ENABLE(WEB_RTC)
     m_rtcController.reset(m_shouldEnableICECandidateFilteringByDefault);
 #endif
-#if ENABLE(POINTER_EVENTS)
     m_pointerCaptureController->reset();
-#endif
 }
 
 RenderingUpdateScheduler& Page::renderingUpdateScheduler()
@@ -2861,9 +2862,11 @@ void Page::forEachDocument(const Function<void(Document&)>& functor) const
 
 void Page::forEachMediaElement(const Function<void(HTMLMediaElement&)>& functor)
 {
+#if ENABLE(VIDEO)
     forEachDocument([&] (Document& document) {
         document.forEachMediaElement(functor);
     });
+#endif
 }
 
 void Page::applicationWillResignActive()
@@ -2999,9 +3002,14 @@ void Page::recomputeTextAutoSizingInAllFrames()
     forEachDocument([] (Document& document) {
         if (auto* renderView = document.renderView()) {
             for (auto& renderer : descendantsOfType<RenderElement>(*renderView)) {
+                // Use the fact that descendantsOfType() returns parent nodes before child nodes.
+                // The adjustment is only valid if the parent nodes have already been updated.
                 if (auto* element = renderer.element()) {
-                    if (Style::Adjuster::adjustForTextAutosizing(renderer.mutableStyle(), *element))
-                        renderer.setNeedsLayout();
+                    if (auto adjustment = Style::Adjuster::adjustmentForTextAutosizing(renderer.style(), *element)) {
+                        auto newStyle = RenderStyle::clone(renderer.style());
+                        Style::Adjuster::adjustForTextAutosizing(newStyle, *element, adjustment);
+                        renderer.setStyle(WTFMove(newStyle));
+                    }
                 }
             }
         }
@@ -3009,5 +3017,62 @@ void Page::recomputeTextAutoSizingInAllFrames()
 }
 
 #endif
+
+bool Page::shouldDisableCorsForRequestTo(const URL& url) const
+{
+    return WTF::anyOf(m_corsDisablingPatterns, [&] (const auto& pattern) {
+        return pattern.matches(url);
+    });
+}
+
+void Page::revealCurrentSelection()
+{
+    focusController().focusedOrMainFrame().selection().revealSelection(SelectionRevealMode::Reveal, ScrollAlignment::alignCenterIfNeeded);
+}
+
+void Page::injectUserStyleSheet(UserStyleSheet& userStyleSheet)
+{
+    // We need to wait until we're no longer displaying the initial empty document before we can inject the stylesheets.
+    if (m_mainFrame->loader().stateMachine().isDisplayingInitialEmptyDocument()) {
+        m_userStyleSheetsPendingInjection.append(userStyleSheet);
+        return;
+    }
+
+    if (userStyleSheet.injectedFrames() == InjectInTopFrameOnly) {
+        if (auto* document = m_mainFrame->document())
+            document->extensionStyleSheets().injectPageSpecificUserStyleSheet(userStyleSheet);
+    } else {
+        forEachDocument([&] (Document& document) {
+            document.extensionStyleSheets().injectPageSpecificUserStyleSheet(userStyleSheet);
+        });
+    }
+}
+
+void Page::removeInjectedUserStyleSheet(UserStyleSheet& userStyleSheet)
+{
+    if (!m_userStyleSheetsPendingInjection.isEmpty()) {
+        m_userStyleSheetsPendingInjection.removeFirstMatching([userStyleSheet](auto& storedUserStyleSheet) {
+            return storedUserStyleSheet.url() == userStyleSheet.url();
+        });
+        return;
+    }
+
+    if (userStyleSheet.injectedFrames() == InjectInTopFrameOnly) {
+        if (auto* document = m_mainFrame->document())
+            document->extensionStyleSheets().removePageSpecificUserStyleSheet(userStyleSheet);
+    } else {
+        forEachDocument([&] (Document& document) {
+            document.extensionStyleSheets().removePageSpecificUserStyleSheet(userStyleSheet);
+        });
+    }
+}
+
+void Page::mainFrameDidChangeToNonInitialEmptyDocument()
+{
+    ASSERT(!m_mainFrame->loader().stateMachine().isDisplayingInitialEmptyDocument());
+    for (auto& userStyleSheet : m_userStyleSheetsPendingInjection)
+        injectUserStyleSheet(userStyleSheet);
+    m_userStyleSheetsPendingInjection.clear();
+}
 
 } // namespace WebCore

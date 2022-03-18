@@ -353,6 +353,12 @@ namespace WebCore {
     WEBCORE_EXPORT String datePickerYearLabelTitle();
 #endif
 
+#if ENABLE(WEB_AUTHN)
+    WEBCORE_EXPORT String genericTouchIDPromptTitle();
+    WEBCORE_EXPORT String makeCredentialTouchIDPromptTitle(const String& domain);
+    WEBCORE_EXPORT String biometricFallbackPromptTitle();
+#endif
+
 #if USE(GLIB) && defined(GETTEXT_PACKAGE)
 #define WEB_UI_STRING(string, description) WebCore::localizedString(_(string))
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(C_(key, string))

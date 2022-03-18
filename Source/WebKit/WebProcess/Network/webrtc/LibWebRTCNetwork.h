@@ -26,6 +26,7 @@
 #pragma once
 
 #if USE(LIBWEBRTC)
+#include "LibWebRTCProvider.h"
 #include "LibWebRTCSocketFactory.h"
 #include "WebRTCMonitor.h"
 #include "WebRTCResolver.h"
@@ -44,6 +45,8 @@ public:
 
     void networkProcessCrashed();
 
+    bool isActive() const;
+
 #if USE(LIBWEBRTC)
     WebRTCMonitor& monitor() { return m_webNetworkMonitor; }
     LibWebRTCSocketFactory& socketFactory() { return m_socketFactory; }
@@ -51,7 +54,7 @@ public:
     void disableNonLocalhostConnections() { socketFactory().disableNonLocalhostConnections(); }
 
     WebRTCSocket socket(WebCore::LibWebRTCSocketIdentifier identifier) { return WebRTCSocket(socketFactory(), identifier); }
-    WebRTCResolver resolver(uint64_t identifier) { return WebRTCResolver(socketFactory(), identifier); }
+    WebRTCResolver resolver(LibWebRTCResolverIdentifier identifier) { return WebRTCResolver(socketFactory(), identifier); }
 #endif
 
 #if ENABLE(WEB_RTC)
@@ -72,6 +75,15 @@ inline void LibWebRTCNetwork::networkProcessCrashed()
 {
 #if USE(LIBWEBRTC)
     m_webNetworkMonitor.networkProcessCrashed();
+#endif
+}
+
+inline bool LibWebRTCNetwork::isActive() const
+{
+#if USE(LIBWEBRTC)
+    return WebCore::LibWebRTCProvider::hasWebRTCThreads();
+#else
+    return false;
 #endif
 }
 

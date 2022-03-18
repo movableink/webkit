@@ -43,6 +43,8 @@ require 'risc'
 # $t8 =>            (scratch)
 # $t9 =>            (stores the callee of a call opcode)
 # $gp =>            (globals)
+# $s0 => csr0       (callee-save, metadataTable)
+# $s1 => csr1       (callee-save, PB)
 # $s4 =>            (callee-save used to preserve $gp across calls)
 # $ra => lr
 # $sp => sp
@@ -138,6 +140,8 @@ class RegisterID
             "$fp"
         when "csr0"
             "$s0"
+        when "csr1"
+            "$s1"
         when "lr"
             "$ra"
         when "sp"
@@ -681,7 +685,10 @@ def mipsAddPICCode(list)
         | node |
         myList << node
         if node.is_a? Label
-            if node.name =~ /^.*_return_location(?:_(?:wide16|wide32))?$/
+            # FIXME: [JSC] checkpoint_osr_exit_from_inlined_call_trampoline is a return location
+            # and we should name it properly.
+            # https://bugs.webkit.org/show_bug.cgi?id=208236
+            if node.name =~ /^.*_return_location(?:_(?:wide16|wide32))?$/ or node.name.start_with?("_checkpoint_osr_exit_from_inlined_call_trampoline")
                 # We need to have a special case for return location labels because they are always
                 # reached from a `ret` instruction. In this case, we need to proper reconfigure `$gp`
                 # using `$ra` instead of using `$t9`.

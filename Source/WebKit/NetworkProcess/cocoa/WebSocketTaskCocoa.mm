@@ -29,10 +29,15 @@
 #if HAVE(NSURLSESSION_WEBSOCKET)
 
 #import "DataReference.h"
+#import "NetworkSessionCocoa.h"
 #import "NetworkSocketChannel.h"
 #import <Foundation/NSURLSession.h>
+#import <WebCore/ResourceRequest.h>
+#import <WebCore/ResourceResponse.h>
 #import <WebCore/WebSocketChannel.h>
 #import <wtf/BlockPtr.h>
+
+using namespace WebCore;
 
 namespace WebKit {
 
@@ -41,6 +46,7 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, RetainPtr<NSURLSessi
     , m_task(WTFMove(task))
 {
     readNextMessage();
+    m_channel.didSendHandshakeRequest(ResourceRequest { [m_task currentRequest] });
 }
 
 WebSocketTask::~WebSocketTask()
@@ -54,8 +60,18 @@ void WebSocketTask::readNextMessage()
             return;
 
         if (error) {
-            // FIXME: the error code is probably not a correct WebSocket code.
-            didClose([error code], [error localizedDescription]);
+            // If closeCode is not zero, we are closing the connection and didClose will be called for us.
+            if ([m_task closeCode])
+                return;
+
+            if (!m_receivedDidConnect) {
+                ResourceResponse response { [m_task response] };
+                if (!response.isNull())
+                    m_channel.didReceiveHandshakeResponse(WTFMove(response));
+            }
+
+            m_channel.didReceiveMessageError([error localizedDescription]);
+            didClose(WebCore::WebSocketChannel::CloseEventCodeAbnormalClosure, emptyString());
             return;
         }
         if (!message) {
@@ -85,7 +101,9 @@ void WebSocketTask::resume()
 void WebSocketTask::didConnect(const String& protocol)
 {
     // FIXME: support extensions.
+    m_receivedDidConnect = true;
     m_channel.didConnect(protocol, { });
+    m_channel.didReceiveHandshakeResponse(ResourceResponse { [m_task response] });
 }
 
 void WebSocketTask::didClose(unsigned short code, const String& reason)
@@ -101,7 +119,8 @@ void WebSocketTask::sendString(const String& text , CompletionHandler<void()>&& 
 {
     auto message = adoptNS([[NSURLSessionWebSocketMessage alloc] initWithString: text]);
     [m_task sendMessage: message.get() completionHandler: makeBlockPtr([callback = WTFMove(callback)](NSError * _Nullable) mutable {
-        callback();
+        // Workaround rdar://problem/55324926 until it gets fixed.
+        callOnMainRunLoop(WTFMove(callback));
     }).get()];
 }
 
@@ -110,7 +129,8 @@ void WebSocketTask::sendData(const IPC::DataReference& data, CompletionHandler<v
     auto nsData = adoptNS([[NSData alloc] initWithBytes:data.data() length:data.size()]);
     auto message = adoptNS([[NSURLSessionWebSocketMessage alloc] initWithData: nsData.get()]);
     [m_task sendMessage: message.get() completionHandler: makeBlockPtr([callback = WTFMove(callback)](NSError * _Nullable) mutable {
-        callback();
+        // Workaround rdar://problem/55324926 until it gets fixed.
+        callOnMainRunLoop(WTFMove(callback));
     }).get()];
 }
 
@@ -126,6 +146,11 @@ void WebSocketTask::close(int32_t code, const String& reason)
 WebSocketTask::TaskIdentifier WebSocketTask::identifier() const
 {
     return [m_task taskIdentifier];
+}
+
+NetworkSessionCocoa* WebSocketTask::networkSession()
+{
+    return static_cast<NetworkSessionCocoa*>(m_channel.session());
 }
 
 }

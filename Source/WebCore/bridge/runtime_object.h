@@ -32,10 +32,19 @@
 namespace JSC {
 namespace Bindings {
 
-class WEBCORE_EXPORT RuntimeObject : public JSDestructibleObject {
+class WEBCORE_EXPORT RuntimeObject : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames | OverridesGetCallData;
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, JSC::SubspaceAccess>
+    static IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        static_assert(sizeof(CellType) == sizeof(RuntimeObject), "RuntimeObject subclasses that add fields need to override subspaceFor<>()");
+        static_assert(CellType::destroy == RuntimeObject::destroy);
+        return subspaceForImpl(vm);
+    }
 
     static RuntimeObject* create(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     {
@@ -48,7 +57,7 @@ public:
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
     static CallType getCallData(JSCell*, CallData&);
     static ConstructType getConstructData(JSCell*, ConstructData&);
@@ -81,6 +90,8 @@ private:
     static EncodedJSValue fallbackObjectGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
     static EncodedJSValue fieldGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
     static EncodedJSValue methodGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
+
+    static IsoSubspace* subspaceForImpl(VM&);
 
     RefPtr<Instance> m_instance;
 };

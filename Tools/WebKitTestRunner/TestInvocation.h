@@ -86,6 +86,9 @@ public:
     void didSetVeryPrevalentResource();
     void didSetHasHadUserInteraction();
     void didReceiveAllStorageAccessEntries(Vector<String>& domains);
+    void didReceiveLoadedThirdPartyDomains(Vector<String>&& domains);
+    void didReceiveWebViewCategory(String&);
+    void didSetInAppBrowserPrivacyEnabled();
 
     void didRemoveAllSessionCredentials();
     

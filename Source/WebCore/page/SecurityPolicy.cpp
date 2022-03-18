@@ -131,6 +131,31 @@ String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, con
     return shouldHideReferrer(url, referrer) ? String() : referrer;
 }
 
+String SecurityPolicy::generateOriginHeader(ReferrerPolicy referrerPolicy, const URL& url, const SecurityOrigin& securityOrigin)
+{
+    switch (referrerPolicy) {
+    case ReferrerPolicy::NoReferrer:
+        return "null"_s;
+    case ReferrerPolicy::NoReferrerWhenDowngrade:
+    case ReferrerPolicy::StrictOrigin:
+    case ReferrerPolicy::StrictOriginWhenCrossOrigin:
+        if (protocolIs(securityOrigin.protocol(), "https") && !url.protocolIs("https"))
+            return "null"_s;
+        break;
+    case ReferrerPolicy::SameOrigin:
+        if (!securityOrigin.canRequest(url))
+            return "null"_s;
+        break;
+    case ReferrerPolicy::EmptyString:
+    case ReferrerPolicy::Origin:
+    case ReferrerPolicy::OriginWhenCrossOrigin:
+    case ReferrerPolicy::UnsafeUrl:
+        break;
+    }
+
+    return securityOrigin.toString();
+}
+
 bool SecurityPolicy::shouldInheritSecurityOriginFromOwner(const URL& url)
 {
     // Paraphrased from <https://html.spec.whatwg.org/multipage/browsers.html#origin> (8 July 2016)
@@ -143,6 +168,12 @@ bool SecurityPolicy::shouldInheritSecurityOriginFromOwner(const URL& url)
     // Note: We generalize this to invalid URLs because we treat such URLs as about:blank.
     //
     return url.isEmpty() || equalIgnoringASCIICase(url.string(), WTF::blankURL()) || equalLettersIgnoringASCIICase(url.string(), "about:srcdoc");
+}
+
+bool SecurityPolicy::isBaseURLSchemeAllowed(const URL& url)
+{
+    // See <https://github.com/whatwg/html/issues/2249>.
+    return !url.protocolIsData() && !WTF::protocolIsJavaScript(url);
 }
 
 void SecurityPolicy::setLocalLoadPolicy(LocalLoadPolicy policy)

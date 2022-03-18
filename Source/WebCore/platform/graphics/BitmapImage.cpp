@@ -151,6 +151,23 @@ NativeImagePtr BitmapImage::nativeImageForCurrentFrame(const GraphicsContext* ta
     return frameImageAtIndexCacheIfNeeded(m_currentFrame, SubsamplingLevel::Default, targetContext);
 }
 
+NativeImagePtr BitmapImage::nativeImageForCurrentFrameRespectingOrientation(const GraphicsContext* targetContext)
+{
+    auto image = nativeImageForCurrentFrame(targetContext);
+
+    ImageOrientation orientation = orientationForCurrentFrame();
+    if (orientation == ImageOrientation::None)
+        return image;
+
+    FloatRect rect = { FloatPoint(), size() };
+    auto buffer = ImageBuffer::create(rect.size(), RenderingMode::Unaccelerated);
+    if (!buffer)
+        return image;
+
+    buffer->context().drawNativeImage(image, rect.size(), rect, rect, { orientation });
+    return ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
+}
+
 #if USE(CG)
 NativeImagePtr BitmapImage::nativeImageOfSize(const IntSize& size, const GraphicsContext* targetContext)
 {
@@ -180,12 +197,12 @@ Vector<NativeImagePtr> BitmapImage::framesNativeImages()
 }
 #endif
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 bool BitmapImage::notSolidColor()
 {
     return size().width() != 1 || size().height() != 1 || frameCount() > 1;
 }
-#endif
+#endif // ASSERT_ENABLED
 
 ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
@@ -295,7 +312,7 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
         if (m_currentFrameDecodingStatus == DecodingStatus::Invalid)
             m_source->destroyIncompleteDecodedData();
         
-        Image::drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, options);
+        Image::drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::FromImage });
         m_currentFrameDecodingStatus = frameDecodingStatusAtIndex(m_currentFrame);
         return;
     }
@@ -310,7 +327,7 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
         // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
         setImageObserver(nullptr);
 
-        draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::None });
+        draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::FromImage });
 
         setImageObserver(observer);
         buffer->convertToLuminanceMask();
@@ -321,7 +338,7 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
     }
 
     ctxt.setDrawLuminanceMask(false);
-    m_cachedImage->drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, options);
+    m_cachedImage->drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::FromImage });
 }
 
 bool BitmapImage::shouldAnimate() const

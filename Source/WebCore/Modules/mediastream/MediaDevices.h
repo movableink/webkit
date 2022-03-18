@@ -79,7 +79,13 @@ public:
         Variant<bool, MediaTrackConstraints> audio;
     };
     void getUserMedia(const StreamConstraints&, Promise&&);
-    void getDisplayMedia(const StreamConstraints&, Promise&&);
+
+    struct DisplayMediaStreamConstraints {
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
+    };
+    void getDisplayMedia(const DisplayMediaStreamConstraints&, Promise&&);
+
     void enumerateDevices(EnumerateDevicesPromise&&);
     MediaTrackSupportedConstraints getSupportedConstraints();
 
@@ -121,11 +127,9 @@ private:
     bool m_listeningForDeviceChanges { false };
 
     Vector<Ref<MediaDeviceInfo>> m_devices;
-    bool m_canAccessCamera { false };
-    bool m_canAccessMicrophone { false };
 
     OptionSet<GestureAllowedRequest> m_requestTypesForCurrentGesture;
-    UserGestureToken* m_currentGestureToken { nullptr };
+    WeakPtr<UserGestureToken> m_currentGestureToken;
 };
 
 } // namespace WebCore

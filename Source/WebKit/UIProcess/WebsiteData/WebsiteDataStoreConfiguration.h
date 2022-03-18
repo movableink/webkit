@@ -55,6 +55,9 @@ public:
     const String& mediaKeysStorageDirectory() const { return m_mediaKeysStorageDirectory; }
     void setMediaKeysStorageDirectory(String&& directory) { m_mediaKeysStorageDirectory = WTFMove(directory); }
     
+    const String& alternativeServicesDirectory() const { return m_alternativeServicesDirectory; }
+    void setAlternativeServicesDirectory(String&& directory) { m_alternativeServicesDirectory = WTFMove(directory); }
+
     const String& javaScriptConfigurationDirectory() const { return m_javaScriptConfigurationDirectory; }
     void setJavaScriptConfigurationDirectory(String&& directory) { m_javaScriptConfigurationDirectory = WTFMove(directory); }
     
@@ -75,6 +78,9 @@ public:
 
     bool allowsCellularAccess() const { return m_allowsCellularAccess; }
     void setAllowsCellularAccess(bool allows) { m_allowsCellularAccess = allows; }
+
+    bool legacyTLSEnabled() const { return m_legacyTLSEnabled; }
+    void setLegacyTLSEnabled(bool enabled) { m_legacyTLSEnabled = enabled; }
 
     bool fastServerTrustEvaluationEnabled() const { return m_fastServerTrustEvaluationEnabled; }
     void setFastServerTrustEvaluationEnabled(bool enabled) { m_fastServerTrustEvaluationEnabled = enabled; }
@@ -168,6 +174,7 @@ private:
     bool m_staleWhileRevalidateEnabled { false };
     String m_localStorageDirectory;
     String m_mediaKeysStorageDirectory;
+    String m_alternativeServicesDirectory;
     String m_deviceIdHashSaltsStorageDirectory;
     String m_resourceLoadStatisticsDirectory;
     String m_javaScriptConfigurationDirectory;
@@ -181,6 +188,7 @@ private:
     bool m_deviceManagementRestrictionsEnabled { false };
     bool m_allLoadsBlockedByDeviceManagementRestrictionsForTesting { false };
     bool m_allowsCellularAccess { true };
+    bool m_legacyTLSEnabled { true };
     bool m_fastServerTrustEvaluationEnabled { false };
     bool m_serviceWorkerProcessTerminationDelayEnabled { true };
     bool m_testingSessionEnabled { false };

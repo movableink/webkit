@@ -155,9 +155,15 @@ void PageClientImpl::setCursor(const WebCore::Cursor& cursor)
         gdk_window_set_cursor(window, newCursor);
 }
 
-void PageClientImpl::setCursorHiddenUntilMouseMoves(bool /* hiddenUntilMouseMoves */)
+void PageClientImpl::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
 {
-    notImplemented();
+    if (!hiddenUntilMouseMoves)
+        return;
+
+    setCursor(WebCore::noneCursor());
+
+    // There's no need to set a timer to restore the cursor by hand. It will
+    // be automatically restored when the mouse moves.
 }
 
 void PageClientImpl::didChangeViewportProperties(const WebCore::ViewportAttributes&)
@@ -288,9 +294,9 @@ void PageClientImpl::selectionDidChange()
         webkitWebViewSelectionDidChange(WEBKIT_WEB_VIEW(m_viewWidget));
 }
 
-RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot()
+RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot(Optional<WebCore::IntRect>&& clipRect)
 {
-    return webkitWebViewBaseTakeViewSnapshot(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
+    return webkitWebViewBaseTakeViewSnapshot(WEBKIT_WEB_VIEW_BASE(m_viewWidget), WTFMove(clipRect));
 }
 
 void PageClientImpl::didChangeContentSize(const IntSize& size)
@@ -581,6 +587,23 @@ void PageClientImpl::didChangeWebPageID() const
 {
     if (WEBKIT_IS_WEB_VIEW(m_viewWidget))
         webkitWebViewDidChangePageID(WEBKIT_WEB_VIEW(m_viewWidget));
+}
+
+String PageClientImpl::themeName() const
+{
+    if (auto* themeNameEnv = g_getenv("GTK_THEME")) {
+        String name = String::fromUTF8(themeNameEnv);
+        if (name.endsWith("-dark") || name.endsWith(":dark"))
+            return name.substring(0, name.length() - 5);
+        return name;
+    }
+
+    GUniqueOutPtr<char> themeNameSetting;
+    g_object_get(gtk_widget_get_settings(m_viewWidget), "gtk-theme-name", &themeNameSetting.outPtr(), nullptr);
+    String name = String::fromUTF8(themeNameSetting.get());
+    if (name.endsWith("-dark"))
+        return name.substring(0, name.length() - 5);
+    return name;
 }
 
 } // namespace WebKit

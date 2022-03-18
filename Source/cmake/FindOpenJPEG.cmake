@@ -52,13 +52,13 @@ This will define the following variables in your project:
 
 #]=======================================================================]
 
-include(FindPkgConfig)
+find_package(PkgConfig QUIET)
 pkg_check_modules(PC_OPENJPEG QUIET libopenjp2)
 set(OpenJPEG_COMPILE_OPTIONS ${PC_OPENJPEG_CFLAGS_OTHER})
 set(OpenJPEG_VERSION ${PC_OPENJPEG_VERSION})
 
 find_path(OpenJPEG_INCLUDE_DIR
-    NAMES openjpeg.h
+    NAMES opj_config.h
     HINTS ${PC_OPENJPEG_INCLUDEDIR} ${PC_OPENJPEG_INCLUDE_DIRS}
 )
 

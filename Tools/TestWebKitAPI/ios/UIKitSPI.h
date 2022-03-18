@@ -62,11 +62,12 @@ IGNORE_WARNINGS_END
 WTF_EXTERN_C_BEGIN
 
 void UIApplicationInitialize(void);
+void UIApplicationInstantiateSingleton(Class principalClass);
 
 WTF_EXTERN_C_END
 
 @interface UITextSuggestion : NSObject
-
+@property (nonatomic, copy) NSString *displayText;
 @end
 
 @interface UITextInputTraits : NSObject <UITextInputTraits>
@@ -173,6 +174,10 @@ typedef NS_OPTIONS(NSInteger, UIWKDocumentRequestFlags) {
 - (void)requestAutocorrectionRectsForString:(NSString *)input withCompletionHandler:(void (^)(UIWKAutocorrectionRects *rectsForInput))completionHandler;
 - (void)requestAutocorrectionContextWithCompletionHandler:(void (^)(UIWKAutocorrectionContext *autocorrectionContext))completionHandler;
 - (void)selectWordBackward;
+- (void)selectPositionAtPoint:(CGPoint)point completionHandler:(void (^)(void))completionHandler;
+- (void)selectTextWithGranularity:(UITextGranularity)granularity atPoint:(CGPoint)point completionHandler:(void (^)(void))completionHandler;
+- (void)updateSelectionWithExtentPoint:(CGPoint)point completionHandler:(void (^)(BOOL selectionEndIsMoving))completionHandler;
+- (void)updateSelectionWithExtentPoint:(CGPoint)point withBoundary:(UITextGranularity)granularity completionHandler:(void (^)(BOOL selectionEndIsMoving))completionHandler;
 @property (nonatomic, readonly) NSString *selectedText;
 @end
 
@@ -195,6 +200,20 @@ IGNORE_WARNINGS_END
 @property (nonatomic, readonly) CGRect _referenceBounds;
 @end
 
+@interface UIResponder (UIKitSPI)
+- (UIResponder *)firstResponder;
+- (void)makeTextWritingDirectionNatural:(id)sender;
+@property (nonatomic, setter=_setSuppressSoftwareKeyboard:) BOOL _suppressSoftwareKeyboard;
+@end
+
+@interface UIKeyboardImpl : UIView
++ (instancetype)sharedInstance;
+@end
+
+@protocol UITextInputSuggestionDelegate <UITextInputDelegate>
+- (void)setSuggestions:(NSArray <UITextSuggestion*> *)suggestions;
+@end
+
 #endif // USE(APPLE_INTERNAL_SDK)
 
 #define UIWKDocumentRequestMarkedTextRects (1 << 5)
@@ -207,13 +226,12 @@ IGNORE_WARNINGS_END
 @property (nonatomic, copy, setter=_setTitle:) NSString *_title;
 @end
 
-@interface UIResponder (UIKitSPI)
-- (UIResponder *)firstResponder;
-- (void)makeTextWritingDirectionNatural:(id)sender;
-@end
-
 @interface UIKeyboard ()
 + (BOOL)isInHardwareKeyboardMode;
+@end
+
+@interface UIKeyboardImpl (UIKitIPI)
+- (BOOL)_shouldSuppressSoftwareKeyboard;
 @end
 
 #if PLATFORM(IOS)
@@ -247,6 +265,10 @@ typedef NS_ENUM(NSUInteger, _UIClickInteractionEvent) {
 
 @interface UIResponder (Internal)
 - (void)_share:(id)sender;
+@end
+
+@interface UIApplication (Internal)
++ (NSString *)displayIdentifier;
 @end
 
 #endif // PLATFORM(IOS_FAMILY)

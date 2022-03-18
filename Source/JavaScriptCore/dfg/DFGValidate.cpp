@@ -286,6 +286,11 @@ public:
                     VALIDATE((node), !!node->child1());
                     VALIDATE((node), !!node->cellOperand()->value() && node->cellOperand()->value().isCell());
                     break;
+                case CheckArrayOrEmpty:
+                    VALIDATE((node), is64Bit());
+                    VALIDATE((node), !!node->child1());
+                    VALIDATE((node), node->child1().useKind() == CellUse);
+                    break;
                 case CheckStructureOrEmpty:
                     VALIDATE((node), is64Bit());
                     VALIDATE((node), !!node->child1());
@@ -473,7 +478,7 @@ private:
                     Node* node = block->at(i);
                     m_graph.doToChildren(node, [&] (const Edge& edge) {
                         Node* child = edge.node();
-                        VALIDATE((node), block->isInPhis(child) || seenNodes.contains(child));
+                        VALIDATE((node, edge), block->isInPhis(child) || seenNodes.contains(child));
                     });
                     seenNodes.add(node);
                 }
@@ -558,9 +563,9 @@ private:
             Operands<size_t> setLocalPositions(OperandsLike, block->variablesAtHead);
             
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
-                VALIDATE((virtualRegisterForArgument(i), block), !block->variablesAtHead.argument(i) || block->variablesAtHead.argument(i)->accessesStack(m_graph));
+                VALIDATE((virtualRegisterForArgumentIncludingThis(i), block), !block->variablesAtHead.argument(i) || block->variablesAtHead.argument(i)->accessesStack(m_graph));
                 if (m_graph.m_form == ThreadedCPS)
-                    VALIDATE((virtualRegisterForArgument(i), block), !block->variablesAtTail.argument(i) || block->variablesAtTail.argument(i)->accessesStack(m_graph));
+                    VALIDATE((virtualRegisterForArgumentIncludingThis(i), block), !block->variablesAtTail.argument(i) || block->variablesAtTail.argument(i)->accessesStack(m_graph));
                 
                 getLocalPositions.argument(i) = notSet;
                 setLocalPositions.argument(i) = notSet;
@@ -707,7 +712,7 @@ private:
             
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
                 checkOperand(
-                    block, getLocalPositions, setLocalPositions, virtualRegisterForArgument(i));
+                    block, getLocalPositions, setLocalPositions, virtualRegisterForArgumentIncludingThis(i));
             }
             for (size_t i = 0; i < block->variablesAtHead.numberOfLocals(); ++i) {
                 checkOperand(

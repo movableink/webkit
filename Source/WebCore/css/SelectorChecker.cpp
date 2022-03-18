@@ -268,7 +268,7 @@ SelectorChecker::MatchResult SelectorChecker::matchRecursively(CheckingContext& 
     MatchType matchType = MatchType::Element;
 
     // The first selector has to match.
-    if (!checkOne(checkingContext, context, dynamicPseudoIdSet, matchType, specificity))
+    if (!checkOne(checkingContext, context, matchType, specificity))
         return MatchResult::fails(Match::SelectorFailsLocally);
 
     if (context.selector->match() == CSSSelector::PseudoElement) {
@@ -651,7 +651,7 @@ static inline bool tagMatches(const Element& element, const CSSSelector& simpleS
     return namespaceURI == starAtom() || namespaceURI == element.namespaceURI();
 }
 
-bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalContext& context, PseudoIdSet& dynamicPseudoIdSet, MatchType& matchType, unsigned& specificity) const
+bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalContext& context, MatchType& matchType, unsigned& specificity) const
 {
     const Element& element = *context.element;
     const CSSSelector& selector = *context.selector;
@@ -841,16 +841,21 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                     subcontext.pseudoElementEffective = context.pseudoElementEffective;
                     subcontext.selector = subselector;
                     subcontext.firstSelectorOfTheFragment = subselector;
+                    subcontext.pseudoId = PseudoId::None;
                     PseudoIdSet localDynamicPseudoIdSet;
                     unsigned localSpecificity = 0;
                     MatchResult result = matchRecursively(checkingContext, subcontext, localDynamicPseudoIdSet, localSpecificity);
+
+                    // Pseudo elements are not valid inside :matches
+                    if (localDynamicPseudoIdSet)
+                        continue;
+
                     if (result.match == Match::SelectorMatches) {
                         maxSpecificity = std::max(maxSpecificity, localSpecificity);
 
                         if (result.matchType == MatchType::Element)
                             localMatchType = MatchType::Element;
 
-                        dynamicPseudoIdSet.merge(localDynamicPseudoIdSet);
                         hasMatchedAnything = true;
                     }
                 }
@@ -994,20 +999,13 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassDirectFocus:
             return matchesDirectFocusPseudoClass(element);
         case CSSSelector::PseudoClassDrag:
-            addStyleRelation(checkingContext, element, Style::Relation::AffectedByDrag);
-
-            if (element.renderer() && element.renderer()->isDragging())
-                return true;
-            break;
+            return element.isBeingDragged();
         case CSSSelector::PseudoClassFocus:
             return matchesFocusPseudoClass(element);
         case CSSSelector::PseudoClassFocusWithin:
-            addStyleRelation(checkingContext, element, Style::Relation::AffectedByFocusWithin);
             return element.hasFocusWithin();
         case CSSSelector::PseudoClassHover:
             if (m_strictParsing || element.isLink() || canMatchHoverOrActiveInQuirksMode(context)) {
-                addStyleRelation(checkingContext, element, Style::Relation::AffectedByHover);
-
                 // See the comment in generateElementIsHovered() in SelectorCompiler.
                 if (checkingContext.resolvingMode == SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements && !context.isMatchElement)
                     return true;
@@ -1018,8 +1016,6 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             break;
         case CSSSelector::PseudoClassActive:
             if (m_strictParsing || element.isLink() || canMatchHoverOrActiveInQuirksMode(context)) {
-                addStyleRelation(checkingContext, element, Style::Relation::AffectedByActive);
-
                 if (element.active() || InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassActive))
                     return true;
             }

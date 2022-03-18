@@ -100,6 +100,11 @@ WI.Target = class Target extends WI.Object
                 this.InspectorAgent.initialized();
         });
 
+        this._resumeIfPaused();
+    }
+
+    _resumeIfPaused()
+    {
         if (this._isPaused) {
             console.assert(this._parentTarget.hasCommand("Target.resume"));
             this._parentTarget.TargetAgent.resume(this._identifier, (error) => {
@@ -127,6 +132,7 @@ WI.Target = class Target extends WI.Object
     get AnimationAgent() { return this._agents.Animation; }
     get ApplicationCacheAgent() { return this._agents.ApplicationCache; }
     get AuditAgent() { return this._agents.Audit; }
+    get BrowserAgent() { return this._agents.Browser; }
     get CPUProfilerAgent() { return this._agents.CPUProfiler; }
     get CSSAgent() { return this._agents.CSS; }
     get CanvasAgent() { return this._agents.Canvas; }

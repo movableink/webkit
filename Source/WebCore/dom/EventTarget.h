@@ -54,6 +54,8 @@ public:
 class EventTarget : public ScriptWrappable {
     WTF_MAKE_ISO_ALLOCATED(EventTarget);
 public:
+    static Ref<EventTarget> create(ScriptExecutionContext&);
+
     void ref() { refEventTarget(); }
     void deref() { derefEventTarget(); }
 
@@ -121,6 +123,8 @@ protected:
     virtual EventTargetData* eventTargetDataConcurrently() = 0;
     virtual EventTargetData& ensureEventTargetData() = 0;
     const EventTargetData* eventTargetData() const;
+
+    virtual void eventListenersDidChange() { }
 
 private:
     virtual void refEventTarget() = 0;

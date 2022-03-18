@@ -1,3 +1,281 @@
+2020-03-08  Konstantin Tokarev  <annulen@yandex.ru>
+
+        [CMake] Some fixes for building Mac port
+        https://bugs.webkit.org/show_bug.cgi?id=208770
+
+        Reviewed by Don Olmstead.
+
+        * PlatformMac.cmake:
+
+2020-02-27  Don Olmstead  <don.olmstead@sony.com>
+
+        Fix WebCore export macros for declspec
+        https://bugs.webkit.org/show_bug.cgi?id=208363
+
+        Reviewed by Konstantin Tokarev.
+
+        Add compilation definitions for static linking of PAL and WebCore in WebKitLegacy.
+
+        * PlatformFTW.cmake:
+        * PlatformWin.cmake:
+
+2020-02-27  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Add WebKit::PAL target
+        https://bugs.webkit.org/show_bug.cgi?id=198493
+
+        Reviewed by Michael Catanzaro.
+
+        Add include of PAL target for Apple internal Windows builds.
+
+        * CMakeLists.txt:
+
+2020-02-24  Rob Buis  <rbuis@igalia.com>
+
+        Handle page closure for stale-while-revalidate revalidations
+        https://bugs.webkit.org/show_bug.cgi?id=204147
+
+        Reviewed by Youenn Fablet.
+
+        Provide empty stub for new method on LoaderStrategy.
+
+        * WebCoreSupport/WebResourceLoadScheduler.cpp:
+        (WebResourceLoadScheduler::browsingContextRemoved):
+        * WebCoreSupport/WebResourceLoadScheduler.h:
+
+2020-02-17  Alex Christensen  <achristensen@webkit.org> and Pavel Feldman <pavel.feldman@gmail.com>
+
+        Ephemeral session data leaks between processes
+        https://bugs.webkit.org/show_bug.cgi?id=207404
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/NetworkStorageSessionMap.cpp:
+        (NetworkStorageSessionMap::ensureSession):
+
+2020-02-17  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Use builtin targets
+        https://bugs.webkit.org/show_bug.cgi?id=205166
+
+        Reviewed by Darin Adler.
+
+        * PlatformFTW.cmake:
+        * PlatformWin.cmake:
+
+2020-02-11  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Fix declarations marked by wrong export macros (WEBCORE_EXPORT and WTF_EXPORT)
+        https://bugs.webkit.org/show_bug.cgi?id=207453
+
+        Reviewed by Ross Kirsling.
+
+        * Storage/InProcessIDBServer.h:
+
+2020-02-11  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Win][CMake][WK1] WebKitLegacyGUID doesn't get recompiled by updating IDL files
+        https://bugs.webkit.org/show_bug.cgi?id=207456
+
+        Reviewed by Don Olmstead.
+
+        In GENERATE_INTERFACE macro, only *.h files were specified to
+        OUTPUT of add_custom_command. Generated *_i.c files were just
+        marked GENERATED source file property. So, WebKitLegacyGUID didn't
+        know which command generates *_i.c files.
+
+        Added a new option HEADER_ONLY to GENERATE_INTERFACE. If
+        HEADER_ONLY is not specified, append ${_filewe}_i.c to the OUTPUT.
+        Only AccessibleStates.idl and IA2CommonTypes.idl are marked with
+        HEADER_ONLY.
+
+        Removed _defines and _depends options to simplify
+        GENERATE_INTERFACE.
+
+        * PlatformWin.cmake:
+
+2020-02-10  Truitt Savell  <tsavell@apple.com>
+
+        Unreviewed, rolling out r256091.
+
+        Broke internal builds
+
+        Reverted changeset:
+
+        "Move trivial definitions from FeatureDefines.xcconfig to
+        PlatformEnableCocoa.h"
+        https://bugs.webkit.org/show_bug.cgi?id=207155
+        https://trac.webkit.org/changeset/256091
+
+2020-02-08  Sam Weinig  <weinig@apple.com>
+
+        Move trivial definitions from FeatureDefines.xcconfig to PlatformEnableCocoa.h
+        https://bugs.webkit.org/show_bug.cgi?id=207155
+
+        Reviewed by Tim Horton.
+
+        To support the move, generate-unified-sources.sh has been updated to generate 
+        the list of ENABLE_* features by directly from preprocessing Platform.h, rather 
+        than just getting the partial list from the xcconfig file.
+
+        * scripts/generate-unified-sources.sh:
+
+2020-02-07  Ryan Haddad  <ryanhaddad@apple.com>
+
+        Unreviewed, rolling out r256051.
+
+        Broke internal builds.
+
+        Reverted changeset:
+
+        "Move trivial definitions from FeatureDefines.xcconfig to
+        PlatformEnableCocoa.h"
+        https://bugs.webkit.org/show_bug.cgi?id=207155
+        https://trac.webkit.org/changeset/256051
+
+2020-02-07  Sam Weinig  <weinig@apple.com>
+
+        Move trivial definitions from FeatureDefines.xcconfig to PlatformEnableCocoa.h
+        https://bugs.webkit.org/show_bug.cgi?id=207155
+
+        Reviewed by Tim Horton.
+
+        To support the move, generate-unified-sources.sh has been updated to generate 
+        the list of ENABLE_* features by directly from preprocessing Platform.h, rather 
+        than just getting the partial list from the xcconfig file.
+
+        * scripts/generate-unified-sources.sh:
+
+2020-02-04  Ross Kirsling  <ross.kirsling@sony.com>
+
+        [CMake] Add Cairo::Cairo target
+        https://bugs.webkit.org/show_bug.cgi?id=207159
+
+        Reviewed by Konstantin Tokarev.
+
+        * PlatformWin.cmake:
+
+2020-02-03  Sihui Liu  <sihui_liu@apple.com>
+
+        Crash in WebCore::IDBServer::IDBServer::createIndex
+        https://bugs.webkit.org/show_bug.cgi?id=207137
+        <rdar://problem/59096231>
+
+        Reviewed by Darin Adler.
+
+        * Storage/InProcessIDBServer.cpp:
+        (InProcessIDBServer::createIndex): Create an isolated copy of IDBIndexInfo before passing it to IDB thread.
+
+2020-01-31  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Add _PRIVATE_LIBRARIES to framework
+        https://bugs.webkit.org/show_bug.cgi?id=207004
+
+        Reviewed by Konstantin Tokarev.
+
+        Move uses of PRIVATE within _LIBRARIES to _PRIVATE_LIBRARIES. Any _LIBRARIES appended
+        afterwards will have that visibility set erroneously.
+
+        * CMakeLists.txt:
+        * PlatformFTW.cmake:
+        * PlatformWin.cmake:
+
+2020-01-24  Keith Rollin  <krollin@apple.com>
+
+        Remove check-xcfilelists.sh from WebKitLegacy Xcode build target
+        https://bugs.webkit.org/show_bug.cgi?id=206762
+        <rdar://problem/58825997>
+
+        Reviewed by Alexey Proskuryakov.
+
+        When check-xcfilelists.sh got added to the WebKitLegacy Xcode project,
+        it was also accidentally added to the WebKitLegacy build target. This
+        caused it to be treated as a "resource", and so was copied to the
+        output directory in the Resources sub-folder during the build. This
+        copying is not expected, needed, or desired. Remove
+        check-xcfilelists.sh from the target, which also removes it from the
+        Copy Resources build phase, which removes it from the
+        WebKitLegacy.framework/Resources directory.
+
+        * WebKitLegacy.xcodeproj/project.pbxproj:
+
+2020-01-20  David Kilzer  <ddkilzer@apple.com>
+
+        Fix missing header guards and clean up empty files in WebCore, WebKitLegacy, WebKit, Tools
+        <https://webkit.org/b/206505>
+
+        Reviewed by Eric Carlson.
+
+        * WebCoreSupport/WebViewGroup.h:
+        - Add #pragma once statement.
+
+2020-01-16  Per Arne Vollan  <pvollan@apple.com>
+
+        [Win] Fix AppleWin build
+        https://bugs.webkit.org/show_bug.cgi?id=206299
+
+        Reviewed by Brent Fulgham.
+
+        Include required targets. Build internal builds with VS2019.
+
+        * CMakeLists.txt:
+        * WebKitLegacy.vcxproj/WebKitLegacy.proj:
+
+2020-01-07  Sihui Liu  <sihui_liu@apple.com>
+
+        REGRESSION (r248734): different threads write m_storageMap of StorageAreaImpl at the same time
+        https://bugs.webkit.org/show_bug.cgi?id=205764
+        <rdar://problem/58179425>
+
+        Reviewed by Maciej Stachowiak.
+
+        In StorageAreaImpl, we avoid modifying m_storageMap from different threads at the same time by blocking main 
+        thread access to it until the writes(importing items) of storage thread is done.
+
+        In r248734 we introduced a new case where the main thread could modify m_storageMap for session change, but we 
+        didn't add the wait there.
+
+        * Storage/StorageAreaImpl.cpp:
+        (WebKit::StorageAreaImpl::importItems):
+        (WebKit::StorageAreaImpl::sessionChanged):
+
+2020-01-06  Mark Lam  <mark.lam@apple.com>
+
+        Convert ASSERT_DISABLED to ASSERT_ENABLED, and fix some tests of NDEBUG that should actually test for ASSERT_ENABLED.
+        https://bugs.webkit.org/show_bug.cgi?id=205776
+
+        Reviewed by Saam Barati.
+
+        * Storage/StorageAreaImpl.cpp:
+        (WebKit::StorageAreaImpl::StorageAreaImpl):
+        (WebKit::StorageAreaImpl::close):
+        * Storage/StorageAreaImpl.h:
+
+2020-01-03  Simon Fraser  <simon.fraser@apple.com>
+
+        Add some shared schemes to the WebKit.xcworkspace
+        https://bugs.webkit.org/show_bug.cgi?id=205698
+
+        Reviewed by Tim Horton.
+
+        Make WebKit.xcworkspace show the following schemes by default:
+            All Source
+            All Tools
+            WTF
+            JavaScriptCore
+            WebCore
+            WebKit
+            WebKitLegacy
+            DumpRenderTree
+            WebKitTestRunner
+            TestWebKitAPI
+            MiniBrowser
+            MobileMiniBrowser.
+            
+        Also remove the MobileMiniBrowserUITests scheme.
+
+        * WebKitLegacy.xcodeproj/xcshareddata/xcschemes/WebKitLegacy.xcscheme: Copied from Tools/MobileMiniBrowser/MobileMiniBrowser.xcodeproj/xcshareddata/xcschemes/MobileMiniBrowserUITests.xcscheme.
+
 2019-12-18  Sihui Liu  <sihui_liu@apple.com>
 
         IndexedDB: perform IDBServer work only on background thread

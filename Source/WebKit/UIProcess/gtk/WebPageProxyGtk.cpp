@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WebPageProxy.h"
 
+#include "InputMethodState.h"
 #include "PageClientImpl.h"
 #include "WebKitUserMessage.h"
 #include "WebKitWebViewBasePrivate.h"
@@ -148,9 +149,9 @@ void WebPageProxy::windowedPluginVisibilityDidChange(bool isVisible, uint64_t wi
 }
 #endif // PLATFORM(X11)
 
-void WebPageProxy::setInputMethodState(bool enabled)
+void WebPageProxy::setInputMethodState(Optional<InputMethodState>&& state)
 {
-    webkitWebViewBaseSetInputMethodState(WEBKIT_WEB_VIEW_BASE(viewWidget()), enabled);
+    webkitWebViewBaseSetInputMethodState(WEBKIT_WEB_VIEW_BASE(viewWidget()), WTFMove(state));
 }
 
 void WebPageProxy::getCenterForZoomGesture(const WebCore::IntPoint& centerInViewCoordinates, WebCore::IntPoint& center)
@@ -181,6 +182,15 @@ void WebPageProxy::sendMessageToWebViewWithReply(UserMessage&& message, Completi
 void WebPageProxy::sendMessageToWebView(UserMessage&& message)
 {
     sendMessageToWebViewWithReply(WTFMove(message), [](UserMessage&&) { });
+}
+
+void WebPageProxy::themeDidChange()
+{
+    if (!hasRunningProcess())
+        return;
+
+    send(Messages::WebPage::ThemeDidChange(pageClient().themeName()));
+    effectiveAppearanceDidChange();
 }
 
 } // namespace WebKit

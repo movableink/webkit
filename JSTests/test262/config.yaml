@@ -3,6 +3,7 @@
 flags:
   BigInt: useBigInt
   WeakRef: useWeakRefs
+  class-fields-public: usePublicClassFields
 skip:
   features:
     - SharedArrayBuffer
@@ -10,7 +11,6 @@ skip:
     # https://bugs.webkit.org/show_bug.cgi?id=174931
     - regexp-lookbehind
 
-    - class-fields-public
     - class-fields-private
     - class-methods-private
     - class-static-fields-public
@@ -19,9 +19,13 @@ skip:
     - host-gc-required
     - regexp-match-indices
     - top-level-await
-    - FinalizationGroup
+    - AggregateError
+    - FinalizationRegistry
     - Intl.DateTimeFormat-datetimestyle
+    - Intl.DateTimeFormat-dayPeriod
     - Intl.DateTimeFormat-formatRange
+    - Intl.DateTimeFormat-fractionalSecondDigits
+    - Intl.DisplayNames
     - Intl.ListFormat
     - Intl.Locale
     - Intl.NumberFormat-unified

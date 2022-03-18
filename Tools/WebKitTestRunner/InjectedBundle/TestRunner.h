@@ -375,12 +375,13 @@ public:
     // Gamepads
     void connectMockGamepad(unsigned index);
     void disconnectMockGamepad(unsigned index);
-    void setMockGamepadDetails(unsigned index, JSStringRef gamepadID, unsigned axisCount, unsigned buttonCount);
+    void setMockGamepadDetails(unsigned index, JSStringRef gamepadID, JSStringRef mapping, unsigned axisCount, unsigned buttonCount);
     void setMockGamepadAxisValue(unsigned index, unsigned axisIndex, double value);
     void setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
     
     // Resource Load Statistics
     void setStatisticsEnabled(bool value);
+    bool isStatisticsEphemeral();
     void installStatisticsDidModifyDataRecordsCallback(JSValueRef callback);
     void installStatisticsDidScanDataRecordsCallback(JSValueRef callback);
     void installStatisticsDidRunTelemetryCallback(JSValueRef callback);
@@ -448,6 +449,8 @@ public:
     void statisticsCallDidSetFirstPartyWebsiteDataRemovalModeCallback();
     void statisticsResetToConsistentState(JSValueRef completionHandler);
     void statisticsCallDidResetToConsistentStateCallback();
+    void loadedThirdPartyDomains(JSValueRef callback);
+    void callDidReceiveLoadedThirdPartyDomainsCallback(Vector<String>&& domains);
 
     // Injected bundle form client.
     void installTextDidChangeInTextFieldCallback(JSValueRef callback);
@@ -458,9 +461,12 @@ public:
     void textFieldDidEndEditingCallback();
 
     // Storage Access API
-    void setStorageAccessAPIEnabled(bool);
     void getAllStorageAccessEntries(JSValueRef callback);
     void callDidReceiveAllStorageAccessEntriesCallback(Vector<String>& domains);
+
+    
+    void getWebViewCategory(JSValueRef callback);
+    void callDidReceiveWebViewCategoryCallback(String);
 
     // Open panel
     void setOpenPanelFiles(JSValueRef);
@@ -493,6 +499,9 @@ public:
     void resetMockMediaDevices();
     void setMockCameraOrientation(unsigned);
     bool isMockRealtimeMediaSourceCenterEnabled();
+    bool hasAppBoundSession();
+    void setInAppBrowserPrivacyEnabled(bool, JSValueRef);
+    void callDidSetInAppBrowserPrivacyEnabledCallback();
 
     size_t userScriptInjectedCount() const;
     void injectUserScript(JSStringRef);
@@ -503,8 +512,8 @@ public:
 
     // FIXME(189876)
     void addTestKeyToKeychain(JSStringRef privateKeyBase64, JSStringRef attrLabel, JSStringRef applicationTagBase64);
-    void cleanUpKeychain(JSStringRef attrLabel, JSStringRef applicationTagBase64);
-    bool keyExistsInKeychain(JSStringRef attrLabel, JSStringRef applicationTagBase64);
+    void cleanUpKeychain(JSStringRef attrLabel, JSStringRef applicationLabelBase64);
+    bool keyExistsInKeychain(JSStringRef attrLabel, JSStringRef applicationLabelBase64);
 
     unsigned long serverTrustEvaluationCallbackCallsCount();
 

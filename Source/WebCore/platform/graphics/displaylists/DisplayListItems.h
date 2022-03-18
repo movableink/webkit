@@ -25,13 +25,16 @@
 
 #pragma once
 
+#include "AlphaPremultiplication.h"
 #include "DisplayList.h"
 #include "FloatPoint.h"
 #include "FloatRoundedRect.h"
 #include "Font.h"
 #include "GlyphBuffer.h"
 #include "Image.h"
+#include "ImageData.h"
 #include "Pattern.h"
+#include "SharedBuffer.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 
@@ -41,6 +44,7 @@ class TextStream;
 
 namespace WebCore {
 
+class ImageData;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
@@ -60,6 +64,10 @@ public:
     // Does not include effets of transform, shadow etc in the state.
     virtual Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
 
+    // Some operations (e.g. putImageData) operate in global bounds. For these operations, override this method.
+    // If applicable, the return value needs to include the effects of shadows, clipping, etc.
+    virtual Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+
 private:
     bool isDrawingItem() const override { return true; }
 
@@ -75,10 +83,6 @@ public:
 
     WEBCORE_EXPORT virtual ~Save();
 
-    // Index in the display list of the corresponding Restore item. 0 if unmatched.
-    size_t restoreIndex() const { return m_restoreIndex; }
-    void setRestoreIndex(size_t index) { m_restoreIndex = index; }
-
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<Ref<Save>> decode(Decoder&);
 
@@ -86,28 +90,17 @@ private:
     WEBCORE_EXPORT Save();
 
     void apply(GraphicsContext&) const override;
-    
-    size_t m_restoreIndex { 0 };
 };
 
 template<class Encoder>
-void Save::encode(Encoder& encoder) const
+void Save::encode(Encoder&) const
 {
-    encoder << static_cast<uint64_t>(m_restoreIndex);
 }
 
 template<class Decoder>
-Optional<Ref<Save>> Save::decode(Decoder& decoder)
+Optional<Ref<Save>> Save::decode(Decoder&)
 {
-    Optional<uint64_t> restoreIndex;
-    decoder >> restoreIndex;
-    if (!restoreIndex)
-        return WTF::nullopt;
-
-    // FIXME: Validate restoreIndex? But we don't have the list context here.
-    auto save = Save::create();
-    save->setRestoreIndex(static_cast<size_t>(*restoreIndex));
-    return save;
+    return Save::create();
 }
 
 class Restore : public Item {
@@ -1057,6 +1050,13 @@ public:
         return adoptRef(*new DrawGlyphs(font, glyphs, advances, count, blockLocation, localAnchor, smoothingMode));
     }
 
+    static Ref<DrawGlyphs> create(const Font& font, Vector<GlyphBufferGlyph, 128>&& glyphs, Vector<GlyphBufferAdvance, 128>&& advances, const FloatPoint& blockLocation, const FloatSize& localAnchor, FontSmoothingMode smoothingMode)
+    {
+        return adoptRef(*new DrawGlyphs(font, WTFMove(glyphs), WTFMove(advances), blockLocation, localAnchor, smoothingMode));
+    }
+
+    WEBCORE_EXPORT virtual ~DrawGlyphs();
+
     const FloatPoint& blockLocation() const { return m_blockLocation; }
     void setBlockLocation(const FloatPoint& blockLocation) { m_blockLocation = blockLocation; }
 
@@ -1066,8 +1066,12 @@ public:
 
     const Vector<GlyphBufferGlyph, 128>& glyphs() const { return m_glyphs; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<Ref<DrawGlyphs>> decode(Decoder&);
+
 private:
     DrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& blockLocation, const FloatSize& localAnchor, FontSmoothingMode);
+    WEBCORE_EXPORT DrawGlyphs(const Font&, Vector<GlyphBufferGlyph, 128>&&, Vector<GlyphBufferAdvance, 128>&&, const FloatPoint& blockLocation, const FloatSize& localAnchor, FontSmoothingMode);
 
     void computeBounds();
 
@@ -1085,6 +1089,58 @@ private:
     FloatSize m_localAnchor;
     FontSmoothingMode m_smoothingMode;
 };
+
+template<class Encoder>
+void DrawGlyphs::encode(Encoder& encoder) const
+{
+    FontHandle handle;
+    handle.font = m_font.ptr();
+    encoder << handle;
+    encoder << m_glyphs;
+    encoder << m_advances;
+    encoder << m_blockLocation;
+    encoder << m_localAnchor;
+    encoder << m_smoothingMode;
+}
+
+template<class Decoder>
+Optional<Ref<DrawGlyphs>> DrawGlyphs::decode(Decoder& decoder)
+{
+    Optional<FontHandle> handle;
+    decoder >> handle;
+    if (!handle || !handle->font)
+        return WTF::nullopt;
+
+    Optional<Vector<GlyphBufferGlyph, 128>> glyphs;
+    decoder >> glyphs;
+    if (!glyphs)
+        return WTF::nullopt;
+
+    Optional<Vector<GlyphBufferAdvance, 128>> advances;
+    decoder >> advances;
+    if (!advances)
+        return WTF::nullopt;
+
+    if (glyphs->size() != advances->size())
+        return WTF::nullopt;
+
+    Optional<FloatPoint> blockLocation;
+    decoder >> blockLocation;
+    if (!blockLocation)
+        return WTF::nullopt;
+
+    Optional<FloatSize> localAnchor;
+    decoder >> localAnchor;
+    if (!localAnchor)
+        return WTF::nullopt;
+
+    Optional<FontSmoothingMode> smoothingMode;
+    decoder >> smoothingMode;
+    if (!smoothingMode)
+        return WTF::nullopt;
+
+    return DrawGlyphs::create(handle->font.releaseNonNull(), WTFMove(*glyphs), WTFMove(*advances), *blockLocation, *localAnchor, *smoothingMode);
+}
 
 class DrawImage : public DrawingItem {
 public:
@@ -2394,6 +2450,77 @@ Optional<Ref<FillEllipse>> FillEllipse::decode(Decoder& decoder)
     return FillEllipse::create(*rect);
 }
 
+class PutImageData : public DrawingItem {
+public:
+    static Ref<PutImageData> create(AlphaPremultiplication inputFormat, const ImageData& imageData, const IntRect& srcRect, const IntPoint& destPoint)
+    {
+        return adoptRef(*new PutImageData(inputFormat, imageData, srcRect, destPoint));
+    }
+    static Ref<PutImageData> create(AlphaPremultiplication inputFormat, Ref<ImageData>&& imageData, const IntRect& srcRect, const IntPoint& destPoint)
+    {
+        return adoptRef(*new PutImageData(inputFormat, WTFMove(imageData), srcRect, destPoint));
+    }
+
+    WEBCORE_EXPORT virtual ~PutImageData();
+
+    AlphaPremultiplication inputFormat() const { return m_inputFormat; }
+    ImageData& imageData() const { return m_imageData; }
+    IntRect srcRect() const { return m_srcRect; }
+    IntPoint destPoint() const { return m_destPoint; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<Ref<PutImageData>> decode(Decoder&);
+
+private:
+    WEBCORE_EXPORT PutImageData(AlphaPremultiplication inputFormat, const ImageData&, const IntRect& srcRect, const IntPoint& destPoint);
+    WEBCORE_EXPORT PutImageData(AlphaPremultiplication inputFormat, Ref<ImageData>&&, const IntRect& srcRect, const IntPoint& destPoint);
+
+    void apply(GraphicsContext&) const override;
+
+    Optional<FloatRect> globalBounds() const override { return FloatRect(m_destPoint, m_srcRect.size()); }
+
+    IntRect m_srcRect;
+    IntPoint m_destPoint;
+    Ref<ImageData> m_imageData;
+    AlphaPremultiplication m_inputFormat;
+};
+
+template<class Encoder>
+void PutImageData::encode(Encoder& encoder) const
+{
+    encoder << m_inputFormat;
+    encoder << m_imageData;
+    encoder << m_srcRect;
+    encoder << m_destPoint;
+}
+
+template<class Decoder>
+Optional<Ref<PutImageData>> PutImageData::decode(Decoder& decoder)
+{
+    Optional<AlphaPremultiplication> inputFormat;
+    Optional<Ref<ImageData>> imageData;
+    Optional<IntRect> srcRect;
+    Optional<IntPoint> destPoint;
+
+    decoder >> inputFormat;
+    if (!inputFormat)
+        return WTF::nullopt;
+
+    decoder >> imageData;
+    if (!imageData)
+        return WTF::nullopt;
+
+    decoder >> srcRect;
+    if (!srcRect)
+        return WTF::nullopt;
+
+    decoder >> destPoint;
+    if (!destPoint)
+        return WTF::nullopt;
+
+    return PutImageData::create(*inputFormat, WTFMove(*imageData), *srcRect, *destPoint);
+}
+
 class StrokeRect : public DrawingItem {
 public:
     static Ref<StrokeRect> create(const FloatRect& rect, float lineWidth)
@@ -2462,7 +2589,7 @@ private:
     void apply(GraphicsContext&) const override;
     Optional<FloatRect> localBounds(const GraphicsContext&) const override;
 
-    const Path m_path;
+    mutable Path m_path;
 };
 
 template<class Encoder>
@@ -2722,7 +2849,7 @@ void Item::encode(Encoder& encoder) const
         encoder << downcast<ClipPath>(*this);
         break;
     case ItemType::DrawGlyphs:
-        WTFLogAlways("DisplayList::Item::encode cannot yet encode DrawGlyphs");
+        encoder << downcast<DrawGlyphs>(*this);
         break;
     case ItemType::DrawImage:
         encoder << downcast<DrawImage>(*this);
@@ -2788,6 +2915,9 @@ void Item::encode(Encoder& encoder) const
         break;
     case ItemType::FillEllipse:
         encoder << downcast<FillEllipse>(*this);
+        break;
+    case ItemType::PutImageData:
+        encoder << downcast<PutImageData>(*this);
         break;
     case ItemType::StrokeRect:
         encoder << downcast<StrokeRect>(*this);
@@ -2899,7 +3029,8 @@ Optional<Ref<Item>> Item::decode(Decoder& decoder)
             return static_reference_cast<Item>(WTFMove(*item));
         break;
     case ItemType::DrawGlyphs:
-        WTFLogAlways("DisplayList::Item::decode cannot yet decode DrawGlyphs");
+        if (auto item = DrawGlyphs::decode(decoder))
+            return static_reference_cast<Item>(WTFMove(*item));
         break;
     case ItemType::DrawImage:
         if (auto item = DrawImage::decode(decoder))
@@ -2985,6 +3116,10 @@ Optional<Ref<Item>> Item::decode(Decoder& decoder)
         break;
     case ItemType::FillEllipse:
         if (auto item = FillEllipse::decode(decoder))
+            return static_reference_cast<Item>(WTFMove(*item));
+        break;
+    case ItemType::PutImageData:
+        if (auto item = PutImageData::decode(decoder))
             return static_reference_cast<Item>(WTFMove(*item));
         break;
     case ItemType::StrokeRect:
@@ -3086,6 +3221,7 @@ SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRoundedRect)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRectWithRoundedHole)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillPath)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillEllipse)
+SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(PutImageData)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokeRect)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokePath)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokeEllipse)
@@ -3145,6 +3281,7 @@ template<> struct EnumTraits<WebCore::DisplayList::ItemType> {
     WebCore::DisplayList::ItemType::FillRectWithRoundedHole,
     WebCore::DisplayList::ItemType::FillPath,
     WebCore::DisplayList::ItemType::FillEllipse,
+    WebCore::DisplayList::ItemType::PutImageData,
     WebCore::DisplayList::ItemType::StrokeRect,
     WebCore::DisplayList::ItemType::StrokePath,
     WebCore::DisplayList::ItemType::StrokeEllipse,

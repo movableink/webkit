@@ -27,7 +27,6 @@
 #include "AxisScrollSnapOffsets.h"
 
 #include "ElementChildIterator.h"
-#include "HTMLCollection.h"
 #include "HTMLElement.h"
 #include "Length.h"
 #include "Logging.h"
@@ -78,10 +77,8 @@ static String snapOffsetsToString(const Vector<LayoutUnit>& snapOffsets)
 {
     StringBuilder builder;
     builder.appendLiteral("[ ");
-    for (auto& offset : snapOffsets) {
-        builder.appendFixedWidthNumber(offset.toFloat(), 1);
-        builder.append(' ');
-    }
+    for (auto& offset : snapOffsets)
+        builder.append(offset.toFloat(), ' ');
     builder.append(']');
     return builder.toString();
 }
@@ -90,24 +87,15 @@ static String snapOffsetRangesToString(const Vector<ScrollOffsetRange<LayoutUnit
 {
     StringBuilder builder;
     builder.appendLiteral("[ ");
-    for (auto& range : ranges) {
-        builder.append('(');
-        builder.appendFixedWidthNumber(range.start.toFloat(), 1);
-        builder.appendLiteral(", ");
-        builder.appendFixedWidthNumber(range.end.toFloat(), 1);
-        builder.appendLiteral(") ");
-    }
+    for (auto& range : ranges)
+        builder.append('(', range.start.toFloat(), ", ", range.end.toFloat(), ") ");
     builder.append(']');
     return builder.toString();
 }
 
 static String snapPortOrAreaToString(const LayoutRect& rect)
 {
-    return makeString("{{",
-        FormattedNumber::fixedWidth(rect.x(), 1), ", ",
-        FormattedNumber::fixedWidth(rect.y(), 1), "} {",
-        FormattedNumber::fixedWidth(rect.width(), 1), ", ",
-        FormattedNumber::fixedWidth(rect.height(), 1), "}}");
+    return makeString("{{", rect.x().toFloat(), ", ", rect.y().toFloat(), "} {", rect.width().toFloat(), ", ", rect.height().toFloat(), "}}");
 }
 
 #endif

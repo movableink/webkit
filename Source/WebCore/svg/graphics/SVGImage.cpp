@@ -218,7 +218,7 @@ NativeImagePtr SVGImage::nativeImageForCurrentFrame(const GraphicsContext*)
         return nullptr;
 
     // Cairo does not use the accelerated drawing flag, so it's OK to make an unconditionally unaccelerated buffer.
-    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(size(), Unaccelerated);
+    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated);
     if (!buffer) // failed to allocate image
         return nullptr;
 
@@ -254,7 +254,7 @@ NativeImagePtr SVGImage::nativeImage(const GraphicsContext* targetContext)
     if (!SUCCEEDED(hr))
         return nullptr;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto nativeImageSize = nativeImage->GetPixelSize();
     ASSERT(nativeImageSize.height = rect().size().height());
     ASSERT(nativeImageSize.width = rect().size().width());

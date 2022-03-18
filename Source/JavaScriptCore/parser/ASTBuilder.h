@@ -405,6 +405,11 @@ public:
         return node;
     }
 
+    DefineFieldNode* createDefineField(const JSTokenLocation& location, const Identifier* ident, ExpressionNode* initializer, DefineFieldNode::Type type)
+    {
+        return new (m_parserArena) DefineFieldNode(location, ident, initializer, type);
+    }
+
     ClassExprNode* createClassExpr(const JSTokenLocation& location, const ParserClassInfo<ASTBuilder>& classInfo, VariableEnvironment& classEnvironment, ExpressionNode* constructor,
         ExpressionNode* parentClass, PropertyListNode* classElements)
     {
@@ -527,6 +532,7 @@ public:
         return new (m_parserArena) PropertyNode(parserArena.identifierArena().makeNumericIdentifier(vm, propertyName), node, type, putType, superBinding, tag);
     }
     PropertyNode* createProperty(ExpressionNode* propertyName, ExpressionNode* node, PropertyNode::Type type, PropertyNode::PutType putType, bool, SuperBinding superBinding, ClassElementTag tag) { return new (m_parserArena) PropertyNode(propertyName, node, type, putType, superBinding, tag); }
+    PropertyNode* createProperty(const Identifier* identifier, ExpressionNode* propertyName, ExpressionNode* node, PropertyNode::Type type, PropertyNode::PutType putType, bool, SuperBinding superBinding, ClassElementTag tag) { return new (m_parserArena) PropertyNode(*identifier, propertyName, node, type, putType, superBinding, tag); }
     PropertyListNode* createPropertyList(const JSTokenLocation& location, PropertyNode* property) { return new (m_parserArena) PropertyListNode(location, property); }
     PropertyListNode* createPropertyList(const JSTokenLocation& location, PropertyNode* property, PropertyListNode* tail) { return new (m_parserArena) PropertyListNode(location, property, tail); }
 
@@ -919,6 +925,16 @@ public:
     {
         tokenStackDepth--;
         m_unaryTokenStack.removeLast();
+    }
+
+    int unaryTokenStackDepth() const
+    {
+        return m_unaryTokenStack.size();
+    }
+
+    void setUnaryTokenStackDepth(int oldDepth)
+    {
+        m_unaryTokenStack.shrink(oldDepth);
     }
     
     void assignmentStackAppend(int& assignmentStackDepth, ExpressionNode* node, const JSTextPosition& start, const JSTextPosition& divot, int assignmentCount, Operator op)

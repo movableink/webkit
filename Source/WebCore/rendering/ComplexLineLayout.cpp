@@ -310,7 +310,7 @@ RootInlineBox* ComplexLineLayout::constructLine(BidiRunList<BidiRun>& bidiRuns, 
         InlineBox* box = createInlineBoxForRenderer(&r->renderer(), isOnlyRun);
         r->setBox(box);
 
-        if (!rootHasSelectedChildren && box->renderer().selectionState() != RenderObject::SelectionNone)
+        if (!rootHasSelectedChildren && box->renderer().selectionState() != RenderObject::HighlightState::None)
             rootHasSelectedChildren = true;
         
         // If we have no parent box yet, or if the run is not simply a sibling,
@@ -977,7 +977,7 @@ BidiRun* ComplexLineLayout::computeInlineDirectionPositionsForSegment(RootInline
 void ComplexLineLayout::removeInlineBox(BidiRun& run, const RootInlineBox& rootLineBox) const
 {
     auto* inlineBox = run.box();
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto* inlineParent = inlineBox->parent();
     while (inlineParent && inlineParent != &rootLineBox) {
         ASSERT(!inlineParent->isDirty());

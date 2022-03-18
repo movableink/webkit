@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -39,8 +39,10 @@ import ews.config as config
 class StatusBubble(View):
     # These queue names are from shortname in https://trac.webkit.org/browser/webkit/trunk/Tools/BuildSlaveSupport/ews-build/config.json
     # FIXME: Auto-generate this list https://bugs.webkit.org/show_bug.cgi?id=195640
+    # Note: This list is sorted in the order of which bubbles appear in bugzilla.
     ALL_QUEUES = ['style', 'ios', 'ios-sim', 'mac', 'mac-debug', 'gtk', 'wpe', 'wincairo', 'win',
-                  'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-debug-wk1', 'api-ios', 'api-mac', 'bindings', 'jsc', 'jsc-armv7', 'jsc-mips', 'jsc-i386', 'webkitperl', 'webkitpy', 'services']
+                  'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-debug-wk1', 'api-ios', 'api-mac', 'api-gtk',
+                  'bindings', 'jsc', 'jsc-armv7', 'jsc-mips', 'jsc-i386', 'webkitperl', 'webkitpy', 'services']
     # FIXME: Auto-generate the queue's trigger relationship
     QUEUE_TRIGGERS = {
         'api-ios': 'ios-sim',
@@ -49,6 +51,7 @@ class StatusBubble(View):
         'mac-wk1': 'mac',
         'mac-wk2': 'mac',
         'mac-debug-wk1': 'mac-debug',
+        'api-gtk': 'gtk',
     }
 
     STEPS_TO_HIDE = ['^Archived built product$', '^Uploaded built product$', '^Transferred archive to S3$',
@@ -56,7 +59,10 @@ class StatusBubble(View):
                      '^Downloaded built product$', '^Extracted built product$',
                      '^Cleaned and updated working directory$', '^Checked out required revision$', '^Updated working directory$',
                      '^Validated patch$', '^Killed old processes$', '^Configured build$', '^OS:.*Xcode:', '(skipped)',
-                     '^Printed configuration$', '^Checked patch relevance$']
+                     '^Printed configuration$', '^Checked patch relevance$', '^Deleted .git/index.lock$',
+                     '^triggered.*$', '^Found modified ChangeLogs$', '^Created local git commit$', '^Set build summary$',
+                     '^Validated commiter$', '^Validated commiter and reviewer$', '^Validated ChangeLog and Reviewer$',
+                     '^Removed flags on bugzilla patch$']
     DAYS_TO_CHECK = 3
     BUILDER_ICON = u'\U0001f6e0'
     TESTER_ICON = u'\U0001f52c'
@@ -65,10 +71,12 @@ class StatusBubble(View):
         bubble = {
             'name': queue,
         }
+        is_tester_queue = self._is_tester_queue(queue)
+        is_builder_queue = self._is_builder_queue(queue)
         if hide_icons == False:
-            if self._is_tester_queue(queue):
+            if is_tester_queue:
                 bubble['name'] = StatusBubble.TESTER_ICON + '  ' + bubble['name']
-            if self._is_builder_queue(queue):
+            if is_builder_queue:
                 bubble['name'] = StatusBubble.BUILDER_ICON + '  ' + bubble['name']
 
         builds, is_parent_build = self.get_all_builds_for_queue(patch, queue, self._get_parent_queue(queue))
@@ -110,13 +118,23 @@ class StatusBubble(View):
                 bubble['details_message'] = 'Build is in-progress. Recent messages:' + self._steps_messages_from_multiple_builds(builds) + '\n\nWaiting to run tests.'
             else:
                 bubble['state'] = 'pass'
-                bubble['details_message'] = 'Pass'
+                if is_builder_queue and is_tester_queue:
+                    bubble['details_message'] = 'Built successfully and passed tests'
+                elif is_builder_queue:
+                    bubble['details_message'] = 'Built successfully'
+                elif is_tester_queue:
+                    if queue == 'style':
+                        bubble['details_message'] = 'Passed style check'
+                    else:
+                        bubble['details_message'] = 'Passed tests'
+                else:
+                    bubble['details_message'] = 'Pass'
         elif build.result == Buildbot.WARNINGS:
             bubble['state'] = 'pass'
             bubble['details_message'] = 'Warning' + self._steps_messages_from_multiple_builds(builds)
         elif build.result == Buildbot.FAILURE:
             bubble['state'] = 'fail'
-            bubble['details_message'] = self._most_recent_step_message(build)
+            bubble['details_message'] = self._most_recent_failure_message(build)
         elif build.result == Buildbot.SKIPPED:
             bubble['state'] = 'none'
             bubble['details_message'] = 'The patch is no longer eligible for processing.'
@@ -203,11 +221,11 @@ class StatusBubble(View):
                 return True
         return False
 
-    def _most_recent_step_message(self, build):
-        recent_step = build.step_set.last()
-        if not recent_step:
-            return ''
-        return recent_step.state_string
+    def _most_recent_failure_message(self, build):
+        for step in build.step_set.all().order_by('-uid'):
+            if step.result == Buildbot.FAILURE:
+                return step.state_string
+        return ''
 
     def get_latest_build_for_queue(self, patch, queue, parent_queue=None):
         builds, is_parent_build = self.get_all_builds_for_queue(patch, queue, parent_queue)
@@ -281,16 +299,24 @@ class StatusBubble(View):
         show_retry = False
         bubbles = []
 
-        if not (patch and patch.sent_to_buildbot):
+        if not patch:
             return (None, show_submit_to_ews, failed_to_apply, show_retry)
 
-        for queue in StatusBubble.ALL_QUEUES:
-            bubble = self._build_bubble(patch, queue, hide_icons)
-            if bubble:
-                show_submit_to_ews = False
-                bubbles.append(bubble)
-                if bubble['state'] in ('fail', 'error'):
-                    show_retry = True
+        if patch.sent_to_buildbot:
+            for queue in StatusBubble.ALL_QUEUES:
+                bubble = self._build_bubble(patch, queue, hide_icons)
+                if bubble:
+                    show_submit_to_ews = False
+                    bubbles.append(bubble)
+                    if bubble['state'] in ('fail', 'error'):
+                        show_retry = True
+
+        if patch.sent_to_commit_queue:
+            if not patch.sent_to_buildbot:
+                hide_icons = True
+            cq_bubble = self._build_bubble(patch, 'commit', hide_icons)
+            if cq_bubble:
+                bubbles.insert(0, cq_bubble)
 
         return (bubbles, show_submit_to_ews, failed_to_apply, show_retry)
 

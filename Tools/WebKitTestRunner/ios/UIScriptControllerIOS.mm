@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -253,6 +253,12 @@ void UIScriptControllerIOS::activateAtPoint(long x, long y, JSValueRef callback)
     singleTapAtPoint(x, y, callback);
 }
 
+void UIScriptControllerIOS::waitForModalTransitionToFinish() const
+{
+    while ([webView().window.rootViewController isPerformingModalTransition])
+        [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:NSDate.distantFuture];
+}
+
 void UIScriptControllerIOS::waitForSingleTapToReset() const
 {
     bool doneWaitingForSingleTapToReset = false;
@@ -286,6 +292,12 @@ void UIScriptControllerIOS::singleTapAtPointWithModifiers(long x, long y, JSValu
 
 void UIScriptControllerIOS::singleTapAtPointWithModifiers(WebCore::FloatPoint location, Vector<String>&& modifierFlags, BlockPtr<void()>&& block)
 {
+    // Animations on the scroll view could be in progress to reveal a form control which may interfere with hit testing (see wkb.ug/205458).
+    [webView().scrollView _removeAllAnimations:NO];
+
+    // Necessary for popovers on iPad (used for elements such as <select>) to finish dismissing (see wkb.ug/206759).
+    waitForModalTransitionToFinish();
+
     waitForSingleTapToReset();
 
     for (auto& modifierFlag : modifierFlags)
@@ -428,18 +440,56 @@ void UIScriptControllerIOS::sendEventStream(JSStringRef eventsJSON, JSValueRef c
     [[HIDEventGenerator sharedHIDEventGenerator] sendEventStream:eventInfo completionBlock:completion.get()];
 }
 
+static NSDictionary *dictionaryForFingerEventWithContentPoint(CGPoint point, NSString* phase, Seconds timeOffset)
+{
+    return @{
+        HIDEventCoordinateSpaceKey : HIDEventCoordinateSpaceTypeContent,
+        HIDEventTimeOffsetKey : @(timeOffset.seconds()),
+        HIDEventInputType : HIDEventInputTypeHand,
+        HIDEventTouchesKey : @[
+            @{
+                HIDEventTouchIDKey : @1,
+                HIDEventInputType : HIDEventInputTypeFinger,
+                HIDEventPhaseKey : phase,
+                HIDEventXKey : @(point.x),
+                HIDEventYKey : @(point.y),
+            },
+        ],
+    };
+}
+
 void UIScriptControllerIOS::dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
-
+    
     CGPoint startPoint = globalToContentCoordinates(webView(), startX, startY);
     CGPoint endPoint = globalToContentCoordinates(webView(), endX, endY);
-    
-    [[HIDEventGenerator sharedHIDEventGenerator] dragWithStartPoint:startPoint endPoint:endPoint duration:durationSeconds completionBlock:makeBlockPtr([this, strongThis = makeRef(*this), callbackID] {
+
+    NSDictionary *touchDownInfo = dictionaryForFingerEventWithContentPoint(startPoint, HIDEventPhaseBegan, 0_s);
+    NSDictionary *interpolatedEvents = @{
+        HIDEventInterpolateKey : HIDEventInterpolationTypeLinear,
+        HIDEventCoordinateSpaceKey : HIDEventCoordinateSpaceTypeContent,
+        HIDEventTimestepKey : @(0.016),
+        HIDEventStartEventKey : dictionaryForFingerEventWithContentPoint(startPoint, HIDEventPhaseMoved, 0_s),
+        HIDEventEndEventKey : dictionaryForFingerEventWithContentPoint(endPoint, HIDEventPhaseMoved, Seconds(durationSeconds)),
+    };
+    NSDictionary *liftUpInfo = dictionaryForFingerEventWithContentPoint(endPoint, HIDEventPhaseEnded, Seconds(durationSeconds));
+
+    NSDictionary *eventStream = @{
+        TopLevelEventInfoKey : @[
+            touchDownInfo,
+            interpolatedEvents,
+            liftUpInfo,
+        ],
+    };
+
+    auto completion = makeBlockPtr([this, protectedThis = makeRefPtr(*this), callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
-    }).get()];
+    });
+
+    [[HIDEventGenerator sharedHIDEventGenerator] sendEventStream:eventStream completionBlock:completion.get()];
 }
     
 void UIScriptControllerIOS::longPressAtPoint(long x, long y, JSValueRef callback)

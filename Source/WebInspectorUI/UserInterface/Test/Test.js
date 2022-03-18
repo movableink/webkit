@@ -29,6 +29,7 @@ WI.loaded = function()
     // The initialization order should match the same in Main.js.
     InspectorBackend.registerAnimationDispatcher(WI.AnimationObserver);
     InspectorBackend.registerApplicationCacheDispatcher(WI.ApplicationCacheObserver);
+    InspectorBackend.registerBrowserDispatcher(WI.BrowserObserver);
     InspectorBackend.registerCPUProfilerDispatcher(WI.CPUProfilerObserver);
     InspectorBackend.registerCSSDispatcher(WI.CSSObserver);
     InspectorBackend.registerCanvasDispatcher(WI.CanvasObserver);
@@ -51,6 +52,7 @@ WI.loaded = function()
 
     // Instantiate controllers used by tests.
     WI.managers = [
+        WI.browserManager = new WI.BrowserManager,
         WI.targetManager = new WI.TargetManager,
         WI.networkManager = new WI.NetworkManager,
         WI.domStorageManager = new WI.DOMStorageManager,
@@ -70,10 +72,12 @@ WI.loaded = function()
         WI.workerManager = new WI.WorkerManager,
         WI.domDebuggerManager = new WI.DOMDebuggerManager,
         WI.canvasManager = new WI.CanvasManager,
+        WI.animationManager = new WI.AnimationManager,
     ];
 
     // Register for events.
     document.addEventListener("DOMContentLoaded", WI.contentLoaded);
+    WI.browserManager.enable();
 
     // Targets.
     WI.backendTarget = null;
@@ -91,6 +95,7 @@ WI.loaded = function()
 WI.contentLoaded = function()
 {
     // Things that would normally get called by the UI, that we still want to do in tests.
+    WI.animationManager.enable();
     WI.applicationCacheManager.enable();
     WI.canvasManager.enable();
     WI.databaseManager.enable();
@@ -181,6 +186,7 @@ WI.updateVisibilityState = () => {};
             get() { return WI.mainTarget._agents[domainName]; },
         });
     }
+    makeAgentGetter("Animation");
     makeAgentGetter("Audit");
     makeAgentGetter("ApplicationCache");
     makeAgentGetter("CPUProfiler");

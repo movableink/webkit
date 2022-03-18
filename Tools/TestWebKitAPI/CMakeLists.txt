@@ -30,6 +30,7 @@ set(TestWTF_SOURCES
     Tests/WTF/BumpPointerAllocator.cpp
     Tests/WTF/CString.cpp
     Tests/WTF/CheckedArithmeticOperations.cpp
+    Tests/WTF/CompactRefPtrTuple.cpp
     Tests/WTF/ConcurrentPtrHashSet.cpp
     Tests/WTF/Condition.cpp
     Tests/WTF/CrossThreadCopier.cpp
@@ -45,6 +46,7 @@ set(TestWTF_SOURCES
     Tests/WTF/HashMap.cpp
     Tests/WTF/HashSet.cpp
     Tests/WTF/Hasher.cpp
+    Tests/WTF/HexNumber.cpp
     Tests/WTF/IntegerToStringConversion.cpp
     Tests/WTF/IteratorRange.cpp
     Tests/WTF/JSONValue.cpp
@@ -137,6 +139,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/IntPoint.cpp
         Tests/WebCore/IntRect.cpp
         Tests/WebCore/IntSize.cpp
+        Tests/WebCore/KeyedCoding.cpp
         Tests/WebCore/LayoutUnit.cpp
         Tests/WebCore/MIMETypeRegistry.cpp
         Tests/WebCore/ParsedContentRange.cpp

@@ -29,6 +29,7 @@
 #include "HTTPHeaderNames.h"
 #include "ReferrerPolicy.h"
 #include "StoredCredentialsPolicy.h"
+#include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 
@@ -52,7 +53,8 @@ void updateRequestReferrer(ResourceRequest&, ReferrerPolicy, const String&);
 WEBCORE_EXPORT void updateRequestForAccessControl(ResourceRequest&, SecurityOrigin&, StoredCredentialsPolicy);
 
 WEBCORE_EXPORT ResourceRequest createAccessControlPreflightRequest(const ResourceRequest&, SecurityOrigin&, const String&);
-CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&&, Document&, const String& crossOriginAttribute, ResourceLoaderOptions&&);
+enum class SameOriginFlag { No, Yes };
+CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&&, ResourceLoaderOptions&&, Document&, const String& crossOriginAttribute, SameOriginFlag = SameOriginFlag::No);
 
 enum class HTTPHeadersToKeepFromCleaning {
     ContentType = 1 << 0,
@@ -65,8 +67,18 @@ enum class HTTPHeadersToKeepFromCleaning {
 OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTTPHeaderMap&);
 WEBCORE_EXPORT void cleanHTTPRequestHeadersForAccessControl(ResourceRequest&, OptionSet<HTTPHeadersToKeepFromCleaning>);
 
-WEBCORE_EXPORT bool passesAccessControlCheck(const ResourceResponse&, StoredCredentialsPolicy, SecurityOrigin&, String& errorDescription);
-WEBCORE_EXPORT bool validatePreflightResponse(const ResourceRequest&, const ResourceResponse&, StoredCredentialsPolicy, SecurityOrigin&, String& errorDescription);
+class WEBCORE_EXPORT CrossOriginAccessControlCheckDisabler {
+public:
+    static CrossOriginAccessControlCheckDisabler& singleton();
+    virtual ~CrossOriginAccessControlCheckDisabler() = default;
+    void setCrossOriginAccessControlCheckEnabled(bool);
+    virtual bool crossOriginAccessControlCheckEnabled() const;
+private:
+    bool m_accessControlCheckEnabled { true };
+};
+
+WEBCORE_EXPORT Expected<void, String> passesAccessControlCheck(const ResourceResponse&, StoredCredentialsPolicy, const SecurityOrigin&, const CrossOriginAccessControlCheckDisabler*);
+WEBCORE_EXPORT Expected<void, String> validatePreflightResponse(const ResourceRequest&, const ResourceResponse&, StoredCredentialsPolicy, const SecurityOrigin&, const CrossOriginAccessControlCheckDisabler*);
 
 WEBCORE_EXPORT Optional<ResourceError> validateCrossOriginResourcePolicy(const SecurityOrigin&, const URL&, const ResourceResponse&);
 Optional<ResourceError> validateRangeRequestedFlag(const ResourceRequest&, const ResourceResponse&);

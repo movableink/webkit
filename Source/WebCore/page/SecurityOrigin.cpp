@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-constexpr unsigned maximumURLSize = 0x8000;
+constexpr unsigned maximumURLSize = 0x04000000;
 
 static bool schemeRequiresHost(const URL& url)
 {
@@ -368,7 +368,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
     if (url.pathEnd() > maximumURLSize)
         return false;
     
-#if !PLATFORM(IOS_FAMILY)
+#if !PLATFORM(IOS_FAMILY) && !ENABLE(BUBBLEWRAP_SANDBOX)
     if (m_data.protocol == "file" && url.isLocalFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
         return false;
 #endif

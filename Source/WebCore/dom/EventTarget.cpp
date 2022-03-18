@@ -34,11 +34,13 @@
 
 #include "DOMWrapperWorld.h"
 #include "EventNames.h"
+#include "EventTargetConcrete.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
 #include "JSEventListener.h"
 #include "JSLazyEventListener.h"
+#include "Quirks.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
@@ -57,6 +59,11 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTargetWithInlineData);
 
+Ref<EventTarget> EventTarget::create(ScriptExecutionContext& context)
+{
+    return EventTargetConcrete::create(context);
+}
+
 bool EventTarget::isNode() const
 {
     return false;
@@ -69,23 +76,14 @@ bool EventTarget::isPaymentRequest() const
 
 bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     listener->checkValidityForEventTarget(*this);
 #endif
 
     auto passive = options.passive;
 
-    if (!passive.hasValue() && eventNames().isTouchScrollBlockingEventType(eventType)) {
-        if (is<DOMWindow>(*this)) {
-            auto& window = downcast<DOMWindow>(*this);
-            if (auto* document = window.document())
-                passive = document->settings().passiveTouchListenersAsDefaultOnDocument();
-        } else if (is<Node>(*this)) {
-            auto& node = downcast<Node>(*this);
-            if (is<Document>(node) || node.document().documentElement() == &node || node.document().body() == &node)
-                passive = node.document().settings().passiveTouchListenersAsDefaultOnDocument();
-        }
-    }
+    if (!passive.hasValue() && Quirks::shouldMakeEventListenerPassive(*this, eventType, listener.get()))
+        passive = true;
 
     bool listenerCreatedFromScript = listener->type() == EventListener::JSEventListenerType && !listener->wasCreatedFromMarkup();
     auto listenerRef = listener.copyRef();
@@ -96,6 +94,7 @@ bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListene
     if (listenerCreatedFromScript)
         InspectorInstrumentation::didAddEventListener(*this, eventType, listenerRef.get(), options.capture);
 
+    eventListenersDidChange();
     return true;
 }
 
@@ -135,7 +134,11 @@ bool EventTarget::removeEventListener(const AtomString& eventType, EventListener
 
     InspectorInstrumentation::willRemoveEventListener(*this, eventType, listener, options.capture);
 
-    return data->eventListenerMap.remove(eventType, listener, options.capture);
+    if (data->eventListenerMap.remove(eventType, listener, options.capture)) {
+        eventListenersDidChange();
+        return true;
+    }
+    return false;
 }
 
 bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<EventListener>&& listener, DOMWrapperWorld& isolatedWorld)
@@ -149,7 +152,7 @@ bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<
     if (existingListener) {
         InspectorInstrumentation::willRemoveEventListener(*this, eventType, *existingListener, false);
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         listener->checkValidityForEventTarget(*this);
 #endif
 
@@ -186,13 +189,13 @@ bool EventTarget::hasActiveEventListeners(const AtomString& eventType) const
 
 ExceptionOr<bool> EventTarget::dispatchEventForBindings(Event& event)
 {
-    event.setUntrusted();
-
     if (!event.isInitialized() || event.isBeingDispatched())
         return Exception { InvalidStateError };
 
     if (!scriptExecutionContext())
         return false;
+
+    event.setUntrusted();
 
     dispatchEvent(event);
     return event.legacyReturnValue();
@@ -308,7 +311,7 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         if (registeredListener->isPassive())
             event.setInPassiveListener(true);
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         registeredListener->callback().checkValidityForEventTarget(*this);
 #endif
 
@@ -347,8 +350,10 @@ void EventTarget::removeAllEventListeners()
     threadData.setIsInRemoveAllEventListeners(true);
 
     auto* data = eventTargetData();
-    if (data)
+    if (data && !data->eventListenerMap.isEmpty()) {
         data->eventListenerMap.clear();
+        eventListenersDidChange();
+    }
 
     threadData.setIsInRemoveAllEventListeners(false);
 }

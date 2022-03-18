@@ -78,6 +78,8 @@ public:
     WTF_EXPORT_PRIVATE void stop();
     WTF_EXPORT_PRIVATE void wakeUp();
 
+    WTF_EXPORT_PRIVATE void suspendFunctionDispatchForCurrentCycle();
+
     enum class CycleResult { Continue, Stop };
     WTF_EXPORT_PRIVATE CycleResult static cycle(RunLoopMode = DefaultRunLoopMode);
 
@@ -92,6 +94,7 @@ public:
 #if USE(GENERIC_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
     // Run the single iteration of the RunLoop. It consumes the pending tasks and expired timers, but it won't be blocked.
     WTF_EXPORT_PRIVATE static void iterate();
+    WTF_EXPORT_PRIVATE static void setWakeUpCallback(WTF::Function<void()>&&);
 #endif
 
 #if USE(WINDOWS_EVENT_LOOP)
@@ -192,6 +195,8 @@ private:
 
     Lock m_functionQueueLock;
     Deque<Function<void()>> m_functionQueue;
+    bool m_isFunctionDispatchSuspended { false };
+    bool m_hasSuspendedFunctions { false };
 
 #if USE(WINDOWS_EVENT_LOOP)
     static LRESULT CALLBACK RunLoopWndProc(HWND, UINT, WPARAM, LPARAM);
@@ -244,6 +249,10 @@ private:
     Vector<Status*> m_mainLoops;
     bool m_shutdown { false };
     bool m_pendingTasks { false };
+#endif
+
+#if USE(GENERIC_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
+    Function<void()> m_wakeUpCallback;
 #endif
 };
 

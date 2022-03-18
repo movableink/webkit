@@ -26,6 +26,8 @@
 #include "config.h"
 
 #include <wtf/Packed.h>
+#include <wtf/HashMap.h>
+#include <wtf/Vector.h>
 
 namespace TestWebKitAPI {
 
@@ -59,8 +61,8 @@ TEST(WTF_Packed, AssignAndGet)
 {
     {
         PackedPtr<uint8_t> key { nullptr };
-        static_assert(WTF_CPU_EFFECTIVE_ADDRESS_WIDTH != 64, "");
-        uint8_t* max = bitwise_cast<uint8_t*>(static_cast<uintptr_t>(((1ULL) << WTF_CPU_EFFECTIVE_ADDRESS_WIDTH) - 1));
+        static_assert(OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) != 64, "");
+        uint8_t* max = bitwise_cast<uint8_t*>(static_cast<uintptr_t>(((1ULL) << OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH)) - 1));
         key = max;
         EXPECT_EQ(key.get(), max);
     }
@@ -81,5 +83,26 @@ TEST(WTF_Packed, PackedAlignedPtr)
 #endif
     }
 }
+
+struct PackingTarget {
+    unsigned m_value { 0 };
+};
+TEST(WTF_Packed, HashMap)
+{
+    Vector<PackingTarget> vector;
+    HashMap<PackedPtr<PackingTarget>, unsigned> map;
+    vector.reserveCapacity(10000);
+    for (unsigned i = 0; i < 10000; ++i)
+        vector.uncheckedAppend(PackingTarget { i });
+
+    for (auto& target : vector)
+        map.add(&target, target.m_value);
+
+    for (auto& target : vector) {
+        EXPECT_TRUE(map.contains(&target));
+        EXPECT_EQ(map.get(&target), target.m_value);
+    }
+}
+
 
 } // namespace TestWebKitAPI

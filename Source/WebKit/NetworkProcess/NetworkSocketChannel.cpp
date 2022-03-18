@@ -30,13 +30,14 @@
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcess.h"
 #include "NetworkSession.h"
+#include "WebCoreArgumentCoders.h"
 #include "WebSocketChannelMessages.h"
 #include "WebSocketTask.h"
 
 namespace WebKit {
 using namespace WebCore;
 
-std::unique_ptr<NetworkSocketChannel> NetworkSocketChannel::create(NetworkConnectionToWebProcess& connection, PAL::SessionID sessionID, const ResourceRequest& request, const String& protocol, uint64_t identifier)
+std::unique_ptr<NetworkSocketChannel> NetworkSocketChannel::create(NetworkConnectionToWebProcess& connection, PAL::SessionID sessionID, const ResourceRequest& request, const String& protocol, WebSocketIdentifier identifier)
 {
     auto result = makeUnique<NetworkSocketChannel>(connection, connection.networkProcess().networkSession(sessionID), request, protocol, identifier);
     if (!result->m_socket) {
@@ -46,7 +47,7 @@ std::unique_ptr<NetworkSocketChannel> NetworkSocketChannel::create(NetworkConnec
     return result;
 }
 
-NetworkSocketChannel::NetworkSocketChannel(NetworkConnectionToWebProcess& connection, NetworkSession* session, const ResourceRequest& request, const String& protocol, uint64_t identifier)
+NetworkSocketChannel::NetworkSocketChannel(NetworkConnectionToWebProcess& connection, NetworkSession* session, const ResourceRequest& request, const String& protocol, WebSocketIdentifier identifier)
     : m_connectionToWebProcess(connection)
     , m_identifier(identifier)
     , m_session(makeWeakPtr(session))
@@ -123,9 +124,25 @@ void NetworkSocketChannel::didReceiveMessageError(const String& errorMessage)
     send(Messages::WebSocketChannel::DidReceiveMessageError { errorMessage });
 }
 
+void NetworkSocketChannel::didSendHandshakeRequest(ResourceRequest&& request)
+{
+    send(Messages::WebSocketChannel::DidSendHandshakeRequest { request });
+}
+
+void NetworkSocketChannel::didReceiveHandshakeResponse(ResourceResponse&& response)
+{
+    response.sanitizeHTTPHeaderFields(ResourceResponse::SanitizationType::CrossOriginSafe);
+    send(Messages::WebSocketChannel::DidReceiveHandshakeResponse { response });
+}
+
 IPC::Connection* NetworkSocketChannel::messageSenderConnection() const
 {
     return &m_connectionToWebProcess.connection();
+}
+
+NetworkSession* NetworkSocketChannel::session()
+{
+    return m_session.get();
 }
 
 } // namespace WebKit

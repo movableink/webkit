@@ -24,7 +24,6 @@
 #include "DOMWindowIndexedDatabase.h"
 #include "DOMWindowWebDatabase.h"
 #include "Frame.h"
-#include "HTMLCollection.h"
 #include "HTMLDocument.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTTPParsers.h"
@@ -38,7 +37,6 @@
 #include "JSEvent.h"
 #include "JSEventListener.h"
 #include "JSHTMLAudioElement.h"
-#include "JSHTMLCollection.h"
 #include "JSHTMLOptionElement.h"
 #include "JSIDBFactory.h"
 #include "JSRemoteDOMWindow.h"
@@ -314,13 +312,13 @@ bool JSDOMWindow::putByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject, 
     return Base::putByIndex(thisObject, lexicalGlobalObject, index, value, shouldThrow);
 }
 
-bool JSDOMWindow::deleteProperty(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName)
+bool JSDOMWindow::deleteProperty(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     JSDOMWindow* thisObject = jsCast<JSDOMWindow*>(cell);
     // Only allow deleting properties by frames in the same origin.
     if (!BindingSecurity::shouldAllowAccessToDOMWindow(lexicalGlobalObject, thisObject->wrapped(), ThrowSecurityError))
         return false;
-    return Base::deleteProperty(thisObject, lexicalGlobalObject, propertyName);
+    return Base::deleteProperty(thisObject, lexicalGlobalObject, propertyName, slot);
 }
 
 bool JSDOMWindow::deletePropertyByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject, unsigned propertyName)

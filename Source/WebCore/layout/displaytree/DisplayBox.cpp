@@ -45,7 +45,7 @@ Box::Box(const Box& other)
     , m_hasClearance(other.m_hasClearance)
     , m_border(other.m_border)
     , m_padding(other.m_padding)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     , m_hasValidTop(other.m_hasValidTop)
     , m_hasValidLeft(other.m_hasValidLeft)
     , m_hasValidHorizontalMargin(other.m_hasValidHorizontalMargin)
@@ -56,7 +56,7 @@ Box::Box(const Box& other)
     , m_hasValidPadding(other.m_hasValidPadding)
     , m_hasValidContentHeight(other.m_hasValidContentHeight)
     , m_hasValidContentWidth(other.m_hasValidContentWidth)
-    , m_hasEstimatedMarginBefore(other.m_hasEstimatedMarginBefore)
+    , m_hasPrecomputedMarginBefore(other.m_hasPrecomputedMarginBefore)
 #endif
 {
 }

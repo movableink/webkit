@@ -107,6 +107,8 @@ allowSettingAnyXHRHeaderFromFileURLs:
   initial: false
 allowCrossOriginSubresourcesToAskForCredentials:
   initial: false
+allowTopNavigationToDataURLs:
+  initial: false
 needsStorageAccessFromFileURLsQuirk:
   initial: true
 needsFrameNameFallbackToIdQuirk:
@@ -124,6 +126,8 @@ clipboardAccessPolicy:
   initial: ClipboardAccessPolicy::RequiresUserGesture
 asyncClipboardAPIEnabled:
   initial: false
+shouldRestrictBaseURLSchemes:
+  initial: true
 
 textAreasAreResizable:
   initial: false
@@ -193,8 +197,6 @@ forceFTPDirectoryListings:
   initial: false
 developerExtrasEnabled:
   initial: false
-scriptMarkupEnabled:
-  initial: true
 needsSiteSpecificQuirks:
   initial: false
   inspectorOverride: true
@@ -361,6 +363,9 @@ requestIdleCallbackEnabled:
   initial: false
 
 HTTPSUpgradeEnabled:
+  initial: false
+
+inProcessCookieCacheEnabled:
   initial: false
 
 thirdPartyIframeRedirectBlockingEnabled:
@@ -625,6 +630,9 @@ syntheticEditingCommandsEnabled:
 CSSOMViewScrollingAPIEnabled:
   initial: false
 
+CSSOMViewSmoothScrollingEnabled:
+  initial: false
+
 inputEventsEnabled:
   initial: true
 
@@ -732,6 +740,9 @@ scriptEnabled:
   initial: false
   getter: isScriptEnabled
   inspectorOverride: true
+parserScriptingFlagPolicy:
+  type: ParserScriptingFlagPolicy
+  initial: ParserScriptingFlagPolicy::OnlyIfScriptIsEnabled
 pluginsEnabled:
   initial: false
   getter: arePluginsEnabled
@@ -740,6 +751,7 @@ pluginsEnabled:
 usesBackForwardCache:
   initial: false
   onChange: usesBackForwardCacheChanged
+  excludeFromInternalSettings: true
 
 dnsPrefetchingEnabled:
   initial: false
@@ -851,8 +863,8 @@ clientCoordinatesRelativeToLayoutViewport:
 incompleteImageBorderEnabled:
   initial: false
 
-shouldDeferAsynchronousScriptsUntilAfterDocumentLoad:
-  initial: false
+shouldDeferAsynchronousScriptsUntilAfterDocumentLoadOrFirstPaint:
+  initial: true
 
 shouldIgnoreMetaViewport:
   initial: false
@@ -890,11 +902,11 @@ webRTCEncryptionEnabled:
   initial: true
   inspectorOverride: true
 
-isThirdPartyCookieBlockingEnabled:
-  initial: true
+isThirdPartyCookieBlockingDisabled:
+  initial: false
 
-isFirstPartyWebsiteDataRemovalEnabled:
-  initial: true
+isFirstPartyWebsiteDataRemovalDisabled:
+  initial: false
 
 isFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
   initial: false
@@ -913,6 +925,15 @@ legacyGetUserMediaEnabled:
   conditional: MEDIA_STREAM
 
 isInAppBrowserPrivacyEnabled:
+  initial: false
+
+NeedsInAppBrowserPrivacyQuirks:
+  initial: false
+
+isAccessibilityIsolatedTreeEnabled:
+  initial: false
+
+aspectRatioOfImgFromWidthAndHeightEnabled:
   initial: false
 
 # Deprecated
@@ -935,3 +956,7 @@ mediaCaptureRequiresSecureConnection:
 
 shouldUseServiceWorkerShortTimeout:
   initial: false
+
+# Clients should use per-navigation "allowsContentJavaScript" policies instead
+scriptMarkupEnabled:
+    initial: true

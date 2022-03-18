@@ -33,13 +33,15 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/_WKRemoteObjectInterface.h>
 #import <WebKit/_WKRemoteObjectRegistry.h>
+#import <wtf/BlockPtr.h>
 #import <wtf/RefCounted.h>
 #import <wtf/RetainPtr.h>
-
-static bool isDone;
+#import <wtf/WeakObjCPtr.h>
 
 TEST(WebKit, RemoteObjectRegistry)
 {
+    __block bool isDone = false;
+
     @autoreleasepool {
         NSString * const testPlugInClassName = @"RemoteObjectRegistryPlugIn";
         auto configuration = retainPtr([WKWebViewConfiguration _test_configurationWithTestPlugInClassName:testPlugInClassName]);
@@ -126,15 +128,85 @@ TEST(WebKit, RemoteObjectRegistry)
 
         class DoneWhenDestroyed : public RefCounted<DoneWhenDestroyed> {
         public:
+            DoneWhenDestroyed(bool& isDone)
+                : isDone(isDone) { }
             ~DoneWhenDestroyed() { isDone = true; }
+        private:
+            bool& isDone;
         };
 
         {
-            RefPtr<DoneWhenDestroyed> doneWhenDestroyed = adoptRef(*new DoneWhenDestroyed);
+            RefPtr<DoneWhenDestroyed> doneWhenDestroyed = adoptRef(*new DoneWhenDestroyed(isDone));
             [object doNotCallCompletionHandler:[doneWhenDestroyed]() {
             }];
         }
 
         TestWebKitAPI::Util::run(&isDone);
+
+        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://webkit.org/"]];
+        NSHTTPURLResponse *response = [[[NSHTTPURLResponse alloc] initWithURL:[NSURL URLWithString:@"https://webkit.org/"] statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{ @"testFieldName" : @"testFieldValue" }] autorelease];
+        NSError *error = [NSError errorWithDomain:@"testDomain" code:123 userInfo:@{@"a":@"b"}];
+        NSURLProtectionSpace *protectionSpace = [[[NSURLProtectionSpace alloc] initWithHost:@"testHost" port:80 protocol:@"testProtocol" realm:@"testRealm" authenticationMethod:NSURLAuthenticationMethodHTTPDigest] autorelease];
+        NSURLCredential *credential = [NSURLCredential credentialWithUser:@"testUser" password:@"testPassword" persistence:NSURLCredentialPersistenceForSession];
+        id<NSURLAuthenticationChallengeSender> sender = nil;
+        NSURLAuthenticationChallenge *challenge = [[[NSURLAuthenticationChallenge alloc] initWithProtectionSpace:protectionSpace proposedCredential:credential previousFailureCount:42 failureResponse:response error:error sender:sender] autorelease];
+        [object sendRequest:request response:response challenge:challenge error:error completionHandler:^(NSURLRequest *deserializedRequest, NSURLResponse *deserializedResponse, NSURLAuthenticationChallenge *deserializedChallenge, NSError *deserializedError) {
+            EXPECT_WK_STREQ(deserializedRequest.URL.absoluteString, "https://webkit.org/");
+            EXPECT_WK_STREQ([(NSHTTPURLResponse *)deserializedResponse allHeaderFields][@"testFieldName"], "testFieldValue");
+            EXPECT_WK_STREQ(deserializedChallenge.protectionSpace.realm, "testRealm");
+            EXPECT_WK_STREQ(deserializedError.domain, "testDomain");
+            isDone = true;
+        }];
+        TestWebKitAPI::Util::run(&isDone);
     }
+}
+
+@interface LocalObject : NSObject<LocalObjectProtocol> {
+@public
+    BlockPtr<void()> completionHandlerFromWebProcess;
+    bool hasCompletionHandler;
+}
+@end
+
+@implementation LocalObject
+
+- (void)doSomethingWithCompletionHandler:(void (^)(void))completionHandler
+{
+    completionHandlerFromWebProcess = completionHandler;
+    hasCompletionHandler = true;
+}
+
+@end
+
+TEST(WebKit, RemoteObjectRegistry_CallReplyBlockAfterOriginatingWebViewDeallocates)
+{
+    LocalObject *localObject = [[[LocalObject alloc] init] autorelease];
+    WeakObjCPtr<WKWebView> weakWebViewPtr;
+
+    @autoreleasepool {
+        NSString * const testPlugInClassName = @"RemoteObjectRegistryPlugIn";
+        auto configuration = retainPtr([WKWebViewConfiguration _test_configurationWithTestPlugInClassName:testPlugInClassName]);
+        auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
+        weakWebViewPtr = webView.get();
+
+        _WKRemoteObjectInterface *interface = remoteObjectInterface();
+        id <RemoteObjectProtocol> object = [[webView _remoteObjectRegistry] remoteObjectProxyWithInterface:interface];
+
+        [[webView _remoteObjectRegistry] registerExportedObject:localObject interface:localObjectInterface()];
+
+        [object callUIProcessMethodWithReplyBlock];
+
+        TestWebKitAPI::Util::run(&localObject->hasCompletionHandler);
+    }
+
+    while (true) {
+        @autoreleasepool {
+            if (!weakWebViewPtr.get())
+                break;
+
+            TestWebKitAPI::Util::spinRunLoop();
+        }
+    }
+
+    localObject->completionHandlerFromWebProcess();
 }

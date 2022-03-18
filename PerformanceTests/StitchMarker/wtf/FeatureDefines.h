@@ -86,8 +86,12 @@
 #define ENABLE_LETTERPRESS 1
 #endif
 
-#if !defined(ENABLE_IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
-#define ENABLE_IOS_AUTOCORRECT_AND_AUTOCAPITALIZE 1
+#if !defined(ENABLE_AUTOCORRECT)
+#define ENABLE_AUTOCORRECT 1
+#endif
+
+#if !defined(ENABLE_AUTOCAPITALIZE)
+#define ENABLE_AUTOCAPITALIZE 1
 #endif
 
 #if !defined(ENABLE_IOS_GESTURE_EVENTS) && USE(APPLE_INTERNAL_SDK)
@@ -676,8 +680,8 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_WEBGL 0
 #endif
 
-#if !defined(ENABLE_GRAPHICS_CONTEXT_3D)
-#define ENABLE_GRAPHICS_CONTEXT_3D ENABLE_WEBGL
+#if !defined(ENABLE_GRAPHICS_CONTEXT_GL)
+#define ENABLE_GRAPHICS_CONTEXT_GL ENABLE_WEBGL
 #endif
 
 #if !defined(ENABLE_WEB_ANIMATIONS)
@@ -730,8 +734,8 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #error "ENABLE(IOS_TOUCH_EVENTS) requires ENABLE(TOUCH_EVENTS)"
 #endif
 
-#if ENABLE(WEBGL) && !ENABLE(GRAPHICS_CONTEXT_3D)
-#error "ENABLE(WEBGL) requires ENABLE(GRAPHICS_CONTEXT_3D)"
+#if ENABLE(WEBGL) && !ENABLE(GRAPHICS_CONTEXT_GL)
+#error "ENABLE(WEBGL) requires ENABLE(GRAPHICS_CONTEXT_GL)"
 #endif
 
 #if ENABLE(WEBGL2) && !ENABLE(WEBGL)

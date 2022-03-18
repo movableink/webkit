@@ -31,6 +31,7 @@
 #include "ClassInfo.h"
 #include "CustomGetterSetter.h"
 #include "DOMAttributeGetterSetter.h"
+#include "DeletePropertySlot.h"
 #include "Heap.h"
 #include "IndexingHeaderInlines.h"
 #include "JSCast.h"
@@ -104,12 +105,6 @@ class JSObject : public JSCell {
 
 public:
     using Base = JSCell;
-
-    // Don't call this directly. Call JSC::subspaceFor<Type>(vm) instead.
-    // FIXME: Refer to Subspace by reference.
-    // https://bugs.webkit.org/show_bug.cgi?id=166988
-    template<typename CellType, SubspaceAccess>
-    static CompleteSubspace* subspaceFor(VM&);
 
     // This is a super dangerous method for JITs. Sometimes the JITs will want to create either a
     // JSFinalObject or a JSArray. This is the method that will do that.
@@ -623,7 +618,7 @@ public:
     bool hasOwnProperty(JSGlobalObject*, PropertyName) const;
     bool hasOwnProperty(JSGlobalObject*, unsigned) const;
 
-    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
 
     JS_EXPORT_PRIVATE static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
@@ -815,7 +810,7 @@ public:
     {
         structure(vm)->flattenDictionaryStructure(vm, this);
     }
-    void shiftButterflyAfterFlattening(const GCSafeConcurrentJSLocker&, VM&, Structure* structure, size_t outOfLineCapacityAfter);
+    void shiftButterflyAfterFlattening(const GCSafeConcurrentJSCellLocker&, VM&, Structure*, size_t outOfLineCapacityAfter);
 
     JSGlobalObject* globalObject() const
     {
@@ -941,7 +936,7 @@ protected:
     
     Structure* visitButterflyImpl(SlotVisitor&);
     
-    void markAuxiliaryAndVisitOutOfLineProperties(SlotVisitor&, Butterfly*, Structure*, PropertyOffset lastOffset);
+    void markAuxiliaryAndVisitOutOfLineProperties(SlotVisitor&, Butterfly*, Structure*, PropertyOffset maxOffset);
 
     // Call this if you know that the object is in a mode where it has array
     // storage. This will assert otherwise.
@@ -1135,10 +1130,12 @@ class JSFinalObject;
 // storage to fully make use of the collector cell containing it.
 class JSFinalObject final : public JSObject {
     friend class JSObject;
-
 public:
-    typedef JSObject Base;
+    using Base = JSObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM&);
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
@@ -1329,7 +1326,7 @@ inline JSValue JSObject::getPrototype(VM& vm, JSGlobalObject* globalObject)
 // flatten an object.
 inline JSValue JSObject::getDirectConcurrently(Structure* structure, PropertyOffset offset) const
 {
-    ConcurrentJSLocker locker(structure->lock());
+    ConcurrentJSCellLocker locker(structure->cellLock());
     if (!structure->isValidOffset(offset))
         return { };
     return getDirect(offset);

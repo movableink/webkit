@@ -137,10 +137,8 @@ http/tests/globalhistory/history-delegate-basic-visited-links.html
 http/tests/globalhistory/history-delegate-basic-refresh-redirect.html
 
 # transitions/default-timing-function.html failing on WebKit2 since it was added
-# legacy-animation-engine/transitions/default-timing-function.html failing on WebKit2 since it was added
 # <https://bugs.webkit.org/show_bug.cgi?id=56531>
 transitions/default-timing-function.html
-legacy-animation-engine/transitions/default-timing-function.html
 
 # Sometimes fails
 # http://webkit.org/b/58990
@@ -433,7 +431,6 @@ plugins/plugin-initiate-popup-window.html
 storage/websql/open-database-while-transaction-in-progress.html
 svg/hixie/cascade/002.xml
 transitions/font-family-during-transition.html
-legacy-animation-engine/transitions/font-family-during-transition.html
 
 # [WK2] http/tests/navigation/anchor-frames-cross-origin.html fails.
 # https://bugs.webkit.org/show_bug.cgi?id=83581
@@ -471,11 +468,8 @@ webkit.org/b/158703 userscripts/window-onerror-for-isolated-world-3.html [ Skip 
 # These transition tests are flaky, sometimes it seems like the transition timing
 # is off when the test completes
 transitions/color-transition-all.html
-legacy-animation-engine/transitions/color-transition-all.html
 transitions/min-max-width-height-transitions.html
-legacy-animation-engine/transitions/min-max-width-height-transitions.html
 transitions/text-indent-transition.html
-legacy-animation-engine/transitions/text-indent-transition.html
 
 # These storage tests fail in WebKit2 on the bot, but not running locally
 storage/websql/multiple-databases-garbage-collection.html
@@ -702,6 +696,9 @@ webkit.org/b/115274 http/tests/security/contentSecurityPolicy/report-same-origin
 fast/images/animated-gif-no-layout.html [ Pass ]
 fast/images/gif-loop-count.html [ Pass ]
 
+# Only relevant for WebKit2
+http/tests/storage/storage-map-leaking.html [ Pass ]
+
 # DumpRenderTree does not implement setWillSendRequestHTTPBody
 http/tests/misc/will-send-request-with-client-provided-http-body.html [ Pass ]
 
@@ -768,6 +765,9 @@ inspector/runtime/callFunctionOn-emulateUserGesture-userIsInteracting.html [ Pas
 # Target domain is only present in WebKit2.
 http/tests/inspector/target [ Pass ]
 
+# Highlighting marked text ranges from layout tests is only supported in WebKit2.
+editing/input/composition-highlights.html [ Pass ]
+
 ### END OF (5) Progressions, expected successes that are expected failures in WebKit1.
 ########################################
 
@@ -790,7 +790,7 @@ webkit.org/b/183140 fast/selectors/querySelector-window-inactive.html
 
 webkit.org/b/186406 compositing/iframes/display-none-subframe.html [ Pass Failure ]
 
-webkit.org/b/187766 http/wpt/service-workers/update-service-worker.https.html [ Pass Timeout ]
+webkit.org/b/187766 http/wpt/service-workers/update-service-worker.https.html [ Pass Failure Timeout ]
 
 # Newly imported test that is flaky on WebKit2 only.
 imported/w3c/web-platform-tests/html/browsers/the-window-object/apis-for-creating-and-navigating-browsing-contexts-by-name/no_window_open_when_term_nesting_level_nonzero.window.html [ Pass Failure ]

@@ -17,6 +17,9 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WebKit_DERIVED_SOURCES_DIR}/include"
     "${WEBKIT_DIR}"
     "${WEBKIT_DIR}/GPUProcess"
+    "${WEBKIT_DIR}/GPUProcess/graphics"
+    "${WEBKIT_DIR}/GPUProcess/media"
+    "${WEBKIT_DIR}/GPUProcess/webrtc"
     "${WEBKIT_DIR}/NetworkProcess"
     "${WEBKIT_DIR}/NetworkProcess/Classifier"
     "${WEBKIT_DIR}/NetworkProcess/Cookies"
@@ -56,6 +59,8 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/Downloads"
     "${WEBKIT_DIR}/UIProcess/Gamepad"
     "${WEBKIT_DIR}/UIProcess/GPU"
+    "${WEBKIT_DIR}/UIProcess/Inspector"
+    "${WEBKIT_DIR}/UIProcess/Inspector/Agents"
     "${WEBKIT_DIR}/UIProcess/Launcher"
     "${WEBKIT_DIR}/UIProcess/Network"
     "${WEBKIT_DIR}/UIProcess/Network/CustomProtocols"
@@ -78,11 +83,15 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/WebProcess/Gamepad"
     "${WEBKIT_DIR}/WebProcess/Geolocation"
     "${WEBKIT_DIR}/WebProcess/GPU"
+    "${WEBKIT_DIR}/WebProcess/GPU/graphics"
+    "${WEBKIT_DIR}/WebProcess/GPU/media"
+    "${WEBKIT_DIR}/WebProcess/GPU/webrtc"
     "${WEBKIT_DIR}/WebProcess/IconDatabase"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/API"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/API/c"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/DOM"
+    "${WEBKIT_DIR}/WebProcess/Inspector"
     "${WEBKIT_DIR}/WebProcess/Launching"
     "${WEBKIT_DIR}/WebProcess/MediaCache"
     "${WEBKIT_DIR}/WebProcess/MediaStream"
@@ -110,6 +119,32 @@ list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
 )
 
 set(WebKit_MESSAGES_IN_FILES
+    GPUProcess/GPUConnectionToWebProcess.messages.in
+    GPUProcess/GPUProcess.messages.in
+
+    GPUProcess/graphics/RemoteRenderingBackendProxy.messages.in
+
+    GPUProcess/media/RemoteAudioDestinationManager.messages.in
+    GPUProcess/media/RemoteAudioSessionProxy.messages.in
+    GPUProcess/media/RemoteCDMFactoryProxy.messages.in
+    GPUProcess/media/RemoteCDMInstanceProxy.messages.in
+    GPUProcess/media/RemoteCDMInstanceSessionProxy.messages.in
+    GPUProcess/media/RemoteCDMProxy.messages.in
+    GPUProcess/media/RemoteLegacyCDMFactoryProxy.messages.in
+    GPUProcess/media/RemoteLegacyCDMProxy.messages.in
+    GPUProcess/media/RemoteLegacyCDMSessionProxy.messages.in
+    GPUProcess/media/RemoteMediaPlayerManagerProxy.messages.in
+    GPUProcess/media/RemoteMediaPlayerProxy.messages.in
+    GPUProcess/media/RemoteMediaResourceManager.messages.in
+
+    GPUProcess/webrtc/LibWebRTCCodecsProxy.messages.in
+    GPUProcess/webrtc/RemoteAudioMediaStreamTrackRenderer.messages.in
+    GPUProcess/webrtc/RemoteAudioMediaStreamTrackRendererManager.messages.in
+    GPUProcess/webrtc/RemoteMediaRecorder.messages.in
+    GPUProcess/webrtc/RemoteMediaRecorderManager.messages.in
+    GPUProcess/webrtc/RemoteSampleBufferDisplayLayer.messages.in
+    GPUProcess/webrtc/RemoteSampleBufferDisplayLayerManager.messages.in
+
     NetworkProcess/Cookies/WebCookieManager.messages.in
 
     NetworkProcess/IndexedDB/WebIDBServer.messages.in
@@ -146,12 +181,10 @@ set(WebKit_MESSAGES_IN_FILES
     Shared/Plugins/NPObjectMessageReceiver.messages.in
 
     UIProcess/DrawingAreaProxy.messages.in
-    UIProcess/RemoteWebInspectorProxy.messages.in
     UIProcess/VisitedLinkStore.messages.in
     UIProcess/WebCookieManagerProxy.messages.in
     UIProcess/WebFullScreenManagerProxy.messages.in
     UIProcess/WebGeolocationManagerProxy.messages.in
-    UIProcess/WebInspectorProxy.messages.in
     UIProcess/WebPageProxy.messages.in
     UIProcess/WebPasteboardProxy.messages.in
     UIProcess/WebProcessPool.messages.in
@@ -160,6 +193,11 @@ set(WebKit_MESSAGES_IN_FILES
     UIProcess/Automation/WebAutomationSession.messages.in
 
     UIProcess/Downloads/DownloadProxy.messages.in
+
+    UIProcess/GPU/GPUProcessProxy.messages.in
+
+    UIProcess/Inspector/RemoteWebInspectorProxy.messages.in
+    UIProcess/Inspector/WebInspectorProxy.messages.in
 
     UIProcess/Network/NetworkProcessProxy.messages.in
 
@@ -175,7 +213,26 @@ set(WebKit_MESSAGES_IN_FILES
 
     WebProcess/FullScreen/WebFullScreenManager.messages.in
 
+    WebProcess/GPU/GPUProcessConnection.messages.in
+
+    WebProcess/GPU/graphics/RemoteRenderingBackend.messages.in
+
+    WebProcess/GPU/media/MediaPlayerPrivateRemote.messages.in
+    WebProcess/GPU/media/RemoteAudioDestinationProxy.messages.in
+    WebProcess/GPU/media/RemoteAudioSession.messages.in
+    WebProcess/GPU/media/RemoteCDMInstanceSession.messages.in
+    WebProcess/GPU/media/RemoteLegacyCDMSession.messages.in
+    WebProcess/GPU/media/RemoteMediaPlayerManager.messages.in
+
+    WebProcess/GPU/webrtc/LibWebRTCCodecs.messages.in
+    WebProcess/GPU/webrtc/SampleBufferDisplayLayer.messages.in
+
     WebProcess/Geolocation/WebGeolocationManager.messages.in
+
+    WebProcess/Inspector/RemoteWebInspectorUI.messages.in
+    WebProcess/Inspector/WebInspector.messages.in
+    WebProcess/Inspector/WebInspectorInterruptDispatcher.messages.in
+    WebProcess/Inspector/WebInspectorUI.messages.in
 
     WebProcess/Network/webrtc/WebMDNSRegister.messages.in
     WebProcess/Network/webrtc/WebRTCMonitor.messages.in
@@ -200,29 +257,22 @@ set(WebKit_MESSAGES_IN_FILES
 
     WebProcess/WebPage/DrawingArea.messages.in
     WebProcess/WebPage/EventDispatcher.messages.in
-    WebProcess/WebPage/RemoteWebInspectorUI.messages.in
     WebProcess/WebPage/VisitedLinkTableController.messages.in
-    WebProcess/WebPage/WebInspector.messages.in
-    WebProcess/WebPage/WebInspectorInterruptDispatcher.messages.in
-    WebProcess/WebPage/WebInspectorUI.messages.in
     WebProcess/WebPage/WebPage.messages.in
 
     WebProcess/WebStorage/StorageAreaMap.messages.in
 )
 
-if (${WebCore_LIBRARY_TYPE} STREQUAL STATIC)
-    # Link with WebCore as PRIVATE not to propagate WebCore to all users of WebKit.
-    set(WebKit_LIBRARIES
-        PRIVATE WebCore
-        PUBLIC WebCoreHeaderInterface
-    )
-else ()
+if (${WebCore_LIBRARY_TYPE} STREQUAL SHARED)
     # All users of WebKit need to link WebCore if WebCore is a shared library.
     if (APPLE)
-        set(WebKit_LIBRARIES PRIVATE WebCore)
+        set(WebKit_PRIVATE_LIBRARIES WebCore)
     else ()
-        set(WebKit_LIBRARIES PUBLIC WebCore)
+        set(WebKit_LIBRARIES WebCore)
     endif ()
+else ()
+    set(WebKit_LIBRARIES WebCoreHeaderInterface)
+    set(WebKit_PRIVATE_LIBRARIES WebCore)
 endif ()
 
 set(WebProcess_LIBRARIES
@@ -233,11 +283,15 @@ set(NetworkProcess_LIBRARIES
     WebKit
 )
 
+set(GPUProcess_LIBRARIES
+    WebKit
+)
+
 set(PluginProcess_LIBRARIES
     WebKit
 )
 
-if (ENABLE_GRAPHICS_CONTEXT_3D)
+if (ENABLE_GRAPHICS_CONTEXT_GL)
     # For platforms that want to use system-provided OpenGL (ES) / EGL headers,
     # these include directories, libraries or definitions need to be
     # added before the ANGLE directories.
@@ -245,8 +299,8 @@ if (ENABLE_GRAPHICS_CONTEXT_3D)
         list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
             ${LIBEPOXY_INCLUDE_DIRS}
         )
-        list(APPEND WebKit_LIBRARIES
-            PRIVATE ${LIBEPOXY_LIBRARIES}
+        list(APPEND WebKit_PRIVATE_LIBRARIES
+            ${LIBEPOXY_LIBRARIES}
         )
         add_definitions(${LIBEPOXY_DEFINITIONS})
     else ()
@@ -254,16 +308,16 @@ if (ENABLE_GRAPHICS_CONTEXT_3D)
             list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
                 ${OPENGL_INCLUDE_DIRS}
             )
-            list(APPEND WebKit_LIBRARIES
-                PRIVATE ${OPENGL_LIBRARIES}
+            list(APPEND WebKit_PRIVATE_LIBRARIES
+                ${OPENGL_LIBRARIES}
             )
             add_definitions(${OPENGL_DEFINITIONS})
         elseif (USE_OPENGL_ES)
             list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
                 ${OPENGLES2_INCLUDE_DIRS}
             )
-            list(APPEND WebKit_LIBRARIES
-                PRIVATE ${OPENGLES2_LIBRARIES}
+            list(APPEND WebKit_PRIVATE_LIBRARIES
+                ${OPENGLES2_LIBRARIES}
             )
             add_definitions(${OPENGLES2_DEFINITIONS})
         endif ()
@@ -272,8 +326,8 @@ if (ENABLE_GRAPHICS_CONTEXT_3D)
             list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
                 ${EGL_INCLUDE_DIRS}
             )
-            list(APPEND WebKit_LIBRARIES
-                PRIVATE ${EGL_LIBRARIES}
+            list(APPEND WebKit_PRIVATE_LIBRARIES
+                ${EGL_LIBRARIES}
             )
             add_definitions(${EGL_DEFINITIONS})
         endif ()
@@ -281,7 +335,7 @@ if (ENABLE_GRAPHICS_CONTEXT_3D)
 endif ()
 
 if (ATOMIC_INT64_REQUIRES_LIBATOMIC)
-    list(APPEND WebKit_LIBRARIES PRIVATE atomic)
+    list(APPEND WebKit_PRIVATE_LIBRARIES atomic)
 endif ()
 
 if (UNIX)
@@ -290,7 +344,7 @@ if (UNIX)
         set(CMAKE_REQUIRED_LIBRARIES rt)
         check_function_exists(shm_open SHM_OPEN_REQUIRES_LIBRT)
         if (SHM_OPEN_REQUIRES_LIBRT)
-            list(APPEND WebKit_LIBRARIES PRIVATE rt)
+            list(APPEND WebKit_PRIVATE_LIBRARIES rt)
         endif ()
         unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
@@ -448,10 +502,24 @@ if (WebKit_NetworkProcess_OUTPUT_NAME)
     set_target_properties(NetworkProcess PROPERTIES OUTPUT_NAME ${WebKit_NetworkProcess_OUTPUT_NAME})
 endif ()
 
+if (ENABLE_GPU_PROCESS)
+    add_executable(GPUProcess ${GPUProcess_SOURCES})
+    ADD_WEBKIT_PREFIX_HEADER(GPUProcess)
+    target_link_libraries(GPUProcess ${GPUProcess_LIBRARIES})
+    target_include_directories(GPUProcess PRIVATE ${GPUProcess_INCLUDE_DIRECTORIES})
+
+    if (WebKit_GPUProcess_OUTPUT_NAME)
+        set_target_properties(GPUProcess PROPERTIES OUTPUT_NAME ${WebKit_GPUProcess_OUTPUT_NAME})
+    endif ()
+endif ()
+
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebProcess -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(NetworkProcess -Wno-unused-parameter)
+    if (ENABLE_GPU_PROCESS)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(GPUProcess -Wno-unused-parameter)
+    endif ()
 endif ()
 
 # FIXME: Mac should build a plugin process.

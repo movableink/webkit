@@ -29,6 +29,8 @@
 #include "DataReference.h"
 #include "ShareableBitmap.h"
 #include "SharedBufferDataReference.h"
+#include <JavaScriptCore/GenericTypedArrayViewInlines.h>
+#include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/BlobPart.h>
 #include <WebCore/CacheQueryOptions.h>
@@ -48,6 +50,7 @@
 #include <WebCore/FileChooser.h>
 #include <WebCore/FilterOperation.h>
 #include <WebCore/FilterOperations.h>
+#include <WebCore/Font.h>
 #include <WebCore/FontAttributes.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/GraphicsLayer.h>
@@ -74,6 +77,7 @@
 #include <WebCore/SearchPopupMenu.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/SerializedAttachmentData.h>
+#include <WebCore/SerializedPlatformDataCueValue.h>
 #include <WebCore/ServiceWorkerClientData.h>
 #include <WebCore/ServiceWorkerClientIdentifier.h>
 #include <WebCore/ServiceWorkerData.h>
@@ -120,16 +124,25 @@ using namespace WebKit;
 
 static void encodeSharedBuffer(Encoder& encoder, const SharedBuffer* buffer)
 {
-    SharedMemory::Handle handle;
     uint64_t bufferSize = buffer ? buffer->size() : 0;
     encoder << bufferSize;
     if (!bufferSize)
         return;
 
+#if USE(UNIX_DOMAIN_SOCKETS)
+    // Do not use shared memory for SharedBuffer encoding in Unix, because it's easy to reach the
+    // maximum number of file descriptors open per process when sending large data in small chunks
+    // over the IPC. ConnectionUnix.cpp already uses shared memory to send any IPC message that is
+    // too large. See https://bugs.webkit.org/show_bug.cgi?id=208571.
+    for (const auto& element : *buffer)
+        encoder.encodeFixedLengthData(reinterpret_cast<const uint8_t*>(element.segment->data()), element.segment->size(), 1);
+#else
+    SharedMemory::Handle handle;
     auto sharedMemoryBuffer = SharedMemory::allocate(buffer->size());
     memcpy(sharedMemoryBuffer->data(), buffer->data(), buffer->size());
     sharedMemoryBuffer->createHandle(handle, SharedMemory::Protection::ReadOnly);
     encoder << handle;
+#endif
 }
 
 static bool decodeSharedBuffer(Decoder& decoder, RefPtr<SharedBuffer>& buffer)
@@ -141,12 +154,21 @@ static bool decodeSharedBuffer(Decoder& decoder, RefPtr<SharedBuffer>& buffer)
     if (!bufferSize)
         return true;
 
+#if USE(UNIX_DOMAIN_SOCKETS)
+    Vector<uint8_t> data;
+    data.grow(bufferSize);
+    if (!decoder.decodeFixedLengthData(data.data(), data.size(), 1))
+        return false;
+
+    buffer = SharedBuffer::create(WTFMove(data));
+#else
     SharedMemory::Handle handle;
     if (!decoder.decode(handle))
         return false;
 
     auto sharedMemoryBuffer = SharedMemory::map(handle, SharedMemory::Protection::ReadOnly);
     buffer = SharedBuffer::create(static_cast<unsigned char*>(sharedMemoryBuffer->data()), bufferSize);
+#endif
 
     return true;
 }
@@ -636,7 +658,9 @@ Optional<FloatQuad> ArgumentCoder<FloatQuad>::decode(Decoder& decoder)
         return WTF::nullopt;
     return floatQuad;
 }
+#endif // PLATFORM(IOS_FAMILY)
 
+#if ENABLE(META_VIEWPORT)
 void ArgumentCoder<ViewportArguments>::encode(Encoder& encoder, const ViewportArguments& viewportArguments)
 {
     SimpleArgumentCoder<ViewportArguments>::encode(encoder, viewportArguments);
@@ -654,8 +678,18 @@ Optional<ViewportArguments> ArgumentCoder<ViewportArguments>::decode(Decoder& de
         return WTF::nullopt;
     return viewportArguments;
 }
-#endif // PLATFORM(IOS_FAMILY)
 
+#endif // ENABLE(META_VIEWPORT)
+
+void ArgumentCoder<ViewportAttributes>::encode(Encoder& encoder, const ViewportAttributes& viewportAttributes)
+{
+    SimpleArgumentCoder<ViewportAttributes>::encode(encoder, viewportAttributes);
+}
+
+bool ArgumentCoder<ViewportAttributes>::decode(Decoder& decoder, ViewportAttributes& viewportAttributes)
+{
+    return SimpleArgumentCoder<ViewportAttributes>::decode(decoder, viewportAttributes);
+}
 
 void ArgumentCoder<IntPoint>::encode(Encoder& encoder, const IntPoint& intPoint)
 {
@@ -760,16 +794,6 @@ void ArgumentCoder<Length>::encode(Encoder& encoder, const Length& length)
 bool ArgumentCoder<Length>::decode(Decoder& decoder, Length& length)
 {
     return SimpleArgumentCoder<Length>::decode(decoder, length);
-}
-
-void ArgumentCoder<ViewportAttributes>::encode(Encoder& encoder, const ViewportAttributes& viewportAttributes)
-{
-    SimpleArgumentCoder<ViewportAttributes>::encode(encoder, viewportAttributes);
-}
-
-bool ArgumentCoder<ViewportAttributes>::decode(Decoder& decoder, ViewportAttributes& viewportAttributes)
-{
-    return SimpleArgumentCoder<ViewportAttributes>::decode(decoder, viewportAttributes);
 }
 
 void ArgumentCoder<VelocityData>::encode(Encoder& encoder, const VelocityData& velocityData)
@@ -1058,7 +1082,7 @@ static void encodeNativeImage(Encoder& encoder, NativeImagePtr image)
     if (!graphicsContext)
         return;
 
-    graphicsContext->drawNativeImage(image, { }, FloatRect({ }, imageSize), FloatRect({ }, imageSize));
+    graphicsContext->drawNativeImage(image, imageSize, FloatRect({ }, imageSize), FloatRect({ }, imageSize));
 
     ShareableBitmap::Handle handle;
     bitmap->createHandle(handle);
@@ -1139,6 +1163,71 @@ void ArgumentCoder<NativeImageHandle>::encode(Encoder& encoder, const NativeImag
 bool ArgumentCoder<NativeImageHandle>::decode(Decoder& decoder, NativeImageHandle& imageHandle)
 {
     return decodeOptionalNativeImage(decoder, imageHandle.image);
+}
+
+void ArgumentCoder<FontHandle>::encode(Encoder& encoder, const FontHandle& handle)
+{
+    encoder << !!handle.font;
+    if (!handle.font)
+        return;
+
+    auto* fontFaceData = handle.font->fontFaceData();
+    encoder << !!fontFaceData;
+    if (fontFaceData) {
+        encodeSharedBuffer(encoder, fontFaceData);
+        auto& data = handle.font->platformData();
+        encoder << data.size();
+        encoder << data.syntheticBold();
+        encoder << data.syntheticOblique();
+    }
+
+    encodePlatformData(encoder, handle);
+}
+
+bool ArgumentCoder<FontHandle>::decode(Decoder& decoder, FontHandle& handle)
+{
+    Optional<bool> hasFont;
+    decoder >> hasFont;
+    if (!hasFont.hasValue())
+        return false;
+
+    if (!hasFont.value())
+        return true;
+
+    Optional<bool> hasFontFaceData;
+    decoder >> hasFontFaceData;
+    if (!hasFontFaceData.hasValue())
+        return false;
+
+    if (hasFontFaceData.value()) {
+        RefPtr<SharedBuffer> fontFaceData;
+        if (!decodeSharedBuffer(decoder, fontFaceData))
+            return false;
+
+        if (!fontFaceData)
+            return false;
+
+        Optional<float> fontSize;
+        decoder >> fontSize;
+        if (!fontSize)
+            return false;
+
+        Optional<bool> syntheticBold;
+        decoder >> syntheticBold;
+        if (!syntheticBold)
+            return false;
+
+        Optional<bool> syntheticItalic;
+        decoder >> syntheticItalic;
+        if (!syntheticItalic)
+            return false;
+
+        FontDescription description;
+        description.setComputedSize(*fontSize);
+        handle = { fontFaceData.releaseNonNull(), Font::Origin::Remote, *fontSize, *syntheticBold, *syntheticItalic };
+    }
+
+    return decodePlatformData(decoder, handle);
 }
 
 void ArgumentCoder<Cursor>::encode(Encoder& encoder, const Cursor& cursor)
@@ -1437,8 +1526,10 @@ void ArgumentCoder<Color>::encode(Encoder& encoder, const Color& color)
         return;
     }
 
+    uint32_t value = color.rgb().value();
+
     encoder << true;
-    encoder << color.rgb();
+    encoder << value;
 }
 
 bool ArgumentCoder<Color>::decode(Decoder& decoder, Color& color)
@@ -1476,11 +1567,11 @@ bool ArgumentCoder<Color>::decode(Decoder& decoder, Color& color)
         return true;
     }
 
-    RGBA32 rgba;
-    if (!decoder.decode(rgba))
+    uint32_t value;
+    if (!decoder.decode(value))
         return false;
 
-    color = Color(rgba);
+    color = SimpleColor { value };
     return true;
 }
 
@@ -1551,6 +1642,7 @@ void ArgumentCoder<CompositionUnderline>::encode(Encoder& encoder, const Composi
     encoder << underline.startOffset;
     encoder << underline.endOffset;
     encoder << underline.thick;
+    encoder.encodeEnum(underline.compositionUnderlineColor);
     encoder << underline.color;
 }
 
@@ -1563,6 +1655,8 @@ Optional<CompositionUnderline> ArgumentCoder<CompositionUnderline>::decode(Decod
     if (!decoder.decode(underline.endOffset))
         return WTF::nullopt;
     if (!decoder.decode(underline.thick))
+        return WTF::nullopt;
+    if (!decoder.decodeEnum(underline.compositionUnderlineColor))
         return WTF::nullopt;
     if (!decoder.decode(underline.color))
         return WTF::nullopt;
@@ -1998,7 +2092,7 @@ Optional<GrammarDetail> ArgumentCoder<GrammarDetail>::decode(Decoder& decoder)
 
 void ArgumentCoder<TextCheckingRequestData>::encode(Encoder& encoder, const TextCheckingRequestData& request)
 {
-    encoder << request.sequence();
+    encoder << request.identifier();
     encoder << request.text();
     encoder << request.checkingTypes();
     encoder.encodeEnum(request.processType());
@@ -2006,8 +2100,8 @@ void ArgumentCoder<TextCheckingRequestData>::encode(Encoder& encoder, const Text
 
 bool ArgumentCoder<TextCheckingRequestData>::decode(Decoder& decoder, TextCheckingRequestData& request)
 {
-    int sequence;
-    if (!decoder.decode(sequence))
+    Optional<TextCheckingRequestIdentifier> identifier;
+    if (!decoder.decode(identifier))
         return false;
 
     String text;
@@ -2022,7 +2116,7 @@ bool ArgumentCoder<TextCheckingRequestData>::decode(Decoder& decoder, TextChecki
     if (!decoder.decodeEnum(processType))
         return false;
 
-    request = TextCheckingRequestData { sequence, text, checkingTypes, processType };
+    request = TextCheckingRequestData { identifier, text, checkingTypes, processType };
     return true;
 }
 
@@ -2072,6 +2166,7 @@ void ArgumentCoder<UserStyleSheet>::encode(Encoder& encoder, const UserStyleShee
     encoder << userStyleSheet.blacklist();
     encoder.encodeEnum(userStyleSheet.injectedFrames());
     encoder.encodeEnum(userStyleSheet.level());
+    encoder << userStyleSheet.pageID();
 }
 
 bool ArgumentCoder<UserStyleSheet>::decode(Decoder& decoder, UserStyleSheet& userStyleSheet)
@@ -2100,7 +2195,12 @@ bool ArgumentCoder<UserStyleSheet>::decode(Decoder& decoder, UserStyleSheet& use
     if (!decoder.decodeEnum(level))
         return false;
 
-    userStyleSheet = UserStyleSheet(source, url, WTFMove(whitelist), WTFMove(blacklist), injectedFrames, level);
+    Optional<Optional<PageIdentifier>> pageID;
+    decoder >> pageID;
+    if (!pageID)
+        return false;
+
+    userStyleSheet = UserStyleSheet(source, url, WTFMove(whitelist), WTFMove(blacklist), injectedFrames, level, WTFMove(*pageID));
     return true;
 }
 
@@ -3116,5 +3216,172 @@ Optional<SerializedAttachmentData> ArgumentCoder<WebCore::SerializedAttachmentDa
 }
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)
+
+#if ENABLE(VIDEO)
+void ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::encode(Encoder& encoder, const SerializedPlatformDataCueValue& value)
+{
+    bool hasPlatformData = value.encodingRequiresPlatformData();
+    encoder << hasPlatformData;
+
+    encoder.encodeEnum(value.platformType());
+    if (hasPlatformData)
+        encodePlatformData(encoder, value);
+}
+
+Optional<SerializedPlatformDataCueValue> ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::decode(IPC::Decoder& decoder)
+{
+    bool hasPlatformData;
+    if (!decoder.decode(hasPlatformData))
+        return WTF::nullopt;
+
+    WebCore::SerializedPlatformDataCueValue::PlatformType type;
+    if (!decoder.decodeEnum(type))
+        return WTF::nullopt;
+
+    if (hasPlatformData)
+        return decodePlatformData(decoder, type);
+
+    return {{ }};
+}
+#endif
+
+void ArgumentCoder<RefPtr<WebCore::SharedBuffer>>::encode(Encoder& encoder, const RefPtr<WebCore::SharedBuffer>& buffer)
+{
+    encodeSharedBuffer(encoder, buffer.get());
+}
+
+Optional<RefPtr<SharedBuffer>> ArgumentCoder<RefPtr<WebCore::SharedBuffer>>::decode(Decoder& decoder)
+{
+    RefPtr<SharedBuffer> buffer;
+    if (!decodeSharedBuffer(decoder, buffer))
+        return WTF::nullopt;
+
+    return buffer;
+}
+
+void ArgumentCoder<Ref<WebCore::SharedBuffer>>::encode(Encoder& encoder, const Ref<WebCore::SharedBuffer>& buffer)
+{
+    encodeSharedBuffer(encoder, buffer.ptr());
+}
+
+Optional<Ref<SharedBuffer>> ArgumentCoder<Ref<WebCore::SharedBuffer>>::decode(Decoder& decoder)
+{
+    RefPtr<SharedBuffer> buffer;
+    if (!decodeSharedBuffer(decoder, buffer) || !buffer)
+        return WTF::nullopt;
+
+    return buffer.releaseNonNull();
+}
+
+#if ENABLE(ENCRYPTED_MEDIA)
+void ArgumentCoder<WebCore::CDMInstanceSession::Message>::encode(Encoder& encoder, const WebCore::CDMInstanceSession::Message& message)
+{
+    encoder << message.first;
+
+    RefPtr<SharedBuffer> messageData = message.second.copyRef();
+    encoder << messageData;
+}
+
+Optional<WebCore::CDMInstanceSession::Message>  ArgumentCoder<WebCore::CDMInstanceSession::Message>::decode(Decoder& decoder)
+{
+    WebCore::CDMInstanceSession::MessageType type;
+    if (!decoder.decode(type))
+        return WTF::nullopt;
+
+    RefPtr<SharedBuffer> buffer;
+    if (!decoder.decode(buffer) || !buffer)
+        return WTF::nullopt;
+
+    return makeOptional<WebCore::CDMInstanceSession::Message>({ type, buffer.releaseNonNull() });
+}
+
+void ArgumentCoder<WebCore::CDMInstanceSession::KeyStatusVector>::encode(Encoder& encoder, const WebCore::CDMInstanceSession::KeyStatusVector& keyStatuses)
+{
+    encoder << static_cast<uint64_t>(keyStatuses.size());
+    for (auto& keyStatus : keyStatuses) {
+        RefPtr<SharedBuffer> key = keyStatus.first.copyRef();
+        encoder << key << keyStatus.second;
+    }
+}
+
+Optional<WebCore::CDMInstanceSession::KeyStatusVector> ArgumentCoder<WebCore::CDMInstanceSession::KeyStatusVector>::decode(Decoder& decoder)
+{
+    uint64_t dataSize;
+    if (!decoder.decode(dataSize))
+        return WTF::nullopt;
+
+    WebCore::CDMInstanceSession::KeyStatusVector keyStatuses;
+    keyStatuses.reserveInitialCapacity(dataSize);
+
+    for (uint64_t i = 0; i < dataSize; ++i) {
+        RefPtr<SharedBuffer> key;
+        if (!decoder.decode(key) || !key)
+            return WTF::nullopt;
+
+        WebCore::CDMInstanceSessionClient::KeyStatus status;
+        if (!decoder.decode(status))
+            return WTF::nullopt;
+
+        keyStatuses.uncheckedAppend({ key.releaseNonNull(), status });
+    }
+    return keyStatuses;
+}
+#endif // ENABLE(ENCRYPTED_MEDIA)
+
+void ArgumentCoder<Ref<WebCore::ImageData>>::encode(Encoder& encoder, const Ref<WebCore::ImageData>& imageData)
+{
+    // FIXME: Copying from the ImageData to the SharedBuffer is slow. Invent some way for the SharedBuffer to be populated directly.
+    auto sharedBuffer = WebCore::SharedBuffer::create(imageData->data()->data(), imageData->data()->byteLength());
+    encoder << imageData->size();
+    encoder << sharedBuffer;
+}
+
+Optional<Ref<WebCore::ImageData>> ArgumentCoder<Ref<WebCore::ImageData>>::decode(Decoder& decoder)
+{
+    Optional<IntSize> imageDataSize;
+    Optional<Ref<SharedBuffer>> data;
+
+    decoder >> imageDataSize;
+    if (!imageDataSize)
+        return WTF::nullopt;
+
+    decoder >> data;
+    if (!data)
+        return WTF::nullopt;
+
+    // FIXME: Copying from the SharedBuffer into the ImageData is slow. Invent some way for the ImageData to simply just retain the SharedBuffer, and use it internally.
+    // Alternatively, we could create an overload for putImageData() which operates on the SharedBuffer directly.
+    auto imageData = ImageData::create(*imageDataSize, Uint8ClampedArray::create(reinterpret_cast<const uint8_t*>((*data)->data()), (*data)->size()));
+    if (!imageData)
+        return WTF::nullopt;
+
+    return { imageData.releaseNonNull() };
+}
+
+void ArgumentCoder<RefPtr<WebCore::ImageData>>::encode(Encoder& encoder, const RefPtr<WebCore::ImageData>& imageData)
+{
+    if (!imageData) {
+        encoder << false;
+        return;
+    }
+
+    encoder << true;
+    ArgumentCoder<Ref<WebCore::ImageData>>::encode(encoder, imageData.copyRef().releaseNonNull());
+}
+
+Optional<RefPtr<WebCore::ImageData>> ArgumentCoder<RefPtr<WebCore::ImageData>>::decode(Decoder& decoder)
+{
+    bool isEngaged;
+    if (!decoder.decode(isEngaged))
+        return WTF::nullopt;
+
+    if (!isEngaged)
+        return RefPtr<WebCore::ImageData>();
+
+    auto result = ArgumentCoder<Ref<WebCore::ImageData>>::decode(decoder);
+    if (!result)
+        return WTF::nullopt;
+    return { WTFMove(*result) };
+}
 
 } // namespace IPC

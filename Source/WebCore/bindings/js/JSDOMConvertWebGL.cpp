@@ -57,7 +57,9 @@
 #include "JSWebGLLoseContext.h"
 #include "JSWebGLProgram.h"
 #include "JSWebGLRenderbuffer.h"
+#include "JSWebGLSampler.h"
 #include "JSWebGLTexture.h"
+#include "JSWebGLTransformFeedback.h"
 #include "JSWebGLVertexArrayObject.h"
 #include "JSWebGLVertexArrayObjectOES.h"
 #include <JavaScriptCore/JSCInlines.h>
@@ -136,6 +138,12 @@ JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject&
         }
 #if ENABLE(WEBGL2)
         ,
+        [&] (const RefPtr<WebGLSampler>& sampler) {
+            return toJS(&lexicalGlobalObject, &globalObject, sampler.get());
+        },
+        [&] (const RefPtr<WebGLTransformFeedback>& transformFeedback) {
+            return toJS(&lexicalGlobalObject, &globalObject, transformFeedback.get());
+        },
         [&] (const RefPtr<WebGLVertexArrayObject>& array) {
             return toJS(&lexicalGlobalObject, &globalObject, array.get());
         }

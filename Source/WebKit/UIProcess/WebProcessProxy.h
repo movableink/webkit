@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,9 +51,14 @@
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Logger.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakHashSet.h>
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+#include "LayerHostingContext.h"
+#endif
 
 namespace API {
 class Navigation;
@@ -66,6 +71,7 @@ class ResourceRequest;
 struct PluginInfo;
 struct PrewarmInformation;
 struct SecurityOriginData;
+enum class ThirdPartyCookieBlockingMode : uint8_t;
 }
 
 namespace WebKit {
@@ -164,6 +170,8 @@ public:
     bool isRunningServiceWorkers() const { return !!m_serviceWorkerInformation; }
     bool isStandaloneServiceWorkerProcess() const { return isRunningServiceWorkers() && !pageCount(); }
 
+    bool isDummyProcessProxy() const;
+
     void didCreateWebPageInProcess(WebCore::PageIdentifier);
 
     void addVisitedLinkStoreUser(VisitedLinkStore&, WebPageProxyIdentifier);
@@ -174,7 +182,6 @@ public:
 
     RefPtr<API::UserInitiatedAction> userInitiatedActivity(uint64_t);
 
-    ResponsivenessTimer& responsivenessTimer() { return m_responsivenessTimer; }
     bool isResponsive() const;
 
     WebFrameProxy* webFrame(WebCore::FrameIdentifier) const;
@@ -206,6 +213,8 @@ public:
 
     static void notifyWebsiteDataDeletionForRegistrableDomainsFinished();
     static void notifyWebsiteDataScanForRegistrableDomainsFinished();
+
+    void setShouldBlockThirdPartyCookiesForTesting(WebCore::ThirdPartyCookieBlockingMode, CompletionHandler<void()>&&);
 #endif
 
     void enableSuddenTermination();
@@ -214,6 +223,8 @@ public:
 
     void requestTermination(ProcessTerminationReason);
 
+    enum class UseLazyStop : bool { No, Yes };
+    void startResponsivenessTimer(UseLazyStop = UseLazyStop::No);
     void stopResponsivenessTimer();
 
     RefPtr<API::Object> transformHandlesToObjects(API::Object*);
@@ -321,12 +332,13 @@ public:
     void revokeAudioCaptureExtension() { m_mediaCaptureSandboxExtensions &= ~Audio; }
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-    void unblockAccessibilityServerIfNeeded();
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    void enableRemoteInspectorIfNeeded();
 #endif
-
-#if PLATFORM(IOS_FAMILY)
-    void processWasResumed(CompletionHandler<void()>&&);
+    
+#if PLATFORM(COCOA)
+    void unblockAccessibilityServerIfNeeded();
+    void unblockPreferenceServiceIfNeeded();
 #endif
 
     void webPageMediaStateDidChange(WebPageProxy&);
@@ -335,7 +347,7 @@ public:
     void deref() final { ThreadSafeRefCounted::deref(); }
 
 #if ENABLE(SERVICE_WORKER)
-    void establishServiceWorkerContext(const WebPreferencesStore&);
+    void establishServiceWorkerContext(const WebPreferencesStore&, CompletionHandler<void()>&&);
     void setServiceWorkerUserAgent(const String&);
     void updateServiceWorkerPreferencesStore(const WebPreferencesStore&);
     bool hasServiceWorkerPageProxy(WebPageProxyIdentifier pageProxyID) { return m_serviceWorkerInformation && m_serviceWorkerInformation->serviceWorkerPageProxyID == pageProxyID; }
@@ -351,10 +363,25 @@ public:
     UserMediaCaptureManagerProxy* userMediaCaptureManagerProxy() { return m_userMediaCaptureManagerProxy.get(); }
 #endif
 
+#if ENABLE(ATTACHMENT_ELEMENT) && PLATFORM(IOS_FAMILY)
+    bool hasIssuedAttachmentElementRelatedSandboxExtensions() const { return m_hasIssuedAttachmentElementRelatedSandboxExtensions; }
+    void setHasIssuedAttachmentElementRelatedSandboxExtensions() { m_hasIssuedAttachmentElementRelatedSandboxExtensions = true; }
+#endif
+
+#if HAVE(VISIBILITY_PROPAGATION_VIEW)
+    void didCreateContextInGPUProcessForVisibilityPropagation(LayerHostingContextID);
+#endif
+
+#if ENABLE(GPU_PROCESS)
+    void gpuProcessCrashed();
+#endif
+
 protected:
     WebProcessProxy(WebProcessPool&, WebsiteDataStore*, IsPrewarmed);
 
     // AuxiliaryProcessProxy
+    ASCIILiteral processName() const final { return "WebContent"_s; }
+
     void getLaunchOptions(ProcessLauncher::LaunchOptions&) override;
     void platformGetLaunchOptions(ProcessLauncher::LaunchOptions&) override;
     void connectionWillOpen(IPC::Connection&) override;
@@ -406,6 +433,7 @@ private:
 
     static const HashSet<String>& platformPathsWithAssumedReadAccess();
 
+    ResponsivenessTimer& responsivenessTimer() { return m_responsivenessTimer; }
     void updateBackgroundResponsivenessTimer();
 
     void processDidTerminateOrFailedToLaunch();
@@ -499,9 +527,10 @@ private:
     std::unique_ptr<ProcessThrottler::BackgroundActivity> m_activityForHoldingLockedFiles;
     ForegroundWebProcessToken m_foregroundToken;
     BackgroundWebProcessToken m_backgroundToken;
-#if PLATFORM(IOS_FAMILY)
+
+#if PLATFORM(COCOA)
     bool m_hasSentMessageToUnblockAccessibilityServer { false };
-    std::unique_ptr<WebCore::DeferrableOneShotTimer> m_unexpectedActivityTimer;
+    bool m_hasSentMessageToUnblockPreferenceService { false };
 #endif
 
     HashMap<String, uint64_t> m_pageURLRetainCountMap;
@@ -527,6 +556,10 @@ private:
     bool m_hasCommittedAnyProvisionalLoads { false };
     bool m_isPrewarmed;
     bool m_hasAudibleWebPage { false };
+#if ENABLE(ATTACHMENT_ELEMENT) && PLATFORM(IOS_FAMILY)
+    bool m_hasIssuedAttachmentElementRelatedSandboxExtensions { false };
+#endif
+    Optional<UseLazyStop> m_shouldStartResponsivenessTimerWhenLaunched;
 
 #if PLATFORM(WATCHOS)
     std::unique_ptr<ProcessThrottler::BackgroundActivity> m_backgroundActivityForFullscreenFormControls;
@@ -535,6 +568,7 @@ private:
 #if PLATFORM(COCOA)
     MediaCaptureSandboxExtensions m_mediaCaptureSandboxExtensions { SandboxExtensionType::None };
 #endif
+    RefPtr<Logger> m_logger;
 
     struct ServiceWorkerInformation {
         WebPageProxyIdentifier serviceWorkerPageProxyID;

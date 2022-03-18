@@ -27,6 +27,7 @@
 #include "JSDollarVM.h"
 
 #include "BuiltinExecutableCreator.h"
+#include "BuiltinNames.h"
 #include "CodeBlock.h"
 #include "DOMAttributeGetterSetter.h"
 #include "DOMJITGetterSetter.h"
@@ -81,6 +82,8 @@ public:
 
     void updateVMStackLimits() { return m_vm.updateStackLimits(); };
 
+    static EncodedJSValue JSC_HOST_CALL functionGetStructureTransitionList(JSGlobalObject*, CallFrame*);
+
 private:
     VM& m_vm;
 };
@@ -108,6 +111,12 @@ namespace {
 class JSDollarVMCallFrame : public JSNonFinalObject {
     using Base = JSNonFinalObject;
 public:
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
+
     JSDollarVMCallFrame(VM& vm, Structure* structure)
         : Base(vm, structure)
     {
@@ -192,6 +201,11 @@ public:
     }
 
     typedef JSNonFinalObject Base;
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
 
     Root* root() const { return m_root.get(); }
     void setRoot(VM& vm, Root* root) { m_root.set(vm, this, root); }
@@ -245,6 +259,13 @@ public:
 
 class Root : public JSDestructibleObject {
 public:
+    using Base = JSDestructibleObject;
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.destructibleObjectSpace;
+    }
+
     Root(VM& vm, Structure* structure)
         : Base(vm, structure)
     {
@@ -271,8 +292,6 @@ public:
         root->finishCreation(vm);
         return root;
     }
-
-    typedef JSDestructibleObject Base;
 
     DECLARE_INFO;
 
@@ -304,6 +323,11 @@ public:
 
     typedef JSNonFinalObject Base;
     static constexpr bool needsDestruction = false;
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
 
     static SimpleObject* create(VM& vm, JSGlobalObject* globalObject)
     {
@@ -357,6 +381,12 @@ public:
     DECLARE_INFO;
     typedef JSNonFinalObject Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::GetOwnPropertySlotIsImpure | JSC::OverridesGetOwnPropertySlot;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -425,6 +455,12 @@ public:
     DECLARE_INFO;
     typedef JSNonFinalObject Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::OverridesGetOwnPropertySlot;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -497,6 +533,12 @@ public:
     typedef JSArray Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesGetPropertyNames;
 
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
+
     static RuntimeArray* create(JSGlobalObject* globalObject, CallFrame* callFrame)
     {
         DollarVMAssertScope assertScope;
@@ -554,7 +596,7 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    static NO_RETURN_DUE_TO_CRASH bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName)
+    static NO_RETURN_DUE_TO_CRASH bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&)
     {
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -658,6 +700,12 @@ public:
 
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable | OverridesGetOwnPropertySlot;
 
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         DollarVMAssertScope assertScope;
@@ -682,6 +730,48 @@ public:
     }
 };
 
+class ObjectDoingSideEffectPutWithoutCorrectSlotStatus : public JSNonFinalObject {
+    using Base = JSNonFinalObject;
+public:
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
+
+    ObjectDoingSideEffectPutWithoutCorrectSlotStatus(VM& vm, Structure* structure)
+        : Base(vm, structure)
+    {
+        DollarVMAssertScope assertScope;
+    }
+
+    DECLARE_INFO;
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        DollarVMAssertScope assertScope;
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+    }
+
+    static ObjectDoingSideEffectPutWithoutCorrectSlotStatus* create(VM& vm, Structure* structure)
+    {
+        DollarVMAssertScope assertScope;
+        ObjectDoingSideEffectPutWithoutCorrectSlotStatus* accessor = new (NotNull, allocateCell<ObjectDoingSideEffectPutWithoutCorrectSlotStatus>(vm.heap)) ObjectDoingSideEffectPutWithoutCorrectSlotStatus(vm, structure);
+        accessor->finishCreation(vm);
+        return accessor;
+    }
+
+    static bool put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+    {
+        DollarVMAssertScope assertScope;
+        auto* thisObject = jsCast<ObjectDoingSideEffectPutWithoutCorrectSlotStatus*>(cell);
+        auto throwScope = DECLARE_THROW_SCOPE(globalObject->vm());
+        auto* string = value.toString(globalObject);
+        RETURN_IF_EXCEPTION(throwScope, false);
+        RELEASE_AND_RETURN(throwScope, Base::put(thisObject, globalObject, propertyName, string, slot));
+    }
+};
+
 class DOMJITNode : public JSNonFinalObject {
 public:
     DOMJITNode(VM& vm, Structure* structure)
@@ -693,6 +783,12 @@ public:
     DECLARE_INFO;
     typedef JSNonFinalObject Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -1202,6 +1298,12 @@ public:
     using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
+
     JSTestCustomGetterSetter(VM& vm, Structure* structure)
         : Base(vm, structure)
     {
@@ -1305,6 +1407,7 @@ const ClassInfo DOMJITCheckSubClassObject::s_info = { "DOMJITCheckSubClassObject
 const ClassInfo JSTestCustomGetterSetter::s_info = { "JSTestCustomGetterSetter", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestCustomGetterSetter) };
 
 const ClassInfo StaticCustomAccessor::s_info = { "StaticCustomAccessor", &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(StaticCustomAccessor) };
+const ClassInfo ObjectDoingSideEffectPutWithoutCorrectSlotStatus::s_info = { "ObjectDoingSideEffectPutWithoutCorrectSlotStatus", &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(ObjectDoingSideEffectPutWithoutCorrectSlotStatus) };
 
 ElementHandleOwner* Element::handleOwner()
 {
@@ -1330,6 +1433,13 @@ static EncodedJSValue JSC_HOST_CALL functionWasmStreamingParserFinalize(JSGlobal
 
 class WasmStreamingParser : public JSDestructibleObject {
 public:
+    using Base = JSDestructibleObject;
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.destructibleObjectSpace;
+    }
+
     class Client final : public Wasm::StreamingParserClient {
     public:
         explicit Client(WasmStreamingParser* parser)
@@ -1352,8 +1462,6 @@ public:
     {
         DollarVMAssertScope assertScope;
     }
-
-    using Base = JSDestructibleObject;
 
     static WasmStreamingParser* create(VM& vm, JSGlobalObject* globalObject)
     {
@@ -1657,6 +1765,15 @@ static EncodedJSValue JSC_HOST_CALL functionEdenGC(JSGlobalObject* globalObject,
 {
     DollarVMAssertScope assertScope;
     VMInspector::edenGC(globalObject);
+    return JSValue::encode(jsUndefined());
+}
+
+// Runs a full GC, but sweep asynchronously.
+// Usage: $vm.gcSweepAsynchronously()
+static EncodedJSValue JSC_HOST_CALL functionGCSweepAsynchronously(JSGlobalObject* globalObject, CallFrame*)
+{
+    DollarVMAssertScope assertScope;
+    globalObject->vm().heap.collectNow(Async, CollectionScope::Full);
     return JSValue::encode(jsUndefined());
 }
 
@@ -2256,6 +2373,31 @@ static EncodedJSValue JSC_HOST_CALL functionCreateStaticCustomAccessor(JSGlobalO
     return JSValue::encode(result);
 }
 
+static EncodedJSValue JSC_HOST_CALL functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    auto* dollarVM = jsDynamicCast<JSDollarVM*>(vm, callFrame->thisValue());
+    RELEASE_ASSERT(dollarVM);
+    auto* result = ObjectDoingSideEffectPutWithoutCorrectSlotStatus::create(vm, dollarVM->objectDoingSideEffectPutWithoutCorrectSlotStatusStructure());
+    return JSValue::encode(result);
+}
+
+static EncodedJSValue JSC_HOST_CALL functionCreateEmptyFunctionWithName(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    const String name = callFrame->argument(0).toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSFunction::create(vm, globalObject, 1, name, functionCreateEmptyFunctionWithName)));
+}
+
 static EncodedJSValue JSC_HOST_CALL functionSetImpureGetterDelegate(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     DollarVMAssertScope assertScope;
@@ -2306,8 +2448,9 @@ static EncodedJSValue JSC_HOST_CALL functionGetPrivateProperty(JSGlobalObject* g
         return encodedJSUndefined();
 
     String str = asString(callFrame->argument(1))->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    SymbolImpl* symbol = vm.propertyNames->lookUpPrivateName(Identifier::fromString(vm, str));
+    SymbolImpl* symbol = vm.propertyNames->builtinNames().lookUpPrivateName(str);
     if (!symbol)
         return throwVMError(globalObject, scope, "Unknown private name.");
 
@@ -2720,6 +2863,72 @@ static EncodedJSValue JSC_HOST_CALL functionMake16BitStringIfPossible(JSGlobalOb
     return JSValue::encode(jsString(vm, String::adopt(WTFMove(buffer))));
 }
 
+EncodedJSValue JSC_HOST_CALL JSDollarVMHelper::functionGetStructureTransitionList(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSObject* obj = callFrame->argument(0).toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!obj)
+        return JSValue::encode(jsNull());
+    Vector<Structure*, 8> structures;
+
+    for (auto* structure = obj->structure(); structure; structure = structure->previousID(vm))
+        structures.append(structure);
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    for (size_t i = 0; i < structures.size(); ++i) {
+        auto* structure = structures[structures.size() - i - 1];
+        result->push(globalObject, JSValue(structure->id()));
+        RETURN_IF_EXCEPTION(scope, { });
+        result->push(globalObject, JSValue(structure->transitionOffset()));
+        RETURN_IF_EXCEPTION(scope, { });
+        result->push(globalObject, JSValue(structure->maxOffset()));
+        RETURN_IF_EXCEPTION(scope, { });
+        if (auto* transitionPropertyName = structure->transitionPropertyName())
+            result->push(globalObject, jsString(vm, String(*transitionPropertyName)));
+        else
+            result->push(globalObject, jsNull());
+        RETURN_IF_EXCEPTION(scope, { });
+        result->push(globalObject, JSValue(structure->isPropertyDeletionTransition()));
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    return JSValue::encode(result);
+}
+
+static EncodedJSValue JSC_HOST_CALL functionGetConcurrently(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSObject* obj = callFrame->argument(0).toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!obj)
+        return JSValue::encode(jsNull());
+    String property = callFrame->argument(1).toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    auto name = PropertyName(Identifier::fromString(vm, property));
+    auto offset = obj->structure()->getConcurrently(name.uid());
+    if (offset != invalidOffset)
+        ASSERT(JSValue::encode(obj->getDirect(offset)));
+    JSValue result = JSValue(offset != invalidOffset);
+    RETURN_IF_EXCEPTION(scope, { });
+    return JSValue::encode(result);
+}
+
+static EncodedJSValue JSC_HOST_CALL functionHasOwnLengthProperty(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    VM& vm = globalObject->vm();
+
+    JSObject* target = asObject(callFrame->uncheckedArgument(0));
+    JSFunction* function = jsDynamicCast<JSFunction*>(vm, target);
+    return JSValue::encode(jsBoolean(function->canAssumeNameAndLengthAreOriginal(vm)));
+}
+
 void JSDollarVM::finishCreation(VM& vm)
 {
     DollarVMAssertScope assertScope;
@@ -2755,6 +2964,7 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "noInline", functionNoInline, 1);
 
     addFunction(vm, "gc", functionGC, 0);
+    addFunction(vm, "gcSweepAsynchronously", functionGCSweepAsynchronously, 0);
     addFunction(vm, "edenGC", functionEdenGC, 0);
     addFunction(vm, "dumpSubspaceHashes", functionDumpSubspaceHashes, 0);
 
@@ -2800,6 +3010,8 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "createWasmStreamingParser", functionCreateWasmStreamingParser, 0);
 #endif
     addFunction(vm, "createStaticCustomAccessor", functionCreateStaticCustomAccessor, 0);
+    addFunction(vm, "createObjectDoingSideEffectPutWithoutCorrectSlotStatus", functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus, 0);
+    addFunction(vm, "createEmptyFunctionWithName", functionCreateEmptyFunctionWithName, 1);
     addFunction(vm, "getPrivateProperty", functionGetPrivateProperty, 2);
     addFunction(vm, "setImpureGetterDelegate", functionSetImpureGetterDelegate, 2);
 
@@ -2846,6 +3058,13 @@ void JSDollarVM::finishCreation(VM& vm)
 
     addFunction(vm, "isWasmSupported", functionIsWasmSupported, 0);
     addFunction(vm, "make16BitStringIfPossible", functionMake16BitStringIfPossible, 1);
+
+    addFunction(vm, "getStructureTransitionList", JSDollarVMHelper::functionGetStructureTransitionList, 1);
+    addFunction(vm, "getConcurrently", functionGetConcurrently, 2);
+
+    addFunction(vm, "hasOwnLengthProperty", functionHasOwnLengthProperty, 1);
+
+    m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructure.set(vm, this, ObjectDoingSideEffectPutWithoutCorrectSlotStatus::createStructure(vm, globalObject, jsNull()));
 }
 
 void JSDollarVM::addFunction(VM& vm, JSGlobalObject* globalObject, const char* name, NativeFunction function, unsigned arguments)
@@ -2860,6 +3079,13 @@ void JSDollarVM::addConstructibleFunction(VM& vm, JSGlobalObject* globalObject, 
     DollarVMAssertScope assertScope;
     Identifier identifier = Identifier::fromString(vm, name);
     putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, NoIntrinsic, function));
+}
+
+void JSDollarVM::visitChildren(JSCell* cell, SlotVisitor& visitor)
+{
+    JSDollarVM* thisObject = jsCast<JSDollarVM*>(cell);
+    Base::visitChildren(thisObject, visitor);
+    visitor.append(thisObject->m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructure);
 }
 
 } // namespace JSC

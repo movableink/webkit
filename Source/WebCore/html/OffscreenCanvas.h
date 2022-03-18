@@ -54,6 +54,22 @@ using OffscreenRenderingContext = Variant<RefPtr<OffscreenCanvasRenderingContext
 using OffscreenRenderingContext = Variant<RefPtr<OffscreenCanvasRenderingContext2D>>;
 #endif
 
+class DetachedOffscreenCanvas {
+    WTF_MAKE_NONCOPYABLE(DetachedOffscreenCanvas);
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    DetachedOffscreenCanvas(std::unique_ptr<ImageBuffer>&&, const IntSize&, bool originClean);
+
+    std::unique_ptr<ImageBuffer> takeImageBuffer();
+    const IntSize& size() const { return m_size; }
+    bool originClean() const { return m_originClean; }
+
+private:
+    std::unique_ptr<ImageBuffer> m_buffer;
+    IntSize m_size;
+    bool m_originClean;
+};
+
 class OffscreenCanvas final : public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTargetWithInlineData, private ContextDestructionObserver {
     WTF_MAKE_ISO_ALLOCATED(OffscreenCanvas);
 public:
@@ -69,25 +85,30 @@ public:
     };
 
     static Ref<OffscreenCanvas> create(ScriptExecutionContext&, unsigned width, unsigned height);
+    static Ref<OffscreenCanvas> create(ScriptExecutionContext&, std::unique_ptr<DetachedOffscreenCanvas>&&);
     virtual ~OffscreenCanvas();
 
+    unsigned width() const final;
+    unsigned height() const final;
     void setWidth(unsigned);
     void setHeight(unsigned);
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
-#if ENABLE(WEBGL)
     ExceptionOr<OffscreenRenderingContext> getContext(JSC::JSGlobalObject&, RenderingContextType, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
-#endif
     ExceptionOr<RefPtr<ImageBitmap>> transferToImageBitmap();
     void convertToBlob(ImageEncodeOptions&&, Ref<DeferredPromise>&&);
 
     void didDraw(const FloatRect&) final;
 
-    Image* copiedImage() const final { return nullptr; }
+    Image* copiedImage() const final;
     bool hasCreatedImageBuffer() const final { return m_hasCreatedImageBuffer; }
 
     SecurityOrigin* securityOrigin() const final;
+
+    bool canDetach() const;
+    std::unique_ptr<DetachedOffscreenCanvas> detach();
+
     CSSValuePool& cssValuePool();
 
     using RefCounted::ref;
@@ -115,10 +136,16 @@ private:
 
     void reset();
 
+    void clearCopiedImage() const;
+
     std::unique_ptr<CanvasRenderingContext> m_context;
 
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };
+
+    bool m_detached { false };
+
+    mutable RefPtr<Image> m_copiedImage;
 };
 
 }

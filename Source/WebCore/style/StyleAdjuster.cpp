@@ -30,6 +30,7 @@
 #include "config.h"
 #include "StyleAdjuster.h"
 
+#include "AnimationBase.h"
 #include "CSSFontSelector.h"
 #include "Element.h"
 #include "FrameView.h"
@@ -42,6 +43,7 @@
 #include "MathMLElement.h"
 #include "Page.h"
 #include "Quirks.h"
+#include "RenderBox.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
 #include "RuntimeEnabledFeatures.h"
@@ -152,14 +154,11 @@ static bool doesNotInheritTextDecoration(const RenderStyle& style, const Element
         || style.isFloating() || style.hasOutOfFlowPosition();
 }
 
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH) || ENABLE(POINTER_EVENTS)
 static bool isScrollableOverflow(Overflow overflow)
 {
     return overflow == Overflow::Scroll || overflow == Overflow::Auto;
 }
-#endif
 
-#if ENABLE(POINTER_EVENTS)
 static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& style, OptionSet<TouchAction> effectiveTouchActions)
 {
     // https://w3c.github.io/pointerevents/#determining-supported-touch-behavior
@@ -190,7 +189,6 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
 
     return sharedTouchActions;
 }
-#endif
 
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
@@ -435,9 +433,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (m_parentBoxStyle.justifyItems().positionType() == ItemPositionType::Legacy && style.justifyItems().position() == ItemPosition::Legacy)
         style.setJustifyItems(m_parentBoxStyle.justifyItems());
 
-#if ENABLE(POINTER_EVENTS)
     style.setEffectiveTouchActions(computeEffectiveTouchActions(style, m_parentStyle.effectiveTouchActions()));
-#endif
 
 #if ENABLE(TEXT_AUTOSIZING)
     if (m_element)
@@ -524,6 +520,22 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
         style.setDisplay(DisplayType::Block);
 }
 
+void Adjuster::adjustAnimatedStyle(RenderStyle& style, const RenderStyle* parentBoxStyle, OptionSet<AnimationImpact> impact)
+{
+    // Set an explicit used z-index in two cases:
+    // 1. When the element respects z-index, and the style has an explicit z-index set (for example, the animation
+    //    itself may animate z-index).
+    // 2. When we want the stacking context side-effets of explicit z-index, via forceStackingContext.
+    // It's important to not clobber an existing used z-index, since an earlier animation may have set it, but we
+    // may still need to update the used z-index value from the specified value.
+    bool elementRespectsZIndex = style.position() != PositionType::Static || (parentBoxStyle && parentBoxStyle->isDisplayFlexibleOrGridBox());
+
+    if (elementRespectsZIndex && !style.hasAutoSpecifiedZIndex())
+        style.setUsedZIndex(style.specifiedZIndex());
+    else if (impact.contains(AnimationImpact::ForcesStackingContext))
+        style.setUsedZIndex(0);
+}
+
 void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 {
     if (m_document.quirks().needsGMailOverflowScrollQuirk() && m_element) {
@@ -550,15 +562,20 @@ static bool hasTextChild(const Element& element)
     return false;
 }
 
-bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& element)
+auto Adjuster::adjustmentForTextAutosizing(const RenderStyle& style, const Element& element) -> AdjustmentForTextAutosizing
 {
+    AdjustmentForTextAutosizing adjustmentForTextAutosizing;
+
     auto& document = element.document();
     if (!document.settings().textAutosizingEnabled() || !document.settings().textAutosizingUsesIdempotentMode())
-        return false;
+        return adjustmentForTextAutosizing;
 
-    AutosizeStatus::updateStatus(style);
+    auto newStatus = AutosizeStatus::computeStatus(style);
+    if (newStatus != style.autosizeStatus())
+        adjustmentForTextAutosizing.newStatus = newStatus;
+
     if (style.textSizeAdjust().isNone())
-        return false;
+        return adjustmentForTextAutosizing;
 
     float initialScale = document.page() ? document.page()->initialScale() : 1;
     auto adjustLineHeightIfNeeded = [&](auto computedFontSize) {
@@ -575,26 +592,24 @@ bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& elemen
         if (AutosizeStatus::probablyContainsASmallFixedNumberOfLines(style))
             return;
 
-        style.setLineHeight({ minimumLineHeight, Fixed });
+        adjustmentForTextAutosizing.newLineHeight = minimumLineHeight;
     };
 
     auto fontDescription = style.fontDescription();
     auto initialComputedFontSize = fontDescription.computedSize();
     auto specifiedFontSize = fontDescription.specifiedSize();
-    bool isCandidate = style.isIdempotentTextAutosizingCandidate();
+    bool isCandidate = style.isIdempotentTextAutosizingCandidate(newStatus);
     if (!isCandidate && WTF::areEssentiallyEqual(initialComputedFontSize, specifiedFontSize))
-        return false;
+        return adjustmentForTextAutosizing;
 
     auto adjustedFontSize = AutosizeStatus::idempotentTextSize(fontDescription.specifiedSize(), initialScale);
     if (isCandidate && WTF::areEssentiallyEqual(initialComputedFontSize, adjustedFontSize))
-        return false;
+        return adjustmentForTextAutosizing;
 
     if (!hasTextChild(element))
-        return false;
+        return adjustmentForTextAutosizing;
 
-    fontDescription.setComputedSize(isCandidate ? adjustedFontSize : specifiedFontSize);
-    style.setFontDescription(WTFMove(fontDescription));
-    style.fontCascade().update(&document.fontSelector());
+    adjustmentForTextAutosizing.newFontSize = isCandidate ? adjustedFontSize : specifiedFontSize;
 
     // FIXME: We should restore computed line height to its original value in the case where the element is not
     // an idempotent text autosizing candidate; otherwise, if an element that is a text autosizing candidate contains
@@ -602,7 +617,28 @@ bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& elemen
     if (isCandidate)
         adjustLineHeightIfNeeded(adjustedFontSize);
 
-    return true;
+    return adjustmentForTextAutosizing;
+}
+
+bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& element, AdjustmentForTextAutosizing adjustment)
+{
+    AutosizeStatus::updateStatus(style);
+    if (auto newFontSize = adjustment.newFontSize) {
+        auto fontDescription = style.fontDescription();
+        fontDescription.setComputedSize(*newFontSize);
+        style.setFontDescription(WTFMove(fontDescription));
+        style.fontCascade().update(&element.document().fontSelector());
+    }
+    if (auto newLineHeight = adjustment.newLineHeight)
+        style.setLineHeight({ *newLineHeight, Fixed });
+    if (auto newStatus = adjustment.newStatus)
+        style.setAutosizeStatus(*newStatus);
+    return adjustment.newFontSize || adjustment.newLineHeight;
+}
+
+bool Adjuster::adjustForTextAutosizing(RenderStyle& style, const Element& element)
+{
+    return adjustForTextAutosizing(style, element, adjustmentForTextAutosizing(style, element));
 }
 #endif
 

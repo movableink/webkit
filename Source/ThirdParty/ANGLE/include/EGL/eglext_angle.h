@@ -194,6 +194,9 @@ EGLAPI EGLint EGLAPIENTRY eglProgramCacheResizeANGLE(EGLDisplay dpy, EGLint limi
 #define EGL_TEXTURE_RECTANGLE_ANGLE 0x345B
 #define EGL_TEXTURE_TYPE_ANGLE 0x345C
 #define EGL_TEXTURE_INTERNAL_FORMAT_ANGLE 0x345D
+#define EGL_IOSURFACE_USAGE_HINT_ANGLE 0x348A
+#define EGL_IOSURFACE_READ_HINT_ANGLE 0x0001
+#define EGL_IOSURFACE_WRITE_HINT_ANGLE 0x0002
 #endif /* EGL_ANGLE_iosurface_client_buffer */
 
 #ifndef EGL_ANGLE_create_context_extensions_enabled
@@ -201,21 +204,29 @@ EGLAPI EGLint EGLAPIENTRY eglProgramCacheResizeANGLE(EGLDisplay dpy, EGLint limi
 #define EGL_EXTENSIONS_ENABLED_ANGLE 0x345F
 #endif /* EGL_ANGLE_create_context_extensions_enabled */
 
-#ifndef EGL_CHROMIUM_get_sync_values
-#define EGL_CHROMIUM_get_sync_values 1
+#ifndef EGL_CHROMIUM_sync_control
+#define EGL_CHROMIUM_sync_control 1
 typedef EGLBoolean (EGLAPIENTRYP PFNEGLGETSYNCVALUESCHROMIUMPROC) (EGLDisplay dpy,
                                                              EGLSurface surface,
                                                              EGLuint64KHR *ust,
                                                              EGLuint64KHR *msc,
                                                              EGLuint64KHR *sbc);
+typedef EGLBoolean (EGLAPIENTRYP PFNEGLGETMSCRATECHROMIUMPROC) (EGLDisplay dpy,
+                                                             EGLSurface surface,
+                                                             EGLint *numerator,
+                                                             EGLint *denominator);
 #ifdef EGL_EGLEXT_PROTOTYPES
 EGLAPI EGLBoolean EGLAPIENTRY eglGetSyncValuesCHROMIUM(EGLDisplay dpy,
                                                              EGLSurface surface,
                                                              EGLuint64KHR *ust,
                                                              EGLuint64KHR *msc,
                                                              EGLuint64KHR *sbc);
+EGLAPI EGLBoolean EGLAPIENTRY eglGetMscRateCHROMIUM(EGLDisplay dpy,
+                                                             EGLSurface surface,
+                                                             EGLint *numerator,
+                                                             EGLint *denominator);
 #endif
-#endif /* EGL_CHROMIUM_get_sync_values */
+#endif /* EGL_CHROMIUM_sync_control */
 
 #ifndef EGL_ANGLE_power_preference
 #define EGL_ANGLE_power_preference 1
@@ -276,9 +287,7 @@ EGLAPI EGLBoolean EGLAPIENTRY eglSwapBuffersWithFrameTokenANGLE(EGLDisplay dpy, 
 
 #ifndef EGL_ANGLE_device_eagl
 #define EGL_ANGLE_device_eagl 1
-#define EGL_EAGL_CONTEXT_ANGLE 0x3487
-// FIXME: Do we need an EGL_PIXEL_FORMAT_ANGLE?
-// #define EGL_EAGL_PIXEL_FORMAT_ANGLE 0x3488
+#define EGL_EAGL_CONTEXT_ANGLE 0x348C
 #endif
 
 // clang-format on

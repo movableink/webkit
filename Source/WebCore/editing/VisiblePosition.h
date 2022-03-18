@@ -34,6 +34,8 @@ class TextStream;
 
 namespace WebCore {
 
+class Range;
+
 // VisiblePosition default affinity is downstream because
 // the callers do not really care (they just want the
 // deep position without regard to line position), and this
@@ -101,6 +103,8 @@ public:
     // Abs x/y position of the caret ignoring transforms.
     // FIXME: navigation with transforms should be smarter.
     WEBCORE_EXPORT int lineDirectionPointForBlockDirectionNavigation() const;
+
+    WEBCORE_EXPORT FloatRect absoluteSelectionBoundsForLine() const;
 
     // This is a tentative enhancement of operator== to account for affinity.
     // FIXME: Combine this function with operator==

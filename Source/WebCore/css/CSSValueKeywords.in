@@ -984,24 +984,6 @@ step-end
 document
 reset
 
-#if defined(ENABLE_CSS_DEVICE_ADAPTATION) && ENABLE_CSS_DEVICE_ADAPTATION
-//
-// CSS_PROP_USER_ZOOM
-//
-// fixed
-zoom
-
-//
-// CSS_PROP_MIN_WIDTH
-// CSS_PROP_MAX_WIDTH
-// CSS_PROP_MIN_HEIGHT
-// CSS_PROP_MAX_HEIGHT
-//
-// auto
-device-width
-device-height
-#endif
-
 //
 // CSS_PROP_POINTER_EVENTS
 //
@@ -1310,8 +1292,9 @@ min
 max
 clamp
 
-#if defined(ENABLE_CSS_IMAGE_RESOLUTION) && ENABLE_CSS_IMAGE_RESOLUTION
 from-image
+
+#if defined(ENABLE_CSS_IMAGE_RESOLUTION) && ENABLE_CSS_IMAGE_RESOLUTION
 snap
 #endif
 
@@ -1377,7 +1360,6 @@ style
 scroll-position
 //contents
 
-#if defined(ENABLE_POINTER_EVENTS) && ENABLE_POINTER_EVENTS
 // touch-action
 // auto
 // none
@@ -1385,7 +1367,10 @@ manipulation
 pan-x
 pan-y
 pinch-zoom
-#endif
+
+// scroll-behavior
+// auto
+smooth
 
 // hanging-punctuation
 allow-end

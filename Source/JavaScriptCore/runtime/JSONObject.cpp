@@ -113,7 +113,6 @@ private:
     friend class Holder;
 
     JSValue toJSON(JSValue, const PropertyNameForFunctionCall&);
-    JSValue toJSONImpl(VM&, JSValue, JSValue toJSONFunction, const PropertyNameForFunctionCall&);
 
     enum StringifyResult { StringifyFailed, StringifySucceeded, StringifyFailedDueToUndefinedOrSymbolValue };
     StringifyResult appendStringifiedValue(StringBuilder&, JSValue, const Holder&, const PropertyNameForFunctionCall&);
@@ -280,7 +279,6 @@ JSValue Stringifier::stringify(JSValue value)
     JSObject* object = nullptr;
     if (isCallableReplacer()) {
         object = constructEmptyObject(m_globalObject);
-        RETURN_IF_EXCEPTION(scope, jsUndefined());
         object->putDirect(vm, vm.propertyNames->emptyIdentifier, value);
     }
 
@@ -303,19 +301,9 @@ ALWAYS_INLINE JSValue Stringifier::toJSON(JSValue baseValue, const PropertyNameF
     auto scope = DECLARE_THROW_SCOPE(vm);
     scope.assertNoException();
 
-    PropertySlot slot(baseValue, PropertySlot::InternalMethodType::Get);
-    bool hasProperty = baseValue.getPropertySlot(m_globalObject, vm.propertyNames->toJSON, slot);
-    EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-    if (!hasProperty)
-        return baseValue;
-
-    JSValue toJSONFunction = slot.getValue(m_globalObject, vm.propertyNames->toJSON);
+    JSValue toJSONFunction = baseValue.get(m_globalObject, vm.propertyNames->toJSON);
     RETURN_IF_EXCEPTION(scope, { });
-    RELEASE_AND_RETURN(scope, toJSONImpl(vm, baseValue, toJSONFunction, propertyName));
-}
 
-JSValue Stringifier::toJSONImpl(VM& vm, JSValue baseValue, JSValue toJSONFunction, const PropertyNameForFunctionCall& propertyName)
-{
     CallType callType;
     CallData callData;
     if (!toJSONFunction.isCallable(vm, callType, callData))
@@ -324,7 +312,7 @@ JSValue Stringifier::toJSONImpl(VM& vm, JSValue baseValue, JSValue toJSONFunctio
     MarkedArgumentBuffer args;
     args.append(propertyName.value(m_globalObject));
     ASSERT(!args.hasOverflowed());
-    return call(m_globalObject, asObject(toJSONFunction), callType, callData, baseValue, args);
+    RELEASE_AND_RETURN(scope, call(m_globalObject, asObject(toJSONFunction), callType, callData, baseValue, args));
 }
 
 Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& builder, JSValue value, const Holder& holder, const PropertyNameForFunctionCall& propertyName)
@@ -529,13 +517,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         if (m_isJSArray && m_object->canGetIndexQuickly(index))
             value = m_object->getIndexQuickly(index);
         else {
-            PropertySlot slot(m_object, PropertySlot::InternalMethodType::Get);
-            bool hasProperty = m_object->getPropertySlot(globalObject, index, slot);
-            EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-            if (hasProperty)
-                value = slot.getValue(globalObject, index);
-            else
-                value = jsUndefined();
+            value = m_object->get(globalObject, index);
             RETURN_IF_EXCEPTION(scope, false);
         }
 
@@ -549,13 +531,8 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         ASSERT(stringifyResult != StringifyFailedDueToUndefinedOrSymbolValue);
     } else {
         // Get the value.
-        PropertySlot slot(m_object, PropertySlot::InternalMethodType::Get);
         Identifier& propertyName = m_propertyNames->propertyNameVector()[index];
-        bool hasProperty = m_object->getPropertySlot(globalObject, propertyName, slot);
-        EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-        if (!hasProperty)
-            return true;
-        JSValue value = slot.getValue(globalObject, propertyName);
+        JSValue value = m_object->get(globalObject, propertyName);
         RETURN_IF_EXCEPTION(scope, false);
 
         rollBackPoint = builder.length();
@@ -693,14 +670,10 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 if (isJSArray(array) && array->canGetIndexQuickly(index))
                     inValue = array->getIndexQuickly(index);
                 else {
-                    PropertySlot slot(array, PropertySlot::InternalMethodType::Get);
-                    if (array->methodTable(vm)->getOwnPropertySlotByIndex(array, m_globalObject, index, slot))
-                        inValue = slot.getValue(m_globalObject, index);
-                    else
-                        inValue = jsUndefined();
+                    inValue = array->get(m_globalObject, index);
                     RETURN_IF_EXCEPTION(scope, { });
                 }
-                    
+
                 if (inValue.isObject()) {
                     stateStack.append(ArrayEndVisitMember);
                     goto stateUnknown;
@@ -747,12 +720,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     propertyStack.removeLast();
                     break;
                 }
-                PropertySlot slot(object, PropertySlot::InternalMethodType::Get);
-                if (object->methodTable(vm)->getOwnPropertySlot(object, m_globalObject, properties[index], slot))
-                    inValue = slot.getValue(m_globalObject, properties[index]);
-                else
-                    inValue = jsUndefined();
-
+                inValue = object->get(m_globalObject, properties[index]);
                 // The holder may be modified by the reviver function so any lookup may throw
                 RETURN_IF_EXCEPTION(scope, { });
 
@@ -770,7 +738,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 JSValue filteredValue = callReviver(object, jsString(vm, prop.string()), outValue);
                 RETURN_IF_EXCEPTION(scope, { });
                 if (filteredValue.isUndefined())
-                    object->methodTable(vm)->deleteProperty(object, m_globalObject, prop);
+                    JSCell::deleteProperty(object, m_globalObject, prop);
                 else
                     object->methodTable(vm)->put(object, m_globalObject, prop, filteredValue, slot);
                 RETURN_IF_EXCEPTION(scope, { });
@@ -796,9 +764,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
         stateStack.removeLast();
     }
     JSObject* finalHolder = constructEmptyObject(m_globalObject);
-    PutPropertySlot slot(finalHolder);
-    finalHolder->methodTable(vm)->put(finalHolder, m_globalObject, vm.propertyNames->emptyIdentifier, outValue, slot);
-    RETURN_IF_EXCEPTION(scope, { });
+    finalHolder->putDirect(vm, vm.propertyNames->emptyIdentifier, outValue);
     RELEASE_AND_RETURN(scope, callReviver(finalHolder, jsEmptyString(vm), outValue));
 }
 

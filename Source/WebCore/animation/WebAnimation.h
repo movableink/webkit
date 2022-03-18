@@ -26,11 +26,14 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "ComputedEffectTiming.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
-#include "WebAnimationUtilities.h"
+#include "WebAnimationTypes.h"
+#include <wtf/Forward.h>
 #include <wtf/Markable.h>
+#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
 #include <wtf/UniqueRef.h>
@@ -39,7 +42,7 @@
 namespace WebCore {
 
 class AnimationEffect;
-class AnimationPlaybackEvent;
+class AnimationEventBase;
 class AnimationTimeline;
 class Document;
 class Element;
@@ -54,6 +57,8 @@ public:
     static Ref<WebAnimation> create(Document&, AnimationEffect*, AnimationTimeline*);
     ~WebAnimation();
 
+    static HashSet<WebAnimation*>& instances();
+
     virtual bool isDeclarativeAnimation() const { return false; }
     virtual bool isCSSAnimation() const { return false; }
     virtual bool isCSSTransition() const { return false; }
@@ -63,7 +68,7 @@ public:
 
     AnimationEffect* effect() const { return m_effect.get(); }
     void setEffect(RefPtr<AnimationEffect>&&);
-    AnimationTimeline* timeline() const { return m_timeline.get(); }
+    AnimationTimeline* timeline() const;
     virtual void setTimeline(RefPtr<AnimationTimeline>&&);
 
     Optional<Seconds> currentTime() const;
@@ -110,24 +115,26 @@ public:
     virtual ExceptionOr<void> bindingsPlay() { return play(); }
     virtual ExceptionOr<void> bindingsPause() { return pause(); }
 
-    virtual bool needsTick() const;
+    bool needsTick() const;
     virtual void tick();
     Seconds timeToNextTick() const;
     virtual void resolve(RenderStyle&);
     void effectTargetDidChange(Element* previousTarget, Element* newTarget);
     void acceleratedStateDidChange();
     void applyPendingAcceleratedActions();
+    void willChangeRenderer();
 
     bool isRunningAccelerated() const;
+    bool isCompletelyAccelerated() const;
     bool isRelevant() const { return m_isRelevant; }
     void updateRelevance();
-    void effectTimingDidChange();
+    void effectTimingDidChange(Optional<ComputedEffectTiming> = WTF::nullopt);
     void suspendEffectInvalidation();
     void unsuspendEffectInvalidation();
     void setSuspended(bool);
     bool isSuspended() const { return m_isSuspended; }
     bool isReplaceable() const;
-    virtual void remove();
+    void remove();
     void enqueueAnimationPlaybackEvent(const AtomString&, Optional<Seconds>, Optional<Seconds>);
 
     uint64_t globalPosition() const { return m_globalPosition; }
@@ -146,6 +153,8 @@ public:
 
 protected:
     explicit WebAnimation(Document&);
+
+    void enqueueAnimationEvent(Ref<AnimationEventBase>&&);
 
 private:
     enum class DidSeek : uint8_t { Yes, No };
@@ -177,7 +186,7 @@ private:
     void applyPendingPlaybackRate();
 
     RefPtr<AnimationEffect> m_effect;
-    RefPtr<AnimationTimeline> m_timeline;
+    WeakPtr<AnimationTimeline> m_timeline;
     UniqueRef<ReadyPromise> m_readyPromise;
     UniqueRef<FinishedPromise> m_finishedPromise;
     Markable<Seconds, Seconds::MarkableTraits> m_previousCurrentTime;
@@ -193,6 +202,7 @@ private:
     bool m_finishNotificationStepsMicrotaskPending;
     bool m_isRelevant;
     bool m_shouldSkipUpdatingFinishedStateWhenResolving;
+    bool m_hasScheduledEventsDuringTick { false };
     TimeToRunPendingTask m_timeToRunPendingPlayTask { TimeToRunPendingTask::NotScheduled };
     TimeToRunPendingTask m_timeToRunPendingPauseTask { TimeToRunPendingTask::NotScheduled };
     ReplaceState m_replaceState { ReplaceState::Active };

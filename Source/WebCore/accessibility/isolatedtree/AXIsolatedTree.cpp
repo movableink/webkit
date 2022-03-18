@@ -28,7 +28,7 @@
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 #include "AXIsolatedTree.h"
 
-#include "AXIsolatedTreeNode.h"
+#include "AXIsolatedObject.h"
 #include "Page.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -40,6 +40,18 @@ static unsigned newTreeID()
 {
     static unsigned s_currentTreeID = 0;
     return ++s_currentTreeID;
+}
+
+AXIsolatedTree::NodeChange::NodeChange(AXIsolatedObject& isolatedObject, AccessibilityObjectWrapper* wrapper)
+    : m_isolatedObject(isolatedObject)
+    , m_wrapper(wrapper)
+{
+}
+
+AXIsolatedTree::NodeChange::NodeChange(const NodeChange& other)
+    : m_isolatedObject(other.m_isolatedObject.get())
+    , m_wrapper(other.m_wrapper)
+{
 }
 
 HashMap<PageIdentifier, Ref<AXIsolatedTree>>& AXIsolatedTree::treePageCache()
@@ -80,11 +92,32 @@ RefPtr<AXIsolatedTree> AXIsolatedTree::treeForID(AXIsolatedTreeID treeID)
 Ref<AXIsolatedTree> AXIsolatedTree::createTreeForPageID(PageIdentifier pageID)
 {
     LockHolder locker(s_cacheLock);
+    ASSERT(!treePageCache().contains(pageID));
 
     auto newTree = AXIsolatedTree::create();
     treePageCache().set(pageID, newTree.copyRef());
     treeIDCache().set(newTree->treeIdentifier(), newTree.copyRef());
     return newTree;
+}
+
+void AXIsolatedTree::removeTreeForPageID(PageIdentifier pageID)
+{
+    LockHolder locker(s_cacheLock);
+
+    if (auto optionalTree = treePageCache().take(pageID)) {
+        auto& tree { *optionalTree };
+        LockHolder treeLocker { tree->m_changeLogLock };
+        for (const auto& axID : tree->m_readerThreadNodeMap.keys()) {
+            if (auto object = tree->nodeForID(axID))
+                object->detach(AccessibilityDetachmentType::CacheDestroyed);
+        }
+        tree->m_pendingAppends.clear();
+        tree->m_pendingRemovals.clear();
+        tree->m_readerThreadNodeMap.clear();
+        treeLocker.unlockEarly();
+
+        treeIDCache().remove(tree->treeIdentifier());
+    }
 }
 
 RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(PageIdentifier pageID)
@@ -99,14 +132,24 @@ RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(PageIdentifier pageID)
 
 RefPtr<AXIsolatedObject> AXIsolatedTree::nodeForID(AXID axID) const
 {
-    if (!axID)
-        return nullptr;
-    return m_readerThreadNodeMap.get(axID);
+    return axID != InvalidAXID ? m_readerThreadNodeMap.get(axID) : nullptr;
+}
+
+Vector<RefPtr<AXCoreObject>> AXIsolatedTree::objectsForIDs(Vector<AXID> axIDs) const
+{
+    Vector<RefPtr<AXCoreObject>> result;
+    result.reserveCapacity(axIDs.size());
+
+    for (const auto& axID : axIDs) {
+        if (auto object = nodeForID(axID))
+            result.uncheckedAppend(object);
+    }
+
+    return result;
 }
 
 RefPtr<AXIsolatedObject> AXIsolatedTree::focusedUIElement()
 {
-    m_focusedNodeID = m_pendingFocusedNodeID;
     return nodeForID(m_focusedNodeID);
 }
     
@@ -122,6 +165,27 @@ void AXIsolatedTree::setRootNode(Ref<AXIsolatedObject>& root)
     m_readerThreadNodeMap.add(root->objectID(), WTFMove(root));
 }
     
+void AXIsolatedTree::setFocusedNode(AXID axID)
+{
+    ASSERT(isMainThread());
+    LockHolder locker { m_changeLogLock };
+    m_focusedNodeID = axID;
+    if (axID == InvalidAXID)
+        return;
+
+    if (m_readerThreadNodeMap.contains(m_focusedNodeID))
+        return; // Nothing to do, the focus is set.
+
+    // If the focused object is in the pending appends, add it to the reader
+    // map, so that we can return the right focused object if requested before
+    // pending appends are applied.
+    for (const auto& item : m_pendingAppends) {
+        if (item.m_isolatedObject->objectID() == m_focusedNodeID
+            && m_readerThreadNodeMap.add(m_focusedNodeID, item.m_isolatedObject.get()) && item.m_wrapper)
+            m_readerThreadNodeMap.get(m_focusedNodeID)->attachPlatformWrapper(item.m_wrapper.get());
+    }
+}
+
 void AXIsolatedTree::setFocusedNodeID(AXID axID)
 {
     LockHolder locker { m_changeLogLock };
@@ -134,33 +198,56 @@ void AXIsolatedTree::removeNode(AXID axID)
     m_pendingRemovals.append(axID);
 }
 
-void AXIsolatedTree::appendNodeChanges(Vector<Ref<AXIsolatedObject>>& log)
+void AXIsolatedTree::appendNodeChanges(const Vector<NodeChange>& changes)
 {
     LockHolder locker { m_changeLogLock };
-    for (auto& node : log)
-        m_pendingAppends.append(node.copyRef());
+    for (const auto& nodeChange : changes)
+        m_pendingAppends.append(nodeChange);
 }
 
 void AXIsolatedTree::applyPendingChanges()
 {
     RELEASE_ASSERT(!isMainThread());
     LockHolder locker { m_changeLogLock };
-    Vector<Ref<AXIsolatedObject>> appendCopy;
-    std::swap(appendCopy, m_pendingAppends);
-    Vector<AXID> removeCopy({ WTFMove(m_pendingRemovals) });
-    locker.unlockEarly();
 
-    // We don't clear the pending IDs beacause if the next round of updates does not modify them, then they stay the same
-    // value without extra bookkeeping.
     m_focusedNodeID = m_pendingFocusedNodeID;
 
-    for (auto& item : appendCopy)
-        m_readerThreadNodeMap.add(item->objectID(), WTFMove(item));
+    while (m_pendingRemovals.size()) {
+        auto axID = m_pendingRemovals.takeLast();
+        if (axID == InvalidAXID)
+            continue;
 
-    for (auto item : removeCopy)
-        m_readerThreadNodeMap.remove(item);
+        if (auto object = nodeForID(axID)) {
+            object->detach(AccessibilityDetachmentType::ElementDestroyed);
+            m_pendingRemovals.appendVector(object->m_childrenIDs);
+        }
+    }
+
+    for (const auto& item : m_pendingAppends) {
+        AXID axID = item.m_isolatedObject->objectID();
+        if (axID == InvalidAXID)
+            continue;
+
+        if (m_readerThreadNodeMap.get(axID) != &item.m_isolatedObject.get()) {
+            // The new IsolatedObject is a replacement for an existing object
+            // as the result of an update. Thus detach the existing one before
+            // adding the new one.
+            if (auto object = nodeForID(axID))
+                object->detach(AccessibilityDetachmentType::ElementDestroyed);
+            m_readerThreadNodeMap.remove(axID);
+        }
+
+        if (m_readerThreadNodeMap.add(axID, item.m_isolatedObject.get()) && item.m_wrapper)
+            m_readerThreadNodeMap.get(axID)->attachPlatformWrapper(item.m_wrapper.get());
+
+        // The reference count of the just added IsolatedObject must be 2
+        // because it is referenced by m_readerThreadNodeMap and m_pendingAppends.
+        // When m_pendingAppends is cleared, the object will be held only by m_readerThreadNodeMap.
+        ASSERT(m_readerThreadNodeMap.get(axID)->refCount() == 2);
+    }
+    m_pendingAppends.clear();
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)

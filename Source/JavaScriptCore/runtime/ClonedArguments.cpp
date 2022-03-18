@@ -153,9 +153,9 @@ Structure* ClonedArguments::createStructure(VM& vm, JSGlobalObject* globalObject
     Structure* structure = Structure::create(vm, globalObject, prototype, TypeInfo(ClonedArgumentsType, StructureFlags), info(), indexingType);
     structure->addPropertyWithoutTransition(
         vm, vm.propertyNames->length, static_cast<unsigned>(PropertyAttribute::DontEnum),
-        [&] (const GCSafeConcurrentJSLocker&, PropertyOffset offset, PropertyOffset newLastOffset) {
+        [&](const GCSafeConcurrentJSCellLocker&, PropertyOffset offset, PropertyOffset newMaxOffset) {
             RELEASE_ASSERT(offset == clonedArgumentsLengthPropertyOffset);
-            structure->setLastOffset(newLastOffset);
+            structure->setMaxOffset(vm, newMaxOffset);
         });
     return structure;
 }
@@ -220,7 +220,7 @@ bool ClonedArguments::put(JSCell* cell, JSGlobalObject* globalObject, PropertyNa
     return Base::put(thisObject, globalObject, ident, value, slot);
 }
 
-bool ClonedArguments::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName ident)
+bool ClonedArguments::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName ident, DeletePropertySlot& slot)
 {
     ClonedArguments* thisObject = jsCast<ClonedArguments*>(cell);
     VM& vm = globalObject->vm();
@@ -229,7 +229,7 @@ bool ClonedArguments::deleteProperty(JSCell* cell, JSGlobalObject* globalObject,
         || ident == vm.propertyNames->iteratorSymbol)
         thisObject->materializeSpecialsIfNecessary(globalObject);
     
-    return Base::deleteProperty(thisObject, globalObject, ident);
+    return Base::deleteProperty(thisObject, globalObject, ident, slot);
 }
 
 bool ClonedArguments::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName ident, const PropertyDescriptor& descriptor, bool shouldThrow)

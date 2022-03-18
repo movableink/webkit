@@ -40,7 +40,7 @@ import urllib
 
 from datetime import datetime  # used in timestamp()
 
-from webkitpy.common.unicode_compatibility import BytesIO, StringIO, unicode
+from webkitpy.common.unicode_compatibility import BytesIO, StringIO, unicode, decode_for
 from webkitpy.common.net.bugzilla.attachment import Attachment
 from webkitpy.common.net.bugzilla.bug import Bug
 
@@ -298,7 +298,7 @@ class BugzillaQueries(object):
     def is_invalid_bugzilla_email(self, search_string):
         review_queue_url = "request.cgi?action=queue&requester=%s&product=&type=review&requestee=&component=&group=requestee" % urllib.quote(search_string)
         results_page = self._load_query(review_queue_url)
-        return bool(re.search("did not match anything", results_page.read()))
+        return bool(re.search('did not match anything', decode_for(results_page.read(), str)))
 
 
 class CommitQueueFlag(object):
@@ -308,6 +308,8 @@ class CommitQueueFlag(object):
 
 
 class Bugzilla(object):
+    NO_EDIT_BUGS_MESSAGE = "Ignore this message if you don't have EditBugs privileges (https://bugs.webkit.org/userprefs.cgi?tab=permissions)"
+
     def __init__(self, committers=committers.CommitterList()):
         self.authenticated = False
         self.queries = BugzillaQueries(self)
@@ -589,7 +591,7 @@ class Bugzilla(object):
             # If the resulting page has a title, and it contains the word
             # "invalid" assume it's the login failure page.
             if match and re.search(b'Invalid', match.group(1), re.IGNORECASE):
-                errorMessage = "Bugzilla login failed: %s" % match.group(1)
+                errorMessage = "Bugzilla login failed: {}".format(decode_for(match.group(1), str))
                 # raise an exception only if this was the last attempt
                 if attempts < 5:
                     _log.error(errorMessage)
@@ -624,9 +626,8 @@ class Bugzilla(object):
         self.browser['description'] = description
         if is_patch:
             self.browser['ispatch'] = ("1",)
-        # FIXME: Should this use self._find_select_element_for_flag?
-        self.browser['flag_type-1'] = ('?',) if mark_for_review else ('X',)
-        self.browser['flag_type-3'] = (self._commit_queue_flag(commit_flag),)
+        self._find_select_element_for_flag("review").value = ("?",) if mark_for_review else ("X",)
+        self._find_select_element_for_flag("commit-queue").value = (self._commit_queue_flag(commit_flag),)
 
         filename = filename or "%s.patch" % timestamp()
         if not mimetype:
@@ -665,7 +666,8 @@ class Bugzilla(object):
 
     @staticmethod
     def _parse_attachment_id_from_add_patch_to_bug_response(response_html):
-        match = re.search(b'<title>Attachment (?P<attachment_id>\d+) added to Bug \d+</title>', response_html)
+        response_html = decode_for(response_html, str)
+        match = re.search('<title>Attachment (?P<attachment_id>\d+) added to Bug \d+</title>', response_html)
         if match:
             return match.group('attachment_id')
         _log.warning('Unable to parse attachment id')
@@ -708,8 +710,8 @@ class Bugzilla(object):
 
     # FIXME: There has to be a more concise way to write this method.
     def _check_create_bug_response(self, response_html):
-        match = re.search("<title>Bug (?P<bug_id>\d+) Submitted[^<]*</title>",
-                          response_html)
+        response_html = decode_for(response_html, str)
+        match = re.search('<title>Bug (?P<bug_id>\d+) Submitted[^<]*</title>', response_html)
         if match:
             return match.group('bug_id')
 
@@ -719,12 +721,9 @@ class Bugzilla(object):
             re.DOTALL)
         error_message = "FAIL"
         if match:
-            text_lines = BeautifulSoup(
-                    match.group('error_message')).findAll(text=True)
-            error_message = "\n" + '\n'.join(
-                    ["  " + line.strip()
-                     for line in text_lines if line.strip()])
-        raise Exception("Bug not created: %s" % error_message)
+            text_lines = BeautifulSoup(match.group('error_message')).findAll(text=True)
+            error_message = "\n" + '\n'.join(["  " + line.strip() for line in text_lines if line.strip()])
+        raise Exception("Bug not created: {}".format(error_message))
 
     def create_bug(self,
                    bug_title,
@@ -784,12 +783,16 @@ class Bugzilla(object):
         return bug_id
 
     def _find_select_element_for_flag(self, flag_name):
-        # FIXME: This will break if we ever re-order attachment flags
         if flag_name == "review":
-            return self.browser.find_control(type='select', nr=0)
+            class_name = "flag_type-1"
         elif flag_name == "commit-queue":
-            return self.browser.find_control(type='select', nr=1)
-        raise Exception("Don't know how to find flag named \"%s\"" % flag_name)
+            class_name = "flag_type-3"
+        else:
+            raise Exception("Don't know how to find flag named \"%s\"" % flag_name)
+
+        return self.browser.find_control(
+            type="select",
+            predicate=lambda control: class_name in (control.attrs.get("class") or ""))
 
     def clear_attachment_flags(self,
                                attachment_id,
@@ -836,10 +839,16 @@ class Bugzilla(object):
         _log.info("Obsoleting attachment: %s" % attachment_id)
         self.open_url(self.attachment_url_for_id(attachment_id, 'edit'))
         self.browser.select_form(nr=1)
-        self.browser.find_control('isobsolete').items[0].selected = True
-        # Also clear any review flag (to remove it from review/commit queues)
-        self._find_select_element_for_flag('review').value = ("X",)
-        self._find_select_element_for_flag('commit-queue').value = ("X",)
+
+        try:
+            self.browser.find_control("isobsolete").items[0].selected = True
+            # Also clear any review flag (to remove it from review/commit queues)
+            self._find_select_element_for_flag("review").value = ("X",)
+            self._find_select_element_for_flag("commit-queue").value = ("X",)
+        except (AttributeError, ValueError):
+            _log.warning("Failed to obsolete attachment")
+            _log.warning(self.NO_EDIT_BUGS_MESSAGE)
+
         if comment_text:
             _log.info(comment_text)
             # Bugzilla has two textareas named 'comment', one is somehow
@@ -905,8 +914,8 @@ class Bugzilla(object):
         self.browser.select_form(name="changeform")
 
         if not self._has_control(self.browser, "assigned_to"):
-            _log.warning("""Failed to assign bug to you (can't find assigned_to) control.
-Ignore this message if you don't have EditBugs privileges (https://bugs.webkit.org/userprefs.cgi?tab=permissions)""")
+            _log.warning("Failed to assign bug to you (can't find assigned_to) control.")
+            _log.warning(self.NO_EDIT_BUGS_MESSAGE)
             return
 
         if comment_text:

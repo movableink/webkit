@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,9 +50,14 @@ struct TestOptions {
     bool enableCSSLogical { false };
     bool adClickAttributionEnabled { false };
     bool enableResizeObserver { false };
+    bool enableCSSOMViewSmoothScrolling { false };
     bool enableCoreMathML { false };
     bool enableRequestIdleCallback { false };
     bool enableAsyncClipboardAPI { false };
+    bool layoutFormattingContextIntegrationEnabled { true };
+    bool enableAspectRatioOfImgFromWidthAndHeight { false };
+    bool enableWebSQL { true };
+    bool allowTopNavigationToDataURLs { true };
     std::string jscOptions;
     std::string additionalSupportedImageTypes;
 

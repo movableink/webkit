@@ -32,6 +32,7 @@
 #include "StorageAreaMap.h"
 #include "StorageAreaMapMessages.h"
 #include "WebCacheStorageProvider.h"
+#include "WebCookieJar.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebIDBConnectionToServer.h"
 #include "WebIDBConnectionToServerMessages.h"
@@ -56,6 +57,7 @@
 #include "WebSocketStream.h"
 #include "WebSocketStreamMessages.h"
 #include <WebCore/CachedResource.h>
+#include <WebCore/HTTPCookieAcceptPolicy.h>
 #include <WebCore/MemoryCache.h>
 #include <WebCore/MessagePort.h>
 #include <WebCore/SharedBuffer.h>
@@ -68,8 +70,9 @@
 namespace WebKit {
 using namespace WebCore;
 
-NetworkProcessConnection::NetworkProcessConnection(IPC::Connection::Identifier connectionIdentifier)
+NetworkProcessConnection::NetworkProcessConnection(IPC::Connection::Identifier connectionIdentifier, HTTPCookieAcceptPolicy cookieAcceptPolicy)
     : m_connection(IPC::Connection::createClientConnection(connectionIdentifier, *this))
+    , m_cookieAcceptPolicy(cookieAcceptPolicy)
 {
     m_connection->open();
 }
@@ -87,7 +90,7 @@ void NetworkProcessConnection::didReceiveMessage(IPC::Connection& connection, IP
         return;
     }
     if (decoder.messageReceiverName() == Messages::WebSocketStream::messageReceiverName()) {
-        if (auto* stream = WebSocketStream::streamWithIdentifier(decoder.destinationID()))
+        if (auto* stream = WebSocketStream::streamWithIdentifier(makeObjectIdentifier<WebSocketIdentifierType>(decoder.destinationID())))
             stream->didReceiveMessage(connection, decoder);
         return;
     }
@@ -108,21 +111,37 @@ void NetworkProcessConnection::didReceiveMessage(IPC::Connection& connection, IP
 
 #if USE(LIBWEBRTC)
     if (decoder.messageReceiverName() == Messages::WebRTCSocket::messageReceiverName()) {
-        WebProcess::singleton().libWebRTCNetwork().socket(makeObjectIdentifier<LibWebRTCSocketIdentifierType>(decoder.destinationID())).didReceiveMessage(connection, decoder);
+        auto& libWebRTCNetwork = WebProcess::singleton().libWebRTCNetwork();
+        if (libWebRTCNetwork.isActive())
+            libWebRTCNetwork.socket(makeObjectIdentifier<LibWebRTCSocketIdentifierType>(decoder.destinationID())).didReceiveMessage(connection, decoder);
+        else
+            RELEASE_LOG_ERROR(WebRTC, "Received WebRTCSocket message while libWebRTCNetwork is not active");
         return;
     }
     if (decoder.messageReceiverName() == Messages::WebRTCMonitor::messageReceiverName()) {
-        WebProcess::singleton().libWebRTCNetwork().monitor().didReceiveMessage(connection, decoder);
+        auto& libWebRTCNetwork = WebProcess::singleton().libWebRTCNetwork();
+        if (libWebRTCNetwork.isActive())
+            libWebRTCNetwork.monitor().didReceiveMessage(connection, decoder);
+        else
+            RELEASE_LOG_ERROR(WebRTC, "Received WebRTCMonitor message while libWebRTCNetwork is not active");
         return;
     }
     if (decoder.messageReceiverName() == Messages::WebRTCResolver::messageReceiverName()) {
-        WebProcess::singleton().libWebRTCNetwork().resolver(decoder.destinationID()).didReceiveMessage(connection, decoder);
+        auto& libWebRTCNetwork = WebProcess::singleton().libWebRTCNetwork();
+        if (libWebRTCNetwork.isActive())
+            libWebRTCNetwork.resolver(makeObjectIdentifier<LibWebRTCResolverIdentifierType>(decoder.destinationID())).didReceiveMessage(connection, decoder);
+        else
+            RELEASE_LOG_ERROR(WebRTC, "Received WebRTCResolver message while libWebRTCNetwork is not active");
         return;
     }
 #endif
 #if ENABLE(WEB_RTC)
     if (decoder.messageReceiverName() == Messages::WebMDNSRegister::messageReceiverName()) {
-        WebProcess::singleton().libWebRTCNetwork().mdnsRegister().didReceiveMessage(connection, decoder);
+        auto& libWebRTCNetwork = WebProcess::singleton().libWebRTCNetwork();
+        if (libWebRTCNetwork.isActive())
+            libWebRTCNetwork.mdnsRegister().didReceiveMessage(connection, decoder);
+        else
+            RELEASE_LOG_ERROR(WebRTC, "Received WebMDNSRegister message while libWebRTCNetwork is not active");
         return;
     }
 #endif
@@ -204,7 +223,7 @@ void NetworkProcessConnection::didReceiveInvalidMessage(IPC::Connection&, IPC::S
 
 void NetworkProcessConnection::writeBlobsToTemporaryFiles(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&& completionHandler)
 {
-    WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::WriteBlobsToTemporaryFiles(blobURLs), WTFMove(completionHandler));
+    connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::WriteBlobsToTemporaryFiles(blobURLs), WTFMove(completionHandler));
 }
 
 void NetworkProcessConnection::didFinishPingLoad(uint64_t pingLoadIdentifier, ResourceError&& error, ResourceResponse&& response)
@@ -221,6 +240,33 @@ void NetworkProcessConnection::setOnLineState(bool isOnLine)
 {
     WebProcess::singleton().webLoaderStrategy().setOnLineState(isOnLine);
 }
+
+bool NetworkProcessConnection::cookiesEnabled() const
+{
+    return m_cookieAcceptPolicy != HTTPCookieAcceptPolicy::Never;
+}
+
+void NetworkProcessConnection::cookieAcceptPolicyChanged(HTTPCookieAcceptPolicy newPolicy)
+{
+    m_cookieAcceptPolicy = newPolicy;
+}
+
+#if HAVE(COOKIE_CHANGE_LISTENER_API)
+void NetworkProcessConnection::cookiesAdded(const String& host, const Vector<WebCore::Cookie>& cookies)
+{
+    WebProcess::singleton().cookieJar().cookiesAdded(host, cookies);
+}
+
+void NetworkProcessConnection::cookiesDeleted(const String& host, const Vector<WebCore::Cookie>& cookies)
+{
+    WebProcess::singleton().cookieJar().cookiesDeleted(host, cookies);
+}
+
+void NetworkProcessConnection::allCookiesDeleted()
+{
+    WebProcess::singleton().cookieJar().allCookiesDeleted();
+}
+#endif
 
 #if ENABLE(SHAREABLE_RESOURCE)
 void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, const ShareableResource::Handle& handle)

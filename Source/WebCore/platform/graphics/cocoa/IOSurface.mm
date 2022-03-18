@@ -28,12 +28,11 @@
 
 #if HAVE(IOSURFACE)
 
-#import "GraphicsContext3D.h"
 #import "GraphicsContextCG.h"
+#import "GraphicsContextGLOpenGL.h"
 #import "HostWindow.h"
 #import "IOSurfacePool.h"
 #import "ImageBuffer.h"
-#import "ImageBufferDataCG.h"
 #import "Logging.h"
 #import "PlatformScreen.h"
 #import <pal/spi/cg/CoreGraphicsSPI.h>
@@ -109,13 +108,6 @@ void IOSurface::moveToPool(std::unique_ptr<IOSurface>&& surface)
 {
     IOSurfacePool::sharedPool().addSurface(WTFMove(surface));
 }
-
-#if USE(IOSURFACE_CANVAS_BACKING_STORE)
-std::unique_ptr<IOSurface> IOSurface::createFromImageBuffer(std::unique_ptr<ImageBuffer> imageBuffer)
-{
-    return WTFMove(imageBuffer->m_data.surface);
-}
-#endif
 
 static NSDictionary *optionsForBiplanarSurface(IntSize size, unsigned pixelFormat, size_t firstPlaneBytesPerPixel, size_t secondPlaneBytesPerPixel)
 {

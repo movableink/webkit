@@ -62,6 +62,15 @@ public:
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
         CellInfo(const Box& tableCellBox, SlotPosition, CellSize);
 
+        size_t startColumn() const { return position.x(); }
+        size_t endColumn() const { return position.x() + size.width(); }
+
+        size_t startRow() const { return position.y(); }
+        size_t endRow() const { return position.y() + size.height(); }
+
+        size_t columnSpan() const { return size.width(); }
+        size_t rowSpan() const { return size.height(); }
+
         const Box& tableCellBox;
         SlotPosition position;
         CellSize size;
@@ -95,7 +104,7 @@ public:
         LayoutUnit m_computedLogicalLeft;
         WeakPtr<const Box> m_columnBox;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         bool m_hasWidthConstraints { false };
         bool m_hasComputedWidth { false };
         bool m_hasComputedLeft { false };

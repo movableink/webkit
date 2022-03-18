@@ -1,7 +1,7 @@
 find_package(Libxkbcommon 0.4.0 REQUIRED)
 find_package(Wayland REQUIRED)
 find_package(WaylandProtocols 1.12 REQUIRED)
-find_package(WPEBackend-fdo 1.3.0 REQUIRED)
+find_package(WPEBackend_fdo 1.3.0 REQUIRED)
 
 set(DERIVED_SOURCES_WPETOOLINGBACKENDS_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WPEToolingBackends")
 
@@ -22,22 +22,20 @@ set(WPEToolingBackends_INCLUDE_DIRECTORIES
 set(WPEToolingBackends_SYSTEM_INCLUDE_DIRECTORIES
     ${ATK_INCLUDE_DIRS}
     ${ATK_BRIDGE_INCLUDE_DIRS}
-    ${CAIRO_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
     ${LIBEPOXY_INCLUDE_DIRS}
-    ${WPE_INCLUDE_DIRS}
     ${WPEBACKEND_FDO_INCLUDE_DIRS}
 )
 
 set(WPEToolingBackends_LIBRARIES
+    Cairo::Cairo
+    WPE::libwpe
     ${ATK_LIBRARIES}
     ${ATK_BRIDGE_LIBRARIES}
-    ${CAIRO_LIBRARIES}
     ${GLIB_LIBRARIES}
     ${LIBEPOXY_LIBRARIES}
     ${LIBXKBCOMMON_LIBRARIES}
     ${WAYLAND_LIBRARIES}
-    ${WPE_LIBRARIES}
     ${WPEBACKEND_FDO_LIBRARIES}
 )
 

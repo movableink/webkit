@@ -53,10 +53,8 @@ struct InteractionInformationAtPosition {
 
     bool canBeValid { true };
     bool nodeAtPositionHasDoubleClickHandler { false };
-#if ENABLE(DATA_INTERACTION)
-    bool hasSelectionAtPosition { false };
-#endif
     bool isSelectable { false };
+    bool prefersDraggingOverTextSelection { false };
     bool isNearMarkedText { false };
     bool touchCalloutEnabled { true };
     bool isLink { false };
@@ -71,6 +69,7 @@ struct InteractionInformationAtPosition {
 #if ENABLE(DATALIST_ELEMENT)
     bool preventTextInteraction { false };
 #endif
+    bool shouldNotUseIBeamInEditableContent { false };
     WebCore::FloatPoint adjustedPointForNodeRespondingToClickEvents;
     URL url;
     URL imageURL;

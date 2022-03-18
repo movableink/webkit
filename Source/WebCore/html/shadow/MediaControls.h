@@ -33,16 +33,11 @@
 #include "MediaControlElements.h"
 #include <wtf/RefPtr.h>
 
-#if ENABLE(VIDEO_TRACK)
-#include "TextTrackCue.h"
-#endif
-
 namespace WebCore {
 
 class Document;
 class Event;
 class MediaPlayer;
-
 class RenderBox;
 class RenderMedia;
 
@@ -103,6 +98,7 @@ public:
     virtual void updateTextTrackDisplay();
     virtual void textTrackPreferencesChanged();
     virtual void clearTextDisplayContainer();
+    virtual void updateTextTrackRepresentationImageIfNeeded();
 #endif
 
 protected:

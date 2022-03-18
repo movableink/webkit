@@ -67,8 +67,29 @@ void WebContextMenuClient::searchWithGoogle(const Frame* frame)
 
     if (Page* page = frame->page()) {
         UserGestureIndicator indicator(ProcessingUserGesture);
-        page->mainFrame().loader().urlSelected(URL { URL { }, url }, { }, nullptr, LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
+        page->mainFrame().loader().changeLocation(URL { URL { }, url }, { }, nullptr, LockHistory::No, LockBackForwardList::No, ReferrerPolicy::EmptyString, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
     }
+}
+
+void WebContextMenuClient::lookUpInDictionary(WebCore::Frame*)
+{
+    notImplemented();
+}
+
+bool WebContextMenuClient::isSpeaking()
+{
+    notImplemented();
+    return false;
+}
+
+void WebContextMenuClient::speak(const String&)
+{
+    notImplemented();
+}
+
+void WebContextMenuClient::stopSpeaking()
+{
+    notImplemented();
 }
 #endif
 

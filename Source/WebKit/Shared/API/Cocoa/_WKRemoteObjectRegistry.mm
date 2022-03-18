@@ -106,22 +106,22 @@ struct PendingReply {
     return remoteObject.autorelease();
 }
 
-- (id)_initWithWebPage:(WebKit::WebPage&)page
+- (id)_initWithWebPage:(NakedRef<WebKit::WebPage>)page
 {
     if (!(self = [super init]))
         return nil;
 
-    _remoteObjectRegistry = makeUnique<WebKit::WebRemoteObjectRegistry>(self, page);
+    _remoteObjectRegistry = makeUnique<WebKit::WebRemoteObjectRegistry>(self, page.get());
 
     return self;
 }
 
-- (id)_initWithWebPageProxy:(WebKit::WebPageProxy&)page
+- (id)_initWithWebPageProxy:(NakedRef<WebKit::WebPageProxy>)page
 {
     if (!(self = [super init]))
         return nil;
 
-    _remoteObjectRegistry = makeUnique<WebKit::UIRemoteObjectRegistry>(self, page);
+    _remoteObjectRegistry = makeUnique<WebKit::UIRemoteObjectRegistry>(self, page.get());
 
     return self;
 }
@@ -291,7 +291,8 @@ static bool validateReplyBlockSignature(NSMethodSignature *wireBlockSignature, P
                 auto encoder = adoptNS([[WKRemoteObjectEncoder alloc] init]);
                 [encoder encodeObject:invocation forKey:invocationKey];
 
-                remoteObjectRegistry->_remoteObjectRegistry->sendReplyBlock(replyID, WebKit::UserData([encoder rootObjectDictionary]));
+                if (remoteObjectRegistry->_remoteObjectRegistry)
+                    remoteObjectRegistry->_remoteObjectRegistry->sendReplyBlock(replyID, WebKit::UserData([encoder rootObjectDictionary]));
                 checker->didCallReplyBlock();
             });
 

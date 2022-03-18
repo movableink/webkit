@@ -35,7 +35,7 @@ class AdClickAttribution;
 class DOMTokenList;
 
 // Link relation bitmask values.
-enum class Relation {
+enum class Relation : uint8_t {
     NoReferrer = 1 << 0,
     NoOpener = 1 << 1,
     Opener = 1 << 2,
@@ -72,6 +72,10 @@ public:
 #if USE(SYSTEM_PREVIEW)
     WEBCORE_EXPORT bool isSystemPreviewLink() const;
 #endif
+
+    void setReferrerPolicyForBindings(const AtomString&);
+    String referrerPolicyForBindings() const;
+    ReferrerPolicy referrerPolicy() const;
 
 protected:
     HTMLAnchorElement(const QualifiedName&, Document&);
@@ -117,7 +121,7 @@ private:
     OptionSet<Relation> m_linkRelations;
 
     // This is computed only once and must not be affected by subsequent URL changes.
-    mutable Optional<SharedStringHash> m_storedVisitedLinkHash;
+    mutable Markable<SharedStringHash, SharedStringHashMarkableTraits> m_storedVisitedLinkHash;
 
     mutable std::unique_ptr<DOMTokenList> m_relList;
 };

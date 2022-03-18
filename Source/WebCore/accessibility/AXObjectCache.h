@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AXIsolatedTree.h"
 #include "AXTextStateChangeIntent.h"
 #include "AccessibilityObject.h"
 #include "Range.h"
@@ -43,10 +44,6 @@
 
 namespace WebCore {
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-class AXIsolatedObject;
-class AXIsolatedTree;
-#endif
 class Document;
 class HTMLAreaElement;
 class HTMLTextFormControlElement;
@@ -171,8 +168,15 @@ public:
     void remove(Widget*);
     void remove(AXID);
 
-    void detachWrapper(AccessibilityObject*, AccessibilityDetachmentType);
+#if !PLATFORM(COCOA)
+    void detachWrapper(AXCoreObject*, AccessibilityDetachmentType);
+#endif
+private:
+    using DOMObjectVariant = Variant<std::nullptr_t, RenderObject*, Node*, Widget*>;
+    void cacheAndInitializeWrapper(AccessibilityObject*, DOMObjectVariant = nullptr);
     void attachWrapper(AXCoreObject*);
+
+public:
     void childrenChanged(Node*, Node* newChild = nullptr);
     void childrenChanged(RenderObject*, RenderObject* newChild = nullptr);
     void childrenChanged(AXCoreObject*);
@@ -189,17 +193,6 @@ public:
     void deferAttributeChangeIfNeeded(const QualifiedName&, Element*);
     void recomputeIsIgnored(RenderObject* renderer);
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    WEBCORE_EXPORT static bool clientSupportsIsolatedTree();
-private:
-    AXCoreObject* isolatedTreeRootObject();
-    static AXCoreObject* isolatedTreeFocusedObject(Document&);
-    void setIsolatedTreeFocusedObject(Node*);
-    static Ref<AXIsolatedTree> generateIsolatedTree(PageIdentifier, Document&);
-    static Ref<AXIsolatedObject> createIsolatedTreeHierarchy(AXCoreObject&, AXID, AXObjectCache*, AXIsolatedTree&, Vector<Ref<AXIsolatedObject>>&, bool isRoot);
-#endif
-
-public:
     WEBCORE_EXPORT bool canUseSecondaryAXThread();
 
 #if ENABLE(ACCESSIBILITY)
@@ -356,8 +349,19 @@ public:
     void performDeferredCacheUpdate();
     void deferTextReplacementNotificationForTextControl(HTMLTextFormControlElement&, const String& previousValue);
 
-    RefPtr<Range> rangeMatchesTextNearRange(RefPtr<Range>, const String&);
-    
+    Optional<SimpleRange> rangeMatchesTextNearRange(const SimpleRange&, const String&);
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    WEBCORE_EXPORT static bool isIsolatedTreeEnabled();
+private:
+    static bool clientSupportsIsolatedTree();
+    AXCoreObject* isolatedTreeRootObject();
+    static AXCoreObject* isolatedTreeFocusedObject(Document&);
+    void setIsolatedTreeFocusedObject(Node*);
+    static Ref<AXIsolatedTree> generateIsolatedTree(PageIdentifier, Document&);
+    void updateIsolatedTree(AXCoreObject*, AXNotification);
+    static void initializeSecondaryAXThread();
+#endif
 
 protected:
     void postPlatformNotification(AXCoreObject*, AXNotification);
@@ -366,10 +370,10 @@ protected:
     void platformPerformDeferredCacheUpdate();
 
 #if PLATFORM(COCOA)
-    void postTextStateChangePlatformNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
+    void postTextStateChangePlatformNotification(AXCoreObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
     void postTextStateChangePlatformNotification(AccessibilityObject*, AXTextEditType, const String&, const VisiblePosition&);
-    void postTextReplacementPlatformNotificationForTextControl(AccessibilityObject*, const String& deletedText, const String& insertedText, HTMLTextFormControlElement&);
-    void postTextReplacementPlatformNotification(AccessibilityObject*, AXTextEditType, const String&, AXTextEditType, const String&, const VisiblePosition&);
+    void postTextReplacementPlatformNotificationForTextControl(AXCoreObject*, const String& deletedText, const String& insertedText, HTMLTextFormControlElement&);
+    void postTextReplacementPlatformNotification(AXCoreObject*, AXTextEditType, const String&, AXTextEditType, const String&, const VisiblePosition&);
 #else
     static AXTextChange textChangeForEditType(AXTextEditType);
     void nodeTextChangePlatformNotification(AccessibilityObject*, AXTextChange, unsigned, const String&);
@@ -410,7 +414,7 @@ protected:
     bool shouldSkipBoundary(const CharacterOffset&, const CharacterOffset&);
 
 private:
-    AccessibilityObject* rootWebArea();
+    AXCoreObject* rootWebArea();
 
     static AccessibilityObject* focusedImageMapUIElement(HTMLAreaElement*);
     static AXCoreObject* focusedObject(Document&);
@@ -547,7 +551,9 @@ inline void AXObjectCache::deferRecomputeIsIgnored(Element*) { }
 inline void AXObjectCache::deferTextChangedIfNeeded(Node*) { }
 inline void AXObjectCache::deferSelectedChildrenChangedIfNeeded(Element&) { }
 inline void AXObjectCache::deferTextReplacementNotificationForTextControl(HTMLTextFormControlElement&, const String&) { }
-inline void AXObjectCache::detachWrapper(AccessibilityObject*, AccessibilityDetachmentType) { }
+#if !PLATFORM(COCOA)
+inline void AXObjectCache::detachWrapper(AXCoreObject*, AccessibilityDetachmentType) { }
+#endif
 inline void AXObjectCache::focusModalNodeTimerFired() { }
 inline void AXObjectCache::performCacheUpdateTimerFired() { }
 inline void AXObjectCache::frameLoadingEventNotification(Frame*, AXLoadingEvent) { }

@@ -58,6 +58,7 @@
 #include "JSWebAssemblyCodeBlock.h"
 #include "MachineStackMarker.h"
 #include "MarkStackMergingConstraint.h"
+#include "MarkedJSValueRefArray.h"
 #include "MarkedSpaceInlines.h"
 #include "MarkingConstraintSet.h"
 #include "PreventCollectionScope.h"
@@ -86,6 +87,7 @@
 #include <wtf/ParallelVectorIterator.h>
 #include <wtf/ProcessID.h>
 #include <wtf/RAMSize.h>
+#include <wtf/Scope.h>
 #include <wtf/SimpleStats.h>
 #include <wtf/Threading.h>
 
@@ -396,7 +398,7 @@ void Heap::dumpHeapStatisticsAtVMDestruction()
 void Heap::lastChanceToFinalize()
 {
     MonotonicTime before;
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: shutdown ");
     }
@@ -414,17 +416,15 @@ void Heap::lastChanceToFinalize()
         }
         m_collectContinuouslyThread->waitForCompletion();
     }
-    
-    if (Options::logGC())
-        dataLog("1");
+
+    dataLogIf(Options::logGC(), "1");
     
     // Prevent new collections from being started. This is probably not even necessary, since we're not
     // going to call into anything that starts collections. Still, this makes the algorithm more
     // obviously sound.
     m_isSafeToCollect = false;
     
-    if (Options::logGC())
-        dataLog("2");
+    dataLogIf(Options::logGC(), "2");
 
     bool isCollecting;
     {
@@ -433,8 +433,7 @@ void Heap::lastChanceToFinalize()
         isCollecting = m_lastServedTicket < m_lastGrantedTicket;
     }
     if (isCollecting) {
-        if (Options::logGC())
-            dataLog("...]\n");
+        dataLogIf(Options::logGC(), "...]\n");
         
         // Wait for the current collection to finish.
         waitForCollector(
@@ -443,11 +442,9 @@ void Heap::lastChanceToFinalize()
                 return m_lastServedTicket == m_lastGrantedTicket;
             });
         
-        if (Options::logGC())
-            dataLog("[GC<", RawPointer(this), ">: shutdown ");
+        dataLogIf(Options::logGC(), "[GC<", RawPointer(this), ">: shutdown ");
     }
-    if (Options::logGC())
-        dataLog("3");
+    dataLogIf(Options::logGC(), "3");
 
     RELEASE_ASSERT(m_requests.isEmpty());
     RELEASE_ASSERT(m_lastServedTicket == m_lastGrantedTicket);
@@ -462,14 +459,12 @@ void Heap::lastChanceToFinalize()
             m_threadCondition->notifyOne(locker);
     }
 
-    if (Options::logGC())
-        dataLog("4");
+    dataLogIf(Options::logGC(), "4");
     
     if (!stopped)
         m_thread->join();
     
-    if (Options::logGC())
-        dataLog("5 ");
+    dataLogIf(Options::logGC(), "5 ");
 
     if (UNLIKELY(Options::dumpHeapStatisticsAtVMDestruction()))
         dumpHeapStatisticsAtVMDestruction();
@@ -483,8 +478,7 @@ void Heap::lastChanceToFinalize()
     
     m_objectSpace.freeMemory();
     
-    if (Options::logGC())
-        dataLog((MonotonicTime::now() - before).milliseconds(), "ms]\n");
+    dataLogIf(Options::logGC(), (MonotonicTime::now() - before).milliseconds(), "ms]\n");
 }
 
 void Heap::releaseDelayedReleasedObjects()
@@ -613,11 +607,11 @@ void Heap::finalizeUnconditionalFinalizers()
     vm().builtinExecutables()->finalizeUnconditionally();
     finalizeMarkedUnconditionalFinalizers<FunctionExecutable>(vm().functionExecutableSpace.space);
     finalizeMarkedUnconditionalFinalizers<SymbolTable>(vm().symbolTableSpace);
+    finalizeMarkedUnconditionalFinalizers<ExecutableToCodeBlockEdge>(vm().executableToCodeBlockEdgesWithFinalizers); // We run this before CodeBlock's unconditional finalizer since CodeBlock looks at the owner executable's installed CodeBlock in its finalizeUnconditionally.
     vm().forEachCodeBlockSpace(
         [&] (auto& space) {
             this->finalizeMarkedUnconditionalFinalizers<CodeBlock>(space.set);
         });
-    finalizeMarkedUnconditionalFinalizers<ExecutableToCodeBlockEdge>(vm().executableToCodeBlockEdgesWithFinalizers);
     finalizeMarkedUnconditionalFinalizers<StructureRareData>(vm().structureRareDataSpace);
     finalizeMarkedUnconditionalFinalizers<UnlinkedFunctionExecutable>(vm().unlinkedFunctionExecutableSpace.set);
     if (vm().m_weakSetSpace)
@@ -1051,13 +1045,13 @@ void Heap::addToRememberedSet(const JSCell* constCell)
 void Heap::sweepSynchronously()
 {
     MonotonicTime before { };
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         dataLog("Full sweep: ", capacity() / 1024, "kb ");
         before = MonotonicTime::now();
     }
     m_objectSpace.sweepBlocks();
     m_objectSpace.shrink();
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         MonotonicTime after = MonotonicTime::now();
         dataLog("=> ", capacity() / 1024, "kb, ", (after - before).milliseconds(), "ms");
     }
@@ -1097,11 +1091,9 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
         
         bool alreadySweptInCollectSync = shouldSweepSynchronously();
         if (!alreadySweptInCollectSync) {
-            if (Options::logGC())
-                dataLog("[GC<", RawPointer(this), ">: ");
+            dataLogIf(Options::logGC(), "[GC<", RawPointer(this), ">: ");
             sweepSynchronously();
-            if (Options::logGC())
-                dataLog("]\n");
+            dataLogIf(Options::logGC(), "]\n");
         }
         m_objectSpace.assertNoUnswept();
         
@@ -1265,8 +1257,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
         m_currentRequest = m_requests.first();
     }
         
-    if (Options::logGC())
-        dataLog("[GC<", RawPointer(this), ">: START ", gcConductorShortName(conn), " ", capacity() / 1024, "kb ");
+    dataLogIf(Options::logGC(), "[GC<", RawPointer(this), ">: START ", gcConductorShortName(conn), " ", capacity() / 1024, "kb ");
 
     m_beforeGC = MonotonicTime::now();
 
@@ -1274,7 +1265,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
         vm().random().setSeed(cryptographicallyRandomNumber());
 
     if (m_collectionScope) {
-        dataLog("Collection scope already set during GC: ", *m_collectionScope, "\n");
+        dataLogLn("Collection scope already set during GC: ", *m_collectionScope);
         RELEASE_ASSERT_NOT_REACHED();
     }
     
@@ -1335,7 +1326,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
     m_constraintSet->didStartMarking();
     
     m_scheduler->beginCollection();
-    if (Options::logGC())
+    if (UNLIKELY(Options::logGC()))
         m_scheduler->log();
     
     // After this, we will almost certainly fall through all of the "slotVisitor.isEmpty()"
@@ -1363,7 +1354,7 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
     
     SlotVisitor& slotVisitor = *m_collectorSlotVisitor;
     
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         HashMap<const char*, size_t> visitMap;
         forEachSlotVisitor(
             [&] (SlotVisitor& slotVisitor) {
@@ -1407,8 +1398,7 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
         m_scheduler->didExecuteConstraints();
     }
         
-    if (Options::logGC())
-        dataLog(slotVisitor.collectorMarkStack().size(), "+", m_mutatorMarkStack->size() + slotVisitor.mutatorMarkStack().size(), " ");
+    dataLogIf(Options::logGC(), slotVisitor.collectorMarkStack().size(), "+", m_mutatorMarkStack->size() + slotVisitor.mutatorMarkStack().size(), " ");
         
     {
         ParallelModeEnabler enabler(slotVisitor);
@@ -1434,7 +1424,7 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
 
     m_scheduler->willResume();
         
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         double thisPauseMS = (MonotonicTime::now() - m_stopTime).milliseconds();
         dataLog("p=", thisPauseMS, "ms (max ", maxPauseMS(thisPauseMS), ")...]\n");
     }
@@ -1478,12 +1468,11 @@ NEVER_INLINE bool Heap::runConcurrentPhase(GCConductor conn)
 
 NEVER_INLINE bool Heap::runReloopPhase(GCConductor conn)
 {
-    if (Options::logGC())
-        dataLog("[GC<", RawPointer(this), ">: ", gcConductorShortName(conn), " ");
+    dataLogIf(Options::logGC(), "[GC<", RawPointer(this), ">: ", gcConductorShortName(conn), " ");
     
     m_scheduler->didStop();
     
-    if (Options::logGC())
+    if (UNLIKELY(Options::logGC()))
         m_scheduler->log();
     
     return changePhase(conn, CollectorPhase::Fixpoint);
@@ -1507,21 +1496,31 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
         
     updateObjectCounts();
     endMarking();
-        
+
     if (UNLIKELY(m_verifier)) {
         m_verifier->gatherLiveCells(HeapVerifier::Phase::AfterMarking);
         m_verifier->verify(HeapVerifier::Phase::AfterMarking);
     }
         
-    if (vm().typeProfiler())
-        vm().typeProfiler()->invalidateTypeSetCache(vm());
+    {
+        auto* previous = Thread::current().setCurrentAtomStringTable(nullptr);
+        auto scopeExit = makeScopeExit([&] {
+            Thread::current().setCurrentAtomStringTable(previous);
+        });
 
-    reapWeakHandles();
-    pruneStaleEntriesFromWeakGCMaps();
-    sweepArrayBuffers();
-    snapshotUnswept();
-    finalizeUnconditionalFinalizers();
-    removeDeadCompilerWorklistEntries();
+        if (vm().typeProfiler())
+            vm().typeProfiler()->invalidateTypeSetCache(vm());
+
+        m_structureIDTable.flushOldTables();
+
+        reapWeakHandles();
+        pruneStaleEntriesFromWeakGCMaps();
+        sweepArrayBuffers();
+        snapshotUnswept();
+        finalizeUnconditionalFinalizers(); // We rely on these unconditional finalizers running before clearCurrentlyExecuting since CodeBlock's finalizer relies on querying currently executing.
+        removeDeadCompilerWorklistEntries();
+    }
+
     notifyIncrementalSweeper();
     
     m_codeBlocks->iterateCurrentlyExecuting(
@@ -1548,7 +1547,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
         m_objectSpace.dumpBits();
     }
     
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         double thisPauseMS = (m_afterGC - m_stopTime).milliseconds();
         dataLog("p=", thisPauseMS, "ms (max ", maxPauseMS(thisPauseMS), "), cycle ", (m_afterGC - m_beforeGC).milliseconds(), "ms END]\n");
     }
@@ -1561,8 +1560,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     }
     ParkingLot::unparkAll(&m_worldState);
 
-    if (false)
-        dataLog("GC END!\n");
+    dataLogLnIf(Options::logGC(), "GC END!");
 
     setNeedFinalize();
 
@@ -1663,7 +1661,6 @@ void Heap::stopThePeriphery(GCConductor conn)
     if (auto* shadowChicken = vm().shadowChicken())
         shadowChicken->update(vm(), vm().topCallFrame);
     
-    m_structureIDTable.flushOldTables();
     m_objectSpace.stopAllocating();
     
     m_stopTime = MonotonicTime::now();
@@ -2090,7 +2087,7 @@ void Heap::notifyThreadStopping(const AbstractLocker&)
 void Heap::finalize()
 {
     MonotonicTime before;
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: finalize ");
     }
@@ -2113,7 +2110,7 @@ void Heap::finalize()
     if (shouldSweepSynchronously())
         sweepSynchronously();
 
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         MonotonicTime after = MonotonicTime::now();
         dataLog((after - before).milliseconds(), "ms]\n");
     }
@@ -2177,22 +2174,15 @@ void Heap::suspendCompilerThreads()
 
 void Heap::willStartCollection()
 {
-    if (Options::logGC())
-        dataLog("=> ");
+    dataLogIf(Options::logGC(), "=> ");
     
     if (shouldDoFullCollection()) {
         m_collectionScope = CollectionScope::Full;
         m_shouldDoFullCollection = false;
-        if (Options::logGC())
-            dataLog("FullCollection, ");
-        if (false)
-            dataLog("Full collection!\n");
+        dataLogIf(Options::logGC(), "FullCollection, ");
     } else {
         m_collectionScope = CollectionScope::Eden;
-        if (Options::logGC())
-            dataLog("EdenCollection, ");
-        if (false)
-            dataLog("Eden collection!\n");
+        dataLogIf(Options::logGC(), "EdenCollection, ");
     }
     if (m_collectionScope && m_collectionScope.value() == CollectionScope::Full) {
         m_sizeBeforeLastFullCollect = m_sizeAfterLastCollect + m_bytesAllocatedThisCycle;
@@ -2289,7 +2279,7 @@ void Heap::updateAllocationLimits()
     // It's up to the user to ensure that extraMemorySize() ends up corresponding to allocation-time
     // extra memory reporting.
     currentHeapSize += extraMemorySize();
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         Checked<size_t, RecordOverflow> checkedCurrentHeapSize = m_totalBytesVisited;
         checkedCurrentHeapSize += extraMemorySize();
         ASSERT(!checkedCurrentHeapSize.hasOverflowed() && checkedCurrentHeapSize.unsafeGet() == currentHeapSize);
@@ -2351,8 +2341,7 @@ void Heap::updateAllocationLimits()
         dataLog("sizeAfterLastCollect = ", m_sizeAfterLastCollect, "\n");
     m_bytesAllocatedThisCycle = 0;
 
-    if (Options::logGC())
-        dataLog("=> ", currentHeapSize / 1024, "kb, ");
+    dataLogIf(Options::logGC(), "=> ", currentHeapSize / 1024, "kb, ");
 }
 
 void Heap::didFinishCollection()
@@ -2770,6 +2759,10 @@ void Heap::addCoreConstraints()
                 MarkedArgumentBuffer::markLists(slotVisitor, *m_markListSet);
             }
 
+            m_markedJSValueRefArrays.forEach([&] (MarkedJSValueRefArray* array) {
+                array->visitAggregate(slotVisitor);
+            });
+
             {
                 SetRootMarkReasonScope rootScope(slotVisitor, SlotVisitor::RootMarkReason::VMExceptions);
                 slotVisitor.appendUnbarriered(m_vm.exception());
@@ -2891,7 +2884,7 @@ void Heap::addMarkingConstraint(std::unique_ptr<MarkingConstraint> constraint)
 void Heap::notifyIsSafeToCollect()
 {
     MonotonicTime before;
-    if (Options::logGC()) {
+    if (UNLIKELY(Options::logGC())) {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: starting ");
     }
@@ -2928,11 +2921,10 @@ void Heap::notifyIsSafeToCollect()
                         }
                     }
                 }
-            });
+            }, ThreadType::GarbageCollection);
     }
     
-    if (Options::logGC())
-        dataLog((MonotonicTime::now() - before).milliseconds(), "ms]\n");
+    dataLogIf(Options::logGC(), (MonotonicTime::now() - before).milliseconds(), "ms]\n");
 }
 
 void Heap::preventCollection()
@@ -3013,6 +3005,12 @@ void Heap::setBonusVisitorTask(RefPtr<SharedTask<void(SlotVisitor&)>> task)
     auto locker = holdLock(m_markingMutex);
     m_bonusVisitorTask = task;
     m_markingConditionVariable.notifyAll();
+}
+
+
+void Heap::addMarkedJSValueRefArray(MarkedJSValueRefArray* array)
+{
+    m_markedJSValueRefArrays.append(array);
 }
 
 void Heap::runTaskInParallel(RefPtr<SharedTask<void(SlotVisitor&)>> task)

@@ -2618,7 +2618,7 @@ public:
             performJITMemcpy(where, &insn, sizeof(int));
             cacheFlush(where, sizeof(int));
         }
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         else {
             MemOpSize size;
             bool V;
@@ -2632,7 +2632,7 @@ public:
             ASSERT(opc == MemOp_LOAD);
             ASSERT(!(imm12 & ~0x1ff));
         }
-#endif
+#endif // ASSERT_ENABLED
     }
 
     static void replaceWithAddressComputation(void* where)
@@ -2653,7 +2653,7 @@ public:
             performJITMemcpy(where, &insn, sizeof(int));
             cacheFlush(where, sizeof(int));
         }
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         else {
             Datasize sf;
             AddOp op;
@@ -2669,7 +2669,7 @@ public:
             ASSERT(!shift);
             ASSERT(!(imm12 & ~0xff8));
         }
-#endif
+#endif // ASSERT_ENABLED
     }
 
     static void repatchPointer(void* where, void* valuePtr)
@@ -2807,7 +2807,7 @@ public:
 
     static void cacheFlush(void* code, size_t size)
     {
-#if OS(IOS_FAMILY)
+#if OS(DARWIN)
         sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
 #elif OS(FUCHSIA)
         zx_cache_flush(code, size, ZX_CACHE_FLUSH_INSN);
@@ -3230,13 +3230,13 @@ protected:
     static int xOrSp(RegisterID reg)
     {
         ASSERT(!isZr(reg));
-        ASSERT(!isIOS() || reg != ARM64Registers::x18);
+        ASSERT(!isDarwin() || reg != ARM64Registers::x18);
         return reg;
     }
     static int xOrZr(RegisterID reg)
     {
         ASSERT(!isSp(reg));
-        ASSERT(!isIOS() || reg != ARM64Registers::x18);
+        ASSERT(!isDarwin() || reg != ARM64Registers::x18);
         return reg & 31;
     }
     static FPRegisterID xOrZrAsFPR(RegisterID reg) { return static_cast<FPRegisterID>(xOrZr(reg)); }

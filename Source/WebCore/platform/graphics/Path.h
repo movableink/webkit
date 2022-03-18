@@ -25,10 +25,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#ifndef Path_h
-#define Path_h
+#pragma once
 
 #include "FloatRect.h"
+#include "InlinePathData.h"
 #include "WindRule.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
@@ -60,11 +60,7 @@ class PlatformContextDirect2D;
 }
 
 #elif USE(CAIRO)
-
-namespace WebCore {
-class CairoPath;
-}
-typedef WebCore::CairoPath PlatformPath;
+#include "RefPtrCairo.h"
 
 #elif USE(WINGDI)
 
@@ -79,11 +75,22 @@ typedef void PlatformPath;
 
 #endif
 
+#if !USE(CAIRO)
+
 #if PLATFORM(QT)
 /* QPainterPath is valued based */
 typedef const PlatformPath& PlatformPathPtr;
 #else
 typedef PlatformPath* PlatformPathPtr;
+#endif
+
+#if USE(CG)
+using PlatformPathStorageType = RetainPtr<CGMutablePathRef>;
+#elif USE(DIRECT2D)
+using PlatformPathStorageType = COMPtr<ID2D1GeometryGroup>;
+#else
+using PlatformPathStorageType = PlatformPathPtr;
+#endif
 #endif
 
 namespace WTF {
@@ -124,7 +131,7 @@ class Path {
 public:
     WEBCORE_EXPORT Path();
 #if USE(CG)
-    Path(RetainPtr<CGMutablePathRef>);
+    Path(RetainPtr<CGMutablePathRef>&&);
 #endif
     WEBCORE_EXPORT ~Path();
 
@@ -143,19 +150,22 @@ public:
     WEBCORE_EXPORT FloatRect fastBoundingRect() const;
     FloatRect strokeBoundingRect(StrokeStyleApplier* = 0) const;
 
+    WEBCORE_EXPORT size_t elementCount() const;
     float length() const;
     PathTraversalState traversalStateAtLength(float length) const;
     FloatPoint pointAtLength(float length) const;
 
     WEBCORE_EXPORT void clear();
 #if PLATFORM(QT)
-    bool isNull() const { return false; }
+    WEBCORE_EXPORT bool isNull() const { return false; }
 #else
-    bool isNull() const { return !m_path; }
+    WEBCORE_EXPORT bool isNull() const { return !m_path; }
 #endif
     bool isEmpty() const;
     // Gets the current point of the current path, which is conceptually the final point reached by the path so far.
     // Note the Path can be empty (isEmpty() == true) and still have a current point.
+    // FIXME: The above comment might need to be updated; on all supported platforms, the result of hasCurrentPoint() is identical
+    // to !isEmpty().
     bool hasCurrentPoint() const;
     FloatPoint currentPoint() const;
 
@@ -189,14 +199,20 @@ public:
 #if USE(DIRECT2D)
     FloatRect fastBoundingRectForStroke(const PlatformContextDirect2D&) const;
     PlatformPathPtr platformPath() const { return m_path.get(); }
+#elif USE(CG)
+    WEBCORE_EXPORT PlatformPathPtr platformPath() const;
+#elif USE(CAIRO)
+    cairo_t* cairoPath() const { return m_path.get(); }
 #else
     PlatformPathPtr platformPath() const { return m_path; }
 #endif
     
 #if PLATFORM(QT)
     PlatformPathPtr ensurePlatformPath() { return platformPath(); }
-#else
+#elif USE(CAIRO)
     // ensurePlatformPath() will allocate a PlatformPath if it has not yet been and will never return null.
+    cairo_t* ensureCairoPath();
+#else
     WEBCORE_EXPORT PlatformPathPtr ensurePlatformPath();
 #endif
 
@@ -233,16 +249,52 @@ public:
     template<class Decoder> static Optional<Path> decode(Decoder&);
 
 private:
+#if ENABLE(INLINE_PATH_DATA)
+    template<typename DataType> bool hasInlineData() const;
+    bool hasAnyInlineData() const;
+    Optional<FloatRect> boundingRectFromInlineData() const;
+#endif
+
+    void moveToSlowCase(const FloatPoint&);
+    void addLineToSlowCase(const FloatPoint&);
+    void addArcSlowCase(const FloatPoint&, float radius, float startAngle, float endAngle, bool anticlockwise);
+    void addQuadCurveToSlowCase(const FloatPoint& controlPoint, const FloatPoint& endPoint);
+    void addBezierCurveToSlowCase(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint);
+
+    FloatRect boundingRectSlowCase() const;
+    FloatRect fastBoundingRectSlowCase() const;
+    bool isEmptySlowCase() const;
+    FloatPoint currentPointSlowCase() const;
+    size_t elementCountSlowCase() const;
+    void applySlowCase(const PathApplierFunction&) const;
+
+#if USE(CG)
+    void createCGPath() const;
+    void swap(Path&);
+#endif
+
+#if USE(CAIRO)
+    RefPtr<cairo_t> m_path;
+#else
+    mutable PlatformPathStorageType m_path;
+#endif
+
 #if USE(DIRECT2D)
     Vector<ID2D1Geometry*> m_geometries;
-    COMPtr<ID2D1GeometryGroup> m_path;
     mutable COMPtr<ID2D1GeometrySink> m_activePath;
     mutable bool m_figureIsOpened { false };
-#elif PLATFORM(QT)
+#endif
+
+#if PLATFORM(QT)
     /* QPainterPath is valued based */
     QPainterPath m_path;
-#else
-    PlatformPathPtr m_path { nullptr };
+#endif
+    
+#if ENABLE(INLINE_PATH_DATA)
+    InlinePathData m_inlineData;
+#endif
+#if USE(CG)
+    mutable bool m_copyPathBeforeMutation { false };
 #endif
 };
 
@@ -250,12 +302,16 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
 
 template<class Encoder> void Path::encode(Encoder& encoder) const
 {
-    uint64_t numPoints = 0;
-    apply([&numPoints](const PathElement&) {
-        ++numPoints;
-    });
+#if ENABLE(INLINE_PATH_DATA)
+    bool hasInlineData = hasAnyInlineData();
+    encoder << hasInlineData;
+    if (hasInlineData) {
+        encoder << m_inlineData;
+        return;
+    }
+#endif
 
-    encoder << numPoints;
+    encoder << static_cast<uint64_t>(elementCount());
 
     apply([&](auto& element) {
         encoder.encodeEnum(element.type);
@@ -285,6 +341,20 @@ template<class Encoder> void Path::encode(Encoder& encoder) const
 template<class Decoder> Optional<Path> Path::decode(Decoder& decoder)
 {
     Path path;
+
+#if ENABLE(INLINE_PATH_DATA)
+    bool hasInlineData;
+    if (!decoder.decode(hasInlineData))
+        return WTF::nullopt;
+
+    if (hasInlineData) {
+        if (!decoder.decode(path.m_inlineData))
+            return WTF::nullopt;
+
+        return path;
+    }
+#endif
+
     uint64_t numPoints;
     if (!decoder.decode(numPoints))
         return WTF::nullopt;
@@ -348,6 +418,18 @@ template<class Decoder> Optional<Path> Path::decode(Decoder& decoder)
     return path;
 }
 
+#if ENABLE(INLINE_PATH_DATA)
+
+template <typename DataType> inline bool Path::hasInlineData() const
+{
+    return WTF::holds_alternative<DataType>(m_inlineData);
+}
+
+inline bool Path::hasAnyInlineData() const
+{
+    return !hasInlineData<Monostate>();
 }
 
 #endif
+
+} // namespace WebCore

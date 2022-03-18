@@ -32,6 +32,7 @@
 #include "ShadowRootMode.h"
 #include "SimulatedClickOptions.h"
 #include "StyleChange.h"
+#include "WebAnimationTypes.h"
 #include <JavaScriptCore/Strong.h>
 
 namespace WebCore {
@@ -41,6 +42,7 @@ class DatasetDOMStringMap;
 class DOMRect;
 class DOMRectList;
 class DOMTokenList;
+class ElementAnimationRareData;
 class ElementRareData;
 class Frame;
 class HTMLDocument;
@@ -57,6 +59,7 @@ class RenderTreePosition;
 class StylePropertyMap;
 class WebAnimation;
 
+struct GetAnimationsOptions;
 struct KeyframeAnimationOptions;
 struct ScrollIntoViewOptions;
 struct ScrollToOptions;
@@ -72,6 +75,8 @@ struct ResizeObserverData;
 namespace Style {
 struct ElementStyle;
 }
+
+enum class AnimationImpact;
 
 class Element : public ContainerNode {
     WTF_MAKE_ISO_ALLOCATED(Element);
@@ -283,6 +288,7 @@ public:
 
     virtual RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&);
     virtual bool rendererIsNeeded(const RenderStyle&);
+    virtual bool rendererIsEverNeeded() { return true; }
 
     WEBCORE_EXPORT ShadowRoot* shadowRoot() const;
     ShadowRoot* shadowRootForBindings(JSC::JSGlobalObject&) const;
@@ -309,12 +315,14 @@ public:
     bool active() const { return isUserActionElement() && isUserActionElementActive(); }
     bool hovered() const { return isUserActionElement() && isUserActionElementHovered(); }
     bool focused() const { return isUserActionElement() && isUserActionElementFocused(); }
+    bool isBeingDragged() const { return isUserActionElement() && isUserActionElementDragged(); }
     bool hasFocusWithin() const { return getFlag(HasFocusWithin); };
 
-    virtual void setActive(bool flag = true, bool pause = false);
-    virtual void setHovered(bool flag = true);
-    virtual void setFocus(bool flag);
-    void setHasFocusWithin(bool flag);
+    virtual void setActive(bool = true, bool pause = false);
+    virtual void setHovered(bool = true);
+    virtual void setFocus(bool);
+    void setBeingDragged(bool);
+    void setHasFocusWithin(bool);
 
     Optional<int> tabIndexSetExplicitly() const;
     bool shouldBeIgnoredInSequentialFocusNavigation() const { return defaultTabIndex() < 0 && !supportsFocus(); }
@@ -339,13 +347,12 @@ public:
 
     bool needsStyleInvalidation() const;
 
+    bool hasValidStyle() const;
+    bool isVisibleWithoutResolvingFullStyle() const;
+
     // Methods for indicating the style is affected by dynamic updates (e.g., children changing, our position changing in our sibling list, etc.)
-    bool styleAffectedByActive() const { return hasStyleFlag(ElementStyleFlag::StyleAffectedByActive); }
     bool styleAffectedByEmpty() const { return hasStyleFlag(ElementStyleFlag::StyleAffectedByEmpty); }
-    bool styleAffectedByFocusWithin() const { return getFlag(StyleAffectedByFocusWithinFlag); }
     bool descendantsAffectedByPreviousSibling() const { return getFlag(DescendantsAffectedByPreviousSiblingFlag); }
-    bool childrenAffectedByHover() const { return getFlag(ChildrenAffectedByHoverRulesFlag); }
-    bool childrenAffectedByDrag() const { return hasStyleFlag(ElementStyleFlag::ChildrenAffectedByDrag); }
     bool childrenAffectedByFirstChildRules() const { return getFlag(ChildrenAffectedByFirstChildRulesFlag); }
     bool childrenAffectedByLastChildRules() const { return getFlag(ChildrenAffectedByLastChildRulesFlag); }
     bool childrenAffectedByForwardPositionalRules() const { return hasStyleFlag(ElementStyleFlag::ChildrenAffectedByForwardPositionalRules); }
@@ -359,11 +366,7 @@ public:
     bool hasFlagsSetDuringStylingOfChildren() const;
 
     void setStyleAffectedByEmpty() { setStyleFlag(ElementStyleFlag::StyleAffectedByEmpty); }
-    void setStyleAffectedByFocusWithin() { setFlag(StyleAffectedByFocusWithinFlag); }
     void setDescendantsAffectedByPreviousSibling() { setFlag(DescendantsAffectedByPreviousSiblingFlag); }
-    void setChildrenAffectedByHover() { setFlag(ChildrenAffectedByHoverRulesFlag); }
-    void setStyleAffectedByActive() { setStyleFlag(ElementStyleFlag::StyleAffectedByActive); }
-    void setChildrenAffectedByDrag() { setStyleFlag(ElementStyleFlag::ChildrenAffectedByDrag); }
     void setChildrenAffectedByFirstChildRules() { setFlag(ChildrenAffectedByFirstChildRulesFlag); }
     void setChildrenAffectedByLastChildRules() { setFlag(ChildrenAffectedByLastChildRulesFlag); }
     void setChildrenAffectedByForwardPositionalRules() { setStyleFlag(ElementStyleFlag::ChildrenAffectedByForwardPositionalRules); }
@@ -454,6 +457,7 @@ public:
     virtual bool isSpinButtonElement() const { return false; }
     virtual bool isTextFormControlElement() const { return false; }
     virtual bool isTextField() const { return false; }
+    virtual bool isTextPlaceholderElement() const { return false; }
     virtual bool isOptionalFormControl() const { return false; }
     virtual bool isRequiredFormControl() const { return false; }
     virtual bool isInRange() const { return false; }
@@ -478,9 +482,18 @@ public:
     void setHasCSSAnimation();
     void clearHasCSSAnimation();
 
+    KeyframeEffectStack* keyframeEffectStack() const;
     KeyframeEffectStack& ensureKeyframeEffectStack();
     bool hasKeyframeEffects() const;
-    bool applyKeyframeEffects(RenderStyle&);
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle&);
+
+    AnimationCollection& webAnimations();
+    AnimationCollection& cssAnimations();
+    AnimationCollection& transitions();
+    CSSAnimationCollection& animationsCreatedByMarkup();
+    void setAnimationsCreatedByMarkup(CSSAnimationCollection&&);
+    PropertyToTransitionMap& completedTransitionByProperty();
+    PropertyToTransitionMap& runningTransitionsByProperty();
 
 #if ENABLE(FULLSCREEN_API)
     WEBCORE_EXPORT bool containsFullScreenElement() const;
@@ -489,11 +502,9 @@ public:
     WEBCORE_EXPORT virtual void webkitRequestFullscreen();
 #endif
 
-#if ENABLE(POINTER_EVENTS)
     ExceptionOr<void> setPointerCapture(int32_t);
     ExceptionOr<void> releasePointerCapture(int32_t);
     bool hasPointerCapture(int32_t);
-#endif
 
 #if ENABLE(POINTER_LOCK)
     WEBCORE_EXPORT void requestPointerLock();
@@ -583,7 +594,7 @@ public:
 
 #if ENABLE(INTERSECTION_OBSERVER)
     IntersectionObserverData& ensureIntersectionObserverData();
-    IntersectionObserverData* intersectionObserverData();
+    IntersectionObserverData* intersectionObserverDataIfExists();
 #endif
 
 #if ENABLE(RESIZE_OBSERVER)
@@ -594,7 +605,7 @@ public:
     Element* findAnchorElementForLink(String& outAnchorName);
 
     ExceptionOr<Ref<WebAnimation>> animate(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeAnimationOptions>>&&);
-    Vector<RefPtr<WebAnimation>> getAnimations();
+    Vector<RefPtr<WebAnimation>> getAnimations(Optional<GetAnimationsOptions>);
 
     ElementIdentifier createElementIdentifier();
 
@@ -631,6 +642,7 @@ private:
     bool isUserActionElementActive() const;
     bool isUserActionElementFocused() const;
     bool isUserActionElementHovered() const;
+    bool isUserActionElementDragged() const;
 
     virtual void didAddUserAgentShadowRoot(ShadowRoot&) { }
 
@@ -687,7 +699,8 @@ private:
 
     void removeShadowRoot();
 
-    const RenderStyle& resolveComputedStyle();
+    enum class ResolveComputedStyleMode { Normal, RenderedOnly };
+    const RenderStyle* resolveComputedStyle(ResolveComputedStyleMode = ResolveComputedStyleMode::Normal);
     const RenderStyle& resolvePseudoElementStyle(PseudoId);
 
     unsigned rareDataChildIndex() const;
@@ -696,6 +709,9 @@ private:
 
     ElementRareData* elementRareData() const;
     ElementRareData& ensureElementRareData();
+
+    ElementAnimationRareData* animationRareData() const;
+    ElementAnimationRareData& ensureAnimationRareData();
 
     virtual int defaultTabIndex() const;
 
@@ -707,7 +723,7 @@ private:
     
     void attachAttributeNodeIfNeeded(Attr&);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     WEBCORE_EXPORT bool fastAttributeLookupAllowed(const QualifiedName&) const;
 #endif
 
@@ -836,15 +852,6 @@ inline UniqueElementData& Element::ensureUniqueElementData()
 inline bool shouldIgnoreAttributeCase(const Element& element)
 {
     return element.isHTMLElement() && element.document().isHTMLDocument();
-}
-
-inline void Element::setHasFocusWithin(bool flag)
-{
-    if (hasFocusWithin() == flag)
-        return;
-    setFlag(flag, HasFocusWithin);
-    if (styleAffectedByFocusWithin())
-        invalidateStyleForSubtree();
 }
 
 template<typename... QualifiedNames>

@@ -26,7 +26,7 @@
 
 // Version number for shader translation API.
 // It is incremented every time the API changes.
-#define ANGLE_SH_VERSION 218
+#define ANGLE_SH_VERSION 224
 
 enum ShShaderSpec
 {
@@ -128,6 +128,7 @@ const ShCompileOptions SH_ENFORCE_PACKING_RESTRICTIONS = UINT64_C(1) << 9;
 // vec234, or mat234 type. The ShArrayIndexClampingStrategy enum,
 // specified in the ShBuiltInResources when constructing the
 // compiler, selects the strategy for the clamping implementation.
+// TODO(http://anglebug.com/4361): fix for compute shaders.
 const ShCompileOptions SH_CLAMP_INDIRECT_ARRAY_BOUNDS = UINT64_C(1) << 10;
 
 // This flag limits the complexity of an expression.
@@ -296,6 +297,9 @@ const ShCompileOptions SH_EMULATE_GL_BASE_VERTEX_BASE_INSTANCE = UINT64_C(1) << 
 // the other backends as well.
 const ShCompileOptions SH_EMULATE_SEAMFUL_CUBE_MAP_SAMPLING = UINT64_C(1) << 44;
 
+// This flag controls how to translate WEBGL_video_texture sampling function.
+const ShCompileOptions SH_TAKE_VIDEO_TEXTURE_AS_EXTERNAL_OES = UINT64_C(1) << 45;
+
 // If requested, validates the AST after every transformation.  Useful for debugging.
 const ShCompileOptions SH_VALIDATE_AST = UINT64_C(1) << 46;
 
@@ -310,6 +314,24 @@ const ShCompileOptions SH_ADD_BASE_VERTEX_TO_VERTEX_ID = UINT64_C(1) << 48;
 
 // This works around the dynamic lvalue indexing of swizzled vectors on various platforms.
 const ShCompileOptions SH_REMOVE_DYNAMIC_INDEXING_OF_SWIZZLED_VECTOR = UINT64_C(1) << 49;
+
+// This flag works a driver bug that fails to allocate ShaderResourceView for StructuredBuffer
+// on Windows 7 and earlier.
+const ShCompileOptions SH_DONT_TRANSLATE_UNIFORM_BLOCK_TO_STRUCTUREDBUFFER = UINT64_C(1) << 50;
+
+// This flag indicates whether Bresenham line raster emulation code should be generated.  This
+// emulation is necessary if the backend uses a differnet algorithm to draw lines.  Currently only
+// implemented for the Vulkan backend.
+const ShCompileOptions SH_ADD_BRESENHAM_LINE_RASTER_EMULATION = UINT64_C(1) << 51;
+
+// This flag allows disabling ARB_texture_rectangle on a per-compile basis. This is necessary
+// for WebGL contexts becuase ARB_texture_rectangle may be necessary for the WebGL implementation
+// internally but shouldn't be exposed to WebGL user code.
+const ShCompileOptions SH_DISABLE_ARB_TEXTURE_RECTANGLE = UINT64_C(1) << 52;
+
+// This flag works around a driver bug by rewriting uses of row-major matrices
+// as column-major in ESSL 3.00 and greater shaders.
+const ShCompileOptions SH_REWRITE_ROW_MAJOR_MATRICES = UINT64_C(1) << 53;
 
 // Defines alternate strategies for implementing array index clamping.
 enum ShArrayIndexClampingStrategy
@@ -361,11 +383,13 @@ struct ShBuiltInResources
     int EXT_multisampled_render_to_texture;
     int EXT_YUV_target;
     int EXT_geometry_shader;
+    int EXT_gpu_shader5;
     int OES_texture_storage_multisample_2d_array;
     int OES_texture_3D;
     int ANGLE_texture_multisample;
     int ANGLE_multi_draw;
     int ANGLE_base_vertex_base_instance;
+    int WEBGL_video_texture;
 
     // Set to 1 to enable replacing GL_EXT_draw_buffers #extension directives
     // with GL_NV_draw_buffers in ESSL output. This flag can be used to emulate
@@ -525,26 +549,26 @@ namespace sh
 // Driver must call this first, once, before doing any other compiler operations.
 // If the function succeeds, the return value is true, else false.
 //
-ANGLE_EXPORT bool Initialize();
+bool Initialize();
 //
 // Driver should call this at shutdown.
 // If the function succeeds, the return value is true, else false.
 //
-ANGLE_EXPORT bool Finalize();
+bool Finalize();
 
 //
 // Initialize built-in resources with minimum expected values.
 // Parameters:
 // resources: The object to initialize. Will be comparable with memcmp.
 //
-ANGLE_EXPORT void InitBuiltInResources(ShBuiltInResources *resources);
+void InitBuiltInResources(ShBuiltInResources *resources);
 
 //
 // Returns the a concatenated list of the items in ShBuiltInResources as a null-terminated string.
 // This function must be updated whenever ShBuiltInResources is changed.
 // Parameters:
 // handle: Specifies the handle of the compiler to be used.
-ANGLE_EXPORT const std::string &GetBuiltInResourcesString(const ShHandle handle);
+const std::string &GetBuiltInResourcesString(const ShHandle handle);
 
 //
 // Driver calls these to create and destroy compiler objects.
@@ -557,11 +581,11 @@ ANGLE_EXPORT const std::string &GetBuiltInResourcesString(const ShHandle handle)
 //         SH_HLSL_3_0_OUTPUT or SH_HLSL_4_1_OUTPUT. Note: Each output type may only
 //         be supported in some configurations.
 // resources: Specifies the built-in resources.
-ANGLE_EXPORT ShHandle ConstructCompiler(sh::GLenum type,
-                                        ShShaderSpec spec,
-                                        ShShaderOutput output,
-                                        const ShBuiltInResources *resources);
-ANGLE_EXPORT void Destruct(ShHandle handle);
+ShHandle ConstructCompiler(sh::GLenum type,
+                           ShShaderSpec spec,
+                           ShShaderOutput output,
+                           const ShBuiltInResources *resources);
+void Destruct(ShHandle handle);
 
 //
 // Compiles the given shader source.
@@ -587,35 +611,35 @@ ANGLE_EXPORT void Destruct(ShHandle handle);
 // SH_VARIABLES: Extracts attributes, uniforms, and varyings.
 //               Can be queried by calling ShGetVariableInfo().
 //
-ANGLE_EXPORT bool Compile(const ShHandle handle,
+bool Compile(const ShHandle handle,
              const char *const shaderStrings[],
              size_t numStrings,
              ShCompileOptions compileOptions);
 
 // Clears the results from the previous compilation.
-ANGLE_EXPORT void ClearResults(const ShHandle handle);
+void ClearResults(const ShHandle handle);
 
 // Return the version of the shader language.
-ANGLE_EXPORT int GetShaderVersion(const ShHandle handle);
+int GetShaderVersion(const ShHandle handle);
 
 // Return the currently set language output type.
-ANGLE_EXPORT ShShaderOutput GetShaderOutputType(const ShHandle handle);
+ShShaderOutput GetShaderOutputType(const ShHandle handle);
 
 // Returns null-terminated information log for a compiled shader.
 // Parameters:
 // handle: Specifies the compiler
-ANGLE_EXPORT const std::string &GetInfoLog(const ShHandle handle);
+const std::string &GetInfoLog(const ShHandle handle);
 
 // Returns null-terminated object code for a compiled shader.
 // Parameters:
 // handle: Specifies the compiler
-ANGLE_EXPORT const std::string &GetObjectCode(const ShHandle handle);
+const std::string &GetObjectCode(const ShHandle handle);
 
 // Returns a (original_name, hash) map containing all the user defined names in the shader,
 // including variable names, function names, struct names, and struct field names.
 // Parameters:
 // handle: Specifies the compiler
-ANGLE_EXPORT const std::map<std::string, std::string> *GetNameHashingMap(const ShHandle handle);
+const std::map<std::string, std::string> *GetNameHashingMap(const ShHandle handle);
 
 // Shader variable inspection.
 // Returns a pointer to a list of variables of the designated type.
@@ -623,19 +647,19 @@ ANGLE_EXPORT const std::map<std::string, std::string> *GetNameHashingMap(const S
 // Returns NULL on failure.
 // Parameters:
 // handle: Specifies the compiler
-ANGLE_EXPORT const std::vector<sh::ShaderVariable> *GetUniforms(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::ShaderVariable> *GetVaryings(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::ShaderVariable> *GetInputVaryings(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::ShaderVariable> *GetOutputVaryings(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::ShaderVariable> *GetAttributes(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::ShaderVariable> *GetOutputVariables(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::InterfaceBlock> *GetInterfaceBlocks(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::InterfaceBlock> *GetUniformBlocks(const ShHandle handle);
-ANGLE_EXPORT const std::vector<sh::InterfaceBlock> *GetShaderStorageBlocks(const ShHandle handle);
-ANGLE_EXPORT sh::WorkGroupSize GetComputeShaderLocalGroupSize(const ShHandle handle);
+const std::vector<sh::ShaderVariable> *GetUniforms(const ShHandle handle);
+const std::vector<sh::ShaderVariable> *GetVaryings(const ShHandle handle);
+const std::vector<sh::ShaderVariable> *GetInputVaryings(const ShHandle handle);
+const std::vector<sh::ShaderVariable> *GetOutputVaryings(const ShHandle handle);
+const std::vector<sh::ShaderVariable> *GetAttributes(const ShHandle handle);
+const std::vector<sh::ShaderVariable> *GetOutputVariables(const ShHandle handle);
+const std::vector<sh::InterfaceBlock> *GetInterfaceBlocks(const ShHandle handle);
+const std::vector<sh::InterfaceBlock> *GetUniformBlocks(const ShHandle handle);
+const std::vector<sh::InterfaceBlock> *GetShaderStorageBlocks(const ShHandle handle);
+sh::WorkGroupSize GetComputeShaderLocalGroupSize(const ShHandle handle);
 // Returns the number of views specified through the num_views layout qualifier. If num_views is
 // not set, the function returns -1.
-ANGLE_EXPORT int GetVertexShaderNumViews(const ShHandle handle);
+int GetVertexShaderNumViews(const ShHandle handle);
 
 // Returns true if the passed in variables pack in maxVectors followingthe packing rules from the
 // GLSL 1.017 spec, Appendix A, section 7.
@@ -644,8 +668,8 @@ ANGLE_EXPORT int GetVertexShaderNumViews(const ShHandle handle);
 // Parameters:
 // maxVectors: the available rows of registers.
 // variables: an array of variables.
-ANGLE_EXPORT bool CheckVariablesWithinPackingLimits(int maxVectors,
-                                                    const std::vector<sh::ShaderVariable> &variables);
+bool CheckVariablesWithinPackingLimits(int maxVectors,
+                                       const std::vector<sh::ShaderVariable> &variables);
 
 // Gives the compiler-assigned register for a shader storage block.
 // The method writes the value to the output variable "indexOut".
@@ -654,9 +678,9 @@ ANGLE_EXPORT bool CheckVariablesWithinPackingLimits(int maxVectors,
 // handle: Specifies the compiler
 // shaderStorageBlockName: Specifies the shader storage block
 // indexOut: output variable that stores the assigned register
-ANGLE_EXPORT bool GetShaderStorageBlockRegister(const ShHandle handle,
-                                                const std::string &shaderStorageBlockName,
-                                                unsigned int *indexOut);
+bool GetShaderStorageBlockRegister(const ShHandle handle,
+                                   const std::string &shaderStorageBlockName,
+                                   unsigned int *indexOut);
 
 // Gives the compiler-assigned register for a uniform block.
 // The method writes the value to the output variable "indexOut".
@@ -665,13 +689,16 @@ ANGLE_EXPORT bool GetShaderStorageBlockRegister(const ShHandle handle,
 // handle: Specifies the compiler
 // uniformBlockName: Specifies the uniform block
 // indexOut: output variable that stores the assigned register
-ANGLE_EXPORT bool GetUniformBlockRegister(const ShHandle handle,
-                                          const std::string &uniformBlockName,
-                                          unsigned int *indexOut);
+bool GetUniformBlockRegister(const ShHandle handle,
+                             const std::string &uniformBlockName,
+                             unsigned int *indexOut);
+
+bool ShouldUniformBlockUseStructuredBuffer(const ShHandle handle,
+                                           const std::string &uniformBlockName);
 
 // Gives a map from uniform names to compiler-assigned registers in the default uniform block.
 // Note that the map contains also registers of samplers that have been extracted from structs.
-ANGLE_EXPORT const std::map<std::string, unsigned int> *GetUniformRegisterMap(const ShHandle handle);
+const std::map<std::string, unsigned int> *GetUniformRegisterMap(const ShHandle handle);
 
 // Sampler, image and atomic counters share registers(t type and u type),
 // GetReadonlyImage2DRegisterIndex and GetImage2DRegisterIndex return the first index into
@@ -693,6 +720,7 @@ GLenum GetGeometryShaderInputPrimitiveType(const ShHandle handle);
 GLenum GetGeometryShaderOutputPrimitiveType(const ShHandle handle);
 int GetGeometryShaderInvocations(const ShHandle handle);
 int GetGeometryShaderMaxVertices(const ShHandle handle);
+unsigned int GetShaderSharedMemorySize(const ShHandle handle);
 
 //
 // Helper function to identify specs that are based on the WebGL spec.
@@ -709,6 +737,43 @@ inline bool IsDesktopGLSpec(ShShaderSpec spec)
 {
     return spec == SH_GL_CORE_SPEC || spec == SH_GL_COMPATIBILITY_SPEC;
 }
+
+// Can't prefix with just _ because then we might introduce a double underscore, which is not safe
+// in GLSL (ESSL 3.00.6 section 3.8: All identifiers containing a double underscore are reserved for
+// use by the underlying implementation). u is short for user-defined.
+extern const char kUserDefinedNamePrefix[];
+
+namespace vk
+{
+
+// Specialization constant ids
+enum class SpecializationConstantId : uint32_t
+{
+    LineRasterEmulation = 0,
+
+    InvalidEnum = 1,
+    EnumCount   = 1,
+};
+
+// Interface block name containing the aggregate default uniforms
+extern const char kDefaultUniformsNameVS[];
+extern const char kDefaultUniformsNameTCS[];
+extern const char kDefaultUniformsNameTES[];
+extern const char kDefaultUniformsNameGS[];
+extern const char kDefaultUniformsNameFS[];
+extern const char kDefaultUniformsNameCS[];
+
+// Interface block and variable name containing driver uniforms
+extern const char kDriverUniformsBlockName[];
+extern const char kDriverUniformsVarName[];
+
+// Interface block array variable name used for atomic counter emulation
+extern const char kAtomicCountersVarName[];
+
+// Line raster emulation varying
+extern const char kLineRasterEmulationPosition[];
+
+}  // namespace vk
 }  // namespace sh
 
 #endif  // GLSLANG_SHADERLANG_H_
