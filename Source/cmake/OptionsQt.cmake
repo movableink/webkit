@@ -421,7 +421,7 @@ if (SQLITE3_SOURCE_DIR)
     set(SQLITE_LIBRARIES qtsqlite)
     set(SQLITE_FOUND 1)
 else ()
-    find_package(Sqlite REQUIRED)
+    find_package(SQLite3 REQUIRED)
 endif ()
 
 find_package(HarfBuzz 0.9.18 REQUIRED COMPONENTS ICU)
@@ -495,7 +495,7 @@ if (ENABLE_TEST_SUPPORT)
     endif ()
 endif ()
 
-find_package(WebP)
+find_package(WebP REQUIRED COMPONENTS demux)
 
 if (WEBP_FOUND)
     SET_AND_EXPOSE_TO_BUILD(USE_WEBP 1)
