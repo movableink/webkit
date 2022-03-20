@@ -34,6 +34,7 @@
 #include "IntRect.h"
 #include "NativeImageQt.h"
 #include "StillImageQt.h"
+#include "ImageBufferDataQt.h"
 
 #include <QImage>
 #include <QPaintEngine>
