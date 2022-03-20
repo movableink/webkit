@@ -93,6 +93,10 @@
 #define BPLATORM_PLAYSTATION 1
 #endif
 
+#if defined(BUILDING_QT__)
+#define BPLATFORM_QT 1
+#endif
+
 /* ==== Policy decision macros: these define policy choices for a particular port. ==== */
 
 /* BUSE() - use a particular third-party library or optional OS service */
@@ -291,7 +295,7 @@
 #define BUSE_OS_LOG 1
 #endif
 
-#if !defined(BUSE_EXPORT_MACROS) && (BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY) || BPLATFORM(PLAYSTATION))
+#if !defined(BUSE_EXPORT_MACROS) && (BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY) || BPLATFORM(PLAYSTATION) || BPLATFORM(QT))
 #define BUSE_EXPORT_MACROS 1
 #endif
 
