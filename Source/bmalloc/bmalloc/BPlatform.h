@@ -110,6 +110,10 @@
 
 #define BENABLE(WTF_FEATURE) (defined BENABLE_##WTF_FEATURE && BENABLE_##WTF_FEATURE)
 
+#if defined(BUILDING_QT__)
+#define BPLATFORM_QT 1
+#endif
+
 /* ==== Policy decision macros: these define policy choices for a particular port. ==== */
 
 /* BUSE() - use a particular third-party library or optional OS service */
