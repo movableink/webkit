@@ -104,7 +104,7 @@ list(APPEND WebKit_SOURCES
     UIProcess/BackingStore.cpp
     UIProcess/DefaultUndoController.cpp
     UIProcess/LegacySessionStateCodingNone.cpp
-    UIProcess/WebInspectorProxy.cpp
+    UIProcess/Inspector/WebInspectorProxy.cpp
 
     UIProcess/API/C/qt/WKIconDatabaseQt.cpp
 
