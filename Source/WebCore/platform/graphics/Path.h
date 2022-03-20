@@ -275,8 +275,6 @@ private:
 
 #if USE(CAIRO)
     RefPtr<cairo_t> m_path;
-#else
-    mutable PlatformPathStorageType m_path;
 #endif
 
 #if USE(DIRECT2D)
