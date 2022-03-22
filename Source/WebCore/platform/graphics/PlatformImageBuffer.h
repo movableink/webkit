@@ -28,7 +28,9 @@
 #include "ConcreteImageBuffer.h"
 #include "DisplayListImageBuffer.h"
 
-#if USE(CG)
+#if PLATFORM(QT)
+#include "ImageBufferQtBackend.h"
+#elif USE(CG)
 #include "ImageBufferCGBitmapBackend.h"
 #elif USE(DIRECT2D)
 #include "ImageBufferDirect2DBackend.h"
@@ -44,7 +46,9 @@
 
 namespace WebCore {
 
-#if USE(CG)
+#if PLATFORM(QT)
+using UnacceleratedImageBufferBackend = ImageBufferQtBackend;
+#elif USE(CG)
 using UnacceleratedImageBufferBackend = ImageBufferCGBitmapBackend;
 #elif USE(DIRECT2D)
 using UnacceleratedImageBufferBackend = ImageBufferDirect2DBackend;

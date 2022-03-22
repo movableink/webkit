@@ -52,8 +52,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/graphics/MediaPlayerPrivate.h
 
-    platform/graphics/qt/ImageBufferDataQt.h
     platform/graphics/qt/MediaPlayerPrivateQt.h
+    platform/graphics/qt/ImageBufferQtBackend.h
 
     platform/mock/GeolocationClientMock.h
 
@@ -133,9 +133,8 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/GradientQt.cpp
     platform/graphics/qt/GraphicsContextQt.cpp
     platform/graphics/qt/IconQt.cpp
-    platform/graphics/qt/ImageBufferDataQt.cpp
-    platform/graphics/qt/ImageBufferQt.cpp
     platform/graphics/qt/ImageQt.cpp
+    platform/graphics/qt/ImageBufferQtBackend.cpp
     platform/graphics/qt/IntPointQt.cpp
     platform/graphics/qt/IntRectQt.cpp
     platform/graphics/qt/IntSizeQt.cpp

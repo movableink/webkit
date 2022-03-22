@@ -25,7 +25,9 @@
 
 #pragma once
 
-#if USE(CG)
+#if PLATFORM(QT)
+#include "ImageBufferQtBackend.h"
+#elif USE(CG)
 #include "ImageBufferCGBackend.h"
 #elif USE(DIRECT2D)
 #include "ImageBufferDirect2DBackend.h"
@@ -35,7 +37,9 @@
 
 namespace WebCore {
 
-#if USE(CG)
+#if PLATFORM(QT)
+using PlatformImageBufferBackend = ImageBufferQtBackend;
+#elif USE(CG)
 using PlatformImageBufferBackend = ImageBufferCGBackend;
 #elif USE(DIRECT2D)
 using PlatformImageBufferBackend = ImageBufferDirect2DBackend;
