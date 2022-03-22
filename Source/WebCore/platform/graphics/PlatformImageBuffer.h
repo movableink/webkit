@@ -28,7 +28,9 @@
 #include "ConcreteImageBuffer.h"
 #include "DisplayListImageBuffer.h"
 
-#if USE(CG)
+#if PLATFORM(QT)
+#include "ImageBufferQtBackend.h"
+#elif USE(CG)
 #include "ImageBufferCGBitmapBackend.h"
 #elif USE(CAIRO)
 #include "ImageBufferCairoImageSurfaceBackend.h"
@@ -40,7 +42,9 @@
 
 namespace WebCore {
 
-#if USE(CG)
+#if PLATFORM(QT)
+using UnacceleratedImageBufferBackend = ImageBufferQtBackend;
+#elif USE(CG)
 using UnacceleratedImageBufferBackend = ImageBufferCGBitmapBackend;
 #elif USE(CAIRO)
 using UnacceleratedImageBufferBackend = ImageBufferCairoImageSurfaceBackend;

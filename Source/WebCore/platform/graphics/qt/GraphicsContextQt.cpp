@@ -48,7 +48,6 @@
 #include "DisplayListRecorder.h"
 #include "FloatConversion.h"
 #include "ImageBuffer.h"
-#include "ImageBufferDataQt.h"
 #include "NativeImageQt.h"
 #include "Path.h"
 #include "Pattern.h"
@@ -978,7 +977,7 @@ void GraphicsContext::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& de
         return;
 
     IntRect rect = enclosingIntRect(destRect);
-    buffer.m_data.m_impl->clip(*this, rect);
+    buffer.context().clip(rect);
 }
 
 void drawFocusRingForPath(QPainter* p, const QPainterPath& path, const Color& color, bool antiAliasing)

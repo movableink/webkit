@@ -25,7 +25,9 @@
 
 #pragma once
 
-#if USE(CG)
+#if PLATFORM(QT)
+#include "ImageBufferQtBackend.h"
+#elif USE(CG)
 #include "ImageBufferCGBackend.h"
 #elif USE(CAIRO)
 #include "ImageBufferCairoBackend.h"
@@ -33,7 +35,9 @@
 
 namespace WebCore {
 
-#if USE(CG)
+#if PLATFORM(QT)
+using PlatformImageBufferBackend = ImageBufferQtBackend;
+#elif USE(CG)
 using PlatformImageBufferBackend = ImageBufferCGBackend;
 #elif USE(CAIRO)
 using PlatformImageBufferBackend = ImageBufferCairoBackend;
