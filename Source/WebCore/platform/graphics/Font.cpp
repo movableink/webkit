@@ -499,14 +499,9 @@ RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, floa
 }
 
 #if !PLATFORM(COCOA)
-void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningIndex, bool enableKerning, bool, const AtomString&) const
+void Font::applyTransforms(GlyphBuffer&, unsigned, bool enableKerning, bool, const AtomString&) const
 {
-#if PLATFORM(QT)
-    QRawFont::LayoutFlags flags = enableKerning ? QRawFont::KernedAdvances : QRawFont::SeparateAdvances;
-    m_platformData.rawFont().advancesForGlyphIndexes(glyphBuffer, advances, glyphBuffer.size(), flags);
-#else
     UNUSED_PARAM(enableKerning);
-#endif
 }
 #endif
 

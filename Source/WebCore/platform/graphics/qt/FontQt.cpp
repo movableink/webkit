@@ -133,4 +133,10 @@ void Font::platformDestroy()
 {
 }
 
+void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningIndex, bool enableKerning, bool, const AtomString&) const
+{
+    QRawFont::LayoutFlags flags = enableKerning ? QRawFont::KernedAdvances : QRawFont::SeparateAdvances;
+    m_platformData.rawFont().advancesForGlyphIndexes(glyphBuffer.glyphs(beginningIndex), glyphBuffer.advances(beginningIndex), glyphBuffer.size(), flags);
+}
+
 }
