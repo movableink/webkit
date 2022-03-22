@@ -59,7 +59,6 @@
 #include <WebCore/HTMLAppletElement.h>
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/HTTPParsers.h>
-#include <WebCore/HTTPStatusCodes.h>
 #include <WebCore/HitTestResult.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MouseEvent.h>
