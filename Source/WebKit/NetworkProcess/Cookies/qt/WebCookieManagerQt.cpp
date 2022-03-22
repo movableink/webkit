@@ -25,18 +25,15 @@
 
 #include "config.h"
 #include "WebCookieManager.h"
+#include <WebCore/HTTPCookieAcceptPolicy.h>
 
 namespace WebKit {
 
-void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy)
-{
-    // FIXME: Not implemented.
-}
+using namespace WebCore;
 
-HTTPCookieAcceptPolicy WebCookieManager::platformGetHTTPCookieAcceptPolicy()
+void WebCookieManager::platformSetHTTPCookieAcceptPolicy(WebCore::HTTPCookieAcceptPolicy)
 {
     // FIXME: Not implemented.
-    return HTTPCookieAcceptPolicy();
 }
 
 } // namespace WebKit

@@ -69,6 +69,8 @@ list(APPEND WebKit_SOURCES
     NetworkProcess/qt/NetworkSessionQt.cpp
     NetworkProcess/qt/NetworkDataTaskQt.cpp
 
+    NetworkProcess/Cookies/qt/WebCookieManagerQt.cpp
+
     Platform/qt/LoggingQt.cpp
     Platform/qt/ModuleQt.cpp
 
@@ -173,8 +175,6 @@ list(APPEND WebKit_SOURCES
     UIProcess/qt/WebPopupMenuProxyQt.cpp
     UIProcess/qt/WebPreferencesQt.cpp
     UIProcess/qt/WebProcessPoolQt.cpp
-
-    WebProcess/Cookies/qt/WebCookieManagerQt.cpp
 
     WebProcess/InjectedBundle/qt/InjectedBundleQt.cpp
 
