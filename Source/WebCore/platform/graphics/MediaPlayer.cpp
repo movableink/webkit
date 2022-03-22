@@ -1601,7 +1601,7 @@ MediaPlayerPrivateQt* MediaPlayer::qtMediaPlayer() const
 }
 #endif
 
-bool MediaPlayer::performTaskAtMediaTime(WTF::Function<void()>&& task, const MediaTime time)
+bool MediaPlayer::performTaskAtMediaTime(WTF::Function<void()>&& task, const MediaTime &time)
 {
     return m_private->performTaskAtMediaTime(WTFMove(task), time);
 }
