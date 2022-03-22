@@ -441,10 +441,6 @@ void QtPageClient::isPlayingAudioDidChange()
 {
 }
 
-void QtPageClient::didFinishProcessingAllPendingMouseEvents()
-{
-}
-
 WebCore::UserInterfaceLayoutDirection QtPageClient::userInterfaceLayoutDirection()
 {
 }
