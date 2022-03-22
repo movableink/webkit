@@ -58,7 +58,7 @@ bool Data::apply(const Function<bool (const uint8_t*, size_t)>& applier) const
     return false;
 }
 
-Data Data::adoptMap(void* map, size_t size, int fd)
+Data Data::adoptMap(FileSystem::MappedFileData&& mappedFile, FileSystem::PlatformFileHandle fd)
 {
     return Data();
 }
