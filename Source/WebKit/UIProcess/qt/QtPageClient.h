@@ -149,7 +149,6 @@ public:
 #endif
     void isPlayingAudioWillChange() override;
     void isPlayingAudioDidChange() override;
-    void didFinishProcessingAllPendingMouseEvents() override;
     WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() override;
     void requestDOMPasteAccess(const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) override;
 #if ENABLE(VIDEO) && USE(GSTREAMER)
