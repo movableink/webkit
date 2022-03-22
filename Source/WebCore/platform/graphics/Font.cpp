@@ -546,7 +546,7 @@ RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, floa
     return platformCreateScaledFont(fontDescription, scaleFactor);
 }
 
-#if !USE(CORE_TEXT)
+#if !USE(CORE_TEXT) && !PLATFORM(QT)
 void Font::applyTransforms(GlyphBuffer&, unsigned, bool enableKerning, bool, const AtomString&) const
 {
     UNUSED_PARAM(enableKerning);
