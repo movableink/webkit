@@ -5639,7 +5639,7 @@ void WebPage::setComposition(const String& text, const Vector<CompositionUnderli
         return;
 
     Ref<Frame> protector(*targetFrame);
-    targetFrame->editor().setComposition(text, underlines, selectionRange.location, selectionRange.location + selectionRange.length);
+    targetFrame->editor().setComposition(text, underlines, { }, selectionRange.location, selectionRange.location + selectionRange.length);
 }
 #endif
 
