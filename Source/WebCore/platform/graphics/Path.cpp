@@ -169,6 +169,7 @@ void Path::addBeziersForRoundedRect(const FloatRect& rect, const FloatSize& topL
     closeSubpath();
 }
 
+#if !PLATFORM(QT)
 void Path::apply(const PathApplierFunction& function) const
 {
     if (isNull())
@@ -266,6 +267,8 @@ FloatPoint Path::currentPoint() const
     return currentPointSlowCase();
 }
 
+#endif // !PLATFORM(QT)
+
 size_t Path::elementCount() const
 {
 #if ENABLE(INLINE_PATH_DATA)
@@ -278,6 +281,8 @@ size_t Path::elementCount() const
 
     return elementCountSlowCase();
 }
+
+#if !PLATFORM(QT)
 
 void Path::addArc(const FloatPoint& point, float radius, float startAngle, float endAngle, bool anticlockwise)
 {
@@ -394,6 +399,8 @@ FloatRect Path::fastBoundingRect() const
 
     return fastBoundingRectSlowCase();
 }
+
+#endif // !PLATFORM(QT)
 
 #if ENABLE(INLINE_PATH_DATA)
 
