@@ -547,14 +547,9 @@ RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, floa
 }
 
 #if !USE(CORE_TEXT)
-void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningIndex, bool enableKerning, bool, const AtomString&) const
+void Font::applyTransforms(GlyphBuffer&, unsigned, bool enableKerning, bool, const AtomString&) const
 {
-#if PLATFORM(QT)
-    QRawFont::LayoutFlags flags = enableKerning ? QRawFont::KernedAdvances : QRawFont::SeparateAdvances;
-    m_platformData.rawFont().advancesForGlyphIndexes(glyphBuffer, advances, glyphBuffer.size(), flags);
-#else
-    return makeGlyphBufferAdvance();
-#endif
+    UNUSED_PARAM(enableKerning);
 }
 #endif
 
