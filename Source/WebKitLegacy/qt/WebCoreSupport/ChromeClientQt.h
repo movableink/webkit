@@ -138,7 +138,7 @@ public:
     // This is a hook for WebCore to tell us what we need to do with the GraphicsLayers.
     void attachRootGraphicsLayer(Frame&, GraphicsLayer*) final;
     void setNeedsOneShotDrawingSynchronization() final;
-    void scheduleCompositingLayerFlush() final;
+    void scheduleRenderingUpdate() final;
     CompositingTriggerFlags allowedCompositingTriggers() const final;
     bool allowsAcceleratedCompositing() const final;
 
