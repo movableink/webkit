@@ -30,6 +30,7 @@
 #include "InitWebCoreQt.h"
 #include "InspectorClientQt.h"
 #include "InspectorServerQt.h"
+#include "MediaRecorderProvider.h"
 #include "NotificationPresenterClientQt.h"
 #include "PluginDatabase.h"
 #include "PluginInfoProviderQt.h"
@@ -255,14 +256,15 @@ void QWebPageAdapter::initializeWebCorePage()
         CacheStorageProvider::create(),
         BackForwardList::create(*this),
         CookieJar::create(storageProvider.copyRef()),
-        makeUniqueRef<ProgressTrackerClientQt>(this)
+        makeUniqueRef<ProgressTrackerClientQt>(this),
+        makeUniqueRef<FrameLoaderClientQt>(),
+        makeUniqueRef<MediaRecorderProvider>()
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
     pageConfiguration.chromeClient = new ChromeClientQt(this);
     pageConfiguration.contextMenuClient = new ContextMenuClientQt();
     pageConfiguration.dragClient = std::make_unique<DragClientQt>(pageConfiguration.chromeClient);
     pageConfiguration.inspectorClient = new InspectorClientQt(this);
-    pageConfiguration.loaderClientForMainFrame = new FrameLoaderClientQt();
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
     pageConfiguration.pluginInfoProvider = &WebKit::PluginInfoProviderQt::singleton();
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
