@@ -112,7 +112,7 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(Optional<HasInsecureContent>) override;
+    void dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const WebCore::ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
@@ -152,16 +152,16 @@ public:
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
     void didDetectXSS(const URL&, bool didBlockEntirePage) override;
 
-    ResourceError cancelledError(const ResourceRequest&) override;
-    ResourceError blockedError(const ResourceRequest&) override;
-    ResourceError cannotShowURLError(const ResourceRequest&) override;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) override;
+    ResourceError cancelledError(const ResourceRequest&) const override;
+    ResourceError blockedError(const ResourceRequest&) const override;
+    ResourceError cannotShowURLError(const ResourceRequest&) const override;
+    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const override;
 
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) override;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) override;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) override;
+    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
+    ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
-    bool shouldFallBack(const ResourceError&) override;
+    bool shouldFallBack(const ResourceError&) const override;
 
     bool canHandleRequest(const WebCore::ResourceRequest&) const override;
     bool canShowMIMEType(const String& MIMEType) const override;
@@ -179,7 +179,7 @@ public:
     Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) override;
     void setTitle(const StringWithDirection&, const URL&) override;
 
-    String userAgent(const WTF::URL&) override;
+    String userAgent(const WTF::URL&) const override;
 
     void savePlatformDataToCachedFrame(WebCore::CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(WebCore::CachedFrame*) override;
