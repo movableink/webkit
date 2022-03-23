@@ -589,7 +589,7 @@ void ChromeClientQt::setNeedsOneShotDrawingSynchronization()
 #endif
 }
 
-void ChromeClientQt::scheduleCompositingLayerFlush()
+void ChromeClientQt::scheduleRenderingUpdate()
 {
 #if USE(TEXTURE_MAPPER)
     // we want the layers to synchronize ASAP
