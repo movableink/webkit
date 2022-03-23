@@ -207,7 +207,7 @@ public:
 
     void willReplaceMultipartContent() override;
     void didReplaceMultipartContent() override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest &) override;
+    ResourceError blockedByContentBlockerError(const ResourceRequest &) const override;
     void updateCachedDocumentLoader(DocumentLoader &) override;
     void prefetchDNS(const WTF::String &) override;
 
