@@ -207,6 +207,12 @@ FrameLoaderClientQt::FrameLoaderClientQt()
 
 FrameLoaderClientQt::~FrameLoaderClientQt()
 {
+    // Delete QWebFrame (handle()), which owns QWebFramePrivate, which
+    // _is_ a QWebFrameAdapter.
+    if (m_webFrame)
+        delete m_webFrame->handle();
+    m_frame = 0;
+    m_webFrame = 0;
 }
 
 void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, Frame* frame)
@@ -638,18 +644,6 @@ void FrameLoaderClientQt::dispatchDidReceiveIcon()
 {
     if (m_webFrame)
         m_webFrame->emitIconChanged();
-}
-
-void FrameLoaderClientQt::frameLoaderDestroyed()
-{
-    // Delete QWebFrame (handle()), which owns QWebFramePrivate, which
-    // _is_ a QWebFrameAdapter.
-    if (m_webFrame)
-        delete m_webFrame->handle();
-    m_frame = 0;
-    m_webFrame = 0;
-
-    delete this;
 }
 
 bool FrameLoaderClientQt::canHandleRequest(const WebCore::ResourceRequest&) const
