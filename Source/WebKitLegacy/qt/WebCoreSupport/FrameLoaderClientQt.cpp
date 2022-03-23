@@ -1111,10 +1111,10 @@ void FrameLoaderClientQt::dispatchDecidePolicyForResponse(const WebCore::Resourc
 {
     // We need to call directly here.
     switch (response.httpStatusCode()) {
-    case HTTPResetContent:
+    case 205:
         // FIXME: a 205 response requires that the requester reset the document view.
         // Fallthrough
-    case HTTPNoContent:
+    case 204:
         function(PolicyAction::Ignore, id);
         return;
     }
