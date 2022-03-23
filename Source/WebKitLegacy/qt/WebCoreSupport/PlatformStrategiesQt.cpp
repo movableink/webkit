@@ -34,13 +34,26 @@
 
 #include <QCoreApplication>
 #include <QLocale>
+#include <WebCore/AudioDestination.h>
 #include <WebCore/BlobRegistryImpl.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/Page.h>
+#include <WebCore/MediaStrategy.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 
 using namespace WebCore;
+
+class WebMediaStrategy final : public MediaStrategy {
+private:
+#if ENABLE(WEB_AUDIO)
+    std::unique_ptr<AudioDestination> createAudioDestination(AudioIOCallback& callback, const String& inputDeviceId,
+        unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate) override
+    {
+        return AudioDestination::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
+    }
+#endif
+};
 
 void PlatformStrategiesQt::initialize()
 {
@@ -56,6 +69,11 @@ PlatformStrategiesQt::PlatformStrategiesQt()
 LoaderStrategy* PlatformStrategiesQt::createLoaderStrategy()
 {
     return new WebResourceLoadScheduler;
+}
+
+MediaStrategy* PlatformStrategiesQt::createMediaStrategy()
+{
+    return new WebMediaStrategy;
 }
 
 PasteboardStrategy* PlatformStrategiesQt::createPasteboardStrategy()
