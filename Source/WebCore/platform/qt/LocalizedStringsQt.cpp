@@ -542,6 +542,13 @@ String AXFigureText()
     return String();
 }
 
+String AXARIAContentGroupText(const String&)
+{
+    notImplemented();
+    return String();
+}
+
+
 String autoFillStrongPasswordLabel()
 {
     notImplemented();

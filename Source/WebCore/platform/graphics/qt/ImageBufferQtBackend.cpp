@@ -35,6 +35,7 @@
 #include "GraphicsContext.h"
 #include "ColorUtilities.h"
 #include "IntRect.h"
+#include "MIMETypeRegistry.h"
 #include <wtf/IsoMallocInlines.h>
 
 #include <QImage>
