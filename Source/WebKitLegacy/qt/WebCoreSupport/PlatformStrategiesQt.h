@@ -43,9 +43,10 @@ public:
 private:
     PlatformStrategiesQt();
 
-    WebCore::LoaderStrategy* createLoaderStrategy() final;
-    WebCore::PasteboardStrategy* createPasteboardStrategy() final;
-    WebCore::BlobRegistry* createBlobRegistry() final;
+    WebCore::LoaderStrategy* createLoaderStrategy() override;
+    WebCore::PasteboardStrategy* createPasteboardStrategy() override;
+    WebCore::BlobRegistry* createBlobRegistry() override;
+    WebCore::MediaStrategy* createMediaStrategy() override;
 };
 
 #endif // PlatformStrategiesQt_h
