@@ -190,7 +190,7 @@ static WebCore::FrameLoadRequest frameLoadRequest(const QUrl &url, WebCore::Fram
         { },
         LockHistory::No,
         LockBackForwardList::No,
-        MaybeSendReferrer,
+        ReferrerPolicy::EmptyString,
         // FIXME: Are these arguments right for all call sites?
         AllowNavigationToInvalidURL::Yes,
         NewFrameOpenerPolicy::Allow,
