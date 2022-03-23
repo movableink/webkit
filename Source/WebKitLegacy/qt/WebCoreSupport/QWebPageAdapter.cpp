@@ -62,6 +62,7 @@
 #include <WebCore/BackForwardController.h>
 #include <WebCore/CacheStorageProvider.h>
 #include <WebCore/Chrome.h>
+#include <WebCore/CompositionHighlight.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuController.h>
 #include <WebCore/CookieJar.h>
@@ -739,12 +740,12 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
             }
 
             if (!ev->preeditString().isEmpty())
-                editor.setComposition(ev->preeditString(), underlines, qMin(a.start, (a.start + a.length)), qMax(a.start, (a.start + a.length)));
+                editor.setComposition(ev->preeditString(), underlines, { }, qMin(a.start, (a.start + a.length)), qMax(a.start, (a.start + a.length)));
             else {
                 // If we are in the middle of a composition, an empty pre-edit string and a selection of zero
                 // cancels the current composition
                 if (editor.hasComposition() && !(a.start + a.length))
-                    editor.setComposition(QString(), underlines, 0, 0);
+                    editor.setComposition(QString(), underlines, { }, 0, 0);
             }
             break;
         }
@@ -766,7 +767,7 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
         else
             editor.insertText(ev->commitString(), 0);
     } else if (!hasSelection && !ev->preeditString().isEmpty())
-        editor.setComposition(ev->preeditString(), underlines, 0, 0);
+        editor.setComposition(ev->preeditString(), underlines, { }, 0, 0);
     else if (ev->preeditString().isEmpty() && editor.hasComposition())
         editor.confirmComposition(String());
 
