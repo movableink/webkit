@@ -48,7 +48,7 @@ public:
     ~GeolocationClientQt() override;
 
     void geolocationDestroyed() override;
-    void startUpdating() override;
+    void startUpdating(const String& authorizationToken) override;
     void stopUpdating() override;
 
     void setEnableHighAccuracy(bool) override;
