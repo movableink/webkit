@@ -113,6 +113,9 @@ public:
 
     void inspectorClientDestroyed();
 
+    bool supportsDockSide(DockSide) final { return false; };
+    void setForcedAppearance(Appearance) final { };
+
 private:
     void updateWindowTitle();
     void destroyInspectorView(bool notifyInspectorController);
