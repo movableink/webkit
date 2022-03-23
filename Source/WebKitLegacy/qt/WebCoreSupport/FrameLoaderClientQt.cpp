@@ -363,7 +363,7 @@ void FrameLoaderClientQt::dispatchDidNavigateWithinPage()
     if (!loaderCompleted)
         return;
 
-    dispatchDidCommitLoad(WTF::nullopt); // QTFIXME
+    dispatchDidCommitLoad(WTF::nullopt, WTF::nullopt); // QTFIXME
     dispatchDidFinishLoad();
 }
 
