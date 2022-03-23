@@ -703,6 +703,15 @@ inline static void fillPathStroke(QPainter* painter, const QPainterPath& platfor
     }
 }
 
+void GraphicsContext::drawNativeImage(const NativeImagePtr& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+{
+    if (paintingDisabled())
+        return;
+
+   ASSERT(hasPlatformContext());
+   WebCore::drawNativeImage(image, *this, destRect, srcRect, IntSize(0, 0), options);
+}
+
 void GraphicsContext::strokePath(const Path& path)
 {
     if (paintingDisabled())
