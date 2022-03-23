@@ -437,7 +437,7 @@ void FrameLoaderClientQt::dispatchDidReceiveTitle(const StringWithDirection& tit
 }
 
 
-void FrameLoaderClientQt::dispatchDidCommitLoad(Optional<HasInsecureContent>)
+void FrameLoaderClientQt::dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>)
 {
     if (dumpFrameLoaderCallbacks)
         printf("%s - didCommitLoadForFrame\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
@@ -627,7 +627,7 @@ void FrameLoaderClientQt::setTitle(const StringWithDirection& title, const URL& 
 }
 
 
-String FrameLoaderClientQt::userAgent(const URL& url)
+String FrameLoaderClientQt::userAgent(const URL& url) const
 {
     if (m_webFrame)
         return m_webFrame->pageAdapter->userAgentForUrl(url).remove(QLatin1Char('\n')).remove(QLatin1Char('\r'));
@@ -808,7 +808,7 @@ void FrameLoaderClientQt::committedLoad(WebCore::DocumentLoader* loader, const c
     }
 }
 
-WebCore::ResourceError FrameLoaderClientQt::cancelledError(const WebCore::ResourceRequest& request)
+WebCore::ResourceError FrameLoaderClientQt::cancelledError(const WebCore::ResourceRequest& request) const
 {
     ResourceError error = ResourceError("QtNetwork", QNetworkReply::OperationCanceledError, request.url(),
         QCoreApplication::translate("QWebFrame", "Request cancelled", 0), ResourceError::Type::Cancellation);
@@ -827,44 +827,44 @@ enum {
     WebKitErrorPluginWillHandleLoad =                           203
 };
 
-WebCore::ResourceError FrameLoaderClientQt::blockedError(const WebCore::ResourceRequest& request)
+WebCore::ResourceError FrameLoaderClientQt::blockedError(const WebCore::ResourceRequest& request) const
 {
     return ResourceError("WebKitErrorDomain", WebKitErrorCannotUseRestrictedPort, request.url(),
         QCoreApplication::translate("QWebFrame", "Request blocked", 0));
 }
 
 
-WebCore::ResourceError FrameLoaderClientQt::cannotShowURLError(const WebCore::ResourceRequest& request)
+WebCore::ResourceError FrameLoaderClientQt::cannotShowURLError(const WebCore::ResourceRequest& request) const
 {
     return ResourceError("WebKitErrorDomain", WebKitErrorCannotShowURL, request.url(),
         QCoreApplication::translate("QWebFrame", "Cannot show URL", 0));
 }
 
-WebCore::ResourceError FrameLoaderClientQt::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request)
+WebCore::ResourceError FrameLoaderClientQt::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
 {
     return ResourceError("WebKitErrorDomain", WebKitErrorFrameLoadInterruptedByPolicyChange, request.url(),
         QCoreApplication::translate("QWebFrame", "Frame load interrupted by policy change", 0));
 }
 
-WebCore::ResourceError FrameLoaderClientQt::cannotShowMIMETypeError(const WebCore::ResourceResponse& response)
+WebCore::ResourceError FrameLoaderClientQt::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
 {
     return ResourceError("WebKitErrorDomain", WebKitErrorCannotShowMIMEType, response.url(),
         QCoreApplication::translate("QWebFrame", "Cannot show mimetype", 0));
 }
 
-WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore::ResourceResponse& response)
+WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
 {
     return ResourceError("QtNetwork", QNetworkReply::ContentNotFoundError, response.url(),
         QCoreApplication::translate("QWebFrame", "File does not exist", 0));
 }
 
-WebCore::ResourceError FrameLoaderClientQt::pluginWillHandleLoadError(const WebCore::ResourceResponse& response)
+WebCore::ResourceError FrameLoaderClientQt::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
 {
     return ResourceError("WebKit", WebKitErrorPluginWillHandleLoad, response.url(),
         QCoreApplication::translate("QWebFrame", "Loading is handled by the media engine", 0));
 }
 
-bool FrameLoaderClientQt::shouldFallBack(const WebCore::ResourceError& error)
+bool FrameLoaderClientQt::shouldFallBack(const WebCore::ResourceError& error) const
 {
     using Error = NeverDestroyed<const ResourceError>;
     static Error cancelledError(this->cancelledError(ResourceRequest()));
@@ -1528,7 +1528,7 @@ void FrameLoaderClientQt::didReplaceMultipartContent()
     notImplemented();
 }
 
-WebCore::ResourceError FrameLoaderClientQt::blockedByContentBlockerError(const WebCore::ResourceRequest &)
+WebCore::ResourceError FrameLoaderClientQt::blockedByContentBlockerError(const WebCore::ResourceRequest &) const
 {
     notImplemented();
     return WebCore::ResourceError();
