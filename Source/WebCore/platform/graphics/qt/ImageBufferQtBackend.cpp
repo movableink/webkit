@@ -112,6 +112,14 @@ RefPtr<Image> ImageBufferQtBackend::copyImage(BackingStoreCopy copyBehavior, Pre
     return StillImage::createForRendering(&m_nativeImage);
 }
 
+NativeImagePtr ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
+{
+    if (copyBehavior == CopyBackingStore)
+        return m_nativeImage.copy();
+
+    return QImage(m_nativeImage);
+}
+
 void ImageBufferQtBackend::draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) {
     if (&destContext == &context()) {
         RefPtr<Image> copy = copyImage();
