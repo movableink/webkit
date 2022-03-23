@@ -465,7 +465,7 @@ list(APPEND WebCoreTestSupport_LIBRARIES
 
 if (HAVE_FONTCONFIG)
     list(APPEND WebCoreTestSupport_LIBRARIES
-        ${FONTCONFIG_LIBRARIES}
+        Fontconfig::Fontconfig
     )
 endif ()
 
