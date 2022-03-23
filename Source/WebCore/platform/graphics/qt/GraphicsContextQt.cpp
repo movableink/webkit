@@ -1487,7 +1487,7 @@ void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendM
     if (paintingDisabled())
         return;
 
-    ASSERT(op == WebCore::CompositeSourceOver || blendMode == WebCore::BlendMode::Normal);
+    ASSERT(op == WebCore::CompositeOperator::SourceOver || blendMode == WebCore::BlendMode::Normal);
 
     if (op == WebCore::CompositeOperator::SourceOver)
         m_data->p()->setCompositionMode(toQtCompositionMode(blendMode));
