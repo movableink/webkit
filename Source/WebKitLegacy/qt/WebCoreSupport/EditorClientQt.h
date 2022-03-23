@@ -102,7 +102,7 @@ public:
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
     void willSetInputMethodState() override;
-    void setInputMethodState(bool enabled) override;
+    void setInputMethodState(Element*) override;
     TextCheckerClient* textChecker() override { return &m_textCheckerClient; }
 
     bool supportsGlobalSelection() override;

@@ -587,8 +587,9 @@ void EditorClientQt::willSetInputMethodState()
 {
 }
 
-void EditorClientQt::setInputMethodState(bool active)
+void EditorClientQt::setInputMethodState(WebCore::Element* element)
 {
+    bool active = element && element->shouldUseInputMethod();
     QWebPageClient* webPageClient = m_page->client.data();
     if (webPageClient) {
         Qt::InputMethodHints hints;
