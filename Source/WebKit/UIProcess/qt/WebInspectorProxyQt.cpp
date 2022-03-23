@@ -98,6 +98,11 @@ void WebInspectorProxy::platformSetAttachedWindowWidth(unsigned)
     notImplemented();
 }
 
+void WebInspectorProxy::platformSetForcedAppearance(WebCore::InspectorFrontendClient::Appearance)
+{
+    notImplemented();
+}
+
 void WebKit::WebInspectorProxy::platformStartWindowDrag()
 {
     notImplemented();
