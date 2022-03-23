@@ -195,14 +195,14 @@ void WebPreferences::registerDefaultUInt32ValueForKey(const String& key, uint32_
         m_store.setUInt32ValueForKey(key, userValue);
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(QT)
 void WebPreferences::platformInitializeStore()
 {
     notImplemented();
 }
 #endif
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !PLATFORM(QT)
 void WebPreferences::platformUpdateStringValueForKey(const String&, const String&)
 {
     notImplemented();

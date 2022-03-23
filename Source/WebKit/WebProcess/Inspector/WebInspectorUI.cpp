@@ -413,7 +413,7 @@ String WebInspectorUI::targetProductVersion() const
     return m_debuggableInfo.targetProductVersion;
 }
 
-#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
 bool WebInspectorUI::canSave()
 {
     notImplemented();

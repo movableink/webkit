@@ -71,6 +71,8 @@ void WebContextMenuClient::searchWithGoogle(const Frame* frame)
     }
 }
 
+#if !PLATFORM(QT)
+
 void WebContextMenuClient::lookUpInDictionary(WebCore::Frame*)
 {
     notImplemented();
@@ -91,6 +93,9 @@ void WebContextMenuClient::stopSpeaking()
 {
     notImplemented();
 }
+
+#endif
+
 #endif
 
 #if USE(ACCESSIBILITY_CONTEXT_MENUS)

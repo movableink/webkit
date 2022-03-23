@@ -28,7 +28,7 @@
 #include "config.h"
 #include "TextChecker.h"
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(QT)
 #include "TextCheckerState.h"
 #include <WebCore/NotImplemented.h>
 

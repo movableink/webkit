@@ -241,7 +241,7 @@ void RemoteWebInspectorUI::setDiagnosticLoggingAvailable(bool available)
 }
 #endif
 
-#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
 String RemoteWebInspectorUI::localizedStringsURL() const
 {
     notImplemented();
