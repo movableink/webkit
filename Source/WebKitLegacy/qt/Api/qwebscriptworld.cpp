@@ -31,7 +31,7 @@ using namespace WebCore;
 */
 QWebScriptWorld::QWebScriptWorld()
 {
-    d = new QWebScriptWorldPrivate(ScriptController::createWorld());
+    d = new QWebScriptWorldPrivate(ScriptController::createWorld("WebScriptWorld"_s));
 }
 
 QWebScriptWorld::QWebScriptWorld(const QWebScriptWorld& other)
