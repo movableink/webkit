@@ -69,7 +69,7 @@ static inline QFont::Weight toQFontWeight(FontSelectionValue fontWeight)
 
 void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, const QRawFont& rawFont)
 {
-    ASSERT(qFuzzyCompare(static_cast<float>(rawFont.pixelSize()), size));
+    // ASSERT(qFuzzyCompare(static_cast<float>(rawFont.pixelSize()), size));
     q.m_data = adoptRef(new FontPlatformDataPrivate(rawFont));
     q.m_size = size;
 }
