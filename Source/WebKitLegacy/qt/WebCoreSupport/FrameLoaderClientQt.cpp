@@ -1162,8 +1162,8 @@ void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore:
         RefPtr<Node> node;
         auto keyStateEventData = action.keyStateEventData();
         if (auto mouseEventData = action.mouseEventData()) {
-            node = m_webFrame->frame->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation,
-                HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent).innerNonSharedNode();
+            constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+            node = m_webFrame->frame->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType).innerNonSharedNode();
         }
 
         printf("Policy delegate: attempt to load %s with navigation type '%s'%s\n",

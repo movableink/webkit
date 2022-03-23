@@ -631,8 +631,8 @@ void QWebPageAdapter::handleSoftwareInputPanel(Qt::MouseButton button, const QPo
         && frame->document()->focusedElement()
             && button == Qt::LeftButton && qGuiApp->property("autoSipEnabled").toBool()) {
         if (!clickCausedFocus || requestSoftwareInputPanel()) {
-            HitTestResult result = frame->eventHandler().hitTestResultAtPoint(frame->view()->windowToContents(pos),
-                HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowUserAgentShadowContent);
+            constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent };
+            HitTestResult result = frame->eventHandler().hitTestResultAtPoint(frame->view()->windowToContents(pos), hitType);
             if (result.isContentEditable()) {
                 QEvent event(QEvent::RequestSoftwareInputPanel);
                 QGuiApplication::sendEvent(client->ownerWidget(), &event);
@@ -946,8 +946,8 @@ QWebHitTestResultPrivate* QWebPageAdapter::updatePositionDependentMenuActions(co
 {
     ASSERT(visitedWebActions);
     WebCore::Frame& focusedFrame = page->focusController().focusedOrMainFrame();
-    HitTestResult result = focusedFrame.eventHandler().hitTestResultAtPoint(focusedFrame.view()->windowToContents(pos),
-        HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowUserAgentShadowContent);
+    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent };
+    HitTestResult result = focusedFrame.eventHandler().hitTestResultAtPoint(focusedFrame.view()->windowToContents(pos), hitType);
     page->contextMenuController().setHitTestResult(result);
 
     if (page->inspectorController().enabled())
