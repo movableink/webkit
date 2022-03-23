@@ -39,8 +39,7 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::Frame* parentFr
         frame = &parentPage->mainFrame();
         frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
     } else {
-        frameLoaderClient = new FrameLoaderClientQt();
-        frame = Frame::create(page, ownerElement, frameLoaderClient);
+        frame = Frame::create(page, ownerElement, makeUniqueRef<FrameLoaderClientQt>());
     }
 
     // FIXME: All of the below should probably be moved over into WebCore
