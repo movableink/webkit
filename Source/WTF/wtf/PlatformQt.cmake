@@ -81,7 +81,6 @@ endif ()
 
 if (USE_GLIB)
     list(APPEND WTF_SOURCES
-        glib/GLibUtilities.cpp
         glib/GRefPtr.cpp
     )
     list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
@@ -92,7 +91,6 @@ if (USE_GLIB)
         ${GLIB_LIBRARIES}
     )
     list(APPEND WTF_PUBLIC_HEADERS
-        glib/GLibUtilities.h
         glib/GRefPtr.h
         glib/GTypedefs.h
         glib/GUniquePtr.h
@@ -130,10 +128,6 @@ if (APPLE)
 endif ()
 
 if (UNIX AND NOT APPLE)
-    list(APPEND WTF_SOURCES
-        unix/CPUTimeUnix.cpp
-    )
-
     check_function_exists(clock_gettime CLOCK_GETTIME_EXISTS)
     if (NOT CLOCK_GETTIME_EXISTS)
         set(CMAKE_REQUIRED_LIBRARIES rt)
@@ -178,7 +172,6 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     list(APPEND WTF_SOURCES
         linux/CurrentProcessMemoryStatus.cpp
         linux/MemoryFootprintLinux.cpp
-        linux/MemoryPressureHandlerLinux.cpp
     )
     list(APPEND WTF_PUBLIC_HEADERS
         linux/CurrentProcessMemoryStatus.h

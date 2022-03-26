@@ -24,7 +24,7 @@
 #include "QtWebError.h"
 #include "qwebdownloaditem_p.h"
 #include "qwebdownloaditem_p_p.h"
-#include <WKDownload.h>
+#include <WKDownloadRef.h>
 #include <WKStringQt.h>
 #include <WKURLQt.h>
 #include <WKURLResponse.h>

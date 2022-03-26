@@ -99,12 +99,6 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/VisitedLinkStoreQt.cpp
     qt/WebCoreSupport/WebDatabaseProviderQt.cpp
     qt/WebCoreSupport/WebEventConversion.cpp
-
-    win/Plugins/PluginDatabase.cpp
-    win/Plugins/PluginDebug.cpp
-    win/Plugins/PluginPackage.cpp
-    win/Plugins/PluginStream.cpp
-    win/Plugins/PluginView.cpp
 )
 
 # Note: Qt5Network_INCLUDE_DIRS includes Qt5Core_INCLUDE_DIRS
@@ -253,7 +247,7 @@ WEBKIT_MAKE_FORWARDING_HEADERS(WebKitLegacy
     FILES ${QtWebKit_PUBLIC_FRAMEWORK_HEADERS}
     FLATTENED
 )
-add_dependencies(QtWebKitFrameworkHeaders WebCorePrivateFrameworkHeaders)
+#add_dependencies(QtWebKitFrameworkHeaders WebCorePrivateFrameworkHeaders)
 
 ecm_generate_headers(
     QtWebKit_FORWARDING_HEADERS

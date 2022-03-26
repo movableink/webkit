@@ -46,8 +46,6 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/gstreamer"
     "${WEBKIT_DIR}/UIProcess/qt"
 
-    "${WEBKIT_DIR}/WebProcess/Plugins/Netscape/unix"
-    "${WEBKIT_DIR}/WebProcess/Plugins/Netscape/x11"
     "${WEBKIT_DIR}/WebProcess/WebCoreSupport/qt"
     "${WEBKIT_DIR}/WebProcess/WebPage/CoordinatedGraphics"
     "${WEBKIT_DIR}/WebProcess/qt"
@@ -85,9 +83,6 @@ list(APPEND WebKit_SOURCES
     Shared/CoordinatedGraphics/CoordinatedGraphicsScene.cpp
     #Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp
 
-    Shared/Plugins/Netscape/unix/NetscapePluginModuleUnix.cpp
-
-    Shared/Plugins/unix/PluginSearchPath.cpp
 
     #Shared/qt/ArgumentCodersQt.cpp
     Shared/qt/AuxiliaryProcessMainQt.cpp
@@ -137,8 +132,6 @@ list(APPEND WebKit_SOURCES
 
     UIProcess/Plugins/qt/PluginProcessProxyQt.cpp
 
-    UIProcess/Plugins/unix/PluginInfoStoreUnix.cpp
-
     #UIProcess/Storage/StorageManager.cpp
 
     UIProcess/WebsiteData/unix/WebsiteDataStoreUnix.cpp
@@ -177,12 +170,6 @@ list(APPEND WebKit_SOURCES
     UIProcess/qt/WebProcessPoolQt.cpp
 
     WebProcess/InjectedBundle/qt/InjectedBundleQt.cpp
-
-    WebProcess/Plugins/Netscape/qt/PluginProxyQt.cpp
-
-    WebProcess/Plugins/Netscape/unix/NetscapePluginUnix.cpp
-
-    WebProcess/Plugins/Netscape/x11/NetscapePluginX11.cpp
 
     WebProcess/WebCoreSupport/qt/WebContextMenuClientQt.cpp
     WebProcess/WebCoreSupport/qt/WebDragClientQt.cpp
@@ -260,16 +247,6 @@ else ()
 
         UIProcess/linux/MemoryPressureMonitor.cpp
     )
-endif ()
-
-if (ENABLE_NETSCAPE_PLUGIN_API)
-    # We don't build PluginProcess on Win and Mac because we don't
-    # support WK2 NPAPI on these platforms, however NPAPI works in WK1.
-    # Some WK2 code is guarded with ENABLE(NETSCAPE_PLUGIN_API) now
-    # so it should be compiled even when we don't want PluginProcess
-    # Enabling PLUGIN_PROCESS without building PluginProcess executable
-    # fixes things
-    add_definitions(-DENABLE_PLUGIN_PROCESS=1)
 endif ()
 
 list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
@@ -383,7 +360,7 @@ set(WebKit_PUBLIC_FRAMEWORK_HEADERS
     UIProcess/API/C/WKCookieManager.h
     UIProcess/API/C/WKCredential.h
     UIProcess/API/C/WKCredentialTypes.h
-    UIProcess/API/C/WKDownload.h
+    UIProcess/API/C/WKDownloadRef.h
     UIProcess/API/C/WKFormSubmissionListener.h
     UIProcess/API/C/WKFrame.h
     UIProcess/API/C/WKFrameHandleRef.h
@@ -472,7 +449,6 @@ set(WebKit_PUBLIC_FRAMEWORK_HEADERS
     WebProcess/InjectedBundle/API/c/WKBundlePageEditorClient.h
     WebProcess/InjectedBundle/API/c/WKBundlePageFormClient.h
     WebProcess/InjectedBundle/API/c/WKBundlePageFullScreenClient.h
-    WebProcess/InjectedBundle/API/c/WKBundlePageGroup.h
     WebProcess/InjectedBundle/API/c/WKBundlePageLoaderClient.h
     WebProcess/InjectedBundle/API/c/WKBundlePageOverlay.h
     WebProcess/InjectedBundle/API/c/WKBundlePagePolicyClient.h
@@ -499,8 +475,6 @@ WEBKIT_MAKE_FORWARDING_HEADERS(WebKit
     FILES ${WebKit_PUBLIC_FRAMEWORK_HEADERS}
     FLATTENED
 )
-
-WEBKIT_CREATE_FORWARDING_HEADERS(QtWebKit/private DIRECTORIES UIProcess/API/qt)
 
 file(GLOB WebKit_PRIVATE_HEADERS UIProcess/API/qt/*_p.h)
 install(

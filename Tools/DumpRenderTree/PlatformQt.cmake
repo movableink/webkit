@@ -2,9 +2,6 @@ list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
     "${QtWebKit_FRAMEWORK_HEADERS_DIR}"
     "${QtWebKitWidgets_FRAMEWORK_HEADERS_DIR}"
     "${WEBKITLEGACY_DIR}/qt/WidgetSupport"
-    TestNetscapePlugIn
-    TestNetscapePlugIn/ForwardingHeaders
-    qt
 )
 
 list(REMOVE_ITEM DumpRenderTree_SOURCES

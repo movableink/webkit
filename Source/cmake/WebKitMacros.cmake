@@ -540,3 +540,14 @@ macro(WEBKIT_CREATE_SYMLINK target src dest)
         DEPENDS ${dest}
         COMMENT "Create symlink from ${src} to ${dest}")
 endmacro()
+
+# TODO: Unify usage of prefix headers and PCH with WebCore and WebKit2
+macro(ADD_PREFIX_HEADER _target _header)
+    if (COMPILER_IS_GCC_OR_CLANG)
+        get_target_property(OLD_COMPILE_FLAGS ${_target} COMPILE_FLAGS)
+        if (${OLD_COMPILE_FLAGS} STREQUAL "OLD_COMPILE_FLAGS-NOTFOUND")
+            set(OLD_COMPILE_FLAGS "")
+        endif ()
+        set_target_properties(${_target} PROPERTIES COMPILE_FLAGS "${OLD_COMPILE_FLAGS} -include ${_header}")
+    endif ()
+endmacro()
