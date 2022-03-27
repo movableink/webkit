@@ -33,10 +33,10 @@
 
 namespace WTF {
 
-class WorkQueue::WorkItemQt : public QObject {
+class WorkQueueBase::WorkItemQt : public QObject {
     Q_OBJECT
 public:
-    WorkItemQt(WorkQueue* workQueue, WTF::Function<void()> function)
+    WorkItemQt(WorkQueueBase* workQueue, WTF::Function<void()> function)
         : m_queue(workQueue)
         , m_source(0)
         , m_signal(0)
@@ -44,7 +44,7 @@ public:
     {
     }
 
-    WorkItemQt(WorkQueue* workQueue, QObject* source, const char* signal, WTF::Function<void()>&& function)
+    WorkItemQt(WorkQueueBase* workQueue, QObject* source, const char* signal, WTF::Function<void()>&& function)
         : m_queue(workQueue)
         , m_source(source)
         , m_signal(signal)
@@ -73,57 +73,57 @@ public:
         executeAndDelete();
     }
 
-    RefPtr<WorkQueue> m_queue;
+    RefPtr<WorkQueueBase> m_queue;
     QObject* m_source;
     const char* m_signal;
     WTF::Function<void()> m_function;
 };
 
-QSocketNotifier* WorkQueue::registerSocketEventHandler(int socketDescriptor, QSocketNotifier::Type type, WTF::Function<void()>&& function)
+QSocketNotifier* WorkQueueBase::registerSocketEventHandler(int socketDescriptor, QSocketNotifier::Type type, WTF::Function<void()>&& function)
 {
     ASSERT(m_workThread);
 
     QSocketNotifier* notifier = new QSocketNotifier(socketDescriptor, type, 0);
     notifier->setEnabled(false);
     notifier->moveToThread(m_workThread);
-    WorkQueue::WorkItemQt* itemQt = new WorkQueue::WorkItemQt(this, notifier, SIGNAL(activated(int)), WTFMove(function));
+    WorkQueueBase::WorkItemQt* itemQt = new WorkQueueBase::WorkItemQt(this, notifier, SIGNAL(activated(int)), WTFMove(function));
     itemQt->moveToThread(m_workThread);
     QMetaObject::invokeMethod(notifier, "setEnabled", Q_ARG(bool, true));
     return notifier;
 }
 
-void WorkQueue::platformInitialize(const char*, Type, QOS)
+void WorkQueueBase::platformInitialize(const char*, Type, QOS)
 {
     m_workThread = new QThread();
     m_workThread->start();
 }
 
-void WorkQueue::platformInvalidate()
+void WorkQueueBase::platformInvalidate()
 {
     m_workThread->exit();
     m_workThread->wait();
     delete m_workThread;
 }
 
-void WorkQueue::dispatch(WTF::Function<void()>&& function)
+void WorkQueueBase::dispatch(WTF::Function<void()>&& function)
 {
     ref();
-    WorkQueue::WorkItemQt* itemQt = new WorkQueue::WorkItemQt(this, WTFMove(function));
+    WorkQueueBase::WorkItemQt* itemQt = new WorkQueueBase::WorkItemQt(this, WTFMove(function));
     itemQt->moveToThread(m_workThread);
     QMetaObject::invokeMethod(itemQt, "executeAndDelete", Qt::QueuedConnection);
 }
 
-void WorkQueue::dispatchAfter(WTF::Seconds duration, WTF::Function<void()>&& function)
+void WorkQueueBase::dispatchAfter(WTF::Seconds duration, WTF::Function<void()>&& function)
 {
     ref();
-    WorkQueue::WorkItemQt* itemQt = new WorkQueue::WorkItemQt(this, WTFMove(function));
+    WorkQueueBase::WorkItemQt* itemQt = new WorkQueueBase::WorkItemQt(this, WTFMove(function));
     itemQt->startTimer(duration.milliseconds());
     itemQt->moveToThread(m_workThread);
 }
 
-void WorkQueue::dispatchOnTermination(QProcess* process, WTF::Function<void()>&& function)
+void WorkQueueBase::dispatchOnTermination(QProcess* process, WTF::Function<void()>&& function)
 {
-    WorkQueue::WorkItemQt* itemQt = new WorkQueue::WorkItemQt(this, process, SIGNAL(finished(int, QProcess::ExitStatus)), WTFMove(function));
+    WorkQueueBase::WorkItemQt* itemQt = new WorkQueueBase::WorkItemQt(this, process, SIGNAL(finished(int, QProcess::ExitStatus)), WTFMove(function));
     itemQt->moveToThread(m_workThread);
 }
 

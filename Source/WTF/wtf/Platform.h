@@ -183,6 +183,7 @@
 #define GL_SILENCE_DEPRECATION 1
 #endif
 #endif
+#endif
 
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */
 #if PLATFORM(COCOA) && ENABLE(ACCESSIBILITY)

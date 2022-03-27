@@ -57,7 +57,6 @@ bool MainThreadInvoker::event(QEvent* e)
     if (e->type() != s_mainThreadInvokerEventType)
         return QObject::event(e);
 
-    dispatchFunctionsFromMainThread();
     return true;
 }
 

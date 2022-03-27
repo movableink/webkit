@@ -96,6 +96,7 @@ if (USE_GLIB)
         glib/GUniquePtr.h
         glib/RunLoopSourcePriority.h
         glib/WTFGType.h
+        glib/Sandbox.h
     )
 endif ()
 

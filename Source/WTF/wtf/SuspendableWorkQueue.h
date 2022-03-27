@@ -50,7 +50,7 @@ private:
     void suspendIfNeeded();
 #if USE(COCOA_EVENT_LOOP)
     using WorkQueue::dispatchQueue;
-#else
+#elsif !PLATFORM(QT)
     using WorkQueue::runLoop;
 #endif
 

@@ -446,7 +446,7 @@ if (MACOS_USE_SYSTEM_ICU)
     add_definitions(-DU_DISABLE_RENAMING=1 -DU_SHOW_CPLUSPLUS_API=0)
     include(target/icu)
 else ()
-    find_package(ICU REQUIRED COMPONENTS data i18n uc)
+    find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
 endif ()
 
 if (APPLE)

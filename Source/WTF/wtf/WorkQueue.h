@@ -63,6 +63,9 @@ public:
 
 #if USE(COCOA_EVENT_LOOP)
     dispatch_queue_t dispatchQueue() const { return m_dispatchQueue.get(); }
+#elif PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
+    QSocketNotifier* registerSocketEventHandler(int, QSocketNotifier::Type, WTF::Function<void()>&&);
+    void dispatchOnTermination(QProcess*, WTF::Function<void()>&&);
 #endif
 
 protected:
@@ -73,7 +76,7 @@ protected:
     WorkQueueBase(const char* name, Type, QOS);
 #if USE(COCOA_EVENT_LOOP)
     explicit WorkQueueBase(OSObjectPtr<dispatch_queue_t>&&);
-#else
+#elsif !PLATFORM(QT)
     explicit WorkQueueBase(RunLoop&);
 #endif
 
@@ -82,6 +85,10 @@ protected:
 
 #if USE(COCOA_EVENT_LOOP)
     OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
+#elif PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
+    class WorkItemQt;
+    QThread* m_workThread;
+    friend class WorkItemQt;
 #else
     RunLoop* m_runLoop;
 #if ASSERT_ENABLED
@@ -119,7 +126,7 @@ protected:
 private:
 #if USE(COCOA_EVENT_LOOP)
     explicit WorkQueue(OSObjectPtr<dispatch_queue_t>&&);
-#else
+#elsif !PLATFORM(QT)
     explicit WorkQueue(RunLoop&);
 #endif
     static Ref<WorkQueue> constructMainWorkQueue();
