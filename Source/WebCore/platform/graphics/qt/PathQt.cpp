@@ -35,7 +35,6 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "NativeImageQt.h"
-#include "StrokeStyleApplier.h"
 #include <QPainterPath>
 #include <QString>
 #include <QTransform>
@@ -134,11 +133,13 @@ static GraphicsContext* scratchContext()
     return context;
 }
 
-bool Path::strokeContains(StrokeStyleApplier& applier, const FloatPoint& point) const
+bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
+    ASSERT(strokeStyleApplier);
+
     QPainterPathStroker stroke;
     GraphicsContext* context = scratchContext();
-    applier.strokeStyle(context);
+    strokeStyleApplier(context);
 
     QPen pen = context->platformContext()->pen();
     stroke.setWidth(pen.widthF());
@@ -166,12 +167,12 @@ FloatRect Path::boundingRect() const
     return m_path.boundingRect();
 }
 
-FloatRect Path::strokeBoundingRect(StrokeStyleApplier* applier) const
+FloatRect Path::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     GraphicsContext* context = scratchContext();
     QPainterPathStroker stroke;
-    if (applier) {
-        applier->strokeStyle(context);
+    if (strokeStyleapplier) {
+        strokeStyleApplier(context);
 
         QPen pen = context->platformContext()->pen();
         stroke.setWidth(pen.widthF());

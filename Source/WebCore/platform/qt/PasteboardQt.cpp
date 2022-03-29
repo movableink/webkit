@@ -155,7 +155,7 @@ bool Pasteboard::canSmartReplace()
     return false;
 }
 
-void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, Optional<size_t>)
+void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std::optional<size_t>)
 {
     if (const QMimeData* data = readData())
         text.text =  data->text();
@@ -383,7 +383,7 @@ String Pasteboard::readOrigin()
     return { };
 }
 
-void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t>)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t>)
 {
     notImplemented();
 }

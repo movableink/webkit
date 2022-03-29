@@ -60,7 +60,7 @@ SocketStreamHandlePrivate::SocketStreamHandlePrivate(SocketStreamHandleImpl* str
 
     initConnections();
 
-    unsigned port = url.port().valueOr(isSecure ? 443 : 80);
+    unsigned port = url.port().value_or(isSecure ? 443 : 80);
 
     QString host = url.host().toStringWithoutCopying(); // QTFIXME: Convert StringView to QString directly?
     if (isSecure) {
@@ -113,14 +113,14 @@ void SocketStreamHandlePrivate::socketReadyRead()
 {
     if (m_streamHandle) {
         QByteArray data = m_socket->read(m_socket->bytesAvailable());
-        m_streamHandle->m_client.didReceiveSocketStreamData(*m_streamHandle, data.constData(), data.size());
+        m_streamHandle->m_client.didReceiveSocketStreamData(*m_streamHandle, reinterpret_cast<const uint8_t*>(data.constData()), data.size());
     }
 }
 
-Optional<size_t> SocketStreamHandlePrivate::send(const uint8_t* data, size_t len)
+std::optional<size_t> SocketStreamHandlePrivate::send(const uint8_t* data, size_t len)
 {
     if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState)
-        return WTF::nullopt;
+        return std::nullopt;
     size_t sentSize = static_cast<size_t>(m_socket->write(reinterpret_cast<const char*>(data), len));
     QMetaObject::invokeMethod(this, "socketSentData", Qt::QueuedConnection);
     return sentSize;
@@ -201,7 +201,7 @@ SocketStreamHandleImpl::~SocketStreamHandleImpl()
     delete m_p;
 }
 
-Optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t length)
+std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t length)
 {
     LOG(Network, "SocketStreamHandle %p platformSend", this);
     return m_p->send(data, length);

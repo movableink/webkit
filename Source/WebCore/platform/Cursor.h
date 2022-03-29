@@ -41,7 +41,6 @@ typedef HICON HCURSOR;
 #include "GRefPtrGtk.h"
 #elif PLATFORM(QT)
 #include <QCursor>
-#include <wtf/Optional.h>
 #endif
 
 #if HAVE(NSCURSOR)
@@ -174,7 +173,7 @@ private:
 #endif
 
 #if PLATFORM(QT)
-    mutable Optional<QCursor> m_platformCursor;
+    mutable std::optional<QCursor> m_platformCursor;
 #elif !HAVE(NSCURSOR)
     mutable PlatformCursor m_platformCursor { nullptr };
 #else

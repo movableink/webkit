@@ -91,12 +91,13 @@ if (USE_GLIB)
         ${GLIB_LIBRARIES}
     )
     list(APPEND WTF_PUBLIC_HEADERS
+        glib/ChassisType.h
         glib/GRefPtr.h
         glib/GTypedefs.h
         glib/GUniquePtr.h
         glib/RunLoopSourcePriority.h
-        glib/WTFGType.h
         glib/Sandbox.h
+        glib/WTFGType.h
     )
 endif ()
 

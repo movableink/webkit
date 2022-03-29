@@ -47,8 +47,8 @@ public:
 
     void transformColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace);
 
-    String toDataURL(const String &mimeType, Optional<double> quality, PreserveResolution) const override;
-    Vector<uint8_t> toData(const String &mimeType, Optional<double> quality) const override;
+    String toDataURL(const String &mimeType, std::optional<double> quality, PreserveResolution) const override;
+    Vector<uint8_t> toData(const String &mimeType, std::optional<double> quality) const override;
     Vector<uint8_t> toBGRAData() const override;
 
     GraphicsContext& context() const override;

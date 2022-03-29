@@ -18,16 +18,16 @@ String ResourceResponse::platformSuggestedFilename() const
     if (!suggestedFilename.isEmpty())
         return suggestedFilename;
 
-    Vector<String> extensions = MIMETypeRegistry::getExtensionsForMIMEType(mimeType());
+    Vector<String> extensions = MIMETypeRegistry::extensionsForMIMEType(mimeType());
     if (extensions.isEmpty())
-        return url().lastPathComponent();
+        return url().lastPathComponent().toString();
 
     // If the suffix doesn't match the MIME type, correct the suffix.
-    QString filename = url().lastPathComponent();
+    QString filename = url().lastPathComponent().toString();
     const String suffix = QMimeDatabase().suffixForFileName(filename);
     if (!extensions.contains(suffix)) {
         filename.chop(suffix.length());
-        filename += MIMETypeRegistry::getPreferredExtensionForMIMEType(mimeType());
+        filename += MIMETypeRegistry::preferredExtensionForMIMEType(mimeType());
     }
     return filename;
 }

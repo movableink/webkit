@@ -69,9 +69,10 @@ static QUrl resolveBlobUrl(const URL& url, const BlobRegistryImpl& blobRegistry)
     // QByteArray::{from,to}Base64 are prone to integer overflow, this is the maximum size that can be safe
     size_t maxBase64Size = std::numeric_limits<int>::max() / 3 - 1;
 
-    Vector<char> base64;
-    WTF::base64Encode(data, base64, WTF::Base64URLPolicy);
-    if (base64.isEmpty() || base64.size() > maxBase64Size) {
+    WTF::Span<unsigned char> base64;
+    WTF::Span<const std::byte> bytes { reinterpret_cast<const std::byte*>(data.data()), static_cast<size_t>(data.size()) };
+    WTF::base64Encode(bytes, base64, Base64EncodePolicy::URL);
+    if (base64.empty() || base64.size() > maxBase64Size) {
         qWarning("Failed to convert blob data to base64: data is too large");
         return QUrl();
     }
@@ -80,7 +81,7 @@ static QUrl resolveBlobUrl(const URL& url, const BlobRegistryImpl& blobRegistry)
     dataUri.append(contentType);
     dataUri.append(QStringLiteral(";base64,"));
     dataUri.reserve(dataUri.size() + base64.size());
-    dataUri.append(QLatin1String(base64.data(), base64.size()));
+    dataUri.append(QLatin1String(reinterpret_cast<const char*>(base64.data()), base64.size()));
     return QUrl(dataUri);
 }
 

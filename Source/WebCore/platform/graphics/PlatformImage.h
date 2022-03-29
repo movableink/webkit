@@ -30,6 +30,8 @@
 typedef struct CGImage* CGImageRef;
 #elif USE(CAIRO)
 #include "RefPtrCairo.h"
+#elif PLATFORM(QT)
+#include <QImage>
 #endif
 
 namespace WebCore {
@@ -38,6 +40,8 @@ namespace WebCore {
 using PlatformImagePtr = RetainPtr<CGImageRef>;
 #elif USE(CAIRO)
 using PlatformImagePtr = RefPtr<cairo_surface_t>;
+#elif PLATFORM(QT)
+using PlatformImagePtr = QImage;
 #endif
 
 }

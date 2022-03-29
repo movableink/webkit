@@ -26,18 +26,20 @@
 #ifndef CertificateInfo_h
 #define CertificateInfo_h
 
-#include "CertificateInfoBase.h"
+#include "CertificateSummary.h"
 #include "NotImplemented.h"
 #include <wtf/persistence/PersistentCoders.h>
 
 namespace WebCore {
 
-class CertificateInfo : public CertificateInfoBase {
+struct CertificateSummary;
+
+class CertificateInfo {
 public:
     CertificateInfo() { }
 
     bool containsNonRootSHA1SignedCertificate() const { notImplemented(); return false; }
-    Optional<SummaryInfo> summaryInfo() const { notImplemented(); return WTF::nullopt; }
+    std::optional<CertificateSummary> summary() const { notImplemented(); return std::nullopt; }
     bool isEmpty() const { notImplemented(); return true; }
 };
 

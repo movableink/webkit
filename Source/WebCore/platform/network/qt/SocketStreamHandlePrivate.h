@@ -53,7 +53,7 @@ public:
 public Q_SLOTS:
     void socketConnected();
     void socketReadyRead();
-    Optional<size_t> send(const uint8_t* data, size_t len);
+    std::optional<size_t> send(const uint8_t* data, size_t len);
     void close();
     void socketSentData();
     void socketClosed();

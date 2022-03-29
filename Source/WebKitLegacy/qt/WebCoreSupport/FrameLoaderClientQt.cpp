@@ -234,12 +234,12 @@ bool FrameLoaderClientQt::hasWebView() const
 
 Optional<PageIdentifier> FrameLoaderClientQt::pageID() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 Optional<FrameIdentifier> FrameLoaderClientQt::frameID() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void FrameLoaderClientQt::savePlatformDataToCachedFrame(CachedFrame*) 
@@ -363,7 +363,7 @@ void FrameLoaderClientQt::dispatchDidNavigateWithinPage()
     if (!loaderCompleted)
         return;
 
-    dispatchDidCommitLoad(WTF::nullopt, WTF::nullopt); // QTFIXME
+    dispatchDidCommitLoad(std::nullopt, std::nullopt); // QTFIXME
     dispatchDidFinishLoad();
 }
 

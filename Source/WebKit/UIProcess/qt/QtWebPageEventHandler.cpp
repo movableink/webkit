@@ -358,7 +358,7 @@ void QtWebPageEventHandler::handleInputMethodEvent(QInputMethodEvent* ev)
 
             QTextCharFormat textCharFormat = attr.value.value<QTextFormat>().toCharFormat();
             QColor qcolor = textCharFormat.underlineColor();
-            Color color = makeRGBA(qcolor.red(), qcolor.green(), qcolor.blue(), qcolor.alpha());
+            Color color = makeSimpleColor(qcolor.red(), qcolor.green(), qcolor.blue(), qcolor.alpha());
             int start = qMin(attr.start, (attr.start + attr.length));
             int end = qMax(attr.start, (attr.start + attr.length));
             underlines.append(CompositionUnderline(start, end, CompositionUnderlineColor::TextColor, color, false));

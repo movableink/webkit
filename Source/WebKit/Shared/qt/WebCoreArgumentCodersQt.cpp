@@ -225,7 +225,7 @@ void ArgumentCoder<FontAttributes>::encodePlatformData(Encoder&, const FontAttri
 Optional<FontAttributes> ArgumentCoder<FontAttributes>::decodePlatformData(Decoder&, FontAttributes&)
 {
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void ArgumentCoder<DictionaryPopupInfo>::encodePlatformData(Encoder&, const DictionaryPopupInfo&)

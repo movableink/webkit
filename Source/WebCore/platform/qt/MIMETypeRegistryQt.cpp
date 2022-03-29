@@ -58,7 +58,7 @@ static const ExtensionMap extensionMap[] = {
     { "xsl", ".xsl", "text/xsl" },
 };
 
-String MIMETypeRegistry::getMIMETypeForExtension(const String &ext)
+String MIMETypeRegistry::mimeTypeForExtension(StringView ext)
 {
     for (auto& entry : extensionMap) {
         if (equalIgnoringASCIICase(ext, entry.extension))
@@ -66,14 +66,14 @@ String MIMETypeRegistry::getMIMETypeForExtension(const String &ext)
     }
 
     // QMimeDatabase lacks the ability to query by extension alone, so we create a fake filename to lookup.
-    const QString filename = QStringLiteral("filename.") + QString(ext);
+    const QString filename = QStringLiteral("filename.") + QString(ext.toString());
 
     // FIXME: We should get all the matched mimetypes with mimeTypesForFileName, and prefer one we support.
     // But initializeSupportedImageMIMETypes will first have to stop using getMIMETypeForExtension, or we
     // would be checking against an uninitialized set of supported mimetypes.
     QMimeType mimeType = QMimeDatabase().mimeTypeForFile(filename, QMimeDatabase::MatchExtension);
     if (mimeType.isValid() && !mimeType.isDefault()) {
-        // getMIMETypeForExtension is used for preload mimetype check, so image looking files can not be loaded as anything but images.
+        // mimeTypeForExtension is used for preload mimetype check, so image looking files can not be loaded as anything but images.
         // Script looking files (.php) are loaded normally and will have their mimetype determined later.
         if (mimeType.inherits(QStringLiteral("application/x-executable")))
             return String();
@@ -83,22 +83,22 @@ String MIMETypeRegistry::getMIMETypeForExtension(const String &ext)
     return String();
 }
 
-String MIMETypeRegistry::getMIMETypeForPath(const String& path)
+String MIMETypeRegistry::mimeTypeForPath(StringView path)
 {
     for (auto& entry : extensionMap) {
         if (path.endsWithIgnoringASCIICase(entry.dotExtension))
             return entry.mimeType;
     }
 
-    // FIXME: See comment in getMIMETypeForExtension.
-    QMimeType type = QMimeDatabase().mimeTypeForFile(path, QMimeDatabase::MatchExtension);
+    // FIXME: See comment in mimeTypeForExtension.
+    QMimeType type = QMimeDatabase().mimeTypeForFile(path.toString(), QMimeDatabase::MatchExtension);
     if (type.isValid() && !type.isDefault())
         return type.name();
 
     return defaultMIMEType();
 }
 
-Vector<String> MIMETypeRegistry::getExtensionsForMIMEType(const String& mimeTypeName)
+Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& mimeTypeName)
 {
     Vector<String> extensions;
     QMimeType mimeType = QMimeDatabase().mimeTypeForName(mimeTypeName);
@@ -111,23 +111,13 @@ Vector<String> MIMETypeRegistry::getExtensionsForMIMEType(const String& mimeType
     return extensions;
 }
 
-String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& mimeTypeName)
+String MIMETypeRegistry::preferredExtensionForMIMEType(const String& mimeTypeName)
 {
     QMimeType mimeType = QMimeDatabase().mimeTypeForName(mimeTypeName);
     if (mimeType.isValid() && !mimeType.isDefault())
         return mimeType.preferredSuffix();
 
     return String();
-}
-
-String MIMETypeRegistry::getNormalizedMIMEType(const String& mimeTypeName)
-{
-    // This looks up the mime type object by preferred name or alias, and returns the preferred name.
-    QMimeType mimeType = QMimeDatabase().mimeTypeForName(mimeTypeName);
-    if (mimeType.isValid() && !mimeType.isDefault())
-        return mimeType.name();
-
-    return mimeTypeName;
 }
 
 bool MIMETypeRegistry::isApplicationPluginMIMEType(const String& mimeType)

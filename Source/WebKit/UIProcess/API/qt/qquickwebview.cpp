@@ -879,7 +879,7 @@ static WTF::Optional<String> readUserFile(const QUrl& url, const char* userFileT
 {
     if (!url.isValid()) {
         qWarning("QQuickWebView: Couldn't open '%s' as %s because URL is invalid.", qPrintable(url.toString()), userFileType);
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     QString path;
@@ -889,19 +889,19 @@ static WTF::Optional<String> readUserFile(const QUrl& url, const char* userFileT
         path = QStringLiteral(":") + url.path();
     else {
         qWarning("QQuickWebView: Couldn't open '%s' as %s because only file:/// and qrc:/// URLs are supported.", qPrintable(url.toString()), userFileType);
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning("QQuickWebView: Couldn't open '%s' as %s due to error '%s'.", qPrintable(url.toString()), userFileType, qPrintable(file.errorString()));
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     QByteArray contents = file.readAll();
     if (contents.isEmpty()) {
         qWarning("QQuickWebView: Ignoring '%s' as %s because file is empty.", qPrintable(url.toString()), userFileType);
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     return String::fromUTF8(contents);

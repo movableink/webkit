@@ -142,7 +142,7 @@ void ImageBufferQtBackend::drawPattern(GraphicsContext &destContext, const Float
 
 GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
 
-static bool encodeImage(const QImage& image, const String& mimeType, Optional<double> quality, QByteArray& data)
+static bool encodeImage(const QImage& image, const String& mimeType, std::optional<double> quality, QByteArray& data)
 {
     ASSERT(MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType));
 
@@ -167,7 +167,7 @@ static bool encodeImage(const QImage& image, const String& mimeType, Optional<do
 }
 
 // QTFIXME: Use PreserveResolution?
-String ImageBufferQtBackend::toDataURL(const String& mimeType, Optional<double> quality, PreserveResolution) const
+String ImageBufferQtBackend::toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const
 {
     RefPtr<Image> image = copyImage(DontCopyBackingStore);
     QByteArray data;
@@ -177,7 +177,7 @@ String ImageBufferQtBackend::toDataURL(const String& mimeType, Optional<double> 
     return "data:" + mimeType + ";base64," + data.toBase64().data();
 }
 
-Vector<uint8_t> ImageBufferQtBackend::toData(const String& mimeType, Optional<double> quality) const
+Vector<uint8_t> ImageBufferQtBackend::toData(const String& mimeType, std::optional<double> quality) const
 {
     RefPtr<Image> image = copyImage(DontCopyBackingStore);
     QByteArray data;

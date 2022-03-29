@@ -73,14 +73,14 @@ bool SharedCookieJarQt::deleteCookie(const QNetworkCookie& cookie)
     if (!m_database.isOpen())
         return false;
 
-    SQLiteStatement sqlQuery(m_database, "DELETE FROM cookies WHERE cookieId=?"_s);
-    if (sqlQuery.prepare() != SQLITE_OK) {
+    auto sqlQuery = m_database.prepareStatement("DELETE FROM cookies WHERE cookieId=?"_s);
+    if (!sqlQuery) {
         qWarning("Failed to prepare delete statement - cannot write to cookie database");
         return false;
     }
 
-    sqlQuery.bindText(1, cookie.domain().append(QLatin1String(cookie.name())));
-    int result = sqlQuery.step();
+    sqlQuery->bindText(1, StringView(cookie.domain().append(QLatin1String(cookie.name())).toLatin1()));
+    int result = sqlQuery->step();
     if (result != SQLITE_DONE) {
         qWarning("Failed to delete cookie from database - %i", result);
         return false;
@@ -103,8 +103,9 @@ void SharedCookieJarQt::deleteCookiesForHostname(const String& hostname)
     QList<QNetworkCookie> cookies = allCookies();
     QList<QNetworkCookie>::Iterator it = cookies.begin();
     QList<QNetworkCookie>::Iterator end = cookies.end();
-    SQLiteStatement sqlQuery(m_database, "DELETE FROM cookies WHERE cookieId=?"_s);
-    if (sqlQuery.prepare() != SQLITE_OK) {
+
+    auto sqlQuery = m_database.prepareStatement("DELETE FROM cookies WHERE cookieId=?"_s);
+    if (!sqlQuery) {
         qWarning("Failed to prepare delete statement - cannot write to cookie database");
         return;
     }
@@ -113,11 +114,11 @@ void SharedCookieJarQt::deleteCookiesForHostname(const String& hostname)
     transaction.begin();
     while (it != end) {
         if (it->domain() == QString(hostname)) {
-            sqlQuery.bindText(1, it->domain().append(QLatin1String(it->name())));
-            int result = sqlQuery.step();
+            sqlQuery->bindText(1, StringView(it->domain().append(QLatin1String(it->name()))));
+            int result = sqlQuery->step();
             if (result != SQLITE_DONE)
                 qWarning("Failed to remove cookie from database - %i", result);
-            sqlQuery.reset();
+            sqlQuery->reset();
             it = cookies.erase(it);
         } else
             it++;
@@ -172,8 +173,8 @@ bool SharedCookieJarQt::setCookiesFromUrl(const QList<QNetworkCookie>& cookieLis
     if (!m_database.isOpen())
         return false;
 
-    SQLiteStatement sqlQuery(m_database, "INSERT OR REPLACE INTO cookies (cookieId, cookie) VALUES (?, ?)"_s);
-    if (sqlQuery.prepare() != SQLITE_OK)
+    auto sqlQuery = m_database.prepareStatement("INSERT OR REPLACE INTO cookies (cookieId, cookie) VALUES (?, ?)"_s);
+    if (!sqlQuery)
         return false;
 
     SQLiteTransaction transaction(m_database);
@@ -181,13 +182,13 @@ bool SharedCookieJarQt::setCookiesFromUrl(const QList<QNetworkCookie>& cookieLis
     foreach (const QNetworkCookie &cookie, cookiesForUrl(url)) {
         if (cookie.isSessionCookie())
             continue;
-        sqlQuery.bindText(1, cookie.domain().append(QLatin1String(cookie.name())));
+        sqlQuery->bindText(1, StringView(cookie.domain().append(QLatin1String(cookie.name()))));
         QByteArray rawCookie = cookie.toRawForm();
-        sqlQuery.bindBlob(2, rawCookie.constData(), rawCookie.size());
-        int result = sqlQuery.step();
+        sqlQuery->bindBlob(2, String(rawCookie.constData(), rawCookie.size()));
+        int result = sqlQuery->step();
         if (result != SQLITE_DONE)
             qWarning("Failed to insert cookie into database - %i", result);
-        sqlQuery.reset();
+        sqlQuery->reset();
     }
     transaction.commit();
 
@@ -209,16 +210,15 @@ void SharedCookieJarQt::loadCookies()
         return;
 
     QList<QNetworkCookie> cookies;
-    SQLiteStatement sqlQuery(m_database, "SELECT cookie FROM cookies"_s);
-    if (sqlQuery.prepare() != SQLITE_OK)
+    auto sqlQuery = m_database.prepareStatement("SELECT cookie FROM cookies"_s);
+    if (!sqlQuery)
         return;
 
-    int result = sqlQuery.step();
+    int result = sqlQuery->step();
     while (result == SQLITE_ROW) {
-        Vector<char> blob;
-        sqlQuery.getColumnBlobAsVector(0, blob);
-        cookies.append(QNetworkCookie::parseCookies(QByteArray::fromRawData(blob.data(), blob.size())));
-        result = sqlQuery.step();
+        Vector<uint8_t> blob = sqlQuery->columnBlob(0);
+        cookies.append(QNetworkCookie::parseCookies(QByteArray::fromRawData(reinterpret_cast<const char*>(blob.data()), blob.size())));
+        result = sqlQuery->step();
     }
 
     if (result != SQLITE_DONE) {

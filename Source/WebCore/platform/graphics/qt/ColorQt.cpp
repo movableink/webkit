@@ -32,19 +32,15 @@
 
 namespace WebCore {
 
-Color::Color(const QColor& c)
+Color::Color(const QColor& color)
+    : Color(convertColor<SRGBA<uint8_t>>(SRGBA<float> { static_cast<float>(color.red()), static_cast<float>(color.green()), static_cast<float>(color.blue()), static_cast<float>(color.alpha()) }))
 {
-    setRGB(makeRGBA(c.red(), c.green(), c.blue(), c.alpha()));
-    if (c.isValid())
-        tagAsValid();
 }
 
 Color::operator QColor() const
 {
-    if (isValid())
-        return QColor(red(), green(), blue(), alpha());
-    else
-        return QColor();
+    auto [r, g, b, a] = toColorTypeLossy<SRGBA<float>>().resolved();
+    return QColor(r, g, b, a);
 }
 
 }
