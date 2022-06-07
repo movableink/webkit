@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ImageBufferBackend.h"
+#include "PlatformImage.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
@@ -40,7 +41,7 @@ public:
     ImageBufferQtBackend(const FloatSize &logicalSize, const IntSize &backendSize, float resolutionScale, ColorSpace, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image);
 
     RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
-    NativeImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
+    PlatformImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
 
     void draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) override;
     void drawPattern(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const AffineTransform &patternTransform, const FloatPoint &phase, const FloatSize &spacing, const ImagePaintingOptions &) override;

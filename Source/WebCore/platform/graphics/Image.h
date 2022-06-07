@@ -156,17 +156,10 @@ public:
 
     enum TileRule { StretchTile, RoundTile, SpaceTile, RepeatTile };
 
-#if PLATFORM(QT)
-    virtual RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) { return QImage(); }
-    virtual RefPtr<NativeImage> nativeImageForCurrentFrame() { return nativeImage(); }
-    virtual RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool = true) { return nativeImageForCurrentFrame(); }
-    virtual RefPtr<NativeImage> nativeImageOfSize(const IntSize&) { return QImage(); }
-#else
     virtual RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) { return nullptr; }
     virtual RefPtr<NativeImage> nativeImageForCurrentFrame() { return nativeImage(); }
     virtual RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool = true) { return nativeImageForCurrentFrame(); }
     virtual RefPtr<NativeImage> nativeImageOfSize(const IntSize&) { return nullptr; }
-#endif
 
     // Accessors for native image formats.
 

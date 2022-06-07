@@ -29,6 +29,7 @@
 #include "StillImageQt.h"
 
 #include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 #include "ShadowBlur.h"
 
 #include <QPainter>
@@ -68,11 +69,6 @@ FloatSize StillImage::size(ImageOrientation) const
     return FloatSize(m_image->width(), m_image->height());
 }
 
-NativeImagePtr StillImage::nativeImageForCurrentFrame(const GraphicsContext*)
-{
-    return *m_image;
-}
-
 ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, const FloatRect& src, const ImagePaintingOptions& options)
 {
     if (m_image->isNull())
@@ -94,7 +90,7 @@ ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, co
         shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
             [normalizedSrc, normalizedDst, &pixmap](GraphicsContext& shadowContext)
             {
-                QPainter* shadowPainter = shadowContext.platformContext();
+                QPainter* shadowPainter = shadowContext.platformContext()->painter();
                 shadowPainter->drawImage(normalizedDst, pixmap, normalizedSrc);
             },
             [&ctxt](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
@@ -103,7 +99,7 @@ ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, co
             });
     }
 
-    ctxt.platformContext()->drawImage(normalizedDst, *m_image, normalizedSrc);
+    ctxt.platformContext()->painter()->drawImage(normalizedDst, *m_image, normalizedSrc);
     ctxt.setCompositeOperation(previousOperator, previousBlendMode);
     return ImageDrawResult::DidDraw;
 }

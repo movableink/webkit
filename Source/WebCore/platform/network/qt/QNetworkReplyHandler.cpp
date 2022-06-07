@@ -120,7 +120,7 @@ qint64 FormDataIODevice::computeSize()
 {
     for (const auto& element : m_formElements) {
         switchOn(element.data,
-            [&] (const Vector<char>& bytes) {
+            [&] (const Vector<uint8_t>& bytes) {
                 m_dataSize += bytes.size();
             }, [&] (const FormDataElement::EncodedFileData& fileData) {
                 QFileInfo fi(fileData.filename);
@@ -152,7 +152,7 @@ void FormDataIODevice::prepareCurrentElement()
         return;
 
     switchOn(m_formElements[0].data,
-        [&] (const Vector<char>&) {
+        [&] (const Vector<uint8_t>&) {
             // Nothing to do
         }, [&] (const FormDataElement::EncodedFileData& fileData) {
             openFileForCurrentElement(fileData);
@@ -192,7 +192,7 @@ qint64 FormDataIODevice::readData(char* destination, qint64 size)
         const qint64 available = size - copied;
 
         switchOn(m_formElements[0].data,
-            [&] (const Vector<char>& bytes) {
+            [&] (const Vector<uint8_t>& bytes) {
                 const qint64 toCopy = qMin<qint64>(available, bytes.size() - m_currentDelta);
                 memcpy(destination + copied, bytes.data()+m_currentDelta, toCopy);
                 m_currentDelta += toCopy;
@@ -552,7 +552,8 @@ void QNetworkReplyHandler::finish()
     }
 
     if (!m_replyWrapper->reply()->error() || shouldIgnoreHttpError(m_replyWrapper->reply(), m_replyWrapper->responseContainsData()))
-        client->didFinishLoading(m_resourceHandle);
+        // QTFIXME: pass resource metrics?
+        client->didFinishLoading(m_resourceHandle, { });
     else
         client->didFail(m_resourceHandle, errorForReply(m_replyWrapper->reply()));
 
@@ -607,7 +608,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
 
     if (mimeType.isEmpty()) {
         // let's try to guess from the extension
-        mimeType = MIMETypeRegistry::getMIMETypeForPath(m_replyWrapper->reply()->url().path());
+        mimeType = MIMETypeRegistry::mimeTypeForPath(StringView(m_replyWrapper->reply()->url().path()));
     }
 
     URL url(m_replyWrapper->reply()->url());

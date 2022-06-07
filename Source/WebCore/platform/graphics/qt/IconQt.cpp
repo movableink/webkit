@@ -22,6 +22,7 @@
 #include "Icon.h"
 
 #include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 #include "IntRect.h"
 #include <QMimeDatabase>
 #include <wtf/text/WTFString.h>
@@ -40,7 +41,7 @@ Icon::~Icon()
 RefPtr<Icon> Icon::createIconForFiles(const Vector<String>& filenames)
 {
     if (filenames.isEmpty())
-        return 0;
+        return nullptr;
 
     QMimeType mimeType = QMimeDatabase().mimeTypeForFile(filenames[0], QMimeDatabase::MatchExtension);
 
@@ -70,7 +71,7 @@ RefPtr<Icon> Icon::createIconForFiles(const Vector<String>& filenames)
         icon->m_icon = QIcon::fromTheme(genericIconName);
 
     if (icon->m_icon.isNull())
-        return 0;
+        return nullptr;
     return icon;
 }
 
@@ -79,7 +80,7 @@ void Icon::paint(GraphicsContext& context, const FloatRect& rect)
     if (m_icon.isNull() || context.paintingDisabled())
         return;
 
-    m_icon.paint(context.platformContext(), enclosingIntRect(rect));
+    m_icon.paint(context.platformContext()->painter(), enclosingIntRect(rect));
 }
 
 }

@@ -65,7 +65,7 @@ DragImageRef createDragImageFromImage(Image* image, ImageOrientation)
     if (!image/* || !image->nativeImageForCurrentFrame()*/)
         return QImage();
 
-    return image->nativeImageForCurrentFrame();
+    return image->nativeImageForCurrentFrame()->platformImage();
 //    return new QImage(*image->nativeImageForCurrentFrame());
 }
 

@@ -35,6 +35,7 @@
 #include "Color.h"
 #include "FileList.h"
 #include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 #include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
@@ -56,6 +57,7 @@
 #include <QFile>
 #include <QFontMetrics>
 #include <QGuiApplication>
+#include <QPainter>
 
 #include <QStyleHints>
 
@@ -229,32 +231,32 @@ void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
     }
 }
 
-Color RenderThemeQt::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeQt::platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
 {
     return colorPalette().brush(QPalette::Active, QPalette::Highlight).color();
 }
 
-Color RenderThemeQt::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeQt::platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
 {
     return colorPalette().brush(QPalette::Inactive, QPalette::Highlight).color();
 }
 
-Color RenderThemeQt::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeQt::platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const
 {
     return colorPalette().brush(QPalette::Active, QPalette::HighlightedText).color();
 }
 
-Color RenderThemeQt::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeQt::platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const
 {
     return colorPalette().brush(QPalette::Inactive, QPalette::HighlightedText).color();
 }
 
-Color RenderThemeQt::platformFocusRingColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeQt::platformFocusRingColor(OptionSet<StyleColorOptions>) const
 {
     return colorPalette().brush(QPalette::Active, QPalette::Highlight).color();
 }
 
-Color RenderThemeQt::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::Options> options) const
+Color RenderThemeQt::systemColor(CSSValueID cssValueId, OptionSet<StyleColorOptions> options) const
 {
     QPalette pal = colorPalette();
     switch (cssValueId) {
@@ -307,7 +309,7 @@ void RenderThemeQt::adjustTextFieldStyle(RenderStyle& style, const Element*) con
     // + RenderTextControl {INPUT} at (2,2) size 166x26
     // in layout tests when a CSS style is applied that doesn't affect background color, border or
     // padding. Just worth keeping in mind!
-    style.setBackgroundColor(Color::transparent);
+    style.setBackgroundColor(Color::transparentBlack);
     style.resetBorder();
     computeSizeBasedOnStyle(style);
 }
@@ -327,7 +329,7 @@ void RenderThemeQt::adjustMenuListStyle(RenderStyle& style, const Element*) cons
     style.resetBorder();
 
     // Height is locked to auto.
-    style.setHeight(Length(Auto));
+    style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
     style.setWhiteSpace(WhiteSpace::Pre);
@@ -341,7 +343,7 @@ void RenderThemeQt::adjustMenuListStyle(RenderStyle& style, const Element*) cons
 void RenderThemeQt::adjustMenuListButtonStyle(RenderStyle& style, const Element*) const
 {
     // Height is locked to auto.
-    style.setHeight(Length(Auto));
+    style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
     style.setWhiteSpace(WhiteSpace::Pre);
@@ -405,7 +407,7 @@ void RenderThemeQt::adjustSearchFieldStyle(RenderStyle& style, const Element*) c
     // + RenderTextControl {INPUT} at (2,2) size 166x26
     // in layout tests when a CSS style is applied that doesn't affect background color, border or
     // padding. Just worth keeping in mind!
-    style.setBackgroundColor(Color::transparent);
+    style.setBackgroundColor(Color::transparentBlack);
     style.resetBorder();
     style.resetPadding();
     computeSizeBasedOnStyle(style);
@@ -417,8 +419,8 @@ void RenderThemeQt::adjustSearchFieldCancelButtonStyle(RenderStyle& style, const
     // Scale the button size based on the font size.
     float fontScale = style.computedFontPixelSize() / defaultControlFontPixelSize;
     int cancelButtonSize = lroundf(qMin(qMax(minCancelButtonSize, defaultCancelButtonSize * fontScale), maxCancelButtonSize));
-    style.setWidth(Length(cancelButtonSize, Fixed));
-    style.setHeight(Length(cancelButtonSize, Fixed));
+    style.setWidth(Length(cancelButtonSize, LengthType::Fixed));
+    style.setHeight(Length(cancelButtonSize, LengthType::Fixed));
 }
 
 // Function taken from RenderThemeMac.mm
@@ -502,8 +504,8 @@ void RenderThemeQt::adjustInnerSpinButtonStyle(RenderStyle& style, const Element
 {
     // Use the same width as our native scrollbar
     int width = ScrollbarTheme::theme().scrollbarThickness();
-    style.setWidth(Length(width, Fixed));
-    style.setMinWidth(Length(width, Fixed));
+    style.setWidth(Length(width, LengthType::Fixed));
+    style.setMinWidth(Length(width, LengthType::Fixed));
 }
 #endif
 
@@ -845,11 +847,11 @@ void RenderThemeQt::adjustSliderThumbSize(RenderStyle& style, const Element*) co
     ControlPart part = style.appearance();
 
     if (part == MediaSliderThumbPart) {
-        style.setWidth(Length(timelineThumbWidth, Fixed));
-        style.setHeight(Length(timelineThumbHeight, Fixed));
+        style.setWidth(Length(timelineThumbWidth, LengthType::Fixed));
+        style.setHeight(Length(timelineThumbHeight, LengthType::Fixed));
     } else if (part == MediaVolumeSliderThumbPart) {
-        style.setHeight(Length(volumeThumbHeight, Fixed));
-        style.setWidth(Length(volumeThumbWidth, Fixed));
+        style.setHeight(Length(volumeThumbHeight, LengthType::Fixed));
+        style.setWidth(Length(volumeThumbWidth, LengthType::Fixed));
     }
 }
 
@@ -892,7 +894,7 @@ void RenderThemeQt::updateCachedSystemFontDescription(CSSValueID, FontCascadeDes
 }
 
 StylePainter::StylePainter(GraphicsContext& context)
-    : painter(context.platformContext())
+    : painter(context.platformContext()->painter())
 {
     if (painter) {
         // the styles often assume being called with a pristine painter where no brush is set,

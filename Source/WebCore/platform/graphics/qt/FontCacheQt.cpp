@@ -74,7 +74,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, cons
     }
 
     if (!computedFont.isValid())
-        return 0;
+        return nullptr;
     FontPlatformData alternateFont(computedFont);
     return fontForPlatformData(alternateFont);
 }

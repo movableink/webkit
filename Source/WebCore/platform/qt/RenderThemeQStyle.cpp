@@ -223,10 +223,10 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     case SearchFieldPart:
     case TextFieldPart: {
         int padding = m_qStyle->findFrameLineWidth();
-        renderStyle.setPaddingLeft(Length(extendFixedPadding(renderStyle.paddingLeft(),  padding), Fixed));
-        renderStyle.setPaddingRight(Length(extendFixedPadding(renderStyle.paddingRight(),  padding), Fixed));
-        renderStyle.setPaddingTop(Length(extendFixedPadding(renderStyle.paddingTop(),  padding), Fixed));
-        renderStyle.setPaddingBottom(Length(extendFixedPadding(renderStyle.paddingBottom(),  padding), Fixed));
+        renderStyle.setPaddingLeft(Length(extendFixedPadding(renderStyle.paddingLeft(),  padding), LengthType::Fixed));
+        renderStyle.setPaddingRight(Length(extendFixedPadding(renderStyle.paddingRight(),  padding), LengthType::Fixed));
+        renderStyle.setPaddingTop(Length(extendFixedPadding(renderStyle.paddingTop(),  padding), LengthType::Fixed));
+        renderStyle.setPaddingBottom(Length(extendFixedPadding(renderStyle.paddingBottom(),  padding), LengthType::Fixed));
         break;
     }
     default:
@@ -277,9 +277,9 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
 
     // FIXME: Check is flawed, since it doesn't take min-width/max-width into account.
     if (renderStyle.width().isIntrinsicOrAuto() && size.width() > 0)
-        renderStyle.setMinWidth(Length(size.width(), Fixed));
+        renderStyle.setMinWidth(Length(size.width(), LengthType::Fixed));
     if (renderStyle.height().isAuto() && size.height() > 0)
-        renderStyle.setMinHeight(Length(size.height(), Fixed));
+        renderStyle.setMinHeight(Length(size.height(), LengthType::Fixed));
 }
 
 
@@ -342,10 +342,10 @@ void RenderThemeQStyle::setButtonPadding(RenderStyle& style) const
         // Can't use this right now because we don't have the baseline to compensate
         // paddingBottom = layoutRect.bottom() - contentsRect.bottom();
     }
-    style.setPaddingLeft(Length(paddingLeft, Fixed));
-    style.setPaddingRight(Length(paddingRight, Fixed));
-    style.setPaddingTop(Length(paddingTop, Fixed));
-    style.setPaddingBottom(Length(paddingBottom, Fixed));
+    style.setPaddingLeft(Length(paddingLeft, LengthType::Fixed));
+    style.setPaddingRight(Length(paddingRight, LengthType::Fixed));
+    style.setPaddingTop(Length(paddingTop, LengthType::Fixed));
+    style.setPaddingBottom(Length(paddingBottom, LengthType::Fixed));
 }
 
 bool RenderThemeQStyle::paintButton(const RenderObject& o, const PaintInfo& i, const IntRect& r)
@@ -407,13 +407,13 @@ void RenderThemeQStyle::setPopupPadding(RenderStyle& style) const
     const int paddingLeft = 4;
     const int paddingRight = style.width().isFixed() || style.width().isPercent() ? 5 : 8;
 
-    style.setPaddingLeft(Length(paddingLeft, Fixed));
+    style.setPaddingLeft(Length(paddingLeft, LengthType::Fixed));
 
     int w = m_qStyle->simplePixelMetric(QStyleFacade::PM_ButtonIconSize);
-    style.setPaddingRight(Length(paddingRight + w, Fixed));
+    style.setPaddingRight(Length(paddingRight + w, LengthType::Fixed));
 
-    style.setPaddingTop(Length(2, Fixed));
-    style.setPaddingBottom(Length(2, Fixed));
+    style.setPaddingTop(Length(2, LengthType::Fixed));
+    style.setPaddingBottom(Length(2, LengthType::Fixed));
 }
 
 QPalette RenderThemeQStyle::colorPalette() const
@@ -670,11 +670,11 @@ void RenderThemeQStyle::adjustSliderThumbSize(RenderStyle& style, const Element*
         int length = m_qStyle->sliderLength(orientation);
         int thickness = m_qStyle->sliderThickness(orientation);
         if (orientation == Qt::Vertical) {
-            style.setWidth(Length(thickness, Fixed));
-            style.setHeight(Length(length, Fixed));
+            style.setWidth(Length(thickness, LengthType::Fixed));
+            style.setHeight(Length(length, LengthType::Fixed));
         } else {
-            style.setWidth(Length(length, Fixed));
-            style.setHeight(Length(thickness, Fixed));
+            style.setWidth(Length(length, LengthType::Fixed));
+            style.setHeight(Length(thickness, LengthType::Fixed));
         }
     } else
         RenderThemeQt::adjustSliderThumbSize(style, element);

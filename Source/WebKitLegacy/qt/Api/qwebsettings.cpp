@@ -885,7 +885,7 @@ QPixmap QWebSettings::webGraphic(WebGraphic type)
     RefPtr<WebCore::Image> img = WebCore::Image::loadPlatformResource(resourceNameForWebGraphic(type));
     if (!img)
         return QPixmap();
-    return QPixmap::fromImage(img->nativeImageForCurrentFrame());
+    return QPixmap::fromImage(img->nativeImageForCurrentFrame()->platformImage());
 }
 
 /*!

@@ -35,6 +35,7 @@
 #include "Scrollbar.h"
 
 #include <QGuiApplication>
+#include <QPainter>
 
 namespace WebCore {
 
@@ -107,11 +108,11 @@ static QStyleFacadeOption initSliderStyleOption(Scrollbar& scrollbar, QObject* w
     opt.rect = scrollbar.frameRect();
     if (scrollbar.enabled())
         opt.state |= QStyleFacade::State_Enabled;
-    if (scrollbar.controlSize() != RegularScrollbar)
+    if (scrollbar.controlSize() != ScrollbarControlSize::Regular)
         opt.state |= QStyleFacade::State_Mini;
-    opt.slider.orientation = (scrollbar.orientation() == VerticalScrollbar) ? Qt::Vertical : Qt::Horizontal;
+    opt.slider.orientation = (scrollbar.orientation() == ScrollbarOrientation::Vertical) ? Qt::Vertical : Qt::Horizontal;
 
-    if (scrollbar.orientation() == HorizontalScrollbar)
+    if (scrollbar.orientation() == ScrollbarOrientation::Horizontal)
         opt.state |= QStyleFacade::State_Horizontal;
     else
         opt.state &= ~QStyleFacade::State_Horizontal;
@@ -202,7 +203,7 @@ void ScrollbarThemeQStyle::invalidatePart(Scrollbar& scrollbar, ScrollbarPart)
 
 int ScrollbarThemeQStyle::scrollbarThickness(ScrollbarControlSize controlSize, ScrollbarExpansionState)
 {
-    const bool mini = controlSize != RegularScrollbar;
+    const bool mini = controlSize != ScrollbarControlSize::Regular;
     return m_qStyle->scrollBarExtent(mini);
 }
 
@@ -219,21 +220,21 @@ int ScrollbarThemeQStyle::thumbLength(Scrollbar& scrollbar)
 {
     QStyleFacadeOption opt = initSliderStyleOption(scrollbar);
     QRect thumb = m_qStyle->scrollBarSubControlRect(opt, QStyleFacade::SC_ScrollBarSlider);
-    return scrollbar.orientation() == HorizontalScrollbar ? thumb.width() : thumb.height();
+    return scrollbar.orientation() == ScrollbarOrientation::Horizontal ? thumb.width() : thumb.height();
 }
 
 int ScrollbarThemeQStyle::trackPosition(Scrollbar& scrollbar)
 {
     QStyleFacadeOption opt = initSliderStyleOption(scrollbar);
     QRect track = m_qStyle->scrollBarSubControlRect(opt, QStyleFacade::SC_ScrollBarGroove);
-    return scrollbar.orientation() == HorizontalScrollbar ? track.x() : track.y();
+    return scrollbar.orientation() == ScrollbarOrientation::Horizontal ? track.x() : track.y();
 }
 
 int ScrollbarThemeQStyle::trackLength(Scrollbar& scrollbar)
 {
     QStyleFacadeOption opt = initSliderStyleOption(scrollbar);
     QRect track = m_qStyle->scrollBarSubControlRect(opt, QStyleFacade::SC_ScrollBarGroove);
-    return scrollbar.orientation() == HorizontalScrollbar ? track.width() : track.height();
+    return scrollbar.orientation() == ScrollbarOrientation::Horizontal ? track.width() : track.height();
 }
 
 void ScrollbarThemeQStyle::paintScrollCorner(GraphicsContext& context, const IntRect& rect)

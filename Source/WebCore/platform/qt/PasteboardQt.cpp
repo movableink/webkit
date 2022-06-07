@@ -252,7 +252,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
     Image* image = cachedImage->imageForRenderer(node.renderer());
     ASSERT(image);
 
-    QImage nativeImage = image->nativeImageForCurrentFrame();
+    QImage nativeImage = image->nativeImageForCurrentFrame()->platformImage();
     if (nativeImage.isNull())
         return;
     if (!m_writableData)

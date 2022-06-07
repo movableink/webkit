@@ -39,8 +39,8 @@ RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String& fileName)
     if (!file.exists() || !file.open(QFile::ReadOnly))
         return nullptr;
 
-    Vector<char> buffer(file.size());
-    file.read(buffer.data(), buffer.size());
+    Vector<uint8_t> buffer(file.size());
+    file.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
     return SharedBuffer::create(WTFMove(buffer));
 }
 

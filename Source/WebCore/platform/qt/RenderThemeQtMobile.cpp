@@ -670,10 +670,10 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     case SearchFieldPart:
     case TextFieldPart: {
         int padding = frameWidth;
-        renderStyle.setPaddingLeft(Length(padding, Fixed));
-        renderStyle.setPaddingRight(Length(padding, Fixed));
-        renderStyle.setPaddingTop(Length(padding, Fixed));
-        renderStyle.setPaddingBottom(Length(padding, Fixed));
+        renderStyle.setPaddingLeft(Length(padding, LengthType::Fixed));
+        renderStyle.setPaddingRight(Length(padding, LengthType::Fixed));
+        renderStyle.setPaddingTop(Length(padding, LengthType::Fixed));
+        renderStyle.setPaddingBottom(Length(padding, LengthType::Fixed));
         break;
     }
     default:
@@ -710,9 +710,9 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
 
     // FIXME: Check is flawed, since it doesn't take min-width/max-width into account.
     if (renderStyle.width().isIntrinsicOrAuto() && size.width() > 0)
-        renderStyle.setMinWidth(Length(size.width(), Fixed));
+        renderStyle.setMinWidth(Length(size.width(), LengthType::Fixed));
     if (renderStyle.height().isAuto() && size.height() > 0)
-        renderStyle.setMinHeight(Length(size.height(), Fixed));
+        renderStyle.setMinHeight(Length(size.height(), LengthType::Fixed));
 }
 
 void RenderThemeQtMobile::adjustButtonStyle(RenderStyle& style, const Element*) const
@@ -734,10 +734,10 @@ void RenderThemeQtMobile::adjustButtonStyle(RenderStyle& style, const Element*) 
 
 void RenderThemeQtMobile::setButtonPadding(RenderStyle& style) const
 {
-    style.setPaddingLeft(Length(buttonPaddingLeft, Fixed));
-    style.setPaddingRight(Length(buttonPaddingRight, Fixed));
-    style.setPaddingTop(Length(buttonPaddingTop, Fixed));
-    style.setPaddingBottom(Length(buttonPaddingBottom, Fixed));
+    style.setPaddingLeft(Length(buttonPaddingLeft, LengthType::Fixed));
+    style.setPaddingRight(Length(buttonPaddingRight, LengthType::Fixed));
+    style.setPaddingTop(Length(buttonPaddingTop, LengthType::Fixed));
+    style.setPaddingBottom(Length(buttonPaddingBottom, LengthType::Fixed));
 }
 
 bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i, const IntRect& r)
@@ -764,7 +764,7 @@ void RenderThemeQtMobile::adjustTextFieldStyle(RenderStyle& style, const Element
     // + RenderTextControl {INPUT} at (2,2) size 166x26
     // in layout tests when a CSS style is applied that doesn't affect background color, border or
     // padding. Just worth keeping in mind!
-    style.setBackgroundColor(Color::transparent);
+    style.setBackgroundColor(Color::transparentBlack);
     style.resetBorder();
     style.setBorderTopWidth(frameWidth);
     style.setBorderRightWidth(frameWidth);
@@ -772,8 +772,8 @@ void RenderThemeQtMobile::adjustTextFieldStyle(RenderStyle& style, const Element
     style.setBorderLeftWidth(frameWidth);
     style.resetPadding();
     computeSizeBasedOnStyle(style);
-    style.setPaddingLeft(Length(textFieldPadding, Fixed));
-    style.setPaddingRight(Length(textFieldPadding, Fixed));
+    style.setPaddingLeft(Length(textFieldPadding, LengthType::Fixed));
+    style.setPaddingRight(Length(textFieldPadding, LengthType::Fixed));
 }
 
 bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -812,7 +812,7 @@ bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo&
 void RenderThemeQtMobile::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
     RenderThemeQt::adjustMenuListStyle(style, e);
-    style.setPaddingLeft(Length(menuListPadding, Fixed));
+    style.setPaddingLeft(Length(menuListPadding, LengthType::Fixed));
 }
 
 void RenderThemeQtMobile::setPopupPadding(RenderStyle& style) const
@@ -820,11 +820,11 @@ void RenderThemeQtMobile::setPopupPadding(RenderStyle& style) const
     const int paddingLeft = 4;
     const int paddingRight = style.width().isFixed() || style.width().isPercent() ? 5 : 8;
 
-    style.setPaddingLeft(Length(paddingLeft, Fixed));
-    style.setPaddingRight(Length(paddingRight + arrowBoxWidth, Fixed));
+    style.setPaddingLeft(Length(paddingLeft, LengthType::Fixed));
+    style.setPaddingRight(Length(paddingRight + arrowBoxWidth, LengthType::Fixed));
 
-    style.setPaddingTop(Length(2, Fixed));
-    style.setPaddingBottom(Length(2, Fixed));
+    style.setPaddingTop(Length(2, LengthType::Fixed));
+    style.setPaddingBottom(Length(2, LengthType::Fixed));
 }
 
 bool RenderThemeQtMobile::paintMenuList(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -930,8 +930,8 @@ void RenderThemeQtMobile::adjustSliderThumbSize(RenderStyle& style, const Elemen
     const ControlPart part = style.appearance();
     if (part == SliderThumbHorizontalPart || part == SliderThumbVerticalPart) {
         const int size = sliderSize * style.effectiveZoom();
-        style.setWidth(Length(size, Fixed));
-        style.setHeight(Length(size, Fixed));
+        style.setWidth(Length(size, LengthType::Fixed));
+        style.setHeight(Length(size, LengthType::Fixed));
     } else
         RenderThemeQt::adjustSliderThumbSize(style, element);
 }

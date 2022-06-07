@@ -39,7 +39,9 @@
 #include "ImageObserver.h"
 #include "ShadowBlur.h"
 #include "StillImageQt.h"
+#include "NativeImage.h"
 #include "Timer.h"
+#include "GraphicsContextQt.h"
 
 #include <QPainter>
 #include <QPaintEngine>
@@ -50,22 +52,22 @@
 
 namespace WebCore {
 
-IntSize nativeImageSize(const NativeImagePtr& image)
+IntSize nativeImageSize(NativeImage& image)
 {
     return image.size();// image ? IntSize(image->size()) : IntSize();
 }
 
-bool nativeImageHasAlpha(const NativeImagePtr& image)
+bool nativeImageHasAlpha(NativeImage& image)
 {
-    return image.hasAlphaChannel();//  !image || image->hasAlphaChannel();
+    return image.hasAlpha();//  !image || image->hasAlphaChannel();
 }
 
-Color nativeImageSinglePixelSolidColor(const NativeImagePtr& image)
+Color nativeImageSinglePixelSolidColor(NativeImage& image)
 {
-    if (image.width() != 1 || image.height() != 1)
+    if (image.platformImage().width() != 1 || image.platformImage().height() != 1)
         return Color();
 
-    return QColor::fromRgba(image.pixel(0, 0));
+    return QColor::fromRgba(image.platformImage().pixel(0, 0));
 }
 
 const QImage* prescaleImageIfRequired(QPainter* painter, const QImage* image, QImage* prescaledImage, const QRectF& destRect, QRectF* srcRect)
@@ -118,28 +120,29 @@ const QImage* prescaleImageIfRequired(QPainter* painter, const QImage* image, QI
     return prescaledImage;
 }
 
-void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& srcRect, const IntSize& srcSize, const ImagePaintingOptions& options)
+void drawNativeImage(NativeImage& image, GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& srcRect, const IntSize& srcSize, const ImagePaintingOptions& options)
 {
     // QTFIXME: Handle imageSize? See e.g. NativeImageDirect2D
-    ctxt.platformContext()->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    QPainter* painter = ctxt.platformContext()->painter();
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
 
     QRectF normalizedDst = destRect.normalized();
     QRectF normalizedSrc = srcRect.normalized();
 
     QImage prescaledImage;
-    const NativeImagePtr& maybePrescaledImage = *prescaleImageIfRequired(ctxt.platformContext(), &image, &prescaledImage, normalizedDst, &normalizedSrc);
+    const QImage* maybePrescaledImage = prescaleImageIfRequired(painter, &image.platformImage(), &prescaledImage, normalizedDst, &normalizedSrc);
 
     CompositeOperator previousOperator = ctxt.compositeOperation();
     BlendMode previousBlendMode = ctxt.blendModeOperation();
-    ctxt.setCompositeOperation(!image.hasAlphaChannel() && options.compositeOperator() == CompositeOperator::SourceOver && options.blendMode() == BlendMode::Normal ? CompositeOperator::Copy : options.compositeOperator(), options.blendMode());
+    ctxt.setCompositeOperation(!image.hasAlpha() && options.compositeOperator() == CompositeOperator::SourceOver && options.blendMode() == BlendMode::Normal ? CompositeOperator::Copy : options.compositeOperator(), options.blendMode());
 
     if (ctxt.hasShadow() && ctxt.mustUseShadowBlur()) {
         ShadowBlur shadow(ctxt.state());
         shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
             [normalizedSrc, normalizedDst, &image](GraphicsContext& shadowContext)
             {
-                QPainter* shadowPainter = shadowContext.platformContext();
-                shadowPainter->drawImage(normalizedDst, image, normalizedSrc);
+                QPainter* shadowPainter = shadowContext.platformContext()->painter();
+                shadowPainter->drawImage(normalizedDst, image.platformImage(), normalizedSrc);
             },
             [&ctxt](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
             {
@@ -147,12 +150,12 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& ctxt, const F
             });
     }
 
-    ctxt.platformContext()->drawImage(normalizedDst, maybePrescaledImage, normalizedSrc);
+    ctxt.platformContext()->painter()->drawImage(normalizedDst, *maybePrescaledImage, normalizedSrc);
 
     ctxt.setCompositeOperation(previousOperator, previousBlendMode);
 }
 
-void clearNativeImageSubimages(const NativeImagePtr&)
+void clearNativeImageSubimages(NativeImage&)
 {
 }
 

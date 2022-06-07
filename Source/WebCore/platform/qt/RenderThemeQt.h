@@ -71,14 +71,14 @@ public:
     void adjustRepaintRect(const RenderObject&, FloatRect&) override;
 
     // The platform selection color.
-    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
+    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const override;
 
-    Color platformFocusRingColor(OptionSet<StyleColor::Options>) const override;
+    Color platformFocusRingColor(OptionSet<StyleColorOptions>) const override;
 
-    Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const override;
+    Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const override;
 
     int minimumMenuListSize(const RenderStyle&) const override;
 

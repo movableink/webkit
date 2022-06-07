@@ -34,8 +34,11 @@
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 #include "NativeImageQt.h"
 #include <QPainterPath>
+#include <QPainter>
+#include <QPen>
 #include <QString>
 #include <QTransform>
 #include <wtf/MathExtras.h>
@@ -125,12 +128,11 @@ bool Path::contains(const FloatPoint& point, WindRule rule) const
     return contains;
 }
 
-static GraphicsContext* scratchContext()
+static QPainter* scratchContext()
 {
     static QImage image(1, 1, NativeImageQt::defaultFormatForAlphaEnabledImages());
     static QPainter painter(&image);
-    static GraphicsContext* context = new GraphicsContext(&painter);
-    return context;
+    return &painter;
 }
 
 bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
@@ -138,10 +140,10 @@ bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsC
     ASSERT(strokeStyleApplier);
 
     QPainterPathStroker stroke;
-    GraphicsContext* context = scratchContext();
+    GraphicsContextQt context(scratchContext());
     strokeStyleApplier(context);
 
-    QPen pen = context->platformContext()->pen();
+    QPen pen = context.painter()->pen();
     stroke.setWidth(pen.widthF());
     stroke.setCapStyle(pen.capStyle());
     stroke.setJoinStyle(pen.joinStyle());
@@ -169,12 +171,12 @@ FloatRect Path::boundingRect() const
 
 FloatRect Path::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
-    GraphicsContext* context = scratchContext();
+    GraphicsContextQt context(scratchContext());
     QPainterPathStroker stroke;
-    if (strokeStyleapplier) {
+    if (strokeStyleApplier) {
         strokeStyleApplier(context);
 
-        QPen pen = context->platformContext()->pen();
+        QPen pen = context.painter()->pen();
         stroke.setWidth(pen.widthF());
         stroke.setCapStyle(pen.capStyle());
         stroke.setJoinStyle(pen.joinStyle());

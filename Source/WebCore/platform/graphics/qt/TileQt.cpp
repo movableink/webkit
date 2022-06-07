@@ -22,7 +22,7 @@
 
 #if USE(TILED_BACKING_STORE)
 
-#include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 #include "TiledBackingStore.h"
 #include "TiledBackingStoreClient.h"
 #include <QObject>
@@ -111,7 +111,7 @@ Vector<IntRect> TileQt::updateBackBuffer()
     *m_dirtyRegion = QRegion();
     
     QPainter painter(m_backBuffer);
-    GraphicsContext context(&painter);
+    GraphicsContextQt context(&painter);
     context.translate(-m_rect.x(), -m_rect.y());
 
     Vector<IntRect> updatedRects;

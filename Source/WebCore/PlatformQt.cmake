@@ -21,6 +21,7 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/page/qt"
     "${WEBCORE_DIR}/platform/qt"
     "${WEBCORE_DIR}/platform/audio/qt"
+    "${WEBCORE_DIR}/platform/glib"
     "${WEBCORE_DIR}/platform/graphics/egl"
     "${WEBCORE_DIR}/platform/graphics/glx"
     "${WEBCORE_DIR}/platform/graphics/gpu/qt"
@@ -50,10 +51,13 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     page/SpatialNavigation.h
 
+    platform/glib/ApplicationGLib.h
+
     platform/graphics/MediaPlayerPrivate.h
 
     platform/graphics/qt/MediaPlayerPrivateQt.h
     platform/graphics/qt/ImageBufferQtBackend.h
+    platform/graphics/qt/GraphicsContextQt.h
 
     platform/mock/GeolocationClientMock.h
 

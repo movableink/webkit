@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-NativeImagePtr ImageBackingStore::image() const
+PlatformImagePtr ImageBackingStore::image() const
 {
     m_pixels->ref();
     // QTFIXME: Ownership of QImage?

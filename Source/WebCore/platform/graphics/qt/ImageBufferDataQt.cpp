@@ -421,7 +421,7 @@ void ImageBufferDataPrivateUnaccelerated::drawPattern(GraphicsContext& destConte
 
 void ImageBufferDataPrivateUnaccelerated::clip(GraphicsContext& context, const IntRect& rect) const
 {
-    auto nativeImage = m_image->nativeImageForCurrentFrame();
+    auto nativeImage = m_image->nativeImageForCurrentFrame()->platformImage();
     if (nativeImage.isNull())
         return;
 

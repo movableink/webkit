@@ -39,6 +39,10 @@
 #include "GradientRendererCG.h"
 #endif
 
+#if PLATFORM(QT)
+#include <QBrush>
+#endif
+
 #if USE(CG)
 typedef struct CGContext* CGContextRef;
 #endif
@@ -47,7 +51,6 @@ typedef struct CGContext* CGContextRef;
 QT_BEGIN_NAMESPACE
 class QGradient;
 QT_END_NAMESPACE
-typedef QGradient* PlatformGradient;
 #endif
 
 #if USE(CAIRO)
@@ -114,8 +117,11 @@ public:
 #if USE(CG)
     void paint(GraphicsContext&);
     void paint(CGContextRef);
-#elif PLATFORM(QT)
+#endif
+
+#if PLATFORM(QT)
     QBrush createBrush();
+    QGradient* platformGradient();
 #endif
 
     template<typename Encoder> void encode(Encoder&) const;
@@ -131,6 +137,10 @@ private:
     GradientSpreadMethod m_spreadMethod;
     GradientColorStops m_stops;
     mutable unsigned m_cachedHash { 0 };
+
+#if PLATFORM(QT)
+    QGradient* m_gradient;
+#endif
 
 #if USE(CG)
     std::optional<GradientRendererCG> m_platformRenderer;

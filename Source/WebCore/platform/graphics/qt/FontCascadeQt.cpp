@@ -27,7 +27,8 @@
 #include "FontDescription.h"
 #include "GlyphBuffer.h"
 #include "Gradient.h"
-#include "GraphicsContext.h"
+#include "GraphicsTypes.h"
+#include "GraphicsContextQt.h"
 #include "NotImplemented.h"
 #include "Pattern.h"
 #include "ShadowBlur.h"
@@ -121,10 +122,10 @@ static QPainterPath pathForGlyphs(const QGlyphRun& glyphRun, const QPointF& offs
 
 static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun, const QPointF& point, qreal baseLineOffset)
 {
-    QPainter* painter = context.platformContext();
+    QPainter* painter = context.platformContext()->painter();
 
     QPainterPath textStrokePath;
-    if (context.textDrawingMode() & TextModeStroke)
+    if (context.textDrawingMode() & TextDrawingMode::Stroke)
         textStrokePath = pathForGlyphs(qtGlyphRun, point);
 
     if (context.hasShadow()) {
@@ -139,11 +140,11 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
             shadow.drawShadowLayer(context.getCTM(), context.clipBounds(), boundingRect,
                 [state, point, qtGlyphRun, textStrokePath](GraphicsContext& shadowContext)
                 {
-                    QPainter* shadowPainter = shadowContext.platformContext();
+                    QPainter* shadowPainter = shadowContext.platformContext()->painter();
                     shadowPainter->setPen(state.shadowColor);
-                    if (shadowContext.textDrawingMode() & TextModeFill)
+                    if (shadowContext.textDrawingMode() & TextDrawingMode::Fill)
                         shadowPainter->drawGlyphRun(point, qtGlyphRun);
-                    else if (shadowContext.textDrawingMode() & TextModeStroke)
+                    else if (shadowContext.textDrawingMode() & TextDrawingMode::Stroke)
                         shadowPainter->strokePath(textStrokePath, shadowPainter->pen());
                 },
                 [&context](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
@@ -155,19 +156,19 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
             painter->setPen(state.shadowColor);
             const QPointF shadowOffset(state.shadowOffset.width(), state.shadowOffset.height());
             painter->translate(shadowOffset);
-            if (context.textDrawingMode() & TextModeFill)
+            if (context.textDrawingMode() & TextDrawingMode::Fill)
                 painter->drawGlyphRun(point, qtGlyphRun);
-            else if (context.textDrawingMode() & TextModeStroke)
+            else if (context.textDrawingMode() & TextDrawingMode::Stroke)
                 painter->strokePath(textStrokePath, painter->pen());
             painter->translate(-shadowOffset);
             painter->setPen(previousPen);
         }
     }
 
-    if (context.textDrawingMode() & TextModeStroke)
+    if (context.textDrawingMode() & TextDrawingMode::Stroke)
         painter->strokePath(textStrokePath, strokePenForContext(context));
 
-    if (context.textDrawingMode() & TextModeFill) {
+    if (context.textDrawingMode() & TextDrawingMode::Fill) {
         QPen previousPen = painter->pen();
         painter->setPen(fillPenForContext(context));
         painter->drawGlyphRun(point, qtGlyphRun);
@@ -287,8 +288,8 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     if (context.paintingDisabled())
         return;
 
-    bool shouldFill = context.textDrawingMode() & TextModeFill;
-    bool shouldStroke = context.textDrawingMode() & TextModeStroke;
+    bool shouldFill = context.textDrawingMode() & TextDrawingMode::Fill;
+    bool shouldStroke = context.textDrawingMode() & TextDrawingMode::Stroke;
 
     if (!shouldFill && !shouldStroke)
         return;

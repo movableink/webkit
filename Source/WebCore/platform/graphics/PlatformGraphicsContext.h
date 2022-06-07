@@ -41,6 +41,11 @@ namespace WebCore {
 class GraphicsContextCairo;
 }
 using PlatformGraphicsContext = WebCore::GraphicsContextCairo;
+#elif PLATFORM(QT)
+namespace WebCore {
+class GraphicsContextQt;
+}
+using PlatformGraphicsContext = WebCore::GraphicsContextQt;
 #else
 using PlatformGraphicsContext = void;
 #endif

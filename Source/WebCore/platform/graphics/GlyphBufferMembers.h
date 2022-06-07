@@ -48,6 +48,11 @@ using GlyphBufferGlyph = CGGlyph;
 using GlyphBufferAdvance = CGSize;
 using GlyphBufferOrigin = CGPoint;
 using GlyphBufferStringOffset = CFIndex;
+#elif PLATFORM(QT)
+using GlyphBufferGlyph = quint32;
+using GlyphBufferAdvance = QPointF;
+using GlyphBufferOrigin = QPointF;
+using GlyphBufferStringOffset = unsigned;
 #else
 using GlyphBufferGlyph = Glyph;
 using GlyphBufferAdvance = FloatSize;
@@ -140,6 +145,78 @@ inline float x(const GlyphBufferOrigin& origin)
 inline float y(const GlyphBufferOrigin& origin)
 {
     return origin.y;
+}
+
+#elif PLATFORM(QT)
+
+inline GlyphBufferAdvance makeGlyphBufferAdvance(const FloatSize& size)
+{
+    return QPointF(size.width(), size.height());
+}
+
+inline GlyphBufferAdvance makeGlyphBufferAdvance(float width, float height)
+{
+    return QPointF(width, height);
+}
+
+inline FloatSize size(const GlyphBufferAdvance& advance)
+{
+    return FloatSize(advance.x(), advance.y());
+}
+
+inline void setWidth(GlyphBufferAdvance& advance, float width)
+{
+    advance.setX(width);
+}
+
+inline void setHeight(GlyphBufferAdvance& advance, float height)
+{
+    advance.setY(height);
+}
+
+inline float width(const GlyphBufferAdvance& advance)
+{
+    return advance.x();
+}
+
+inline float height(const GlyphBufferAdvance& advance)
+{
+    return advance.y();
+}
+
+inline GlyphBufferOrigin makeGlyphBufferOrigin(const FloatPoint& point)
+{
+    return QPointF(point.x(), point.y());
+}
+
+inline GlyphBufferOrigin makeGlyphBufferOrigin(float x, float y)
+{
+    return QPointF(x, y);
+}
+
+inline FloatPoint point(const GlyphBufferOrigin& origin)
+{
+    return FloatPoint(origin.x(), origin.y());
+}
+
+inline void setX(GlyphBufferOrigin& origin, float x)
+{
+    origin.setX(x);
+}
+
+inline void setY(GlyphBufferOrigin& origin, float y)
+{
+    origin.setY(y);
+}
+
+inline float x(const GlyphBufferOrigin& origin)
+{
+    return origin.x();
+}
+
+inline float y(const GlyphBufferOrigin& origin)
+{
+    return origin.y();
 }
 
 #else

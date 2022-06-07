@@ -113,7 +113,7 @@ RefPtr<Image> ImageBufferQtBackend::copyImage(BackingStoreCopy copyBehavior, Pre
     return StillImage::createForRendering(&m_nativeImage);
 }
 
-NativeImagePtr ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
+PlatformImagePtr ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
 {
     if (copyBehavior == CopyBackingStore)
         return m_nativeImage.copy();
@@ -171,7 +171,7 @@ String ImageBufferQtBackend::toDataURL(const String& mimeType, std::optional<dou
 {
     RefPtr<Image> image = copyImage(DontCopyBackingStore);
     QByteArray data;
-    if (!encodeImage(image->nativeImageForCurrentFrame(), mimeType, quality, data))
+    if (!encodeImage(image->nativeImageForCurrentFrame()->platformImage(), mimeType, quality, data))
         return "data:,";
 
     return "data:" + mimeType + ";base64," + data.toBase64().data();
@@ -181,7 +181,7 @@ Vector<uint8_t> ImageBufferQtBackend::toData(const String& mimeType, std::option
 {
     RefPtr<Image> image = copyImage(DontCopyBackingStore);
     QByteArray data;
-    if (!encodeImage(image->nativeImageForCurrentFrame(), mimeType, quality, data))
+    if (!encodeImage(image->nativeImageForCurrentFrame()->platformImage(), mimeType, quality, data))
         return { };
 
     Vector<uint8_t> result(data.size());

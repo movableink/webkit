@@ -27,14 +27,14 @@
 #include "config.h"
 #include "Gradient.h"
 
-#include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 
 #include <QGradient>
 #include <QPainter>
 
 namespace WebCore {
 
-void Gradient::platformDestroy()
+void Gradient::stopsChanged()
 {
     delete m_gradient;
     m_gradient = 0;
@@ -117,13 +117,13 @@ QGradient* Gradient::platformGradient()
     }
 
     switch (m_spreadMethod) {
-    case SpreadMethodPad:
+    case GradientSpreadMethod::Pad:
         m_gradient->setSpread(QGradient::PadSpread);
         break;
-    case SpreadMethodReflect:
+    case GradientSpreadMethod::Reflect:
         m_gradient->setSpread(QGradient::ReflectSpread);
         break;
-    case SpreadMethodRepeat:
+    case GradientSpreadMethod::Repeat:
         m_gradient->setSpread(QGradient::RepeatSpread);
         break;
     }
@@ -133,7 +133,7 @@ QGradient* Gradient::platformGradient()
 
 void Gradient::fill(GraphicsContext& context, const FloatRect& rect)
 {
-    context.platformContext()->fillRect(rect, *platformGradient());
+    context.platformContext()->painter()->fillRect(rect, *platformGradient());
 }
 
 QBrush Gradient::createBrush()

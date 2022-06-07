@@ -253,7 +253,7 @@ String ImageBuffer::toDataURL(const String& mimeType, std::optional<double> qual
 {
     RefPtr<Image> image = copyImage(DontCopyBackingStore);
     QByteArray data;
-    if (!encodeImage(image->nativeImageForCurrentFrame(), mimeType, quality, data))
+    if (!encodeImage(image->nativeImageForCurrentFrame()->platformImage(), mimeType, quality, data))
         return "data:,";
 
     return "data:" + mimeType + ";base64," + data.toBase64().data();
@@ -263,7 +263,7 @@ Vector<uint8_t> ImageBuffer::toData(const String& mimeType, std::optional<double
 {
     RefPtr<Image> image = copyImage(DontCopyBackingStore);
     QByteArray data;
-    if (!encodeImage(image->nativeImageForCurrentFrame(), mimeType, quality, data))
+    if (!encodeImage(image->nativeImageForCurrentFrame()->platformImage(), mimeType, quality, data))
         return { };
 
     Vector<uint8_t> result(data.size());
