@@ -505,11 +505,13 @@ void GraphicsContextQt::drawEllipse(const FloatRect& rect)
     m_data->p()->drawEllipse(rect);
 }
 
-void GraphicsContextQt::drawPattern(const PlatformImagePtr& image, const FloatSize& imageSize, const FloatRect &destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,
+void GraphicsContextQt::drawPattern(NativeImage& nativeImage, const FloatRect &destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,
     const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    if (paintingDisabled() || !patternTransform.isInvertible())
+    if (!patternTransform.isInvertible())
         return;
+
+    QImage image = nativeImage.platformImage();
 
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     FloatRect tileRectAdjusted = adjustSourceRectForDownSampling(tileRect, framePixmap->size());
@@ -968,7 +970,7 @@ void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient)
             p->fillRect(platformRect.translated(QPointF(m_state.shadowOffset.width(), m_state.shadowOffset.height())), shadowColor);
         }
     }
-    p->fillRect(platformRect, gradient.platformGradient());
+    p->fillRect(platformRect, *gradient.platformGradient());
 }
 
 void GraphicsContextQt::fillRoundedRectImpl(const FloatRoundedRect& rect, const Color& color)

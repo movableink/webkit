@@ -27,41 +27,39 @@
 
 #include "ImageBufferBackend.h"
 #include "PlatformImage.h"
+#include "PixelBuffer.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
-class ImageBufferQtBackend : public ImageBufferBackend {
+class WEBCORE_EXPORT ImageBufferQtBackend : public ImageBufferBackend {
     WTF_MAKE_ISO_ALLOCATED(ImageBufferQtBackend);
     WTF_MAKE_NONCOPYABLE(ImageBufferQtBackend);
 public:
-    static std::unique_ptr<ImageBufferQtBackend> create(const FloatSize &, float resolutionScale, ColorSpace, const HostWindow *);
-    static std::unique_ptr<ImageBufferQtBackend> create(const FloatSize &, const GraphicsContext &);
+    static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const HostWindow *);
+    static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
-    ImageBufferQtBackend(const FloatSize &logicalSize, const IntSize &backendSize, float resolutionScale, ColorSpace, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image);
+    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image);
 
     RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
-    PlatformImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
+    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
 
     void draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) override;
     void drawPattern(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const AffineTransform &patternTransform, const FloatPoint &phase, const FloatSize &spacing, const ImagePaintingOptions &) override;
 
-    void transformColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace);
+    void transformToColorSpace(const DestinationColorSpace&) override;
 
     String toDataURL(const String &mimeType, std::optional<double> quality, PreserveResolution) const override;
     Vector<uint8_t> toData(const String &mimeType, std::optional<double> quality) const override;
-    Vector<uint8_t> toBGRAData() const override;
 
     GraphicsContext& context() const override;
 
-    RefPtr<ImageData> getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const override;
-    void putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData, const IntRect& srcRect, const IntPoint& destPoint) override;
+    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const override;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
-
     using ImageBufferBackend::ImageBufferBackend;
 
-    ColorFormat backendColorFormat() const override { return ColorFormat::BGRA; }
     static void initPainter(QPainter *painter);
     void platformTransformColorSpace(const std::array<uint8_t, 256>& lookUpTable);
 

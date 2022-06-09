@@ -32,8 +32,9 @@
 #include "StillImageQt.h"
 #include "NativeImageQt.h"
 #include "ImageData.h"
-#include "GraphicsContext.h"
+#include "GraphicsContextQt.h"
 #include "ColorUtilities.h"
+#include "ColorTransferFunctions.h"
 #include "IntRect.h"
 #include "MIMETypeRegistry.h"
 #include <wtf/IsoMallocInlines.h>
@@ -46,24 +47,24 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBufferQtBackend);
 
-ImageBufferQtBackend::ImageBufferQtBackend(const FloatSize &logicalSize, const IntSize &backendSize, float resolutionScale, ColorSpace colorSpace, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image)
-    : ImageBufferBackend(logicalSize, backendSize, resolutionScale, colorSpace)
+ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image)
+    : ImageBufferBackend(parameters)
     , m_nativeImage(nativeImage)
     , m_image(WTFMove(image))
     , m_context(WTFMove(context))
 {}
 
-std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const FloatSize &size, float resolutionScale, ColorSpace colorSpace, const HostWindow *hostWindow)
+std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const HostWindow *hostWindow)
 {
-    IntSize backendSize = calculateBackendSize(size, resolutionScale);
+    IntSize backendSize = calculateBackendSize(parameters);
     if (backendSize.isEmpty())
         return nullptr;
 
     auto painter = new QPainter;
 
-    auto nativeImage = QImage(IntSize(size * resolutionScale), NativeImageQt::defaultFormatForAlphaEnabledImages());
+    auto nativeImage = QImage(IntSize(parameters.logicalSize * parameters.resolutionScale), NativeImageQt::defaultFormatForAlphaEnabledImages());
     nativeImage.fill(QColor(Qt::transparent));
-    nativeImage.setDevicePixelRatio(resolutionScale);
+    nativeImage.setDevicePixelRatio(parameters.resolutionScale);
 
     if (!painter->begin(&nativeImage))
         return nullptr;
@@ -71,15 +72,14 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const FloatSi
     ImageBufferQtBackend::initPainter(painter);
 
     auto image = StillImage::create(nativeImage);
-
     auto context = std::make_unique<GraphicsContext>(painter);
 
-    return std::make_unique<ImageBufferQtBackend>(size, backendSize, resolutionScale, colorSpace, WTFMove(context), nativeImage, WTFMove(image));
+    return std::make_unique<ImageBufferQtBackend>(parameters, WTFMove(context), WTFMove(image));
 }
 
-std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const FloatSize &size, const GraphicsContext &)
+std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const GraphicsContext& context)
 {
-    return ImageBufferQtBackend::create(size, 1, ColorSpace::SRGB, nullptr);
+    return ImageBufferQtBackend::create(parameters, nullptr);
 }
 
 void ImageBufferQtBackend::initPainter(QPainter *painter)
@@ -113,12 +113,12 @@ RefPtr<Image> ImageBufferQtBackend::copyImage(BackingStoreCopy copyBehavior, Pre
     return StillImage::createForRendering(&m_nativeImage);
 }
 
-PlatformImagePtr ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
+RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
 {
     if (copyBehavior == CopyBackingStore)
-        return m_nativeImage.copy();
+        return NativeImage::create(m_nativeImage.copy());
 
-    return QImage(m_nativeImage);
+    return NativeImage::create(QImage(m_nativeImage));
 }
 
 void ImageBufferQtBackend::draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) {
@@ -189,33 +189,33 @@ Vector<uint8_t> ImageBufferQtBackend::toData(const String& mimeType, std::option
     return result;
 }
 
-void ImageBufferQtBackend::transformColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace)
+void ImageBufferQtBackend::transformToColorSpace(const DestinationColorSpace& newColorSpace)
 {
-    if (srcColorSpace == destColorSpace)
+    if (m_parameters.colorSpace == newColorSpace)
         return;
 
     // only sRGB <-> linearRGB are supported at the moment
-    if ((srcColorSpace != ColorSpace::LinearRGB && srcColorSpace != ColorSpace::SRGB)
-        || (destColorSpace != ColorSpace::LinearRGB && destColorSpace != ColorSpace::SRGB))
+    if ((m_parameters.colorSpace != DestinationColorSpace::LinearSRGB() && m_parameters.colorSpace != DestinationColorSpace::SRGB())
+        || (newColorSpace != DestinationColorSpace::LinearSRGB() && newColorSpace != DestinationColorSpace::SRGB()))
         return;
 
-    if (destColorSpace == ColorSpace::LinearRGB) {
+    if (newColorSpace == DestinationColorSpace::LinearSRGB()) {
         static const std::array<uint8_t, 256> linearRgbLUT = [] {
             std::array<uint8_t, 256> array;
             for (unsigned i = 0; i < 256; i++) {
                 float color = i / 255.0f;
-                color = sRGBToLinearColorComponent(color);
+                color = SRGBTransferFunction<float, TransferFunctionMode::Clamped>::toLinear(color);
                 array[i] = static_cast<uint8_t>(round(color * 255));
             }
             return array;
         }();
         platformTransformColorSpace(linearRgbLUT);
-    } else if (destColorSpace == ColorSpace::SRGB) {
+    } else if (newColorSpace == DestinationColorSpace::SRGB()) {
         static const std::array<uint8_t, 256> deviceRgbLUT= [] {
             std::array<uint8_t, 256> array;
             for (unsigned i = 0; i < 256; i++) {
                 float color = i / 255.0f;
-                color = linearToSRGBColorComponent(color);
+                color = SRGBTransferFunction<float, TransferFunctionMode::Clamped>::toGammaEncoded(color);
                 array[i] = static_cast<uint8_t>(round(color * 255));
             }
             return array;
@@ -226,7 +226,7 @@ void ImageBufferQtBackend::transformColorSpace(ColorSpace srcColorSpace, ColorSp
 
 void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t, 256>& lookUpTable)
 {
-    QPainter* painter = context().platformContext();
+    QPainter* painter = context().platformContext()->painter();
 
     QImage image = m_nativeImage.convertToFormat(QImage::Format_ARGB32);
     ASSERT(!image.isNull());
@@ -254,19 +254,14 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
     painter->restore();
 }
 
-Vector<uint8_t> ImageBufferQtBackend::toBGRAData() const
+std::optional<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
 {
-    return ImageBufferBackend::toBGRAData(const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
 }
 
-RefPtr<ImageData> ImageBufferQtBackend::getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const
+void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    return ImageBufferBackend::getImageData(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
-}
-
-void ImageBufferQtBackend::putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData, const IntRect& srcRect, const IntPoint& destPoint)
-{
-    ImageBufferBackend::putImageData(inputFormat, imageData, srcRect, destPoint, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
+    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
 }
 
 } // namespace WebCore
