@@ -122,21 +122,13 @@ protected:
         return BackendType::calculateExternalMemoryCost(m_parameters);
     }
 
-#if PLATFORM(QT)
-    PlatformImagePtr copyNativeImage(BackingStoreCopy copyBehavior = CopyBackingStore) const override
-#else
     RefPtr<NativeImage> copyNativeImage(BackingStoreCopy copyBehavior = CopyBackingStore) const override
-#endif
     {
         if (auto* backend = ensureBackendCreated()) {
             const_cast<ConcreteImageBuffer&>(*this).flushDrawingContext();
             return backend->copyNativeImage(copyBehavior);
         }
-#if PLATFORM(QT)
-        return QImage();
-#else
         return nullptr;
-#endif
     }
 
     RefPtr<Image> copyImage(BackingStoreCopy copyBehavior = CopyBackingStore, PreserveResolution preserveResolution = PreserveResolution::No) const override
@@ -190,11 +182,7 @@ protected:
             flushDrawingContext();
             return backend->sinkIntoNativeImage();
         }
-#if PLATFORM(QT)
-        return QImage();
-#else
         return nullptr;
-#endif
     }
 
     RefPtr<Image> sinkIntoImage(PreserveResolution preserveResolution = PreserveResolution::No) override

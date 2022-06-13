@@ -37,10 +37,14 @@ class WEBCORE_EXPORT ImageBufferQtBackend : public ImageBufferBackend {
     WTF_MAKE_ISO_ALLOCATED(ImageBufferQtBackend);
     WTF_MAKE_NONCOPYABLE(ImageBufferQtBackend);
 public:
+    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image);
+
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const HostWindow *);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
-    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContextQt>&& context, QImage nativeImage, Ref<Image> image);
+    static size_t calculateMemoryCost(const Parameters&);
+    static unsigned calculateBytesPerRow(const IntSize& backendSize);
+    static size_t calculateExternalMemoryCost(const Parameters&);
 
     RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
     RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;

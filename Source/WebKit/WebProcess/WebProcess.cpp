@@ -228,7 +228,7 @@
 #include <WebCore/VP9UtilitiesCocoa.h>
 #endif
 
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
 #include <wtf/linux/RealTimeThreads.h>
 #endif
 
@@ -843,7 +843,7 @@ void WebProcess::createWebPage(PageIdentifier pageID, WebPageCreationParameters&
         // Balanced by an enableTermination in removeWebPage.
         disableTermination();
         updateCPULimit();
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
         RealTimeThreads::singleton().setEnabled(hasVisibleWebPage());
 #endif
     } else
@@ -863,7 +863,7 @@ void WebProcess::removeWebPage(PageIdentifier pageID)
 
     enableTermination();
     updateCPULimit();
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
     RealTimeThreads::singleton().setEnabled(hasVisibleWebPage());
 #endif
 }
@@ -1537,7 +1537,7 @@ void WebProcess::pageActivityStateDidChange(PageIdentifier, OptionSet<WebCore::A
 {
     if (changed & WebCore::ActivityState::IsVisible) {
         updateCPUMonitorState(CPUMonitorUpdateReason::VisibilityHasChanged);
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
         RealTimeThreads::singleton().setEnabled(hasVisibleWebPage());
 #endif
     }

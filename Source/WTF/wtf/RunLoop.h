@@ -144,6 +144,11 @@ public:
         WTF_EXPORT_PRIVATE void setPriority(int);
 #endif
 
+#if PLATFORM(QT)
+        // Qt uses linux's RealTimeThreads but not glib event loop
+        WTF_EXPORT_PRIVATE void setPriority(int) { }
+#endif
+
     private:
         WTF_EXPORT_PRIVATE void start(Seconds interval, bool repeat);
 

@@ -35,6 +35,7 @@ else ()
         posix/FileSystemPOSIX.cpp
         posix/OSAllocatorPOSIX.cpp
         posix/ThreadingPOSIX.cpp
+        posix/CPUTimePOSIX.cpp
     )
 endif ()
 

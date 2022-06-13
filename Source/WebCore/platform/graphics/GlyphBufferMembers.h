@@ -53,7 +53,7 @@ using GlyphBufferAdvance = CGSize;
 using GlyphBufferOrigin = CGPoint;
 using GlyphBufferStringOffset = CFIndex;
 #elif PLATFORM(QT)
-using GlyphBufferGlyph = quint32;
+using GlyphBufferGlyph = Glyph;
 using GlyphBufferAdvance = QPointF;
 using GlyphBufferOrigin = QPointF;
 using GlyphBufferStringOffset = unsigned;

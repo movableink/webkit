@@ -31,15 +31,13 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/qt"
     "${WEBCORE_DIR}/platform/graphics/win"
     "${WEBCORE_DIR}/platform/network/qt"
+    "${WEBCORE_DIR}/platform/network/glib"
     "${WEBCORE_DIR}/platform/text/qt"
     "${WEBCORE_DIR}/platform/win"
     "${WEBCORE_DIR}/platform/graphics/x11"
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
-    bindings/js/CachedScriptSourceProvider.h
-    bindings/js/ScriptSourceCode.h
-
     bridge/qt/qt_instance.h
     bridge/qt/qt_runtime.h
 

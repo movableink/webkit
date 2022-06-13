@@ -38,6 +38,12 @@ class CertificateInfo {
 public:
     CertificateInfo() { }
 
+    CertificateInfo isolatedCopy() const
+    {
+        CertificateInfo info;
+        return info;
+    }
+
     bool containsNonRootSHA1SignedCertificate() const { notImplemented(); return false; }
     std::optional<CertificateSummary> summary() const { notImplemented(); return std::nullopt; }
     bool isEmpty() const { notImplemented(); return true; }
@@ -54,10 +60,10 @@ template<> struct Coder<WebCore::CertificateInfo> {
         notImplemented();
     }
 
-    static bool decode(Decoder&, WebCore::CertificateInfo&)
+    static std::optional<WebCore::CertificateInfo> decode(Decoder&)
     {
         notImplemented();
-        return false;
+        return std::nullopt;
     }
 };
 

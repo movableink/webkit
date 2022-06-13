@@ -40,7 +40,7 @@
 #include <bmalloc/bmalloc.h>
 #endif
 
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
 #include <wtf/linux/RealTimeThreads.h>
 #endif
 
@@ -378,7 +378,7 @@ void Thread::setCurrentThreadIsUserInteractive(int relativePriority)
     ASSERT(relativePriority <= 0);
     ASSERT(relativePriority >= QOS_MIN_RELATIVE_PRIORITY);
     pthread_set_qos_class_self_np(adjustedQOSClass(QOS_CLASS_USER_INTERACTIVE), relativePriority);
-#elif OS(LINUX)
+#elif OS(LINUX) && !PLATFORM(QT)
     // We don't allow to make the main thread real time. This is used by secondary processes to match the
     // UI process, but in linux the UI process is not real time.
     if (!isMainThread())

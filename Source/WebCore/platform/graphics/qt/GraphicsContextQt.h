@@ -79,6 +79,8 @@ public:
 
     void clipPath(const Path&, WindRule = WindRule::EvenOdd) final;
 
+    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
+
     void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
     void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke);
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;

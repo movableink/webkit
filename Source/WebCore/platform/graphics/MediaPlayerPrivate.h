@@ -183,11 +183,7 @@ public:
     virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
 #endif
     virtual RefPtr<VideoFrame> videoFrameForCurrentTime() { return nullptr; }
-#if PLATFORM(QT)
-    virtual PlatformImagePtr nativeImageForCurrentTime() { return QImage(); }
-#else
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
-#endif
     virtual DestinationColorSpace colorSpace() = 0;
 
     virtual void setPreload(MediaPlayer::Preload) { }

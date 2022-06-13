@@ -57,7 +57,7 @@
 #include "UserMediaCaptureManager.h"
 #endif
 
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
 #include <wtf/linux/RealTimeThreads.h>
 #endif
 
@@ -95,7 +95,7 @@ void WebProcess::platformSetCacheModel(CacheModel cacheModel)
 
 void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationParameters&)
 {
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
     // Disable RealTimeThreads in WebProcess initially, since it depends on having a visible web page.
     RealTimeThreads::singleton().setEnabled(false);
 #endif

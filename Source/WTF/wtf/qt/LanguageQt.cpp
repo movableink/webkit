@@ -39,7 +39,7 @@ static String platformLanguage()
     return locale.name().replace(QLatin1Char('_'), QLatin1Char('-'));
 }
 
-Vector<String> platformUserPreferredLanguages()
+Vector<String> platformUserPreferredLanguages(ShouldMinimizeLanguages)
 {
     Vector<String> userPreferredLanguages;
     userPreferredLanguages.append(platformLanguage());

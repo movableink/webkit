@@ -42,6 +42,7 @@
 #include "NativeImage.h"
 #include "Timer.h"
 #include "GraphicsContextQt.h"
+#include "NotImplemented.h"
 
 #include <QPainter>
 #include <QPaintEngine>
@@ -52,23 +53,30 @@
 
 namespace WebCore {
 
-IntSize nativeImageSize(NativeImage& image)
+IntSize NativeImage::size() const
 {
-    return image.size();// image ? IntSize(image->size()) : IntSize();
+    return IntSize(m_platformImage.size());
 }
 
-bool nativeImageHasAlpha(NativeImage& image)
+bool NativeImage::hasAlpha() const
 {
-    return image.hasAlpha();//  !image || image->hasAlphaChannel();
+    return m_platformImage.hasAlphaChannel();
 }
 
-Color nativeImageSinglePixelSolidColor(NativeImage& image)
+Color NativeImage::singlePixelSolidColor() const
 {
-    if (image.platformImage().width() != 1 || image.platformImage().height() != 1)
+    if (size() != IntSize(1, 1))
         return Color();
 
-    return QColor::fromRgba(image.platformImage().pixel(0, 0));
+    return QColor::fromRgba(m_platformImage.pixel(0, 0));
 }
+
+DestinationColorSpace NativeImage::colorSpace() const
+{
+    notImplemented();
+    return DestinationColorSpace::SRGB();
+}
+
 
 const QImage* prescaleImageIfRequired(QPainter* painter, const QImage* image, QImage* prescaledImage, const QRectF& destRect, QRectF* srcRect)
 {

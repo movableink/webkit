@@ -47,6 +47,7 @@
 #include "Color.h"
 #include "DisplayListRecorder.h"
 #include "FloatConversion.h"
+#include "FontCascade.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
 #include "NativeImageQt.h"
@@ -579,6 +580,11 @@ void GraphicsContextQt::drawPattern(NativeImage& nativeImage, const FloatRect &d
     p->fillRect(dr, b);
 
     setCompositeOperation(previousOperator);
+}
+
+void GraphicsContextQt::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+{
+    FontCascade::drawGlyphs(*this, font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
 }
 
 /*

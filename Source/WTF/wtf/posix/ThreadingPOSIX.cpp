@@ -46,7 +46,9 @@
 #include <sched.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#if !PLATFORM(QT)
 #include <wtf/linux/RealTimeThreads.h>
+#endif
 #ifndef SCHED_RESET_ON_FORK
 #define SCHED_RESET_ON_FORK 0x40000000
 #endif
@@ -261,7 +263,7 @@ dispatch_qos_class_t Thread::dispatchQOSClass(QOS qos)
 }
 #endif
 
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
 static int schedPolicy(Thread::QOS qos)
 {
     switch (qos) {
@@ -296,7 +298,7 @@ bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> st
         return false;
     }
 
-#if OS(LINUX)
+#if OS(LINUX) && !PLATFORM(QT)
     int policy = schedPolicy(qos);
     if (policy == SCHED_RR)
         RealTimeThreads::singleton().registerThread(*this);

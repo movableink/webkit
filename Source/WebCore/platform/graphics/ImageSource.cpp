@@ -361,7 +361,11 @@ void ImageSource::startAsyncDecodingQueue()
 
             // Get the frame NativeImage on the decoding thread.
             auto platformImage = protectedDecoder->createFrameImageAtIndex(frameRequest.index, frameRequest.subsamplingLevel, frameRequest.decodingOptions);
-            if (platformImage.isNull())
+#if PLATFORM(QT)
+            if (!platformImage.isNull())
+#else
+            if (platformImage)
+#endif
                 LOG(Images, "ImageSource::%s - %p - url: %s [frame %ld has been decoded]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);
             else {
                 LOG(Images, "ImageSource::%s - %p - url: %s [decoding for frame %ld has failed]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);

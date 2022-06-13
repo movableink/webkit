@@ -74,12 +74,29 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Paramet
     auto image = StillImage::create(nativeImage);
     auto context = std::make_unique<GraphicsContextQt>(painter);
 
-    return std::make_unique<ImageBufferQtBackend>(parameters, WTFMove(context), WTFMove(image));
+    return std::make_unique<ImageBufferQtBackend>(parameters, WTFMove(context), nativeImage, WTFMove(image));
 }
 
 std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const GraphicsContext& context)
 {
     return ImageBufferQtBackend::create(parameters, nullptr);
+}
+
+size_t ImageBufferQtBackend::calculateMemoryCost(const Parameters& parameters)
+{
+    IntSize backendSize = calculateBackendSize(parameters);
+    return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
+}
+
+size_t ImageBufferQtBackend::calculateExternalMemoryCost(const Parameters& parameters)
+{
+    return calculateMemoryCost(parameters);
+}
+
+unsigned ImageBufferQtBackend::calculateBytesPerRow(const IntSize& backendSize)
+{
+    ASSERT(!backendSize.isEmpty());
+    return CheckedUint32(backendSize.width()) * 4;
 }
 
 void ImageBufferQtBackend::initPainter(QPainter *painter)
