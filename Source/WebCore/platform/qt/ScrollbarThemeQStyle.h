@@ -40,7 +40,7 @@ public:
     ~ScrollbarThemeQStyle() final;
 
     bool paint(Scrollbar&, GraphicsContext&, const IntRect& dirtyRect) final;
-    void paintScrollCorner(GraphicsContext&, const IntRect& cornerRect) final;
+    void paintScrollCorner(ScrollableArea&, GraphicsContext&, const IntRect& cornerRect) final;
 
     ScrollbarPart hitTest(Scrollbar&, const IntPoint&) final;
 

@@ -58,7 +58,7 @@ namespace WebCore {
 
     class SocketStreamHandleImpl final : public SocketStreamHandle {
     public:
-        static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, const String&, SourceApplicationAuditToken&&, const StorageSessionProvider* provider)
+        static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, const String&, SourceApplicationAuditToken&&, const StorageSessionProvider* provider, bool shouldAcceptInsecureCertificates)
         {
             return adoptRef(*new SocketStreamHandleImpl(url, client, provider));
         }

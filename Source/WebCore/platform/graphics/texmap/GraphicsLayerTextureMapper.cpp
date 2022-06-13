@@ -306,13 +306,8 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         // This assumption is true for the GTK+ port.
         auto newNativeImage = image->nativeImageForCurrentFrame();
 
-#if PLATFORM(QT)
-        if (newNativeImage.isNull())
-            return;
-#else
         if (!newNativeImage)
             return;
-#endif
 
         if (newNativeImage == m_compositedNativeImage)
             return;

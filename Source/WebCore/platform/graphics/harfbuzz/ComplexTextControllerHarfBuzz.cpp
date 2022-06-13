@@ -404,11 +404,14 @@ static Vector<hb_feature_t, 4> fontFeatures(const FontCascade& font, const FontP
 
     // 2. If the font is defined via an @font-face rule, the font features implied by the
     //    font-feature-settings descriptor in the @font-face rule.
+
+// QTFIXME: ???
+#if USE(FREETYPE)
     auto* fcPattern = fontPlatformData.fcPattern();
     FcChar8* fcFontFeature;
     for (int i = 0; FcPatternGetString(fcPattern, FC_FONT_FEATURES, i, &fcFontFeature) == FcResultMatch; ++i)
         featuresToBeApplied.set(fontFeatureTag(reinterpret_cast<char*>(fcFontFeature)), 1);
-
+#endif
     // 3. Font features implied by the value of the ‘font-variant’ property, the related ‘font-variant’
     //    subproperties and any other CSS property that uses OpenType features.
     setFeatureSettingsFromVariants(font.fontDescription().variantSettings(), featuresToBeApplied);

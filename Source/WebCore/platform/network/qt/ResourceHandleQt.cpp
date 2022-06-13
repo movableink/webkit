@@ -111,12 +111,12 @@ bool ResourceHandle::start()
     if (d->m_context && !d->m_context->isValid())
         return false;
 
-    if (!d->m_user.isEmpty() || !d->m_pass.isEmpty()) {
+    if (!d->m_user.isEmpty() || !d->m_password.isEmpty()) {
         // If credentials were specified for this request, add them to the url,
         // so that they will be passed to QNetworkRequest.
         URL urlWithCredentials(firstRequest().url());
         urlWithCredentials.setUser(d->m_user);
-        urlWithCredentials.setPass(d->m_pass);
+        urlWithCredentials.setPassword(d->m_password);
         d->m_firstRequest.setURL(urlWithCredentials);
     }
 
@@ -133,19 +133,19 @@ void ResourceHandle::cancel()
     }
 }
 
-void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentialsPolicy /*storedCredentials*/, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentialsPolicy /*storedCredentials*/, SecurityOrigin*, ResourceError& error, ResourceResponse& response, Vector<uint8_t>& data)
 {
     // QTFIXME
 //    WebCoreSynchronousLoader syncLoader(error, response, data);
 //    auto handle = adoptRef(*new ResourceHandle(context, request, &syncLoader, true, false));
 
 //    ResourceHandleInternal* d = handle->getInternal();
-//    if (!d->m_user.isEmpty() || !d->m_pass.isEmpty()) {
+//    if (!d->m_user.isEmpty() || !d->m_password.isEmpty()) {
 //        // If credentials were specified for this request, add them to the url,
 //        // so that they will be passed to QNetworkRequest.
 //        URL urlWithCredentials(d->m_firstRequest.url());
 //        urlWithCredentials.setUser(d->m_user);
-//        urlWithCredentials.setPass(d->m_pass);
+//        urlWithCredentials.setPass(d->m_password);
 //        d->m_firstRequest.setURL(urlWithCredentials);
 //    }
 

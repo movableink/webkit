@@ -62,11 +62,11 @@ protected:
 
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
-    bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
+    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const final;
 
     // Returns the duration of the animation for the progress bar.
-    Seconds animationDurationForProgressBar(RenderProgress&) const final;
+    Seconds animationDurationForProgressBar(const RenderProgress&) const final;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;

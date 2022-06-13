@@ -80,7 +80,7 @@ public:
 #if USE(CF)
     WEBCORE_EXPORT static Ref<DataSegment> create(RetainPtr<CFDataRef>&&);
 #endif
-#if USE(GLIB) && !PLATFORM(QT)
+#if USE(GLIB)
     WEBCORE_EXPORT static Ref<DataSegment> create(GRefPtr<GBytes>&&);
 #endif
 #if USE(GSTREAMER)

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "GraphicsContextQt.h"
 #include "ImageBufferBackend.h"
 #include "PlatformImage.h"
 #include "PixelBuffer.h"
@@ -39,7 +40,7 @@ public:
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const HostWindow *);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
-    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image);
+    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContextQt>&& context, QImage nativeImage, Ref<Image> image);
 
     RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
     RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
@@ -62,6 +63,7 @@ protected:
 
     static void initPainter(QPainter *painter);
     void platformTransformColorSpace(const std::array<uint8_t, 256>& lookUpTable);
+    unsigned bytesPerRow() const override;
 
     QImage m_nativeImage;
     RefPtr<Image> m_image;

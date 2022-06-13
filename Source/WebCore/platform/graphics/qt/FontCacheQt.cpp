@@ -100,22 +100,26 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
     return fontForPlatformData(platformData);
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& familyName, const FontFeatureSettings*, FontSelectionSpecifiedCapabilities)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&)
 {
     QFontDatabase db;
-    if (!db.hasFamily(familyName.string()))
+    if (!db.hasFamily(family.string()))
         return nullptr;
-    return std::make_unique<FontPlatformData>(fontDescription, familyName);
+    return std::make_unique<FontPlatformData>(fontDescription, family);
 }
 
-const AtomString& FontCache::platformAlternateFamilyName(const AtomString&)
+std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
 {
-    return nullAtom();
+    return std::nullopt;
 }
 
 Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts)
 {
     return { };
 }
+
+#if USE(FREETYPE)
+foo()
+#endif
 
 } // namespace WebCore

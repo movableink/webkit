@@ -157,7 +157,7 @@ static JSValueRef pixmapToImageData(JSContextRef context, JSObjectRef /*function
     JSLockHolder locker(lexicalGlobalObject);
 
     RefPtr<ImageData> imageData = ImageData::create(IntSize(width, height));
-    copyPixelsInto(image, width, height, imageData->data()->data());
+    copyPixelsInto(image, width, height, imageData->data().data());
 
     JSDOMGlobalObject* globalObject = static_cast<JSDOMGlobalObject*>(lexicalGlobalObject);
     return ::toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, globalObject, imageData.get()));

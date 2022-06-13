@@ -52,7 +52,7 @@ public:
 
     static QtRuntimeObject* create(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     {
-        QtRuntimeObject* object = new (allocateCell<QtRuntimeObject>(vm.heap)) QtRuntimeObject(vm, structure, WTFMove(instance));
+        QtRuntimeObject* object = new (allocateCell<QtRuntimeObject>(vm)) QtRuntimeObject(vm, structure, WTFMove(instance));
         object->finishCreation(vm);
         return object;
     }

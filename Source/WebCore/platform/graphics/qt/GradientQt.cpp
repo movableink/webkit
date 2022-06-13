@@ -36,15 +36,11 @@ namespace WebCore {
 
 void Gradient::stopsChanged()
 {
-    delete m_gradient;
-    m_gradient = 0;
+    m_gradient = nullptr;
 }
 
-QGradient* Gradient::platformGradient()
+void Gradient::createQtGradient()
 {
-    if (m_gradient)
-        return m_gradient;
-
     bool reversed;
     qreal innerRadius;
     qreal outerRadius;
@@ -62,12 +58,12 @@ QGradient* Gradient::platformGradient()
 
             m_gradient = new QRadialGradient(center, outerRadius, focalPoint);
         },
-        [&] (const ConicData&) {}
+        [&] (const ConicData& data) {
+            m_gradient = new QConicalGradient(data.point0.x(), data.point0.y(), data.angleRadians);
+        }
     );
 
     m_gradient->setInterpolationMode(QGradient::ComponentInterpolation);
-
-    sortStopsIfNecessary();
 
     qreal lastStop(0.0);
     const qreal lastStopDiff = 0.0000001;
@@ -127,19 +123,21 @@ QGradient* Gradient::platformGradient()
         m_gradient->setSpread(QGradient::RepeatSpread);
         break;
     }
-
-    return m_gradient;
 }
 
 void Gradient::fill(GraphicsContext& context, const FloatRect& rect)
 {
-    context.platformContext()->painter()->fillRect(rect, *platformGradient());
+    if (!m_gradient)
+        createQtGradient();
+
+    context.platformContext()->painter()->fillRect(rect, *m_gradient);
 }
 
 QBrush Gradient::createBrush()
 {
-    QBrush brush(*platformGradient());
-    brush.setTransform(gradientSpaceTransform());
+    if (!m_gradient)
+        createQtGradient();
+    QBrush brush(*m_gradient);
     return brush;
 }
 

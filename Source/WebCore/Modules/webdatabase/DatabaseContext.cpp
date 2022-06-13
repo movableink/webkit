@@ -183,8 +183,6 @@ bool DatabaseContext::allowDatabaseAccess() const
     auto* context = scriptExecutionContext();
     if (is<Document>(*context)) {
         auto& document = downcast<Document>(*context);
-        if (document.page() && !document.page()->settings().offlineStorageDatabaseEnabled())
-            return false;
         if (!document.page() || (document.page()->usesEphemeralSession() && !LegacySchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document.securityOrigin().protocol())))
             return false;
         return true;

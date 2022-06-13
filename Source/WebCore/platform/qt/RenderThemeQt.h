@@ -98,19 +98,17 @@ public:
 #endif
 #if ENABLE(VIDEO)
     String mediaControlsStyleSheet() override;
-    String mediaControlsScript() override;
+    Vector<String, 2> mediaControlsScripts() override;
 #endif
 
 protected:
     void updateCachedSystemFontDescription(CSSValueID systemFontID, FontCascadeDescription&) const override;
 
-    bool paintCheckbox(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintCheckbox(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void setCheckboxSize(RenderStyle&) const override;
 
-    bool paintRadio(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void setRadioSize(RenderStyle&) const override;
-
-    void setButtonSize(RenderStyle&) const override;
 
     void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
 
@@ -123,7 +121,7 @@ protected:
 
     void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
     // Returns the repeat interval of the animation for the progress bar.
-    Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const override;
+    Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
 
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
 

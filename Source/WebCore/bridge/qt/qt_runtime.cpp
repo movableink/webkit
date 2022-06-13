@@ -296,11 +296,11 @@ static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSVal
     if (type == Date) {
         JSObject* jsObject = toJS(object);
         DateInstance* date = jsDynamicCast<DateInstance*>(lexicalGlobalObject->vm(), jsObject);
-        other = date->gregorianDateTimeUTC(lexicalGlobalObject->vm());
+        other = date->gregorianDateTimeUTC(lexicalGlobalObject->vm().dateCache);
     } else {
         double ms = JSValueToNumber(context, value, exception);
         GregorianDateTime convertedGdt;
-        msToGregorianDateTime(lexicalGlobalObject->vm(), ms, WTF::UTCTime, convertedGdt);
+        lexicalGlobalObject->vm().dateCache.msToGregorianDateTime(ms, WTF::UTCTime, convertedGdt);
         other = &convertedGdt;
     }
 

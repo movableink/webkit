@@ -122,7 +122,11 @@ protected:
         return BackendType::calculateExternalMemoryCost(m_parameters);
     }
 
+#if PLATFORM(QT)
+    PlatformImagePtr copyNativeImage(BackingStoreCopy copyBehavior = CopyBackingStore) const override
+#else
     RefPtr<NativeImage> copyNativeImage(BackingStoreCopy copyBehavior = CopyBackingStore) const override
+#endif
     {
         if (auto* backend = ensureBackendCreated()) {
             const_cast<ConcreteImageBuffer&>(*this).flushDrawingContext();

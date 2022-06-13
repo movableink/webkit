@@ -166,19 +166,6 @@ void CanvasStyle::applyStrokeColor(GraphicsContext& context) const
         [&context] (const Color& color) {
             context.setStrokeColor(color);
         },
-        [&context] (const CMYKAColor& color) {
-            // FIXME: Do this through platform-independent GraphicsContext API.
-            // We'll need a fancier Color abstraction to support CMYKA correctly
-#if PLATFORM(QT)
-            QPen currentPen = context.platformContext()->pen();
-            QColor clr;
-            clr.setCmykF(color.c, color.m, color.y, color.k, color.a);
-            currentPen.setColor(clr);
-            context.platformContext()->setPen(currentPen);
-#else
-            context.setStrokeColor(color.color);
-#endif
-        },
         [&context] (const RefPtr<CanvasGradient>& gradient) {
             context.setStrokeGradient(gradient->gradient());
         },
@@ -199,19 +186,6 @@ void CanvasStyle::applyFillColor(GraphicsContext& context) const
     WTF::switchOn(m_style,
         [&context] (const Color& color) {
             context.setFillColor(color);
-        },
-        [&context] (const CMYKAColor& color) {
-            // FIXME: Do this through platform-independent GraphicsContext API.
-            // We'll need a fancier Color abstraction to support CMYKA correctly
-#if PLATFORM(QT)
-            QBrush currentBrush = context.platformContext()->brush();
-            QColor clr;
-            clr.setCmykF(color.c, color.m, color.y, color.k, color.a);
-            currentBrush.setColor(clr);
-            context.platformContext()->setBrush(currentBrush);
-#else
-            context.setFillColor(color.color);
-#endif
         },
         [&context] (const RefPtr<CanvasGradient>& gradient) {
             context.setFillGradient(gradient->gradient());

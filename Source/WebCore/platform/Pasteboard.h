@@ -211,7 +211,7 @@ public:
 #endif
 
 #if PLATFORM(QT)
-    Pasteboard(const QMimeData* , bool);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const QMimeData* , bool);
 #endif
 
     WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForCopyAndPaste(std::unique_ptr<PasteboardContext>&&);
@@ -274,6 +274,10 @@ public:
     static std::unique_ptr<Pasteboard> createForGlobalSelection(std::unique_ptr<PasteboardContext>&&);
 #endif
 
+#if PLATFORM(QT)
+    static std::unique_ptr<Pasteboard> createForGlobalSelection(std::unique_ptr<PasteboardContext>&&);
+#endif
+
 #if PLATFORM(IOS_FAMILY)
     explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, int64_t changeCount);
     explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& pasteboardName);
@@ -306,7 +310,7 @@ public:
 
 #if PLATFORM(QT)
     static std::unique_ptr<Pasteboard> createForGlobalSelection();
-    static std::unique_ptr<Pasteboard> create(const QMimeData* readableClipboard = 0, bool isForDragAndDrop = false);
+    static std::unique_ptr<Pasteboard> create(std::unique_ptr<WebCore::PasteboardContext>&&, const QMimeData* readableClipboard = 0, bool isForDragAndDrop = false);
 
     QMimeData* clipboardData() const { return m_writableData; }
     void invalidateWritableData() const { m_writableData = 0; }

@@ -211,7 +211,7 @@ Path absolutePathForRenderer(RenderObject* const o)
         for (; layer; layer = layer->parent()) {
             RenderLayerModelObject* layerRenderer = &layer->renderer();
 
-            if (layerRenderer->hasOverflowClip() && layerRenderer != currentRenderer) {
+            if (layerRenderer->hasNonVisibleOverflow() && layerRenderer != currentRenderer) {
                 bool containerSkipped = false;
                 // Skip ancestor layers that are not containers for the current renderer.
                 currentRenderer->container(layerRenderer, containerSkipped);

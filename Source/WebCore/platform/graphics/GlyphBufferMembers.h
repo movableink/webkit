@@ -39,6 +39,10 @@
 #include <CoreGraphics/CGGeometry.h>
 #endif
 
+#if PLATFORM(QT)
+#include <QPointF>
+#endif
+
 namespace WebCore {
 
 // The CG ports use the CG types directly, so an array of these types can be fed directly into CTFontShapeGlyphs().

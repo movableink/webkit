@@ -656,7 +656,7 @@ bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const Render
     }
 }
 
-LengthBox RenderThemeQtMobile::popupInternalPaddingBox(const RenderStyle&) const
+LengthBox RenderThemeQtMobile::popupInternalPaddingBox(const RenderStyle&, const Settings&) const
 {
     return { 0, 0, 1, 0 };
 }
@@ -700,7 +700,7 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     case DefaultButtonPart:
     case ButtonPart:
     case MenulistPart: {
-        const int height = renderStyle.fontMetrics().height() * buttonHeightRatio * renderStyle.effectiveZoom();
+        const int height = renderStyle.metricsOfPrimaryFont().height() * buttonHeightRatio * renderStyle.effectiveZoom();
         size = QSize(renderStyle.width().value(), height);
         break;
     }
@@ -728,7 +728,7 @@ void RenderThemeQtMobile::adjustButtonStyle(RenderStyle& style, const Element*) 
 
     // QTFIXME: style.setFontDescription(WTFMove(fontDescription)); ?
     style.setLineHeight(RenderStyle::initialLineHeight());
-    setButtonSize(style);
+    // QTFIXME: setButtonSize(style) was removed
     setButtonPadding(style);
 }
 
@@ -849,7 +849,7 @@ bool RenderThemeQtMobile::paintMenuListButton(RenderObject& o, const PaintInfo& 
     return false;
 }
 
-Seconds RenderThemeQtMobile::animationDurationForProgressBar(RenderProgress& renderProgress) const
+Seconds RenderThemeQtMobile::animationDurationForProgressBar(const RenderProgress& renderProgress) const
 {
     if (renderProgress.isDeterminate())
         return 0_s;

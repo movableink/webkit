@@ -237,7 +237,7 @@ int ScrollbarThemeQStyle::trackLength(Scrollbar& scrollbar)
     return scrollbar.orientation() == ScrollbarOrientation::Horizontal ? track.width() : track.height();
 }
 
-void ScrollbarThemeQStyle::paintScrollCorner(GraphicsContext& context, const IntRect& rect)
+void ScrollbarThemeQStyle::paintScrollCorner(ScrollableArea&, GraphicsContext& context, const IntRect& rect)
 {
     StylePainterQStyle p(this, context);
     if (!p.isValid())

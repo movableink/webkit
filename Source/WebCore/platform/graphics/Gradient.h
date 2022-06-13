@@ -121,7 +121,7 @@ public:
 
 #if PLATFORM(QT)
     QBrush createBrush();
-    QGradient* platformGradient();
+    void createQtGradient();
 #endif
 
     template<typename Encoder> void encode(Encoder&) const;

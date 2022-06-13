@@ -83,6 +83,7 @@ static QTextLine setupLayout(QTextLayout* layout, const TextRun& style)
 
 static QPen fillPenForContext(GraphicsContext& ctx)
 {
+    // QTFIXME: QBrush should set a transform, probably
     if (ctx.fillGradient())
         return QPen(ctx.fillGradient()->createBrush(), 0);
 
@@ -95,6 +96,7 @@ static QPen fillPenForContext(GraphicsContext& ctx)
 
 static QPen strokePenForContext(GraphicsContext& ctx)
 {
+    // QTFIXME: QBrush should set a transform, probably
     if (ctx.strokeGradient())
         return QPen(ctx.strokeGradient()->createBrush(), ctx.strokeThickness());
 
@@ -279,7 +281,7 @@ void FontCascade::initFormatForTextLayout(QTextLayout* layout, const TextRun& ru
 //    return false;
 //}
 
-void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBuffer& glyphBuffer, unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
 {
     //qDebug() << Q_FUNC_INFO << __LINE__;
     if (!font.platformData().size())
@@ -288,8 +290,8 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     if (context.paintingDisabled())
         return;
 
-    bool shouldFill = context.textDrawingMode() & TextDrawingMode::Fill;
-    bool shouldStroke = context.textDrawingMode() & TextDrawingMode::Stroke;
+    bool shouldFill = context.textDrawingMode().contains(TextDrawingMode::Fill);
+    bool shouldStroke = context.textDrawingMode().contains(TextDrawingMode::Stroke);
 
     if (!shouldFill && !shouldStroke)
         return;
@@ -304,8 +306,8 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     float width = 0;
 
     for (int i = 0; i < numGlyphs; ++i) {
-        Glyph glyph = glyphBuffer.glyphAt(from + i);
-        float advance = glyphBuffer.advanceAt(from + i).width();
+        Glyph glyph = glyphs[i];
+        float advance = advances[i].x();
         if (!glyph)
             continue;
         glyphIndexes.append(glyph);

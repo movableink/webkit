@@ -315,7 +315,7 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) co
     // TODO: address no longer having styleResolver reference here
     // style.fontCascade().update(&styleResolver.document().fontSelector());
     style.setLineHeight(RenderStyle::initialLineHeight());
-    setButtonSize(style);
+    // QTFIXME: setButtonSize() was removed
     setButtonPadding(style);
 }
 
@@ -443,18 +443,17 @@ void RenderThemeQStyle::adjustMenuListButtonStyle(RenderStyle& style, const Elem
     RenderThemeQt::adjustMenuListButtonStyle(style, e);
 }
 
-bool RenderThemeQStyle::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)
+void RenderThemeQStyle::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)
 {
     StylePainterQStyle p(this, i, o);
     if (!p.isValid())
-        return true;
+        return;
 
     p.styleOption.rect = IntRect(r);
     p.paintComboBoxArrow();
-    return false;
 }
 
-Seconds RenderThemeQStyle::animationDurationForProgressBar(RenderProgress& renderProgress) const
+Seconds RenderThemeQStyle::animationDurationForProgressBar(const RenderProgress& renderProgress) const
 {
     if (renderProgress.position() >= 0)
         return 0_s;

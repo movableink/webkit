@@ -207,7 +207,7 @@ Ref<TextMetrics> CanvasRenderingContext2D::measureText(const String& text)
 #if PLATFORM(QT)
     // We always use complex text shaping since it can't be turned off for QPainterPath::addText().
     FontCascade::CodePath oldCodePath = FontCascade::codePath();
-    FontCascade::setCodePath(FontCascade::Complex);
+    FontCascade::setCodePath(FontCascade::CodePath::Complex);
 #endif
     
     String normalizedText = normalizeSpaces(text);

@@ -71,43 +71,38 @@ static String normalizeMimeType(const String& type)
     return qType;
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::create(const QMimeData* readableClipboard, bool isForDragAndDrop)
+std::unique_ptr<Pasteboard> Pasteboard::create(std::unique_ptr<WebCore::PasteboardContext>&& context, const QMimeData* readableClipboard, bool isForDragAndDrop)
 {
-    return std::make_unique<Pasteboard>(readableClipboard, isForDragAndDrop);
+    return std::make_unique<Pasteboard>(WTFMove(context), readableClipboard, isForDragAndDrop);
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<WebCore::PasteboardContext>&& context)
 {
-    return create();
+    return create(WTFMove(context));
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForGlobalSelection()
+std::unique_ptr<Pasteboard> Pasteboard::createForGlobalSelection(std::unique_ptr<PasteboardContext>&& context)
 {
-    auto pasteboard = createForCopyAndPaste();
+    auto pasteboard = createForCopyAndPaste(WTFMove(context));
     pasteboard->m_selectionMode = true;
     return pasteboard;
 }
 
 #if ENABLE(DRAG_SUPPORT)
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(std::unique_ptr<PasteboardContext>&& context)
 {
-    return create(0, true);
+    return create(WTFMove(context), 0, true);
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
+std::unique_ptr<Pasteboard> Pasteboard::create(const DragData& dragData)
 {
-    return create(dragData.platformData(), true);
+    return makeUnique<Pasteboard>(dragData.createPasteboardContext(), dragData.platformData(), true);
 }
 #endif
 
-// QTFIXME: Check if we need to create QMimeData
-Pasteboard::Pasteboard()
-    : Pasteboard(nullptr, false)
-{
-}
-
-Pasteboard::Pasteboard(const QMimeData* readableClipboard, bool isForDragAndDrop)
+Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context, const QMimeData* readableClipboard, bool isForDragAndDrop)
     : m_selectionMode(false)
+    , m_context(WTFMove(context))
     , m_readableData(readableClipboard)
     , m_writableData(0)
     , m_isForDragAndDrop(isForDragAndDrop)
@@ -123,7 +118,7 @@ Pasteboard::~Pasteboard()
     m_readableData = 0;
 }
 
-void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete, Frame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
+void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartCopyOrDelete, Frame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     if (!m_writableData)
         m_writableData = new QMimeData;
@@ -161,12 +156,12 @@ void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std:
         text.text =  data->text();
 }
 
-RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, Range& context,
+RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, const SimpleRange& context,
                                                           bool allowPlainText, bool& chosePlainText)
 {
     const QMimeData* mimeData = readData();
     if (!mimeData)
-        return 0;
+        return nullptr;
 
     chosePlainText = false;
 
@@ -388,7 +383,7 @@ void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std:
     notImplemented();
 }
 
-void Pasteboard::read(PasteboardFileReader& reader)
+void Pasteboard::read(PasteboardFileReader& reader, std::optional<size_t> itemIndex)
 {
     const QMimeData* data = readData();
     if (!data)
@@ -396,10 +391,21 @@ void Pasteboard::read(PasteboardFileReader& reader)
 
     Vector<String> fileList;
     const auto urls = data->urls();
-    for (const QUrl& url : urls) {
+
+    if (itemIndex)
+    {
+        auto url = urls.at(itemIndex.value());
         if (url.scheme() != QLatin1String("file"))
-            continue;
+            return;
         reader.readFilename(url.toLocalFile());
+    }
+    else
+    {
+        for (const QUrl& url : urls) {
+            if (url.scheme() != QLatin1String("file"))
+                continue;
+            reader.readFilename(url.toLocalFile());
+        }
     }
 }
 

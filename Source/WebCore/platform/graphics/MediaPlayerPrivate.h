@@ -184,7 +184,7 @@ public:
 #endif
     virtual RefPtr<VideoFrame> videoFrameForCurrentTime() { return nullptr; }
 #if PLATFORM(QT)
-    virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return QImage(); }
+    virtual PlatformImagePtr nativeImageForCurrentTime() { return QImage(); }
 #else
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
 #endif

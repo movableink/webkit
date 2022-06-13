@@ -26,6 +26,7 @@
 #include <QNetworkRequest>
 #include <QBasicTimer>
 
+#include "SecurityOrigin.h"
 #include "FormData.h"
 #include "QtMIMETypeSniffer.h"
 

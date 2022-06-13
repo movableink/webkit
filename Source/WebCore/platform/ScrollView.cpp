@@ -1591,7 +1591,7 @@ String ScrollView::debugDescription() const
     return makeString("ScrollView 0x", hex(reinterpret_cast<uintptr_t>(this), Lowercase));
 }
 
-#if !PLATFORM(COCOA) !PLATFORM(QT)
+#if !PLATFORM(COCOA) && !PLATFORM(QT)
 
 void ScrollView::platformAddChild(Widget*)
 {

@@ -26,6 +26,7 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include "FontCreationContext.h"
 
 namespace WebCore {
 
@@ -42,7 +43,7 @@ struct FontCustomPlatformData {
 public:
     FontCustomPlatformData() { }
 
-    FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontFeatureSettings& fontFaceFeatures, FontSelectionSpecifiedCapabilities fontFaceCapabilities);
+    FontPlatformData fontPlatformData(const FontDescription&, bool& bold, bool& italic, const FontCreationContext&);
 
     static bool supportsFormat(const String&);
 

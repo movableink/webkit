@@ -72,7 +72,7 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Paramet
     ImageBufferQtBackend::initPainter(painter);
 
     auto image = StillImage::create(nativeImage);
-    auto context = std::make_unique<GraphicsContext>(painter);
+    auto context = std::make_unique<GraphicsContextQt>(painter);
 
     return std::make_unique<ImageBufferQtBackend>(parameters, WTFMove(context), WTFMove(image));
 }
@@ -262,6 +262,11 @@ std::optional<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBuffe
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
+}
+
+unsigned ImageBufferQtBackend::bytesPerRow() const
+{
+    return m_nativeImage.bytesPerLine();
 }
 
 } // namespace WebCore

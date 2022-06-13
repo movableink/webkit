@@ -34,37 +34,46 @@ namespace WebCore {
 
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
-    RefPtr<Range> range = selectedRange();
+    auto range = selectedRange();
     if (!range)
         return;
 
-    pasteboard.writeSelection(*range, canSmartCopyOrDelete(), m_frame, IncludeImageAltTextForDataTransfer);
+    pasteboard.writeSelection(*range, canSmartCopyOrDelete(), *m_document.frame(), IncludeImageAltTextForDataTransfer);
 }
 
 void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, const URL& url, const String& title)
 {
+
     pasteboard.writeImage(element, url, title);
 }
 
 void Editor::pasteWithPasteboard(Pasteboard* pasteboard, OptionSet<PasteOption> options)
 {
-    RefPtr<Range> range = selectedRange();
+    auto range = selectedRange();
     if (!range)
         return;
 
     bool chosePlainText;
-    RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(m_frame, *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
+    RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(*m_document.frame(), *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
 
     if (fragment && options.contains(PasteOption::AsQuotation))
         quoteFragmentForPasting(*fragment);
 
-    if (fragment && shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Pasted))
+    if (fragment && shouldInsertFragment(*fragment, range.value(), EditorInsertAction::Pasted))
         pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(*pasteboard), chosePlainText, options.contains(PasteOption::IgnoreMailBlockquote) ? MailBlockquoteHandling::IgnoreBlockquote : MailBlockquoteHandling::RespectBlockquote);
 }
 
-RefPtr<DocumentFragment> Editor::webContentFromPasteboard(Pasteboard&, Range&, bool /*allowPlainText*/, bool& /*chosePlainText*/)
+RefPtr<DocumentFragment> Editor::webContentFromPasteboard(Pasteboard&, const SimpleRange&, bool /*allowPlainText*/, bool& /*chosePlainText*/)
 {
     return nullptr;
+}
+
+void Editor::platformCopyFont()
+{
+}
+
+void Editor::platformPasteFont()
+{
 }
 
 } // namespace WebCore

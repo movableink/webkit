@@ -652,7 +652,9 @@ void GraphicsContextQt::fillPath(const Path& path)
                     if (state.fillPattern) {
                         shadowPainter->fillPath(platformPath, QBrush(state.fillPattern->createPlatformPattern()));
                     } else if (state.fillGradient) {
-                        shadowPainter->fillPath(platformPath, state.fillGradient->createBrush());
+                        QBrush brush = state.fillGradient->createBrush();
+                        brush.setTransform(state.fillGradientSpaceTransform);
+                        shadowPainter->fillPath(platformPath, brush);
                     } else {
                         shadowPainter->fillPath(platformPath, oldBrush);
                     }
@@ -672,7 +674,9 @@ void GraphicsContextQt::fillPath(const Path& path)
     if (m_state.fillPattern) {
         p->fillPath(platformPath, QBrush(m_state.fillPattern->createPlatformPattern()));
     } else if (m_state.fillGradient) {
-        p->fillPath(platformPath, m_state.fillGradient->createBrush());
+        QBrush brush = m_state.fillGradient->createBrush();
+        brush.setTransform(m_state.fillGradientSpaceTransform);
+        p->fillPath(platformPath, brush);
     } else
         p->fillPath(platformPath, p->brush());
 }
@@ -798,7 +802,9 @@ void GraphicsContextQt::strokePath(const Path& path)
                     QPainter* shadowPainter = shadowContext.platformContext()->painter();
                     if (state.strokeGradient) {
                         QPen shadowPen(oldPen);
-                        shadowPen.setBrush(state.strokeGradient->createBrush());
+                        QBrush shadowBrush = state.strokeGradient->createBrush();
+                        shadowBrush.setTransform(state.fillGradientSpaceTransform);
+                        shadowPen.setBrush(shadowBrush);
                         fillPathStroke(shadowPainter, platformPath, shadowPen);
                     } else {
                         fillPathStroke(shadowPainter, platformPath, oldPen);
@@ -824,7 +830,9 @@ void GraphicsContextQt::strokePath(const Path& path)
         pen.setBrush(brush);
         fillPathStroke(p, platformPath, pen);
     } else if (m_state.strokeGradient) {
-        pen.setBrush(m_state.strokeGradient->createBrush());
+        QBrush brush = m_state.strokeGradient->createBrush();
+        brush.setTransform(m_state.fillGradientSpaceTransform);
+        pen.setBrush(brush);
         fillPathStroke(p, platformPath, pen);
     } else
         fillPathStroke(p, platformPath, pen);
@@ -892,6 +900,8 @@ void GraphicsContextQt::fillRect(const FloatRect& rect)
         drawRepeatPattern(p, *m_state.fillPattern, normalizedRect);
     } else if (m_state.fillGradient) {
         QBrush brush(m_state.fillGradient->createBrush());
+        brush.setTransform(m_state.fillGradientSpaceTransform);
+
         if (hasShadow()) {
             ShadowBlur shadow(m_state);
             shadow.drawShadowLayer(getCTM(), clipBounds(), normalizedRect,
@@ -970,7 +980,7 @@ void GraphicsContextQt::fillRect(const FloatRect& rect, Gradient& gradient)
             p->fillRect(platformRect.translated(QPointF(m_state.shadowOffset.width(), m_state.shadowOffset.height())), shadowColor);
         }
     }
-    p->fillRect(platformRect, *gradient.platformGradient());
+    gradient.fill(*this, platformRect);
 }
 
 void GraphicsContextQt::fillRoundedRectImpl(const FloatRoundedRect& rect, const Color& color)

@@ -75,7 +75,9 @@ Notification::Notification(ScriptExecutionContext& context, String&& title, Opti
         m_notificationSource = NotificationSource::Document;
     else if (context.isServiceWorkerGlobalScope()) {
         m_notificationSource = NotificationSource::ServiceWorker;
+#if ENABLE(SERVICE_WORKER)
         downcast<ServiceWorkerGlobalScope>(context).registration().addNotificationToList(*this);
+#endif
     } else
         RELEASE_ASSERT_NOT_REACHED();
 
@@ -104,8 +106,10 @@ Notification::Notification(const Notification& other)
 Notification::~Notification()
 {
     if (auto* context = scriptExecutionContext()) {
+#if ENABLE(SERVICE_WORKER)
         if (context->isServiceWorkerGlobalScope())
             downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
+#endif
     }
 }
 
@@ -118,9 +122,10 @@ void Notification::contextDestroyed()
 {
     auto* context = scriptExecutionContext();
     RELEASE_ASSERT(context);
+#if ENABLE(SERVICE_WORKER)
     if (context->isServiceWorkerGlobalScope())
         downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
-
+#endif
     ActiveDOMObject::contextDestroyed();
 }
 
@@ -169,8 +174,10 @@ void Notification::close()
         if (auto* client = clientFromContext())
             client->cancel(*this);
         if (auto* context = scriptExecutionContext()) {
+#if ENABLE(SERVICE_WORKER)
             if (context->isServiceWorkerGlobalScope())
                 downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
+#endif
         }
         break;
     }
@@ -233,9 +240,11 @@ void Notification::dispatchClickEvent()
         });
         break;
     case NotificationSource::ServiceWorker:
+#if ENABLE(SERVICE_WORKER)
         ServiceWorkerGlobalScope::ensureOnContextThread(m_contextIdentifier, [this, protectedThis = Ref { *this }](auto& context) {
             downcast<ServiceWorkerGlobalScope>(context).postTaskToFireNotificationEvent(NotificationEventType::Click, *this, { });
         });
+#endif
         break;
     }
 }
@@ -249,9 +258,11 @@ void Notification::dispatchCloseEvent()
         queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
         break;
     case NotificationSource::ServiceWorker:
+#if ENABLE(SERVICE_WORKER)
         ServiceWorkerGlobalScope::ensureOnContextThread(m_contextIdentifier, [this, protectedThis = Ref { *this }](auto& context) {
             downcast<ServiceWorkerGlobalScope>(context).postTaskToFireNotificationEvent(NotificationEventType::Close, *this, { });
         });
+#endif
         break;
     }
 

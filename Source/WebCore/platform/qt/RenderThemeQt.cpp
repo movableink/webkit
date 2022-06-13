@@ -282,9 +282,9 @@ void RenderThemeQt::setCheckboxSize(RenderStyle& style) const
     computeSizeBasedOnStyle(style);
 }
 
-bool RenderThemeQt::paintCheckbox(const RenderObject& o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeQt::paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
-    return paintButton(o, i, r);
+    return paintButton(o, i, IntRect(r));
 }
 
 void RenderThemeQt::setRadioSize(RenderStyle& style) const
@@ -292,14 +292,9 @@ void RenderThemeQt::setRadioSize(RenderStyle& style) const
     computeSizeBasedOnStyle(style);
 }
 
-bool RenderThemeQt::paintRadio(const RenderObject& o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeQt::paintRadio(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
-    return paintButton(o, i, r);
-}
-
-void RenderThemeQt::setButtonSize(RenderStyle& style) const
-{
-    computeSizeBasedOnStyle(style);
+    return paintButton(o, i, IntRect(r));
 }
 
 void RenderThemeQt::adjustTextFieldStyle(RenderStyle& style, const Element*) const
@@ -354,7 +349,7 @@ void RenderThemeQt::adjustMenuListButtonStyle(RenderStyle& style, const Element*
     setPopupPadding(style);
 }
 
-Seconds RenderThemeQt::animationRepeatIntervalForProgressBar(RenderProgress& renderProgress) const
+Seconds RenderThemeQt::animationRepeatIntervalForProgressBar(const RenderProgress& renderProgress) const
 {
     if (renderProgress.position() >= 0)
         return 0_s;
@@ -534,12 +529,9 @@ String RenderThemeQt::mediaControlsStyleSheet()
     return String(mediaControlsBaseUserAgentStyleSheet, sizeof(mediaControlsBaseUserAgentStyleSheet));
 }
 
-String RenderThemeQt::mediaControlsScript()
+Vector<String, 2> RenderThemeQt::mediaControlsScripts()
 {
-    StringBuilder scriptBuilder;
-    scriptBuilder.append(mediaControlsLocalizedStringsJavaScript, sizeof(mediaControlsLocalizedStringsJavaScript));
-    scriptBuilder.append(mediaControlsBaseJavaScript, sizeof(mediaControlsBaseJavaScript));
-    return scriptBuilder.toString();
+    return { mediaControlsLocalizedStringsJavaScript, mediaControlsBaseJavaScript };
 }
 #endif
 

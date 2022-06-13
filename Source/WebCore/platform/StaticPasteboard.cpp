@@ -133,7 +133,7 @@ void StaticPasteboard::write(const PasteboardImage& image)
     UNUSED_PARAM(image);
 #endif
 
-#if !PLATFORM(WIN)
+#if !PLATFORM(WIN) && !PLATFORM(QT)
     if (Pasteboard::canExposeURLToDOMWhenPasteboardContainsFiles(image.url.url.string()))
         write(image.url);
 #endif
