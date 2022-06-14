@@ -27,21 +27,21 @@ file(GLOB InspectorFilesDependencies
 # DerivedSources/JavaScriptCore/inspector/InspectorBackendCommands.js is
 # expected in DerivedSources/WebInspectorUI/UserInterface/Protocol/.
 add_custom_command(
-    OUTPUT ${DERIVED_SOURCES_WEBINSPECTORUI_DIR}/UserInterface/Protocol/InspectorBackendCommands.js
+    OUTPUT ${WebInspectorUI_DERIVED_SOURCES_DIR}/UserInterface/Protocol/InspectorBackendCommands.js
     DEPENDS ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js
-    COMMAND ${CMAKE_COMMAND} -E copy ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js ${DERIVED_SOURCES_WEBINSPECTORUI_DIR}/UserInterface/Protocol/InspectorBackendCommands.js
+    COMMAND ${CMAKE_COMMAND} -E copy ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js ${WebInspectorUI_DERIVED_SOURCES_DIR}/UserInterface/Protocol/InspectorBackendCommands.js
 )
 
 get_target_property(RCC_EXECUTABLE ${Qt5Core_RCC_EXECUTABLE} IMPORTED_LOCATION)
 
 add_custom_command(
-    OUTPUT ${DERIVED_SOURCES_WEBINSPECTORUI_DIR}/qrc_WebInspector.cpp
+    OUTPUT ${WebInspectorUI_DERIVED_SOURCES_DIR}/qrc_WebInspector.cpp
     DEPENDS ${InspectorFilesDependencies}
-            ${DERIVED_SOURCES_WEBINSPECTORUI_DIR}/UserInterface/Protocol/InspectorBackendCommands.js
+            ${WebInspectorUI_DERIVED_SOURCES_DIR}/UserInterface/Protocol/InspectorBackendCommands.js
             ${TOOLS_DIR}/qt/generate-inspector-qrc.pl
     COMMAND ${PERL_EXECUTABLE} ${TOOLS_DIR}/qt/generate-inspector-qrc.pl
             --baseDir ${CMAKE_SOURCE_DIR}/Source/WebInspectorUI
-            --outDir ${DERIVED_SOURCES_WEBINSPECTORUI_DIR}
+            --outDir ${WebInspectorUI_DERIVED_SOURCES_DIR}
             --prefix /webkit/inspector
             --rccExecutable ${RCC_EXECUTABLE}
             --resourceName WebInspector

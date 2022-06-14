@@ -220,9 +220,9 @@ if (NOT SHARED_CORE)
     if (ENABLE_INSPECTOR_UI)
         include("${CMAKE_SOURCE_DIR}/Source/WebInspectorUI/PlatformQt.cmake")
         list(APPEND WebKitLegacy_SOURCES
-            "${DERIVED_SOURCES_WEBINSPECTORUI_DIR}/qrc_WebInspector.cpp"
+            "${WebInspectorUI_DERIVED_SOURCES_DIR}/qrc_WebInspector.cpp"
         )
-        set_property(SOURCE "${DERIVED_SOURCES_WEBINSPECTORUI_DIR}/qrc_WebInspector.cpp" PROPERTY SKIP_AUTOMOC ON)
+        set_property(SOURCE "${WebInspectorUI_DERIVED_SOURCES_DIR}/qrc_WebInspector.cpp" PROPERTY SKIP_AUTOMOC ON)
     endif ()
 endif ()
 
