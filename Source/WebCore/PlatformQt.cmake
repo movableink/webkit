@@ -41,6 +41,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bridge/qt/qt_instance.h
     bridge/qt/qt_runtime.h
 
+    bindings/js/ScriptSourceCode.h
+
     dom/StaticNodeList.h
 
     loader/NavigationScheduler.h
