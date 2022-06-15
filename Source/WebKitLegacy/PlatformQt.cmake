@@ -43,7 +43,6 @@ list(APPEND WebKitLegacy_INCLUDE_DIRECTORIES
 
 list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKITLEGACY_DIR}/Storage"
-    "${WEBKITLEGACY_DIR}/win/Plugins"
     "${WebKitLegacy_DERIVED_SOURCES_DIR}"
 )
 
@@ -62,8 +61,6 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qwebhistoryinterface.cpp
     qt/Api/qwebkitglobal.cpp
     qt/Api/qwebkitplatformplugin.h
-    qt/Api/qwebplugindatabase.cpp
-    qt/Api/qwebpluginfactory.cpp
     qt/Api/qwebscriptworld.cpp
     qt/Api/qwebsecurityorigin.cpp
     qt/Api/qwebsettings.cpp
@@ -178,38 +175,6 @@ if (ENABLE_TEST_SUPPORT)
     endif ()
 endif ()
 
-if (ENABLE_NETSCAPE_PLUGIN_API)
-    list(APPEND WebKitLegacy_SOURCES
-        win/Plugins/PluginMainThreadScheduler.cpp
-        win/Plugins/npapi.cpp
-    )
-
-    if (UNIX AND NOT APPLE)
-        list(APPEND WebKitLegacy_SOURCES
-            qt/Plugins/PluginPackageQt.cpp
-            qt/Plugins/PluginViewQt.cpp
-        )
-    endif ()
-
-    if (WIN32)
-        list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
-            ${WEBCORE_DIR}/platform/win
-        )
-
-        list(APPEND WebKitLegacy_SOURCES
-            win/Plugins/PluginDatabaseWin.cpp
-            win/Plugins/PluginMessageThrottlerWin.cpp
-            win/Plugins/PluginPackageWin.cpp
-            win/Plugins/PluginViewWin.cpp
-        )
-    endif ()
-else ()
-    list(APPEND WebKitLegacy_SOURCES
-        qt/Plugins/PluginPackageNone.cpp
-        qt/Plugins/PluginViewNone.cpp
-    )
-endif ()
-
 # Resources have to be included directly in the final binary.
 # The linker won't pick them from a static library since they aren't referenced.
 if (NOT SHARED_CORE)
@@ -235,7 +200,6 @@ set(QtWebKit_PUBLIC_FRAMEWORK_HEADERS
     qt/Api/qwebhistoryinterface.h
     qt/Api/qwebkitglobal.h
     qt/Api/qwebkitplatformplugin.h
-    qt/Api/qwebpluginfactory.h
     qt/Api/qwebscriptworld.h
     qt/Api/qwebsecurityorigin.h
     qt/Api/qwebsettings.h
@@ -257,8 +221,7 @@ ecm_generate_headers(
         QWebFullScreenRequest
         QWebHistory,QWebHistoryItem
         QWebHistoryInterface
-        QWebKitPlatformPlugin,QWebHapticFeedbackPlayer,QWebFullScreenVideoHandler,QWebNotificationData,QWebNotificationPresenter,QWebSelectData,QWebSelectMethod,QWebSpellChecker,QWebTouchModifier
-        QWebPluginFactory
+        QWebKitPlatformPlugin,QWebFullScreenVideoHandler,QWebNotificationData,QWebNotificationPresenter,QWebSelectData,QWebSelectMethod,QWebSpellChecker,QWebTouchModifier
         QWebSecurityOrigin
         QWebSettings
     COMMON_HEADER
@@ -825,7 +788,6 @@ if (COMPILER_IS_GCC_OR_CLANG)
         qt/Api/qwebfullscreenrequest.cpp
         qt/Api/qwebhistory.cpp
         qt/Api/qwebhistoryinterface.cpp
-        qt/Api/qwebpluginfactory.cpp
         qt/Api/qwebscriptworld.cpp
         qt/Api/qwebsecurityorigin.cpp
         qt/Api/qwebsettings.cpp

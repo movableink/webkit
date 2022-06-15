@@ -32,9 +32,7 @@
 #include "InspectorServerQt.h"
 #include "MediaRecorderProvider.h"
 #include "NotificationPresenterClientQt.h"
-#include "PluginDatabase.h"
 #include "PluginInfoProviderQt.h"
-#include "PluginPackage.h"
 #include "ProgressTrackerClientQt.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageStorageSessionProvider.h"
@@ -972,22 +970,12 @@ static void extractContentTypeFromHash(const HashSet<String, ASCIICaseInsensitiv
         list << type;
 }
 
-static void extractContentTypeFromPluginVector(const Vector<PluginPackage*>& plugins, QStringList& list)
-{
-    for (auto* plugin : plugins) {
-        for (auto& mimeToDescription :  plugin->mimeToDescriptions().keys())
-            list << mimeToDescription;
-    }
-}
-
 QStringList QWebPageAdapter::supportedContentTypes() const
 {
     QStringList mimeTypes;
 
     extractContentTypeFromHash(MIMETypeRegistry::supportedImageMIMETypes(), mimeTypes);
     extractContentTypeFromHash(MIMETypeRegistry::supportedNonImageMIMETypes(), mimeTypes);
-    if (page->settings().arePluginsEnabled())
-        extractContentTypeFromPluginVector(PluginDatabase::installedPlugins()->plugins(), mimeTypes);
 
     return mimeTypes;
 }
@@ -1013,10 +1001,6 @@ bool QWebPageAdapter::supportsContentType(const QString& mimeType) const
         return true;
 
     if (MIMETypeRegistry::isSupportedNonImageMIMEType(type))
-        return true;
-
-    if (page->settings().arePluginsEnabled()
-        && PluginDatabase::installedPlugins()->isMIMETypeRegistered(type))
         return true;
 
     return false;

@@ -26,8 +26,6 @@
 #include "EditorClientQt.h"
 #include "FrameLoaderClientQt.h"
 #include "NotificationPresenterClientQt.h"
-#include "PluginDatabase.h"
-#include "PluginView.h"
 #include "ProgressTrackerClientQt.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageAdapter.h"
@@ -183,24 +181,9 @@ void DumpRenderTreeSupportQt::initialize()
     QtDRTNodeRuntime::initialize();
 }
 
-void DumpRenderTreeSupportQt::overwritePluginDirectories()
-{
-    PluginDatabase* db = PluginDatabase::installedPlugins(/* populate */ false);
-
-    String qtPath(qgetenv("QTWEBKIT_PLUGIN_PATH").data());
-    auto paths = qtPath.split(UChar(':'));
-
-    db->setPluginDirectories(paths);
-    db->refresh();
-}
-
 void DumpRenderTreeSupportQt::setDumpRenderTreeModeEnabled(bool b)
 {
     QWebPageAdapter::drtRun = b;
-#if ENABLE(NETSCAPE_PLUGIN_API) && defined(XP_UNIX)
-    // PluginViewQt (X11) needs a few workarounds when running under DRT
-    PluginView::setIsRunningUnderDRT(b);
-#endif
 }
 
 void DumpRenderTreeSupportQt::setFrameFlatteningEnabled(QWebPageAdapter* adapter, bool enabled)

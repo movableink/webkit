@@ -21,8 +21,6 @@
 #include "qwebsettings.h"
 
 #include "InitWebCoreQt.h"
-#include "PluginDatabase.h"
-#include "qwebplugindatabase_p.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -198,10 +196,6 @@ void QWebSettingsPrivate::apply()
                                       global->attributes.value(QWebSettings::JavaEnabled));
         settings->setJavaEnabled(value);
 
-        value = attributes.value(QWebSettings::PluginsEnabled,
-                                      global->attributes.value(QWebSettings::PluginsEnabled));
-        settings->setPluginsEnabled(value);
-
         value = attributes.value(QWebSettings::SpatialNavigationEnabled,
                                       global->attributes.value(QWebSettings::SpatialNavigationEnabled));
         settings->setSpatialNavigationEnabled(value);
@@ -339,22 +333,13 @@ QWebSettings* QWebSettings::globalSettings()
 
     QWebSettings allows configuration of browser properties, such as font sizes and
     families, the location of a custom style sheet, and generic attributes like
-    JavaScript and plugins. Individual attributes are set using the setAttribute()
+    JavaScript. Individual attributes are set using the setAttribute()
     function. The \l{QWebSettings::WebAttribute}{WebAttribute} enum further describes
     each attribute.
 
     QWebSettings also configures global properties such as the web page memory
     cache, icon database, local database storage and offline
     applications storage.
-
-    \section1 Enabling Plugins
-
-    Support for browser plugins can enabled by setting the
-    \l{QWebSettings::PluginsEnabled}{PluginsEnabled} attribute. For many applications,
-    this attribute is enabled for all pages by setting it on the
-    \l{globalSettings()}{global settings object}. Qt WebKit will always ignore this setting
-    when processing Qt plugins. The decision to allow a Qt plugin is made by the client
-    in its reimplementation of QWebPage::createPlugin().
 
     \section1 Web Application Support
 
@@ -419,7 +404,6 @@ QWebSettings* QWebSettings::globalSettings()
     This enums describes the standard graphical elements used in webpages.
 
     \value MissingImageGraphic The replacement graphic shown when an image could not be loaded.
-    \value MissingPluginGraphic The replacement graphic shown when a plugin could not be loaded.
     \value DefaultFrameIconGraphic The default icon for QWebFrame::icon().
     \value TextAreaSizeGripCornerGraphic The graphic shown for the size grip of text areas.
     \value DeleteButtonGraphic The graphic shown for the WebKit-Editing-Delete-Button in Deletion UI.
@@ -441,8 +425,6 @@ QWebSettings* QWebSettings::globalSettings()
         programs. This is enabled by default
     \value JavaEnabled Enables or disables Java applets.
         Currently Java applets are not supported.
-    \value PluginsEnabled Enables or disables plugins in Web pages (e.g. using NPAPI). Qt plugins
-        with a mimetype such as "application/x-qt-plugin" are not affected by this setting. This is disabled by default.
     \value PrivateBrowsingEnabled Private browsing prevents WebKit from
         recording visited pages in the history and storing web page icons. This is disabled by default.
     \value JavascriptCanOpenWindows Specifies whether JavaScript programs
@@ -793,61 +775,10 @@ QIcon QWebSettings::iconForUrl(const QUrl& url)
     return QIcon();
 }
 
-/*!
-    Changes the NPAPI plugin search paths to \a paths.
-
-    \sa pluginSearchPaths()
-*/
-void QWebSettings::setPluginSearchPaths(const QStringList& paths)
-{
-    WebCore::initializeWebCoreQt();
-
-    Vector<String> directories;
-
-    for (int i = 0; i < paths.count(); ++i)
-        directories.append(paths.at(i));
-
-    WebCore::PluginDatabase::installedPlugins()->setPluginDirectories(directories);
-    // PluginDatabase::setPluginDirectories() does not refresh the database.
-    WebCore::PluginDatabase::installedPlugins()->refresh();
-}
-
-/*!
-    Returns a list of search paths that are used by WebKit to look for NPAPI plugins.
-
-    \sa setPluginSearchPaths()
-*/
-QStringList QWebSettings::pluginSearchPaths()
-{
-    WebCore::initializeWebCoreQt();
-
-    QStringList paths;
-
-    const Vector<String>& directories = WebCore::PluginDatabase::installedPlugins()->pluginDirectories();
-    for (unsigned i = 0; i < directories.size(); ++i)
-        paths.append(directories[i]);
-
-    return paths;
-}
-
-/*
-    Returns the plugin database object.
-
-QWebPluginDatabase *QWebSettings::pluginDatabase()
-{
-    WebCore::initializeWebCoreQt();
-    static QWebPluginDatabase* database = 0;
-    if (!database)
-        database = new QWebPluginDatabase();
-    return database;
-}
-*/
-
 static const char* resourceNameForWebGraphic(QWebSettings::WebGraphic type)
 {
     switch (type) {
     case QWebSettings::MissingImageGraphic: return "missingImage";
-    case QWebSettings::MissingPluginGraphic: return "nullPlugin";
     case QWebSettings::DefaultFrameIconGraphic: return "urlIcon";
     case QWebSettings::TextAreaSizeGripCornerGraphic: return "textAreaResizeCorner";
     case QWebSettings::DeleteButtonGraphic: return "deleteButton";
@@ -1285,18 +1216,6 @@ void QWebSettings::enablePersistentStorage(const QString& path)
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineStorageDatabaseEnabled, true);
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineWebApplicationCacheEnabled, true);
 
-#if ENABLE(NETSCAPE_PLUGIN_METADATA_CACHE)
-    // All applications can share the common QtWebkit cache file(s).
-    // Path is not configurable and uses QDesktopServices::CacheLocation by default.
-    QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    WebCore::makeAllDirectories(cachePath);
-
-    QFileInfo info(cachePath);
-    if (info.isDir() && info.isWritable()) {
-        WebCore::PluginDatabase::setPersistentMetadataCacheEnabled(true);
-        WebCore::PluginDatabase::setPersistentMetadataCachePath(cachePath);
-    }
-#endif
 #endif
 }
 

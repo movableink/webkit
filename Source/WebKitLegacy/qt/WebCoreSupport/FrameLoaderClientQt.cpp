@@ -33,8 +33,6 @@
 #include "FrameLoaderClientQt.h"
 
 #include "FrameNetworkingContextQt.h"
-#include "PluginDatabase.h"
-#include "PluginView.h"
 #include "QWebFrameAdapter.h"
 #include "QWebFrameData.h"
 #include "QWebPageAdapter.h"
@@ -196,7 +194,6 @@ static const char* navigationTypeToString(NavigationType type)
 FrameLoaderClientQt::FrameLoaderClientQt()
     : m_frame(0)
     , m_webFrame(0)
-    , m_pluginView(0)
     , m_hasSentResponseToPlugin(false)
     , m_isOriginatingLoad(false)
     , m_isDisplayingErrorPage(false)
@@ -539,11 +536,7 @@ void FrameLoaderClientQt::didChangeTitle(DocumentLoader*)
 
 void FrameLoaderClientQt::finishedLoading(DocumentLoader*)
 {
-    if (!m_pluginView)
-        return;
-    m_pluginView->didFinishLoading();
-    m_pluginView = nullptr;
-    m_hasSentResponseToPlugin = false;
+    // Plugins would be notified here, if they still existed
 }
 
 bool FrameLoaderClientQt::canShowMIMETypeAsHTML(const String& MIMEType) const
@@ -557,10 +550,6 @@ bool FrameLoaderClientQt::canShowMIMEType(const String& MIMEType) const
     String type = MIMEType;
     type.convertToASCIILowercase(); // FIXME: Do we really need it?
     if (MIMETypeRegistry::canShowMIMEType(type))
-        return true;
-
-    if (m_frame && m_frame->settings().arePluginsEnabled()
-        && PluginDatabase::installedPlugins()->isMIMETypeRegistered(type))
         return true;
 
     return false;
@@ -776,36 +765,17 @@ bool FrameLoaderClientQt::canCachePage() const
 
 void FrameLoaderClientQt::setMainDocumentError(WebCore::DocumentLoader* loader, const WebCore::ResourceError& error)
 {
-    if (!m_pluginView)
-        return;
-    m_pluginView->didFail(error);
-    m_pluginView = 0;
-    m_hasSentResponseToPlugin = false;
+    // Plugins removed
 }
 
 // FIXME: This function should be moved into WebCore.
 void FrameLoaderClientQt::committedLoad(WebCore::DocumentLoader* loader, const char* data, int length)
 {
-    if (!m_pluginView)
-        loader->commitData(data, length);
+    loader->commitData(data, length);
 
     // If we are sending data to MediaDocument, we should stop here and cancel the request.
     if (m_frame->document()->isMediaDocument())
         loader->cancelMainResourceLoad(pluginWillHandleLoadError(loader->response()));
-
-    // We re-check here as the plugin can have been created.
-    if (m_pluginView) {
-        if (!m_hasSentResponseToPlugin) {
-            m_pluginView->didReceiveResponse(loader->response());
-            // The function didReceiveResponse sets up a new stream to the plug-in.
-            // On a full-page plug-in, a failure in setting up this stream can cause the
-            // main document load to be cancelled, setting m_pluginView to null.
-            if (!m_pluginView)
-                return;
-            m_hasSentResponseToPlugin = true;
-        }
-        m_pluginView->didReceiveData(data, length);
-    }
 }
 
 WebCore::ResourceError FrameLoaderClientQt::cancelledError(const WebCore::ResourceRequest& request) const
@@ -1257,29 +1227,12 @@ ObjectContentType FrameLoaderClientQt::objectContentType(const URL& url, const S
     if (!mimeType.length())
         mimeType = MIMETypeRegistry::getMIMETypeForExtension(extension);
 
-    bool arePluginsEnabled = (m_frame && m_frame->settings().arePluginsEnabled());
-    if (arePluginsEnabled && !mimeType.length())
-        mimeType = PluginDatabase::installedPlugins()->MIMETypeForExtension(extension);
-
     if (!mimeType.length())
         return ObjectContentType::Frame;
-
-    ObjectContentType plugInType = ObjectContentType::None;
-    if (arePluginsEnabled && PluginDatabase::installedPlugins()->isMIMETypeRegistered(mimeType))
-        plugInType = ObjectContentType::PlugIn;
-    else if (m_frame->page()) {
-        bool allowPlugins = m_frame->loader().subframeLoader().allowPlugins();
-        if ((m_frame->page()->pluginData().supportsMimeType(mimeType, PluginData::AllPlugins) && allowPlugins)
-            || m_frame->page()->pluginData().supportsMimeType(mimeType, PluginData::OnlyApplicationPlugins))
-                plugInType = ObjectContentType::PlugIn;
-    }
 
     if (MIMETypeRegistry::isSupportedImageMIMEType(mimeType))
         return ObjectContentType::Image;
     
-    if (plugInType != ObjectContentType::None)
-        return plugInType;
-
     if (MIMETypeRegistry::isSupportedNonImageMIMEType(mimeType))
         return ObjectContentType::Frame;
 
@@ -1437,37 +1390,12 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
         // FIXME: Make things work for widgetless plugins as well.
         delete pluginAdapter;
     }
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    else { // NPAPI Plugins
-        Vector<String> params = paramNames;
-        Vector<String> values = paramValues;
-        if (mimeType == "application/x-shockwave-flash") {
-            // Inject wmode=opaque when there is no client or the client is not a QWebView.
-            size_t wmodeIndex = params.find("wmode");
-            if (wmodeIndex == WTF::notFound) {
-                params.append("wmode");
-                values.append("opaque");
-            } else if (equalLettersIgnoringASCIICase(values[wmodeIndex], "window"))
-                values[wmodeIndex] = "opaque";
-        }
-
-        RefPtr<PluginView> pluginView = PluginView::create(m_frame, pluginSize, element, url,
-            params, values, mimeType, loadManually);
-        return pluginView;
-    }
-#endif // ENABLE(NETSCAPE_PLUGIN_API)
 
     return 0;
 }
 
 void FrameLoaderClientQt::redirectDataToPlugin(Widget& pluginWidget)
 {
-    if (!pluginWidget.isPluginView()) {
-        m_pluginView = nullptr;
-        return;
-    }
-    m_pluginView = toPluginView(&pluginWidget);
-    m_hasSentResponseToPlugin = false;
 }
 
 RefPtr<Widget> FrameLoaderClientQt::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement& element, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues)

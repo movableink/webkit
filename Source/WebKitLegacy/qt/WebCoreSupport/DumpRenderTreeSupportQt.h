@@ -117,7 +117,6 @@ public:
     static QString webPageGroupName(QWebPageAdapter*);
     static void webPageSetGroupName(QWebPageAdapter*, const QString& groupName);
     static void clearFrameName(QWebFrameAdapter*);
-    static void overwritePluginDirectories();
     static bool hasDocumentElement(QWebFrameAdapter*);
     static void setWindowsBehaviorAsEditingBehavior(QWebPageAdapter*);
 
