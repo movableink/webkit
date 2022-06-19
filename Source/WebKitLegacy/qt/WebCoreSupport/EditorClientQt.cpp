@@ -69,14 +69,14 @@ static QString dumpPath(WebCore::Node& node)
     return str;
 }
 
-static QString dumpRange(WebCore::Range *range)
+static QString dumpRange(const std::optional<WebCore::SimpleRange>& range)
 {
     if (!range)
         return QLatin1String("(null)");
 
     QString str = QString::fromLatin1("range from %1 of %2 to %3 of %4")
-        .arg(range->startOffset()).arg(dumpPath(range->startContainer()))
-        .arg(range->endOffset()).arg(dumpPath(range->endContainer()));
+        .arg(range.value().startOffset()).arg(dumpPath(range.value().startContainer()))
+        .arg(range.value().endOffset()).arg(dumpPath(range.value().endContainer()));
 
     return str;
 }
@@ -89,7 +89,7 @@ bool EditorClientQt::acceptsEditing = true;
 
 using namespace HTMLNames;
 
-bool EditorClientQt::shouldDeleteRange(Range* range)
+bool EditorClientQt::shouldDeleteRange(const std::optional<SimpleRange>& range)
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: shouldDeleteDOMRange:%s\n", dumpRange(range).toUtf8().constData());
@@ -112,21 +112,21 @@ int EditorClientQt::spellCheckerDocumentTag()
     return 0;
 }
 
-bool EditorClientQt::shouldBeginEditing(WebCore::Range* range)
+bool EditorClientQt::shouldBeginEditing(const SimpleRange& range)
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: shouldBeginEditingInDOMRange:%s\n", dumpRange(range).toUtf8().constData());
     return true;
 }
 
-bool EditorClientQt::shouldEndEditing(WebCore::Range* range)
+bool EditorClientQt::shouldEndEditing(const SimpleRange& range)
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: shouldEndEditingInDOMRange:%s\n", dumpRange(range).toUtf8().constData());
     return true;
 }
 
-bool EditorClientQt::shouldInsertText(const String& string, Range* range, EditorInsertAction action)
+bool EditorClientQt::shouldInsertText(const String& string, const std::optional<SimpleRange>& range, EditorInsertAction action)
 {
     if (dumpEditingCallbacks) {
         static const char *insertactionstring[] = {
@@ -141,7 +141,7 @@ bool EditorClientQt::shouldInsertText(const String& string, Range* range, Editor
     return acceptsEditing;
 }
 
-bool EditorClientQt::shouldChangeSelectedRange(Range* currentRange, Range* proposedRange, EAffinity selectionAffinity, bool stillSelecting)
+bool EditorClientQt::shouldChangeSelectedRange(const std::optional<SimpleRange>& currentRange, const std::optional<SimpleRange>& proposedRange, Affinity selectionAffinity, bool stillSelecting)
 {
     if (dumpEditingCallbacks) {
         static const char *affinitystring[] = {
@@ -156,20 +156,20 @@ bool EditorClientQt::shouldChangeSelectedRange(Range* currentRange, Range* propo
         printf("EDITING DELEGATE: shouldChangeSelectedDOMRange:%s toDOMRange:%s affinity:%s stillSelecting:%s\n",
             dumpRange(currentRange).toUtf8().constData(),
             dumpRange(proposedRange).toUtf8().constData(),
-            affinitystring[selectionAffinity], boolstring[stillSelecting]);
+            affinitystring[selectionAffinity == Affinity::Upstream ? 0 : 1], boolstring[stillSelecting]);
     }
     return acceptsEditing;
 }
 
-bool EditorClientQt::shouldApplyStyle(WebCore::StyleProperties* style, WebCore::Range* range)
+bool EditorClientQt::shouldApplyStyle(const WebCore::StyleProperties& style, const std::optional<SimpleRange>& range)
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:%s\n",
-            QString(style->asText()).toUtf8().constData(), dumpRange(range).toUtf8().constData());
+            QString(style.asText()).toUtf8().constData(), dumpRange(range).toUtf8().constData());
     return acceptsEditing;
 }
 
-bool EditorClientQt::shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range*)
+bool EditorClientQt::shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&)
 {
     notImplemented();
     return true;
@@ -200,7 +200,7 @@ void EditorClientQt::respondToChangedSelection(Frame* frame)
 //     printf("%s\n", buffer);
 
     if (supportsGlobalSelection() && frame->selection().isRange())
-        Pasteboard::createForGlobalSelection()->writeSelection(*frame->selection().toNormalizedRange().get(), frame->editor().canSmartCopyOrDelete(), *frame);
+        Pasteboard::createForGlobalSelection()->writeSelection(frame->selection().selection().toNormalizedRange().value(), frame->editor().canSmartCopyOrDelete(), *frame);
 
     m_page->respondToChangedSelection();
     if (!frame->editor().ignoreSelectionChanges()) // QTFIXME: check
@@ -218,11 +218,11 @@ void EditorClientQt::didWriteSelectionToPasteboard()
 {
 }
 
-void EditorClientQt::willWriteSelectionToPasteboard(Range*)
+void EditorClientQt::willWriteSelectionToPasteboard(const std::optional<SimpleRange>&)
 {
 }
 
-void EditorClientQt::getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+void EditorClientQt::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
 {
 }
 
@@ -293,7 +293,7 @@ void EditorClientQt::redo()
 #endif
 }
 
-bool EditorClientQt::shouldInsertNode(Node* node, Range* range, EditorInsertAction action)
+bool EditorClientQt::shouldInsertNode(Node& node, const std::optional<SimpleRange>& range, EditorInsertAction action)
 {
     if (dumpEditingCallbacks) {
         static const char *insertactionstring[] = {
@@ -302,7 +302,7 @@ bool EditorClientQt::shouldInsertNode(Node* node, Range* range, EditorInsertActi
             "WebViewInsertActionDropped",
         };
 
-        printf("EDITING DELEGATE: shouldInsertNode:%s replacingDOMRange:%s givenAction:%s\n", dumpPath(*node).toUtf8().constData(),
+        printf("EDITING DELEGATE: shouldInsertNode:%s replacingDOMRange:%s givenAction:%s\n", dumpPath(node).toUtf8().constData(),
             dumpRange(range).toUtf8().constData(), insertactionstring[static_cast<int>(action)]);
     }
     return acceptsEditing;
@@ -655,7 +655,7 @@ void EditorClientQt::updateEditorStateAfterLayoutIfEditabilityChanged()
 {
 }
 
-DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(const WTF::String& originIdentifier)
+DOMPasteAccessResponse EditorClientQt::requestDOMPasteAccess(DOMPasteAccessCategory, const WTF::String& originIdentifier)
 {
     return WebCore::DOMPasteAccessResponse::DeniedForGesture;
 }
@@ -668,7 +668,7 @@ void EditorClientQt::didUpdateComposition()
 {
 }
 
-bool EditorClientQt::performTwoStepDrop(DocumentFragment&, Range& destination, bool isMove)
+bool EditorClientQt::performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove)
 {
     return false;
 }

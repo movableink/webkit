@@ -46,13 +46,12 @@ static QByteArray generateWebSocketChallengeResponse(const QByteArray& key)
 {
     SHA1 sha1;
     SHA1::Digest digest;
-    Vector<char> encoded;
     QByteArray toHash("258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     toHash.prepend(key);
     sha1.addBytes((uint8_t*)toHash.data(), toHash.size());
     sha1.computeHash(digest);
-    base64Encode((char*)digest.data(), digest.size(), encoded);
-    return QByteArray(encoded.data(), encoded.size());
+    Vector<uint8_t> encoded = base64EncodeToVector((char*)digest.data(), digest.size());
+    return QByteArray(reinterpret_cast<char*>(encoded.data()), encoded.size());
 }
 
 static InspectorServerQt* s_inspectorServer;
@@ -241,7 +240,7 @@ void InspectorServerRequestHandlerQt::tcpReadyRead()
             if (file.exists()) {
                 file.open(QIODevice::ReadOnly);
                 response = file.readAll();
-                contentType = MIMETypeRegistry::getMIMETypeForPath(m_path);
+                contentType = MIMETypeRegistry::mimeTypeForPath(StringView(m_path));
             } else {
                 code = 404;
                 text = QString::fromLatin1("Not OK");

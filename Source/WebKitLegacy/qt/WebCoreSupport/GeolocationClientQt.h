@@ -48,11 +48,11 @@ public:
     ~GeolocationClientQt() override;
 
     void geolocationDestroyed() override;
-    void startUpdating(const String& authorizationToken) override;
+    void startUpdating(const String& authorizationToken, bool enableHighAccuracy) override;
     void stopUpdating() override;
 
     void setEnableHighAccuracy(bool) override;
-    Optional<GeolocationPositionData> lastPosition() override { return m_lastPosition; }
+    std::optional<GeolocationPositionData> lastPosition() override { return m_lastPosition; }
 
     void requestPermission(Geolocation&) override;
     void cancelPermissionRequest(Geolocation&) override;
@@ -62,7 +62,7 @@ private Q_SLOTS:
 
 private:
     const QWebPageAdapter* m_webPage;
-    Optional<GeolocationPositionData> m_lastPosition;
+    std::optional<GeolocationPositionData> m_lastPosition;
     QGeoPositionInfoSource* m_location;
 };
 

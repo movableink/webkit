@@ -47,7 +47,7 @@ using namespace WebCore;
 class WebMediaStrategy final : public MediaStrategy {
 private:
 #if ENABLE(WEB_AUDIO)
-    std::unique_ptr<AudioDestination> createAudioDestination(AudioIOCallback& callback, const String& inputDeviceId,
+    Ref<AudioDestination> createAudioDestination(AudioIOCallback& callback, const String& inputDeviceId,
         unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate) override
     {
         return AudioDestination::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
@@ -83,14 +83,16 @@ PasteboardStrategy* PlatformStrategiesQt::createPasteboardStrategy()
 
 class WebBlobRegistry final : public BlobRegistry {
 private:
-    void registerFileBlobURL(const URL& url, Ref<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerFileBlobURL(url, WTFMove(reference), contentType); }
+    void registerFileBlobURL(const URL& url, Ref<BlobDataFileReference>&& reference, const String& path, const String& contentType) final { m_blobRegistry.registerFileBlobURL(url, WTFMove(reference), contentType); }
     void registerBlobURL(const URL& url, Vector<BlobPart>&& parts, const String& contentType) final { m_blobRegistry.registerBlobURL(url, WTFMove(parts), contentType); }
-    void registerBlobURL(const URL& url, const URL& srcURL) final { m_blobRegistry.registerBlobURL(url, srcURL); }
-    void registerBlobURLOptionallyFileBacked(const URL& url, const URL& srcURL, RefPtr<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerBlobURLOptionallyFileBacked(url, srcURL, WTFMove(reference), contentType); }
-    void registerBlobURLForSlice(const URL& url, const URL& srcURL, long long start, long long end) final { m_blobRegistry.registerBlobURLForSlice(url, srcURL, start, end); }
+    void registerBlobURL(const URL& url, const URL& srcURL, const PolicyContainer& container) final { m_blobRegistry.registerBlobURL(url, srcURL, container); }
+    void registerBlobURLOptionallyFileBacked(const URL& url, const URL& srcURL, RefPtr<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerBlobURLOptionallyFileBacked(url, srcURL, WTFMove(reference), contentType, { }); }
+    void registerBlobURLForSlice(const URL& url, const URL& srcURL, long long start, long long end, const String& contentType) final { m_blobRegistry.registerBlobURLForSlice(url, srcURL, start, end, contentType); }
+    void registerBlobURLHandle(const URL& url) final { m_blobRegistry.registerBlobURLHandle(url); }
     void unregisterBlobURL(const URL& url) final { m_blobRegistry.unregisterBlobURL(url); }
+    void unregisterBlobURLHandle(const URL& url) final { m_blobRegistry.unregisterBlobURLHandle(url); }
     unsigned long long blobSize(const URL& url) final { return m_blobRegistry.blobSize(url); }
-    void writeBlobsToTemporaryFiles(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&& completionHandler) final { m_blobRegistry.writeBlobsToTemporaryFiles(blobURLs, WTFMove(completionHandler)); }
+    void writeBlobsToTemporaryFilesForIndexedDB(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&& completionHandler) final { m_blobRegistry.writeBlobsToTemporaryFilesForIndexedDB(blobURLs, WTFMove(completionHandler)); }
 
     BlobRegistryImpl* blobRegistryImpl() final { return &m_blobRegistry; }
 

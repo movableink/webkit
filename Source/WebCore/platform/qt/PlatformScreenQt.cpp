@@ -40,6 +40,10 @@
 #include <QGuiApplication>
 #include <QScreen>
 
+#if ENABLE(TOUCH_EVENTS)
+#include <QTouchDevice>
+#endif
+
 namespace WebCore {
 
 static int screenNumber(Widget* w)
@@ -105,5 +109,17 @@ bool screenSupportsExtendedColor(Widget*)
 {
     return false;
 }
+
+#if ENABLE(TOUCH_EVENTS)
+bool screenIsTouchPrimaryInputDevice()
+{
+    return true;
+}
+
+bool screenHasTouchDevice()
+{
+    return !QTouchDevice::devices().isEmpty();
+}
+#endif
 
 } // namespace WebCore

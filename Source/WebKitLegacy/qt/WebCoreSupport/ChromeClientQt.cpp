@@ -45,6 +45,7 @@
 #include <WebCore/ApplicationCacheStorage.h>
 #include <WebCore/ColorChooser.h>
 #include <WebCore/ColorChooserClient.h>
+#include <WebCore/CookieConsentDecisionResult.h>
 #include <WebCore/DatabaseTracker.h>
 #include <WebCore/Document.h>
 #include <WebCore/FileChooser.h>
@@ -52,6 +53,7 @@
 #include <WebCore/FullscreenManager.h>
 #include <WebCore/HitTestResult.h>
 #include <WebCore/Icon.h>
+#include <WebCore/ModalContainerTypes.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/SecurityOrigin.h>
@@ -174,7 +176,7 @@ void ChromeClientQt::focusedFrameChanged(Frame*)
 {
 }
 
-Page* ChromeClientQt::createWindow(Frame& frame, const FrameLoadRequest&, const WindowFeatures& features, const NavigationAction&)
+Page* ChromeClientQt::createWindow(Frame& frame, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
     if (frame.document() && frame.document()->fullscreenManager().currentFullscreenElement())
@@ -323,7 +325,7 @@ bool ChromeClientQt::runBeforeUnloadConfirmPanel(const String& message, Frame& f
     return runJavaScriptConfirm(frame, message);
 }
 
-void ChromeClientQt::closeWindowSoon()
+void ChromeClientQt::closeWindow()
 {
     m_webPage->page->setGroupName(String());
     m_webPage->page->mainFrame().loader().stopAllLoaders();
@@ -477,7 +479,7 @@ void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, unsign
     }
 }
 
-void ChromeClientQt::print(Frame& frame)
+void ChromeClientQt::print(Frame& frame, const StringWithDirection&)
 {
     emit m_webPage->printRequested(QWebFrameAdapter::kit(frame));
 }
@@ -589,14 +591,23 @@ void ChromeClientQt::setNeedsOneShotDrawingSynchronization()
 #endif
 }
 
-void ChromeClientQt::scheduleRenderingUpdate()
+bool ChromeClientQt::scheduleRenderingUpdate()
 {
 #if USE(TEXTURE_MAPPER)
     // we want the layers to synchronize ASAP
-    if (m_textureMapperLayerClient)
+    if (m_textureMapperLayerClient) {
         m_textureMapperLayerClient->markForSync(true);
+        return true;
+    }
 #endif
+    return false;
 }
+
+void ChromeClientQt::triggerRenderingUpdate()
+{
+    scheduleRenderingUpdate();
+}
+
 
 ChromeClient::CompositingTriggerFlags ChromeClientQt::allowedCompositingTriggers() const
 {
@@ -622,7 +633,7 @@ IntRect ChromeClientQt::visibleRectForTiledBackingStore() const
 }
 #endif
 
-void ChromeClientQt::isPlayingMediaDidChange(MediaProducer::MediaStateFlags state, uint64_t)
+void ChromeClientQt::isPlayingMediaDidChange(MediaProducerMediaStateFlags state)
 {
     if (state == m_mediaState)
         return;
@@ -630,10 +641,10 @@ void ChromeClientQt::isPlayingMediaDidChange(MediaProducer::MediaStateFlags stat
     MediaProducer::MediaStateFlags oldState = m_mediaState;
     m_mediaState = state;
 
-    if ((oldState & MediaProducer::IsPlayingAudio) == (m_mediaState & MediaProducer::IsPlayingAudio))
+    if ((oldState & MediaProducerMediaState::IsPlayingAudio) == (m_mediaState & MediaProducerMediaState::IsPlayingAudio))
         return;
 
-    m_webPage->recentlyAudibleChanged(m_mediaState & MediaProducer::IsPlayingAudio);
+    m_webPage->recentlyAudibleChanged(m_mediaState.contains(MediaProducerMediaState::IsPlayingAudio));
 }
 
 #if ENABLE(VIDEO) && ((USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)) || USE(QT_MULTIMEDIA))
@@ -771,6 +782,25 @@ void ChromeClientQt::intrinsicContentsSizeChanged(const IntSize&) const
 RefPtr<Icon> ChromeClientQt::createIconForFiles(const Vector<WTF::String>& filenames)
 {
     return Icon::createIconForFiles(filenames);
+}
+
+void ChromeClientQt::classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<WebCore::ModalContainerControlType>&&)>&& completion)
+{
+    completion({ });
+}
+
+void ChromeClientQt::decidePolicyForModalContainer(OptionSet<WebCore::ModalContainerControlType>, CompletionHandler<void(WebCore::ModalContainerDecision)>&& completion)
+{
+    completion(ModalContainerDecision::Show);
+}
+
+void ChromeClientQt::requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&& completion)
+{
+    completion(CookieConsentDecisionResult::NotSupported);
+}
+
+void ChromeClientQt::setTextIndicator(const WebCore::TextIndicatorData&) const
+{
 }
 
 } // namespace WebCore

@@ -146,7 +146,6 @@ public:
     enum VisibilityState {
         VisibilityStateVisible,
         VisibilityStateHidden,
-        VisibilityStatePrerender,
         VisibilityStateUnloaded
     };
 

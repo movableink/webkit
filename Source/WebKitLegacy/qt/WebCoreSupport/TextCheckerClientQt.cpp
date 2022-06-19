@@ -101,8 +101,8 @@ void TextCheckerClientQt::checkGrammarOfString(StringView view, Vector<GrammarDe
     for (int i = 0; i < count; ++i) {
         const QWebSpellChecker::GrammarDetail qGrammarDetail = qGrammarDetails.at(i);
         GrammarDetail webkitGrammarDetail;
-        webkitGrammarDetail.location = qGrammarDetail.location;
-        webkitGrammarDetail.length = qGrammarDetail.length;
+        webkitGrammarDetail.range.location = qGrammarDetail.location;
+        webkitGrammarDetail.range.length = qGrammarDetail.length;
         // Copy guesses strings.
         convertToVectorList(qGrammarDetail.guesses, webkitGrammarDetail.guesses);
         webkitGrammarDetail.userDescription = qGrammarDetail.userDescription;

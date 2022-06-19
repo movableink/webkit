@@ -56,7 +56,7 @@ void QtTestSupport::clearMemoryCaches()
     pageCache.setMaxSize(0);
     pageCache.setMaxSize(pageCacheMaxSize);
 
-    FontCache::singleton().invalidate();
+    FontCache::forCurrentThread().invalidate();
 
     WebCore::CrossOriginPreflightResultCache::singleton().clear();
 }
@@ -96,7 +96,7 @@ void QtTestSupport::initializeTestFonts()
     appFontSet = FcConfigGetFonts(config, FcSetApplication);
     numFonts = appFontSet->nfont;
 
-    WebCore::FontCache::singleton().invalidate();
+    WebCore::FontCache::forCurrentThread().invalidate();
     QFontDatabase::removeAllApplicationFonts();
 #endif
 }

@@ -34,7 +34,6 @@
 #include "QWebFrameAdapter.h"
 #include "QWebPageAdapter.h"
 
-#include <JavaScriptCore/ScriptDebugServer.h>
 #include <QCoreApplication>
 #include <QFile>
 #include <QNetworkRequest>
@@ -262,7 +261,7 @@ void InspectorClientQt::sendMessageToFrontend(const String& message)
         return;
 
     Page* frontendPage = m_frontendWebPage->page;
-    m_frontendClient->dispatchMessageAsync(message);
+    m_frontendClient->frontendAPIDispatcher().dispatchMessageAsync(message);
 }
 
 InspectorFrontendClientQt::InspectorFrontendClientQt(QWebPageAdapter* inspectedWebPage, InspectorController* inspectedPageController, std::unique_ptr<QObject> inspectorView, WebCore::Page* inspectorPage, InspectorClientQt* inspectorClient)

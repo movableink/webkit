@@ -43,6 +43,8 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/Editor.h>
 #include <WebCore/FocusController.h>
+#include <WebCore/FrameLoadRequest.h>
+#include <WebCore/GraphicsContextQt.h>
 #include <WebCore/GCController.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/InspectorController.h>
@@ -251,19 +253,19 @@ void DumpRenderTreeSupportQt::garbageCollectorCollectOnAlternateThread(bool wait
     GCController::singleton().garbageCollectOnAlternateThreadForDebugging(waitUntilDone);
 }
 
-void DumpRenderTreeSupportQt::whiteListAccessFromOrigin(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
+void DumpRenderTreeSupportQt::allowListAccessFromOrigin(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
 {
-    SecurityPolicy::addOriginAccessWhitelistEntry(SecurityOrigin::createFromString(sourceOrigin), destinationProtocol, destinationHost, allowDestinationSubdomains);
+    SecurityPolicy::addOriginAccessAllowlistEntry(SecurityOrigin::createFromString(sourceOrigin), destinationProtocol, destinationHost, allowDestinationSubdomains);
 }
 
-void DumpRenderTreeSupportQt::removeWhiteListAccessFromOrigin(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
+void DumpRenderTreeSupportQt::removeAllowListAccessFromOrigin(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
 {
-    SecurityPolicy::removeOriginAccessWhitelistEntry(SecurityOrigin::createFromString(sourceOrigin), destinationProtocol, destinationHost, allowDestinationSubdomains);
+    SecurityPolicy::removeOriginAccessAllowlistEntry(SecurityOrigin::createFromString(sourceOrigin), destinationProtocol, destinationHost, allowDestinationSubdomains);
 }
 
-void DumpRenderTreeSupportQt::resetOriginAccessWhiteLists()
+void DumpRenderTreeSupportQt::resetOriginAccessAllowLists()
 {
-    SecurityPolicy::resetOriginAccessWhitelists();
+    SecurityPolicy::resetOriginAccessAllowlists();
 }
 
 void DumpRenderTreeSupportQt::setDomainRelaxationForbiddenForURLScheme(bool forbidden, const QString& scheme)
@@ -295,18 +297,20 @@ QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
 {
     WebCore::Frame& frame = adapter->page->focusController().focusedOrMainFrame();
     QVariantList selectedRange;
-    RefPtr<Range> range = frame.selection().toNormalizedRange().get();
+    auto range = createLiveRange(frame.selection().selection().toNormalizedRange()).get();
 
     Element* selectionRoot = frame.selection().selection().rootEditableElement();
     Element* scope = selectionRoot ? selectionRoot : frame.document()->documentElement();
 
-    RefPtr<Range> testRange = Range::create(scope->document(), scope, 0, &range->startContainer(), range->startOffset());
-    ASSERT(&testRange->startContainer() == scope);
-    int startPosition = TextIterator::rangeLength(testRange.get());
+    auto testRange = makeRangeSelectingNodeContents(scope->document());
+    testRange.start = { range->startContainer(), range->startOffset() };
 
-    testRange->setEnd(range->endContainer(), range->endOffset());
-    ASSERT(&testRange->startContainer() == scope);
-    int endPosition = TextIterator::rangeLength(testRange.get());
+    ASSERT(&testRange.startContainer() == scope);
+    int startPosition = characterCount(testRange);
+
+    testRange.end = { range->endContainer(), range->endOffset() };
+    ASSERT(&testRange.startContainer() == scope);
+    int endPosition = characterCount(testRange);
 
     selectedRange << startPosition << (endPosition - startPosition);
 
@@ -322,12 +326,14 @@ QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter
     if ((location + length < location) && (location + length))
         length = 0;
 
-    RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(frame.selection().rootEditableElementOrDocumentElement(), location, length);
+    WebCore::CharacterRange range { location, length };
+    auto* element = frame.selection().rootEditableElementOrDocumentElement();
 
-    if (!range)
+    if (!element)
         return QVariantList();
 
-    QRect resultRect = frame.editor().firstRectForRange(range.get());
+    auto resolvedRange = resolveCharacterRange(makeRangeSelectingNodeContents(*element), range);
+    QRect resultRect = frame.editor().firstRectForRange(resolvedRange);
     rect << resultRect.x() << resultRect.y() << resultRect.width() << resultRect.height();
     return rect;
 }
@@ -337,7 +343,7 @@ void DumpRenderTreeSupportQt::setWindowsBehaviorAsEditingBehavior(QWebPageAdapte
     Page* corePage = adapter->page;
     if (!corePage)
         return;
-    corePage->settings().setEditingBehaviorType(EditingWindowsBehavior);
+    corePage->settings().setEditingBehaviorType(EditingBehaviorType::Windows);
 }
 
 void DumpRenderTreeSupportQt::clearAllApplicationCaches()
@@ -706,7 +712,7 @@ void DumpRenderTreeSupportQt::setAlternateHtml(QWebFrameAdapter* adapter, const 
     WebCore::ResourceResponse response(failingUrl, "text/html"_s, data->size(), "utf-8"_s);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(data), failingUrl, response, SubstituteData::SessionHistoryVisibility::Hidden);
-    coreFrame->loader().load(WebCore::FrameLoadRequest(*coreFrame, request, ShouldOpenExternalURLsPolicy::ShouldNotAllow /*FIXME*/, substituteData));
+    coreFrame->loader().load(WebCore::FrameLoadRequest(*coreFrame, request, substituteData));
 }
 
 void DumpRenderTreeSupportQt::confirmComposition(QWebPageAdapter *adapter, const char* text)
@@ -785,7 +791,7 @@ QImage DumpRenderTreeSupportQt::paintPagesWithBoundaries(QWebFrameAdapter* adapt
     image.fill(Qt::white);
     painter.begin(&image);
 
-    GraphicsContext ctx(&painter);
+    GraphicsContextQt ctx(&painter);
     for (int i = 0; i < printContext.pageCount(); ++i) {
         printContext.spoolPage(ctx, i, pageRect.width());
         // translate to next page coordinates
@@ -794,8 +800,8 @@ QImage DumpRenderTreeSupportQt::paintPagesWithBoundaries(QWebFrameAdapter* adapt
         // if there is a next page, draw a blue line between these two
         if (i + 1 < printContext.pageCount()) {
             ctx.save();
-            ctx.setStrokeColor(Color(0, 0, 255));
-            ctx.setFillColor(Color(0, 0, 255));
+            ctx.setStrokeColor(Color(Color::blue));
+            ctx.setFillColor(Color(Color::blue));
             ctx.drawLine(IntPoint(0, -1), IntPoint(pageRect.width(), -1));
             ctx.restore();
         }

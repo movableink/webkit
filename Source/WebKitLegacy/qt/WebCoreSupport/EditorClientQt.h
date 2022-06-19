@@ -45,7 +45,7 @@ class EditorClientQt : public EditorClient {
 public:
     EditorClientQt(QWebPageAdapter*);
     
-    bool shouldDeleteRange(Range*) override;
+    bool shouldDeleteRange(const std::optional<SimpleRange>&) override;
     bool smartInsertDeleteEnabled() override;
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
     void toggleSmartInsertDelete() override;
@@ -57,23 +57,23 @@ public:
     void toggleGrammarChecking() override;
     int spellCheckerDocumentTag() override;
 
-    bool shouldBeginEditing(Range*) override;
-    bool shouldEndEditing(Range*) override;
-    bool shouldInsertNode(Node*, Range*, EditorInsertAction) override;
-    bool shouldInsertText(const String&, Range*, EditorInsertAction) override;
-    bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) override;
+    bool shouldBeginEditing(const SimpleRange&) override;
+    bool shouldEndEditing(const SimpleRange&) override;
+    bool shouldInsertNode(Node&, const std::optional<SimpleRange>&, EditorInsertAction) override;
+    bool shouldInsertText(const String&, const std::optional<SimpleRange>&, EditorInsertAction) override;
+    bool shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity, bool stillSelecting) override;
 
-    bool shouldApplyStyle(StyleProperties*, Range*) override;
+    bool shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&) override;
 
-    bool shouldMoveRangeAfterDelete(Range*, Range*) override;
+    bool shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&) override;
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
     void respondToChangedSelection(Frame*) override;
     void didEndEditing() override;
-    void willWriteSelectionToPasteboard(Range*) override;
+    void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
-    void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData) override;
+    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData) override;
 
     void registerUndoStep(UndoStep&) override;
     void registerRedoStep(UndoStep&) override;
@@ -114,10 +114,10 @@ public:
 
     void didEndUserTriggeredSelectionChanges() final;
     void updateEditorStateAfterLayoutIfEditabilityChanged() final;
-    DOMPasteAccessResponse requestDOMPasteAccess(const WTF::String& originIdentifier) final;
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const WTF::String& originIdentifier) final;
     void canceledComposition() final;
     void didUpdateComposition() final;
-    bool performTwoStepDrop(DocumentFragment&, Range& destination, bool isMove) final;
+    bool performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove) final;
     bool canShowFontPanel() const final;
 
     bool isEditing() const;

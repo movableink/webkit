@@ -29,6 +29,7 @@
 
 #include <QPointer>
 #include <WebCore/Element.h>
+#include <WebCore/Document.h>
 
 class QWebFullScreenRequestPrivate {
 public:

@@ -42,6 +42,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bridge/qt/qt_runtime.h
 
     bindings/js/ScriptSourceCode.h
+    bindings/js/CachedScriptSourceProvider.h
+    bindings/js/ScriptBufferSourceProvider.h
 
     dom/StaticNodeList.h
 

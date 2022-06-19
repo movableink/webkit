@@ -41,9 +41,9 @@ enum class FormDataType {
 static void encodeElement(KeyedEncoder& encoder, const FormDataElement& element)
 {
     switchOn(element.data,
-        [&] (const Vector<char>& bytes) {
+        [&] (const Vector<uint8_t>& bytes) {
             encoder.encodeEnum("type", FormDataType::Data);
-            encoder.encodeBytes("data", reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size());
+            encoder.encodeBytes("data", bytes.data(), bytes.size());
         }, [&] (const FormDataElement::EncodedFileData& fileData) {
             encoder.encodeEnum("type", FormDataType::EncodedFile);
             encoder.encodeString("filename", fileData.filename);
@@ -74,7 +74,7 @@ static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
 
     switch (type) {
     case FormDataType::Data: {
-        Vector<char> bytes;
+        Vector<uint8_t> bytes;
         if (!decoder.decodeBytes("data", bytes))
             return false;
         element.data = WTFMove(bytes);
@@ -190,7 +190,7 @@ static void encodeBackForwardTreeNode(KeyedEncoder& encoder, const HistoryItem& 
     encoder.encodeFloat("pageScaleFactor", item.pageScaleFactor());
 
     encoder.encodeConditionalObject("stateObject", item.stateObject(), [](KeyedEncoder& encoder, const SerializedScriptValue& stateObject) {
-        encoder.encodeBytes("data", stateObject.data().data(), stateObject.data().size());
+        encoder.encodeBytes("data", stateObject.wireBytes().data(), stateObject.wireBytes().size());
     });
 
     encoder.encodeString("target", item.target());
@@ -283,7 +283,7 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
     decoder.decodeConditionalObject("stateObject", stateObject, [](KeyedDecoder& decoder, RefPtr<SerializedScriptValue>& stateObject) -> bool {
         Vector<uint8_t> bytes;
         if (decoder.decodeBytes("data", bytes)) {
-            stateObject = SerializedScriptValue::adopt(WTFMove(bytes));
+            stateObject = SerializedScriptValue::createFromWireBytes(WTFMove(bytes));
             return true;
         }
         return false;

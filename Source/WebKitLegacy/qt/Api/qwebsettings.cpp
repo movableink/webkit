@@ -229,10 +229,6 @@ void QWebSettingsPrivate::apply()
                                       global->attributes.value(QWebSettings::PrintElementBackgrounds));
         settings->setShouldPrintBackgrounds(value);
 
-        value = attributes.value(QWebSettings::OfflineStorageDatabaseEnabled,
-                                      global->attributes.value(QWebSettings::OfflineStorageDatabaseEnabled));
-        settings->setOfflineStorageDatabaseEnabled(value);
-
         value = attributes.value(QWebSettings::OfflineWebApplicationCacheEnabled,
                                       global->attributes.value(QWebSettings::OfflineWebApplicationCacheEnabled));
         settings->setOfflineWebApplicationCacheEnabled(value);

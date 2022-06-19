@@ -35,7 +35,9 @@
 #include "QtPlatformPlugin.h"
 #include <QMultiHash>
 #include <QScopedPointer>
+#include <wtf/CompletionHandler.h>
 #include <WebCore/NotificationClient.h>
+#include <WebCore/NotificationPermission.h>
 #include <WebCore/Timer.h>
 
 class QWebFrameAdapter;
@@ -82,14 +84,12 @@ public:
     ~NotificationPresenterClientQt();
 
     /* WebCore::NotificationClient interface */
-    bool show(Notification*) override;
-    void cancel(Notification*) override;
-    void notificationObjectDestroyed(Notification*) override;
+    bool show(Notification&) override;
+    void cancel(Notification&) override;
+    void notificationObjectDestroyed(Notification&) override;
     void notificationControllerDestroyed() override;
-    void requestPermission(ScriptExecutionContext*, RefPtr<NotificationPermissionCallback>&&) override;
-    bool hasPendingPermissionRequests(ScriptExecutionContext*) const override;
+    void requestPermission(ScriptExecutionContext&, PermissionHandler&&) override;
     NotificationClient::Permission checkPermission(ScriptExecutionContext*) override;
-    void cancelRequestsForPermission(ScriptExecutionContext*) override;
 
     void cancel(NotificationWrapper*);
 
@@ -114,18 +114,18 @@ public:
 
 private:
     void sendEvent(Notification*, const AtomString& eventName);
-    void displayNotification(Notification*);
+    void displayNotification(Notification&);
     void removeReplacedNotificationFromQueue(Notification*);
     void detachNotification(Notification*);
     void dumpReplacedIdText(Notification*);
-    void dumpShowText(Notification*);
-    QWebPageAdapter* toPage(ScriptExecutionContext*);
-    QWebFrameAdapter* toFrame(ScriptExecutionContext*);
+    void dumpShowText(Notification&);
+    QWebPageAdapter* toPage(ScriptExecutionContext&);
+    QWebFrameAdapter* toFrame(ScriptExecutionContext&);
 
     int m_clientCount;
     struct CallbacksInfo {
         QWebFrameAdapter* m_frame;
-        QList<RefPtr<NotificationPermissionCallback> > m_callbacks;
+        QList<PermissionHandler> m_permissionHandlers;
     };
     QHash<ScriptExecutionContext*,  CallbacksInfo > m_pendingPermissionRequests;
     QHash<ScriptExecutionContext*, NotificationClient::Permission> m_cachedPermissions;

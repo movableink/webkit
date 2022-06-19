@@ -54,7 +54,8 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/HTMLAppletElement.h>
+#include <WebCore/FrameLoadRequest.h>
+#include <WebCore/FrameView.h>
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/HTTPParsers.h>
 #include <WebCore/HitTestResult.h>
@@ -66,10 +67,12 @@
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/ResourceHandle.h>
 #include <WebCore/ResourceHandleInternal.h>
+#include <WebCore/ScrollView.h>
 #include <WebCore/Settings.h>
 #include <WebCore/SubframeLoader.h>
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/UserGestureIndicator.h>
+#include <WebCore/Widget.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
@@ -78,7 +81,7 @@
 #include "IconDatabaseClientQt.h"
 #endif
 
-static QMap<unsigned long, QString> dumpAssignedUrls;
+static QMap<uint64_t, QString> dumpAssignedUrls;
 
 // Compare with the file "WebKit/Tools/DumpRenderTree/mac/FrameLoadDelegate.mm".
 static QString drtDescriptionSuitableForTestResult(WebCore::Frame* webCoreFrame)
@@ -194,7 +197,6 @@ static const char* navigationTypeToString(NavigationType type)
 FrameLoaderClientQt::FrameLoaderClientQt()
     : m_frame(0)
     , m_webFrame(0)
-    , m_hasSentResponseToPlugin(false)
     , m_isOriginatingLoad(false)
     , m_isDisplayingErrorPage(false)
     , m_shouldSuppressLoadStarted(false)
@@ -229,12 +231,12 @@ bool FrameLoaderClientQt::hasWebView() const
     return true;
 }
 
-Optional<PageIdentifier> FrameLoaderClientQt::pageID() const
+std::optional<PageIdentifier> FrameLoaderClientQt::pageID() const
 {
     return std::nullopt;
 }
 
-Optional<FrameIdentifier> FrameLoaderClientQt::frameID() const
+std::optional<FrameIdentifier> FrameLoaderClientQt::frameID() const
 {
     return std::nullopt;
 }
@@ -261,8 +263,8 @@ void FrameLoaderClientQt::transitionToCommittedForNewPage()
 
     ScrollbarMode hScrollbar = (ScrollbarMode) m_webFrame->scrollBarPolicy(Qt::Horizontal);
     ScrollbarMode vScrollbar = (ScrollbarMode) m_webFrame->scrollBarPolicy(Qt::Vertical);
-    bool hLock = hScrollbar != ScrollbarAuto;
-    bool vLock = vScrollbar != ScrollbarAuto;
+    bool hLock = hScrollbar != ScrollbarMode::Auto;
+    bool vLock = vScrollbar != ScrollbarMode::Auto;
 
     // The HistoryController will update the scroll position later if needed.
     IntRect currentVisibleContentRect = m_frame->view() ? IntRect(IntPoint::zero(), m_frame->view()->fixedVisibleContentRect().size()) : IntRect();
@@ -285,10 +287,6 @@ void FrameLoaderClientQt::transitionToCommittedForNewPage()
 }
 
 void FrameLoaderClientQt::didRestoreFromBackForwardCache()
-{
-}
-
-void FrameLoaderClientQt::dispatchDidBecomeFrameset(bool)
 {
 }
 
@@ -434,7 +432,7 @@ void FrameLoaderClientQt::dispatchDidReceiveTitle(const StringWithDirection& tit
 }
 
 
-void FrameLoaderClientQt::dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>)
+void FrameLoaderClientQt::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>)
 {
     if (dumpFrameLoaderCallbacks)
         printf("%s - didCommitLoadForFrame\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
@@ -769,9 +767,9 @@ void FrameLoaderClientQt::setMainDocumentError(WebCore::DocumentLoader* loader, 
 }
 
 // FIXME: This function should be moved into WebCore.
-void FrameLoaderClientQt::committedLoad(WebCore::DocumentLoader* loader, const char* data, int length)
+void FrameLoaderClientQt::committedLoad(WebCore::DocumentLoader* loader, const SharedBuffer& buffer)
 {
-    loader->commitData(data, length);
+    loader->commitData(buffer);
 
     // If we are sending data to MediaDocument, we should stop here and cancel the request.
     if (m_frame->document()->isMediaDocument())
@@ -883,10 +881,10 @@ void FrameLoaderClientQt::convertMainResourceLoadToDownload(DocumentLoader* docu
     }
 }
 
-void FrameLoaderClientQt::assignIdentifierToInitialRequest(unsigned long identifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest& request)
+void FrameLoaderClientQt::assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier identifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest& request)
 {
     if (dumpResourceLoadCallbacks)
-        dumpAssignedUrls[identifier] = drtDescriptionSuitableForTestResult(request.url());
+        dumpAssignedUrls[identifier.toUInt64()] = drtDescriptionSuitableForTestResult(request.url());
 }
 
 static void blockRequest(WebCore::ResourceRequest& request)
@@ -904,11 +902,11 @@ static bool hostIsUsedBySomeTestsToGenerateError(const QString& host)
     return host == QLatin1String("255.255.255.255");
 }
 
-void FrameLoaderClientQt::dispatchWillSendRequest(WebCore::DocumentLoader*, unsigned long identifier, WebCore::ResourceRequest& newRequest, const WebCore::ResourceResponse& redirectResponse)
+void FrameLoaderClientQt::dispatchWillSendRequest(WebCore::DocumentLoader*, ResourceLoaderIdentifier identifier, WebCore::ResourceRequest& newRequest, const WebCore::ResourceResponse& redirectResponse)
 {
     if (dumpResourceLoadCallbacks)
         printf("%s - willSendRequest %s redirectResponse %s\n",
-            qPrintable(dumpAssignedUrls[identifier]),
+            qPrintable(dumpAssignedUrls[identifier.toUInt64()]),
             qPrintable(drtDescriptionSuitableForTestResult(newRequest)),
             (redirectResponse.isNull()) ? "(null)" : qPrintable(drtDescriptionSuitableForTestResult(redirectResponse)));
 
@@ -956,53 +954,53 @@ void FrameLoaderClientQt::dispatchWillSendRequest(WebCore::DocumentLoader*, unsi
     // qDebug() << "FrameLoaderClientQt::dispatchWillSendRequest" << request.isNull() << url;
 }
 
-bool FrameLoaderClientQt::shouldUseCredentialStorage(DocumentLoader*, unsigned long)
+bool FrameLoaderClientQt::shouldUseCredentialStorage(DocumentLoader*, WebCore::ResourceLoaderIdentifier)
 {
     notImplemented();
     return false;
 }
 
-void FrameLoaderClientQt::dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long, const AuthenticationChallenge&)
+void FrameLoaderClientQt::dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, WebCore::ResourceLoaderIdentifier, const AuthenticationChallenge&)
 {
     notImplemented();
 }
 
-void FrameLoaderClientQt::dispatchDidReceiveResponse(WebCore::DocumentLoader*, unsigned long identifier, const WebCore::ResourceResponse& response)
+void FrameLoaderClientQt::dispatchDidReceiveResponse(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier, const WebCore::ResourceResponse& response)
 {
 
     m_response = response;
     if (dumpWillCacheResponseCallbacks)
         printf("%s - willCacheResponse: called\n",
-            qPrintable(dumpAssignedUrls[identifier]));
+            qPrintable(dumpAssignedUrls[identifier.toUInt64()]));
 
     if (dumpResourceLoadCallbacks)
         printf("%s - didReceiveResponse %s\n",
-            qPrintable(dumpAssignedUrls[identifier]),
+            qPrintable(dumpAssignedUrls[identifier.toUInt64()]),
             qPrintable(drtDescriptionSuitableForTestResult(response)));
 
     if (dumpResourceResponseMIMETypes) {
         printf("%s has MIME type %s\n",
-            qPrintable(QString(response.url().lastPathComponent())),
+            qPrintable(QString(response.url().lastPathComponent().toString())),
             qPrintable(QString(response.mimeType())));
     }
 }
 
-void FrameLoaderClientQt::dispatchDidReceiveContentLength(WebCore::DocumentLoader*, unsigned long, int)
+void FrameLoaderClientQt::dispatchDidReceiveContentLength(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, int)
 {
 }
 
-void FrameLoaderClientQt::dispatchDidFinishLoading(WebCore::DocumentLoader*, unsigned long identifier)
+void FrameLoaderClientQt::dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier)
 {
     if (dumpResourceLoadCallbacks)
         printf("%s - didFinishLoading\n",
-            (dumpAssignedUrls.contains(identifier) ? qPrintable(dumpAssignedUrls[identifier]) : "<unknown>"));
+            (dumpAssignedUrls.contains(identifier.toUInt64()) ? qPrintable(dumpAssignedUrls[identifier.toUInt64()]) : "<unknown>"));
 }
 
-void FrameLoaderClientQt::dispatchDidFailLoading(WebCore::DocumentLoader* loader, unsigned long identifier, const WebCore::ResourceError& error)
+void FrameLoaderClientQt::dispatchDidFailLoading(WebCore::DocumentLoader* loader, WebCore::ResourceLoaderIdentifier identifier, const WebCore::ResourceError& error)
 {
     if (dumpResourceLoadCallbacks)
         printf("%s - didFailLoadingWithError: %s\n",
-            (dumpAssignedUrls.contains(identifier) ? qPrintable(dumpAssignedUrls[identifier]) : "<unknown>"),
+            (dumpAssignedUrls.contains(identifier.toUInt64()) ? qPrintable(dumpAssignedUrls[identifier.toUInt64()]) : "<unknown>"),
             qPrintable(drtDescriptionSuitableForTestResult(error)));
 }
 
@@ -1040,7 +1038,7 @@ bool FrameLoaderClientQt::callErrorPageExtension(const WebCore::ResourceError& e
     WebCore::ResourceResponse response(failingUrl, output.contentType, buffer->size(), output.encoding);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(buffer), failingUrl, response, SubstituteData::SessionHistoryVisibility::Hidden);
-    m_frame->loader().load(WebCore::FrameLoadRequest(*m_frame, request, ShouldOpenExternalURLsPolicy::ShouldNotAllow /*FIXME*/, substituteData));
+    m_frame->loader().load(WebCore::FrameLoadRequest(*m_frame, request, substituteData));
 
     m_shouldSuppressLoadStarted = false;
 
@@ -1073,7 +1071,7 @@ void FrameLoaderClientQt::dispatchDidFailLoad(const WebCore::ResourceError& erro
         emitLoadFinished(false);
 }
 
-WebCore::Frame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::NavigationAction&)
+WebCore::Frame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy)
 {
     if (!m_webFrame)
         return 0;
@@ -1132,7 +1130,7 @@ void FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction(const WebCore:
         RefPtr<Node> node;
         auto keyStateEventData = action.keyStateEventData();
         if (auto mouseEventData = action.mouseEventData()) {
-            constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::DisallowUserAgentShadowContent, HitTestRequest::AllowChildFrameContent };
+            constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
             node = m_webFrame->frame->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType).innerNonSharedNode();
         }
 
@@ -1178,13 +1176,12 @@ void FrameLoaderClientQt::startDownload(const WebCore::ResourceRequest& request,
         m_webFrame->pageAdapter->emitDownloadRequested(r);
 }
 
-RefPtr<Frame> FrameLoaderClientQt::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement& ownerElement, const String& referrer)
+RefPtr<Frame> FrameLoaderClientQt::createFrame(const String& name, HTMLFrameOwnerElement& ownerElement)
 {
     if (!m_webFrame)
-        return 0;
+        return nullptr;
 
     QWebFrameData frameData(m_frame->page(), m_frame, &ownerElement, name);
-    frameData.referrer = referrer;
 
     QWebFrameAdapter* childWebFrame = m_webFrame->createChildFrame(&frameData);
     // The creation of the frame may have run arbitrary JavaScript that removed it from the page already.
@@ -1192,22 +1189,10 @@ RefPtr<Frame> FrameLoaderClientQt::createFrame(const URL& url, const String& nam
         QPointer<QObject> qWebFrame = childWebFrame->handle();
         frameData.frame.leakRef(); // QTFIXME: ???
         ASSERT_UNUSED(qWebFrame, !qWebFrame);
-        return 0;
+        return nullptr;
     }
 
     m_webFrame->pageAdapter->emitFrameCreated(childWebFrame);
-
-    // FIXME: Set override encoding if we have one.
-
-    URL urlToLoad = url;
-    if (urlToLoad.isEmpty())
-        urlToLoad = WTF::blankURL();
-
-    m_frame->loader().loadURLIntoChildFrame(urlToLoad, frameData.referrer, frameData.frame.get());
-
-    // The frame's onload handler may have removed it from the document.
-    if (!frameData.frame->tree().parent())
-        return 0;
 
     return frameData.frame;
 }
@@ -1215,7 +1200,7 @@ RefPtr<Frame> FrameLoaderClientQt::createFrame(const URL& url, const String& nam
 ObjectContentType FrameLoaderClientQt::objectContentType(const URL& url, const String& mimeTypeIn)
 {
     // qDebug()<<" ++++++++++++++++ url is "<<url.string()<<", mime = "<<mimeTypeIn;
-    QFileInfo fi(url.path());
+    QFileInfo fi(url.path().toString());
     String extension = fi.suffix();
     if (MIMETypeRegistry::isApplicationPluginMIMEType(mimeTypeIn))
         return ObjectContentType::PlugIn;
@@ -1225,7 +1210,7 @@ ObjectContentType FrameLoaderClientQt::objectContentType(const URL& url, const S
 
     String mimeType = mimeTypeIn;
     if (!mimeType.length())
-        mimeType = MIMETypeRegistry::getMIMETypeForExtension(extension);
+        mimeType = MIMETypeRegistry::mimeTypeForExtension(extension);
 
     if (!mimeType.length())
         return ObjectContentType::Frame;
@@ -1323,7 +1308,7 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
     // qDebug()<<"------\t url = "<<url.string();
 
     if (!m_webFrame)
-        return 0;
+        return nullptr;
 
     QStringList params;
     QStringList values;
@@ -1391,16 +1376,11 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
         delete pluginAdapter;
     }
 
-    return 0;
+    return nullptr;
 }
 
 void FrameLoaderClientQt::redirectDataToPlugin(Widget& pluginWidget)
 {
-}
-
-RefPtr<Widget> FrameLoaderClientQt::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement& element, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues)
-{
-    return createPlugin(pluginSize, element, url, paramNames, paramValues, "application/x-java-applet", true);
 }
 
 String FrameLoaderClientQt::overrideMediaType() const
@@ -1470,6 +1450,12 @@ void FrameLoaderClientQt::updateCachedDocumentLoader(WebCore::DocumentLoader &)
 void FrameLoaderClientQt::prefetchDNS(const WTF::String &)
 {
     notImplemented();
+}
+
+void FrameLoaderClientQt::sendH2Ping(const URL& url, CompletionHandler<void(Expected<Seconds, WebCore::ResourceError>&&)>&& completionHandler)
+{
+    ASSERT_NOT_REACHED();
+    completionHandler(makeUnexpected(WebCore::internalError(url)));
 }
 
 }

@@ -41,29 +41,29 @@
 
 namespace WebCore {
 
-static inline Qt::DropActions dragOperationsToDropActions(unsigned op)
+static inline Qt::DropActions dragOperationsToDropActions(OptionSet<DragOperation> op)
 {
     Qt::DropActions result = Qt::IgnoreAction;
-    if (op & DragOperationCopy)
+    if (op.contains(DragOperation::Copy))
         result = Qt::CopyAction;
-    if (op & DragOperationMove)
+    if (op.contains(DragOperation::Move))
         result |= Qt::MoveAction;
-    if (op & DragOperationGeneric)
+    if (op.contains(DragOperation::Generic))
         result |= Qt::MoveAction;
-    if (op & DragOperationLink)
+    if (op.contains(DragOperation::Link))
         result |= Qt::LinkAction;
     return result;
 }
 
 static inline DragOperation dropActionToDragOperation(Qt::DropActions action)
 {
-    DragOperation result = DragOperationNone;
+    DragOperation result = DragOperation::Generic;
     if (action & Qt::CopyAction)
-        result = DragOperationCopy;
+        result = DragOperation::Copy;
     if (action & Qt::LinkAction)
-        result = DragOperationLink;
+        result = DragOperation::Link;
     if (action & Qt::MoveAction)
-        result = DragOperationMove;
+        result = DragOperation::Move;
     return result;
 }
 
@@ -71,9 +71,9 @@ void DragClientQt::willPerformDragDestinationAction(DragDestinationAction, const
 {
 }
 
-DragSourceAction DragClientQt::dragSourceActionMaskForPoint(const IntPoint&)
+OptionSet<DragSourceAction> DragClientQt::dragSourceActionMaskForPoint(const IntPoint&)
 {
-    return DragSourceActionAny;
+    return WebCore::anyDragSourceAction();
 }
 
 void DragClientQt::willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&)
@@ -97,7 +97,7 @@ void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Fram
             drag->setHotSpot(IntPoint(eventPos - dragImageOrigin));
         } else if (clipboardData && clipboardData->hasImage())
             drag->setPixmap(qvariant_cast<QPixmap>(clipboardData->imageData()));
-        DragOperation dragOperationMask = dataTransfer.sourceOperation();
+        OptionSet<DragOperation> dragOperationMask = dataTransfer.sourceOperationMask();
         drag->setMimeData(clipboardData);
         Qt::DropAction actualDropAction = drag->exec(dragOperationsToDropActions(dragOperationMask));
 

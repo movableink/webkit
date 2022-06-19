@@ -80,7 +80,7 @@ public:
     void focusedElementChanged(Element*) final;
     void focusedFrameChanged(Frame*) final;
 
-    Page* createWindow(Frame&, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) final;
+    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
 
     bool canRunModal() final;
@@ -105,7 +105,7 @@ public:
     bool canRunBeforeUnloadConfirmPanel() final;
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&) final;
 
-    void closeWindowSoon() final;
+    void closeWindow() final;
 
     void runJavaScriptAlert(Frame&, const String&) final;
     bool runJavaScriptConfirm(Frame&, const String&) final;
@@ -130,7 +130,7 @@ public:
 
     void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const WTF::String&, WebCore::TextDirection) final;
 
-    void print(Frame&) final;
+    void print(Frame&, const StringWithDirection&) final;
     void exceededDatabaseQuota(Frame&, const String&, DatabaseDetails) final;
     void reachedMaxAppCacheSize(int64_t spaceNeeded) final;
     void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t totalSpaceNeeded) final;
@@ -138,7 +138,8 @@ public:
     // This is a hook for WebCore to tell us what we need to do with the GraphicsLayers.
     void attachRootGraphicsLayer(Frame&, GraphicsLayer*) final;
     void setNeedsOneShotDrawingSynchronization() final;
-    void scheduleRenderingUpdate() final;
+    bool scheduleRenderingUpdate() final;
+    void triggerRenderingUpdate() final;
     CompositingTriggerFlags allowedCompositingTriggers() const final;
     bool allowsAcceleratedCompositing() const final;
 
@@ -150,7 +151,7 @@ public:
     void needTouchEvents(bool) final { }
 #endif
 
-    void isPlayingMediaDidChange(MediaProducer::MediaStateFlags, uint64_t) final;
+    void isPlayingMediaDidChange(MediaProducerMediaStateFlags) final;
 
 #if ENABLE(VIDEO) && ((USE(GSTREAMER) && USE(NATIVE_FULLSCREEN_VIDEO)) || USE(QT_MULTIMEDIA))
     bool supportsVideoFullscreen(MediaPlayerEnums::VideoFullscreenMode) final;
@@ -172,7 +173,10 @@ public:
 
 #if ENABLE(DATALIST_ELEMENT)
     std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    bool canShowDataListSuggestionLabels() const final { return false; }
 #endif
+
+    void setTextIndicator(const WebCore::TextIndicatorData&) const final;
 
     void runOpenPanel(Frame&, FileChooser&) final;
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) final;
@@ -180,7 +184,7 @@ public:
     void setCursor(const Cursor&) final;
     void setCursorHiddenUntilMouseMoves(bool) final { }
 
-    void scrollRectIntoView(const IntRect&) const final { }
+    void scrollMainFrameToRevealRect(const IntRect&) const final { }
 
     bool selectItemWritingDirectionIsNatural() final;
     bool selectItemAlignmentFollowsMenuWritingDirection() final;
@@ -200,6 +204,10 @@ public:
     bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const final;
 #endif
 
+    void requestCookieConsent(CompletionHandler<void(WebCore::CookieConsentDecisionResult)>&&) final;
+    void classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<WebCore::ModalContainerControlType>&&)>&&) final;
+    void decidePolicyForModalContainer(OptionSet<WebCore::ModalContainerControlType>, CompletionHandler<void(WebCore::ModalContainerDecision)>&&) final;
+
     IntPoint accessibilityScreenToRootView(const IntPoint&) const;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const;
     void didFinishLoadingImageForElement(HTMLImageElement&);
@@ -207,6 +215,11 @@ public:
     RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&);
 
     QWebFullScreenVideoHandler* createFullScreenVideoHandler();
+
+    bool hoverSupportedByPrimaryPointingDevice() const override { return true; }
+    bool hoverSupportedByAnyAvailablePointingDevice() const override { return true; }
+    std::optional<WebCore::PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return WebCore::PointerCharacteristics::Fine; }
+    OptionSet<WebCore::PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const override { return WebCore::PointerCharacteristics::Fine; }
 
     QWebPageAdapter* m_webPage;
     URL lastHoverURL;

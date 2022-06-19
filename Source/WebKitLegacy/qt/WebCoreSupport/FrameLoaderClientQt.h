@@ -78,8 +78,8 @@ public:
 
     void makeRepresentation(DocumentLoader*) override { }
 
-    Optional<PageIdentifier> pageID() const final;
-    Optional<FrameIdentifier> frameID() const final;
+    std::optional<PageIdentifier> pageID() const final;
+    std::optional<FrameIdentifier> frameID() const final;
 
     void forceLayoutForNonHTML() override;
 
@@ -88,15 +88,15 @@ public:
     void detachedFromParent2() override;
     void detachedFromParent3() override;
 
-    void assignIdentifierToInitialRequest(unsigned long identifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest&) override;
+    void assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest&) override;
 
-    void dispatchWillSendRequest(WebCore::DocumentLoader*, unsigned long, WebCore::ResourceRequest&, const WebCore::ResourceResponse&) override;
-    bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier) override;
-    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
-    void dispatchDidReceiveResponse(WebCore::DocumentLoader*, unsigned long, const WebCore::ResourceResponse&) override;
-    void dispatchDidReceiveContentLength(WebCore::DocumentLoader*, unsigned long, int) override;
-    void dispatchDidFinishLoading(WebCore::DocumentLoader*, unsigned long) override;
-    void dispatchDidFailLoading(WebCore::DocumentLoader*, unsigned long, const WebCore::ResourceError&) override;
+    void dispatchWillSendRequest(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, WebCore::ResourceRequest&, const WebCore::ResourceResponse&) override;
+    bool shouldUseCredentialStorage(DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier) override;
+    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier, const AuthenticationChallenge&) override;
+    void dispatchDidReceiveResponse(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, const WebCore::ResourceResponse&) override;
+    void dispatchDidReceiveContentLength(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, int) override;
+    void dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier) override;
+    void dispatchDidFailLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, const WebCore::ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, int) override;
 
     void dispatchDidDispatchOnloadEvents() override;
@@ -112,14 +112,14 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const WebCore::ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
     void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) override;
 
-    WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&) override;
+    WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
@@ -142,7 +142,7 @@ public:
     void willChangeTitle(DocumentLoader*) override;
     void didChangeTitle(DocumentLoader*) override;
 
-    void committedLoad(WebCore::DocumentLoader*, const char*, int) override;
+    void committedLoad(WebCore::DocumentLoader*, const SharedBuffer&) override;
     void finishedLoading(DocumentLoader*) override;
 
     void updateGlobalHistory() override;
@@ -187,16 +187,12 @@ public:
 
     void didRestoreFromBackForwardCache() override;
 
-    void dispatchDidBecomeFrameset(bool) override;
-
     bool canCachePage() const override;
     void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const WebCore::ResourceResponse&) override;
 
-    RefPtr<Frame> createFrame(const URL&, const String& name, HTMLFrameOwnerElement&, const String& referrer) override;
+    RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement&) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) override;
     void redirectDataToPlugin(Widget& pluginWidget) override;
-
-    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
 
     ObjectContentType objectContentType(const URL&, const String& mimeTypeIn) override;
     String overrideMediaType() const override;
@@ -218,6 +214,8 @@ public:
     QWebFrameAdapter* webFrame() const;
 
     void originatingLoadStarted() { m_isOriginatingLoad = true; }
+
+    void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;

@@ -31,12 +31,14 @@
 #include <JavaScriptCore/APICast.h>
 #include <QFileInfo>
 #include <QNetworkRequest>
+#include <QPainter>
 #include <WebCore/Chrome.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/Editing.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoadRequest.h>
+#include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLMetaElement.h>
@@ -53,6 +55,7 @@
 #include <WebCore/SubstituteData.h>
 #include <WebCore/markup.h>
 #include <WebCore/qt_runtime.h>
+#include <wtf/URL.h>
 
 #if USE(TILED_BACKING_STORE)
 #include "TiledBackingStore.h"
@@ -149,7 +152,7 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     if (!body.isEmpty())
         request.setHTTPBody(WebCore::FormData::create(body.constData(), body.size()));
 
-    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, ShouldOpenExternalURLsPolicy::ShouldNotAllow /*FIXME*/));
+    frame->loader().load(WebCore::FrameLoadRequest(*frame, request));
 
     if (frame->tree().parent())
         pageAdapter->insideOpenCall = false;
@@ -255,7 +258,7 @@ void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeTyp
     WebCore::ResourceResponse response(URL(), WTF::String(actualMimeType), buffer->size(), encoding);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(buffer), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
-    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, ShouldOpenExternalURLsPolicy::ShouldNotAllow /*FIXME*/, substituteData));
+    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, substituteData));
 }
 
 void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
@@ -267,7 +270,7 @@ void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
     WebCore::ResourceResponse response(URL(), "text/html"_s, data->size(), "utf-8"_s);
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(data), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
-    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, ShouldOpenExternalURLsPolicy::ShouldNotAllow /*FIXME*/, substituteData));
+    frame->loader().load(WebCore::FrameLoadRequest(*frame, request, substituteData));
 }
 
 QMultiMap<QString, QString> QWebFrameAdapter::metaData() const
@@ -345,7 +348,7 @@ void QWebFrameAdapter::init(QWebPageAdapter* pageAdapter, QWebFrameData* frameDa
 
 QWebFrameAdapter* QWebFrameAdapter::kit(const Frame* frame)
 {
-    return static_cast<FrameLoaderClientQt&>(frame->loader().client()).webFrame();
+    return static_cast<const FrameLoaderClientQt&>(frame->loader().client()).webFrame();
 }
 
 QUrl QWebFrameAdapter::ensureAbsoluteUrl(const QUrl& url)
@@ -373,7 +376,7 @@ QWebHitTestResultPrivate* QWebFrameAdapter::hitTestContent(const QPoint& pos) co
     if (!frame->view() || !frame->contentRenderer())
         return 0;
 
-    constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::ReadOnly, HitTestRequest::Active, HitTestRequest::IgnoreClipping, HitTestRequest::DisallowUserAgentShadowContent };
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent };
     HitTestResult result = frame->eventHandler().hitTestResultAtPoint(frame->view()->windowToContents(pos), hitType);
 
     if (result.scrollbar())
@@ -483,7 +486,7 @@ static void coalesceRectsIfPossible(const QRect& clipRect, QVector<QRect>& rects
 
 void QWebFrameAdapter::renderRelativeCoords(QPainter* painter, int layers, const QRegion& clip)
 {
-    GraphicsContext context(painter);
+    GraphicsContextQt context(painter);
     if (context.paintingDisabled() && !context.invalidatingControlTints())
         return;
 
@@ -539,7 +542,7 @@ void QWebFrameAdapter::renderFrameExtras(GraphicsContext& context, int layers, c
 {
     if (!(layers & (PanIconLayer | ScrollBarLayer)))
         return;
-    QPainter* painter = context.platformContext();
+    QPainter* painter = context.platformContext()->painter();
     WebCore::FrameView* view = frame->view();
     QVector<QRect> vector = clip.rects();
     for (int i = 0; i < vector.size(); ++i) {
@@ -695,9 +698,9 @@ void QWebFrameAdapter::setFocus()
 
 void QWebFrameAdapter::setScrollBarPolicy(Qt::Orientation orientation, Qt::ScrollBarPolicy policy)
 {
-    Q_ASSERT((int)ScrollbarAuto == (int)Qt::ScrollBarAsNeeded);
-    Q_ASSERT((int)ScrollbarAlwaysOff == (int)Qt::ScrollBarAlwaysOff);
-    Q_ASSERT((int)ScrollbarAlwaysOn == (int)Qt::ScrollBarAlwaysOn);
+    Q_ASSERT((int)ScrollbarMode::Auto == (int)Qt::ScrollBarAsNeeded);
+    Q_ASSERT((int)ScrollbarMode::AlwaysOff == (int)Qt::ScrollBarAlwaysOff);
+    Q_ASSERT((int)ScrollbarMode::AlwaysOn == (int)Qt::ScrollBarAlwaysOn);
 
     if (orientation == Qt::Horizontal) {
         horizontalScrollBarPolicy = policy;
@@ -718,7 +721,7 @@ void QWebFrameAdapter::scrollToAnchor(const QString &anchor)
 {
     FrameView* view = frame->view();
     if (view)
-        view->scrollToFragment(URL(anchor));
+        view->scrollToFragment(URL(QUrl(anchor)));
 }
 
 void QWebFrameAdapter::scrollBy(int dx, int dy)
@@ -737,7 +740,7 @@ void QWebFrameAdapter::setScrollBarValue(Qt::Orientation orientation, int value)
             value = 0;
         else if (value > scrollBarMaximum(orientation))
             value = scrollBarMaximum(orientation);
-        sb->scrollableArea().scrollToOffsetWithoutAnimation(orientation == Qt::Horizontal ? HorizontalScrollbar : VerticalScrollbar, value);
+        sb->scrollableArea().scrollToOffsetWithoutAnimation(orientation == Qt::Horizontal ? ScrollbarOrientation::Horizontal : ScrollbarOrientation::Vertical, value);
     }
 }
 

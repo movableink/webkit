@@ -40,7 +40,6 @@
 #include <WebCore/EventNames.h>
 #include <WebCore/Frame.h>
 #include <WebCore/Notification.h>
-#include <WebCore/NotificationPermissionCallback.h>
 #include <WebCore/Page.h>
 #include <WebCore/ScriptExecutionContext.h>
 
@@ -168,26 +167,25 @@ void NotificationPresenterClientQt::removeClient()
     }
 }
 
-bool NotificationPresenterClientQt::show(Notification* notification)
+bool NotificationPresenterClientQt::show(Notification& notification)
 {
     // FIXME: workers based notifications are not supported yet.
-    if (notification->scriptExecutionContext()->isWorkerGlobalScope())
+    if (notification.scriptExecutionContext()->isWorkerGlobalScope())
         return false;
-    notification->setPendingActivity(*notification);
-    if (!notification->tag().isEmpty())
-        removeReplacedNotificationFromQueue(notification);
+    if (!notification.tag().isEmpty())
+        removeReplacedNotificationFromQueue(&notification);
     if (dumpNotification)
         dumpShowText(notification);
     displayNotification(notification);
     return true;
 }
 
-void NotificationPresenterClientQt::displayNotification(Notification* notification)
+void NotificationPresenterClientQt::displayNotification(Notification& notification)
 {
     NotificationWrapper* wrapper = new NotificationWrapper();
-    m_notifications.insert(notification, wrapper);
-    QString title = notification->title();
-    QString message = notification->body();
+    m_notifications.insert(&notification, wrapper);
+    QString title = notification.title();
+    QString message = notification.body();
 
     if (m_platformPlugin.plugin() && m_platformPlugin.plugin()->supportsExtension(QWebKitPlatformPlugin::Notifications))
         wrapper->m_presenter = m_platformPlugin.createNotificationPresenter();
@@ -202,7 +200,7 @@ void NotificationPresenterClientQt::displayNotification(Notification* notificati
     wrapper->m_displayEventTimer.startOneShot(0_s);
 
     // Make sure the notification was not cancelled during handling the display event
-    if (m_notifications.find(notification) == m_notifications.end())
+    if (m_notifications.find(&notification) == m_notifications.end())
         return;
 
     if (wrapper->m_presenter) {
@@ -215,19 +213,19 @@ void NotificationPresenterClientQt::displayNotification(Notification* notificati
 #ifndef QT_NO_SYSTEMTRAYICON
     wrapper->connect(m_systemTrayIcon.data(), SIGNAL(messageClicked()), wrapper, SLOT(notificationClicked()));
     QMetaObject::invokeMethod(m_systemTrayIcon.data(), "show");
-    QMetaObject::invokeMethod(m_systemTrayIcon.data(), "showMessage", Q_ARG(QString, notification->title()), Q_ARG(QString, notification->body()));
+    QMetaObject::invokeMethod(m_systemTrayIcon.data(), "showMessage", Q_ARG(QString, notification.title()), Q_ARG(QString, notification.body()));
 #endif
 }
 
-void NotificationPresenterClientQt::cancel(Notification* notification)
+void NotificationPresenterClientQt::cancel(Notification& notification)
 {
-    if (dumpNotification && notification->scriptExecutionContext())
-        printf("DESKTOP NOTIFICATION CLOSED: %s\n", QString(notification->title()).toUtf8().constData());
+    if (dumpNotification && notification.scriptExecutionContext())
+        printf("DESKTOP NOTIFICATION CLOSED: %s\n", QString(notification.title()).toUtf8().constData());
 
-    NotificationsQueue::Iterator iter = m_notifications.find(notification);
+    NotificationsQueue::Iterator iter = m_notifications.find(&notification);
     if (iter != m_notifications.end()) {
-        sendEvent(notification, eventNames().closeEvent);
-        detachNotification(notification);
+        sendEvent(&notification, eventNames().closeEvent);
+        detachNotification(&notification);
     }
 }
 
@@ -235,7 +233,7 @@ void NotificationPresenterClientQt::cancel(NotificationWrapper* wrapper)
 {
     Notification* notification = notificationForWrapper(wrapper);
     if (notification)
-        cancel(notification);
+        cancel(*notification);
 }
 
 void NotificationPresenterClientQt::notificationClicked(NotificationWrapper* wrapper)
@@ -277,77 +275,36 @@ Notification* NotificationPresenterClientQt::notificationForWrapper(const Notifi
     return 0;
 }
 
-void NotificationPresenterClientQt::notificationObjectDestroyed(Notification* notification)
+void NotificationPresenterClientQt::notificationObjectDestroyed(Notification& notification)
 {
     // Called from ~Notification(), Remove the entry from the notifications list and delete the icon.
-    NotificationsQueue::Iterator iter = m_notifications.find(notification);
+    NotificationsQueue::Iterator iter = m_notifications.find(&notification);
     if (iter != m_notifications.end())
-        delete m_notifications.take(notification);
+        delete m_notifications.take(&notification);
 }
 
 void NotificationPresenterClientQt::notificationControllerDestroyed()
 {
 }
 
-void NotificationPresenterClientQt::requestPermission(ScriptExecutionContext* context, RefPtr<NotificationPermissionCallback>&& callback)
+void NotificationPresenterClientQt::requestPermission(ScriptExecutionContext& context, PermissionHandler&& permissionHandler)
 {
     if (dumpNotification)
-        printf("DESKTOP NOTIFICATION PERMISSION REQUESTED: %s\n", QString(context->securityOrigin()->toString()).toUtf8().constData());
+        printf("DESKTOP NOTIFICATION PERMISSION REQUESTED: %s\n", QString(context.securityOrigin()->toString()).toUtf8().constData());
 
-    NotificationClient::Permission permission = checkPermission(context);
+    NotificationClient::Permission permission = checkPermission(&context);
     if (permission != NotificationClient::Permission::Default) {
-        if (callback)
-            callback->handleEvent(permission);
+        permissionHandler(permission);
         return;
     }
 
-    QHash<ScriptExecutionContext*, CallbacksInfo >::iterator iter = m_pendingPermissionRequests.find(context);
-    if (iter != m_pendingPermissionRequests.end())
-        iter.value().m_callbacks.append(callback);
-    else {
-        RefPtr<NotificationPermissionCallback> cb = WTFMove(callback);
-        CallbacksInfo info;
-        info.m_frame = toFrame(context);
-        info.m_callbacks.append(cb);
-
-        if (toPage(context) && toFrame(context)) {
-            m_pendingPermissionRequests.insert(context, info);
-            toPage(context)->notificationsPermissionRequested(toFrame(context));
-        }
-    }
-}
-
-bool NotificationPresenterClientQt::hasPendingPermissionRequests(ScriptExecutionContext* context) const
-{
-    return m_pendingPermissionRequests.contains(context);
+    // QTFIXME
+    permissionHandler(Permission::Denied);
 }
 
 NotificationClient::Permission NotificationPresenterClientQt::checkPermission(ScriptExecutionContext* context)
 {
     return m_cachedPermissions.value(context, NotificationClient::Permission::Default);
-}
-
-void NotificationPresenterClientQt::cancelRequestsForPermission(ScriptExecutionContext* context)
-{
-    m_cachedPermissions.remove(context);
-
-    QHash<ScriptExecutionContext*, CallbacksInfo >::iterator iter = m_pendingPermissionRequests.find(context);
-    if (iter == m_pendingPermissionRequests.end())
-        return;
-
-    QWebFrameAdapter* frame = iter.value().m_frame;
-    if (!frame)
-        return;
-    QWebPageAdapter* page = QWebPageAdapter::kit(frame->frame->page());
-    m_pendingPermissionRequests.erase(iter);
-
-    if (!page)
-        return;
-
-    if (dumpNotification)
-        printf("DESKTOP NOTIFICATION PERMISSION REQUEST CANCELLED: %s\n", QString(context->securityOrigin()->toString()).toUtf8().constData());
-
-    page->notificationsPermissionRequestCancelled(frame);
 }
 
 void NotificationPresenterClientQt::setNotificationsAllowedForFrame(Frame* frame, bool allowed)
@@ -358,22 +315,6 @@ void NotificationPresenterClientQt::setNotificationsAllowedForFrame(Frame* frame
 
     NotificationClient::Permission permission = allowed ? NotificationClient::Permission::Granted : NotificationClient::Permission::Denied;
     m_cachedPermissions.insert(frame->document(), permission);
-
-    QHash<ScriptExecutionContext*,  CallbacksInfo>::iterator iter = m_pendingPermissionRequests.begin();
-    while (iter != m_pendingPermissionRequests.end()) {
-        if (iter.key() == frame->document())
-            break;
-    }
-
-    if (iter == m_pendingPermissionRequests.end())
-        return;
-
-    QList<RefPtr<NotificationPermissionCallback> >& callbacks = iter.value().m_callbacks;
-    Q_FOREACH(const RefPtr<NotificationPermissionCallback>& callback, callbacks) {
-        if (callback)
-            callback->handleEvent(permission);
-    }
-    m_pendingPermissionRequests.remove(iter.key());
 }
 
 void NotificationPresenterClientQt::sendDisplayEvent(NotificationWrapper* wrapper)
@@ -420,7 +361,6 @@ void NotificationPresenterClientQt::removeReplacedNotificationFromQueue(Notifica
 void NotificationPresenterClientQt::detachNotification(Notification* notification)
 {
     delete m_notifications.take(notification);
-    notification->unsetPendingActivity(*notification);
 }
 
 void NotificationPresenterClientQt::dumpReplacedIdText(Notification* notification)
@@ -429,20 +369,20 @@ void NotificationPresenterClientQt::dumpReplacedIdText(Notification* notificatio
         printf("REPLACING NOTIFICATION %s\n", QString(notification->title()).toUtf8().constData());
 }
 
-void NotificationPresenterClientQt::dumpShowText(Notification* notification)
+void NotificationPresenterClientQt::dumpShowText(Notification& notification)
 {
     printf("DESKTOP NOTIFICATION:%s icon %s, title %s, text %s\n",
-        notification->dir() == NotificationDirection::Rtl ? "(RTL)" : "",
-        QString(notification->icon().string()).toUtf8().constData(), QString(notification->title()).toUtf8().constData(),
-        QString(notification->body()).toUtf8().constData());
+        notification.dir() == NotificationDirection::Rtl ? "(RTL)" : "",
+        QString(notification.icon().string()).toUtf8().constData(), QString(notification.title()).toUtf8().constData(),
+        QString(notification.body()).toUtf8().constData());
 }
 
-QWebPageAdapter* NotificationPresenterClientQt::toPage(ScriptExecutionContext* context)
+QWebPageAdapter* NotificationPresenterClientQt::toPage(ScriptExecutionContext& context)
 {
-    if (!context || context->isWorkerGlobalScope())
+    if (context.isWorkerGlobalScope())
         return 0;
 
-    Document* document = static_cast<Document*>(context);
+    Document* document = static_cast<Document*>(&context);
 
     Page* page = document->page();
     if (!page)
@@ -451,12 +391,12 @@ QWebPageAdapter* NotificationPresenterClientQt::toPage(ScriptExecutionContext* c
     return QWebPageAdapter::kit(page);
 }
 
-QWebFrameAdapter* NotificationPresenterClientQt::toFrame(ScriptExecutionContext* context)
+QWebFrameAdapter* NotificationPresenterClientQt::toFrame(ScriptExecutionContext& context)
 {
-    if (!context || context->isWorkerGlobalScope())
+    if (context.isWorkerGlobalScope())
         return 0;
 
-    Document* document = static_cast<Document*>(context);
+    Document* document = static_cast<Document*>(&context);
     if (!document || !document->frame())
         return 0;
 

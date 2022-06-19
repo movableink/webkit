@@ -21,14 +21,14 @@
 #include "QtPrintContext.h"
 
 #include "QWebFrameAdapter.h"
-#include <WebCore/GraphicsContext.h>
+#include <WebCore/GraphicsContextQt.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/PrintContext.h>
 
 using namespace WebCore;
 
 QtPrintContext::QtPrintContext(QPainter* painter, const QRect& pageRect, QWebFrameAdapter* frameAdapter)
-    : m_graphicsContext(new GraphicsContext(painter))
+    : m_graphicsContext(new GraphicsContextQt(painter))
     , m_printContext(new PrintContext(frameAdapter->frame))
 {
     m_printContext->begin(pageRect.width(), pageRect.height());

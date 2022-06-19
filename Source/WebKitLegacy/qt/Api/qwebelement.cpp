@@ -28,6 +28,7 @@
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/FullscreenManager.h>
+#include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/JSDocument.h>
 #include <WebCore/JSElement.h>
@@ -1364,7 +1365,7 @@ void QWebElement::render(QPainter* painter, const QRect& clip)
     if (!clip.isEmpty())
         rect.intersect(clip.translated(rect.location()));
 
-    GraphicsContext context(painter);
+    GraphicsContextQt context(painter);
 
     context.save();
     context.translate(-rect.x(), -rect.y());

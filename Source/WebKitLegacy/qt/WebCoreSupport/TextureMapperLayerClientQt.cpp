@@ -23,10 +23,12 @@
 
 #if USE(TEXTURE_MAPPER)
 
+#include <QPainter>
 #include "QWebFrameAdapter.h"
 #include "QWebPageAdapter.h"
 #include <WebCore/Frame.h>
 #include <WebCore/FrameView.h>
+#include <WebCore/GraphicsContextQt.h>
 #include <WebCore/GraphicsLayerTextureMapper.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/TextureMapperLayer.h>
@@ -77,7 +79,6 @@ void TextureMapperLayerClientQt::setRootGraphicsLayer(GraphicsLayer* layer)
 //        if (pageClient() && pageClient()->makeOpenGLContextCurrentIfAvailable())
 //            mode = TextureMapper::OpenGLMode;
         m_textureMapper = TextureMapper::create(/*mode*/);
-        m_rootTextureMapperLayer->setTextureMapper(m_textureMapper.get());
         syncRootLayer();
     } else {
         m_rootGraphicsLayer = nullptr;
@@ -96,7 +97,7 @@ void TextureMapperLayerClientQt::syncLayers()
         return;
 
     if (didSync)
-        downcast<GraphicsLayerTextureMapper>(*m_rootGraphicsLayer).updateBackingStoreIncludingSubLayers();
+        downcast<GraphicsLayerTextureMapper>(*m_rootGraphicsLayer).updateBackingStoreIncludingSubLayers(*m_textureMapper.get());
 
     if (rootLayer()->descendantsOrSelfHaveRunningAnimations() && !m_syncTimer.isActive())
         m_syncTimer.startOneShot(1_s / 60.0);
@@ -121,7 +122,7 @@ void TextureMapperLayerClientQt::renderCompositedLayers(GraphicsContext& context
 //        m_textureMapper->setImageInterpolationQuality(WebCore::InterpolationNone);
 
 //    m_textureMapper->setTextDrawingMode(context.textDrawingMode());
-    QPainter* painter = context.platformContext();
+    QPainter* painter = context.platformContext()->painter();
     QTransform transform;
     // QTFIXME
 //    if (m_textureMapper->accelerationMode() == TextureMapper::OpenGLMode) {
@@ -145,8 +146,8 @@ void TextureMapperLayerClientQt::renderCompositedLayers(GraphicsContext& context
         m_rootGraphicsLayer->flushCompositingStateForThisLayerOnly();
     }
     m_textureMapper->beginPainting();
-    m_textureMapper->beginClip(matrix, clip);
-    m_rootTextureMapperLayer->paint();
+    m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
+    m_rootTextureMapperLayer->paint(*m_textureMapper.get());
     m_fpsCounter.updateFPSAndDisplay(*m_textureMapper.get(), IntPoint::zero(), matrix);
     m_textureMapper->endClip();
     m_textureMapper->endPainting();

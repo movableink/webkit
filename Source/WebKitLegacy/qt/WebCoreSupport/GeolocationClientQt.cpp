@@ -94,7 +94,7 @@ void GeolocationClientQt::positionUpdated(const QGeoPositionInfo& geoPosition)
     GeolocationController::from(page)->positionChanged(m_lastPosition);
 }
 
-void GeolocationClientQt::startUpdating(const String&)
+void GeolocationClientQt::startUpdating(const String&, bool)
 {
     if (!m_location && (m_location = QGeoPositionInfoSource::createDefaultSource(this)))
         connect(m_location, SIGNAL(positionUpdated(QGeoPositionInfo)), this, SLOT(positionUpdated(QGeoPositionInfo)));

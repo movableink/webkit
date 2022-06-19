@@ -85,11 +85,11 @@ Q_DECL_EXPORT void initializeWebCoreQt()
         return;
 
 #if !LOG_DISABLED
-    WebCore::initializeLogChannelsIfNecessary();
+    WebCore::logChannels().initializeLogChannelsIfNecessary();
 #endif // !LOG_DISABLED
-    JSC::initializeThreading();
+    JSC::initialize();
     WTF::initializeMainThread();
-    RunLoop::initializeMainRunLoop();
+    RunLoop::initializeMain();
     WebCore::SecurityPolicy::setLocalLoadPolicy(WebCore::SecurityPolicy::AllowLocalLoadsForLocalAndSubstituteData);
 
     PlatformStrategiesQt::initialize();
