@@ -25,13 +25,9 @@
 
 #include "WebDatabaseProvider.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <qwebsettings.h>
 
 String WebDatabaseProvider::indexedDatabaseDirectoryPath()
 {
     return QWebSettings::globalSettings()->offlineStoragePath();
 }
-
-#endif

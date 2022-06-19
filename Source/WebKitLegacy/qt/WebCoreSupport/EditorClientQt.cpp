@@ -200,7 +200,7 @@ void EditorClientQt::respondToChangedSelection(Frame* frame)
 //     printf("%s\n", buffer);
 
     if (supportsGlobalSelection() && frame->selection().isRange())
-        Pasteboard::createForGlobalSelection()->writeSelection(frame->selection().selection().toNormalizedRange().value(), frame->editor().canSmartCopyOrDelete(), *frame);
+        Pasteboard::createForGlobalSelection({ })->writeSelection(frame->selection().selection().toNormalizedRange().value(), frame->editor().canSmartCopyOrDelete(), *frame);
 
     m_page->respondToChangedSelection();
     if (!frame->editor().ignoreSelectionChanges()) // QTFIXME: check

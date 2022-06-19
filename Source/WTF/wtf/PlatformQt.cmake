@@ -88,6 +88,7 @@ if (USE_GLIB)
         ${GLIB_INCLUDE_DIRS}
     )
     list(APPEND WTF_LIBRARIES
+        ${GLIB_GIO_LIBRARIES}
         ${GLIB_GOBJECT_LIBRARIES}
         ${GLIB_LIBRARIES}
     )
@@ -131,6 +132,11 @@ if (APPLE)
 endif ()
 
 if (UNIX AND NOT APPLE)
+    list(APPEND WTF_SOURCES
+        unix/MemoryPressureHandlerUnix.cpp
+        unix/LoggingUnix.cpp
+    )
+
     check_function_exists(clock_gettime CLOCK_GETTIME_EXISTS)
     if (NOT CLOCK_GETTIME_EXISTS)
         set(CMAKE_REQUIRED_LIBRARIES rt)

@@ -39,8 +39,6 @@
 
 using namespace WebCore;
 
-namespace WebKit {
-
 PluginInfoProviderQt& PluginInfoProviderQt::singleton()
 {
     static PluginInfoProviderQt& pluginInfoProvider = adoptRef(*new PluginInfoProviderQt).leakRef();
@@ -115,6 +113,4 @@ Vector<PluginInfo> PluginInfoProviderQt::webVisiblePluginInfo(Page& page, const 
     // QTFIXME: Handle URL? Refactor implementation
     Optional<Vector<WebCore::SupportedPluginIdentifier>> supportedPluginIdentifiers;
     return pluginInfo(page, supportedPluginIdentifiers);
-}
-
 }

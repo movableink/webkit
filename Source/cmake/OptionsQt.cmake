@@ -362,7 +362,7 @@ WEBKIT_OPTION_END()
 # FTL JIT and IndexedDB support require GCC 4.9
 # TODO: Patch code to avoid variadic lambdas
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if (ENABLE_FTL_JIT OR ENABLE_INDEXED_DATABASE OR (ENABLE_WEBKIT AND ENABLE_DATABASE_PROCESS))
+    if (ENABLE_FTL_JIT OR (ENABLE_WEBKIT AND ENABLE_DATABASE_PROCESS))
         if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9.0")
             message(FATAL_ERROR "GCC 4.9.0 is required to build QtWebKit with FTL JIT, Indexed Database, and Database Process (WebKit 2). Use a newer GCC version or clang, or disable these features")
         endif ()
@@ -396,6 +396,9 @@ SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER TRUE)
 if (WIN32)
     # bmalloc is not ported to Windows yet
     set(USE_SYSTEM_MALLOC 1)
+else()
+    set(bmalloc_LIBRARY_TYPE OBJECT)
+    set(WTF_LIBRARY_TYPE OBJECT)
 endif ()
 
 if (DEFINED ENV{SQLITE3SRCDIR})

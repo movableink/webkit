@@ -21,7 +21,7 @@
 #include "config.h"
 #include "Logging.h"
 
-#if !LOG_DISABLED
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
 #include <QDebug>
 #include <wtf/text/WTFString.h>

@@ -331,7 +331,7 @@ static inline const char* findSimpleMIMEType(const char* data, size_t dataSize, 
     return 0;
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 static bool isTypeInList(const char* type, const MagicNumbers* types, size_t typesCount)
 {
     for (size_t i = 0; i < typesCount; ++i) {

@@ -27,8 +27,6 @@
 
 #include <WebCore/PluginInfoProvider.h>
 
-namespace WebKit {
-
 class PluginInfoProviderQt final : public WebCore::PluginInfoProvider {
 public:
     static PluginInfoProviderQt& singleton();
@@ -41,5 +39,3 @@ private:
 
     PluginInfoProviderQt() = default;
 };
-
-}

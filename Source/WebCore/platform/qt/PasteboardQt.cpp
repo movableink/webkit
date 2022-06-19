@@ -439,6 +439,10 @@ void Pasteboard::write(const PasteboardImage&)
 {
 }
 
+void Pasteboard::write(const PasteboardBuffer&)
+{
+}
+
 void Pasteboard::writeMarkup(const String&)
 {
 }

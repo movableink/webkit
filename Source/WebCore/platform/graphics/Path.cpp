@@ -40,6 +40,7 @@
 
 namespace WebCore {
 
+#if !PLATFORM(QT)
 float Path::length() const
 {
     PathTraversalState traversalState(PathTraversalState::Action::TotalLength);
@@ -50,6 +51,7 @@ float Path::length() const
 
     return traversalState.totalLength();
 }
+#endif
 
 #if !HAVE(CGPATH_GET_NUMBER_OF_ELEMENTS)
 
