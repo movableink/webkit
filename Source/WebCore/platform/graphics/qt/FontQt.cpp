@@ -129,6 +129,11 @@ Path Font::platformPathForGlyph(Glyph glyph) const
     return path;
 }
 
+bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
+{
+    return variation ? false : glyphForCharacter(character);
+}
+
 void Font::platformDestroy()
 {
 }

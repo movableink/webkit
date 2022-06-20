@@ -39,6 +39,7 @@ list(APPEND WebKitLegacy_INCLUDE_DIRECTORIES
     "${WEBKITLEGACY_DIR}/qt"
     "${WEBKITLEGACY_DIR}/qt/Api"
     "${WEBKITLEGACY_DIR}/qt/WebCoreSupport"
+    "${bmalloc_FRAMEWORK_HEADERS_DIR}"
 )
 
 list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES

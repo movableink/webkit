@@ -121,11 +121,13 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cairo/FontCairoHarfbuzzNG.cpp
 
     platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz.cpp
+    platform/graphics/harfbuzz/FontDescriptionHarfBuzz.cpp
 
 #    platform/graphics/texmap/BitmapTextureImageBuffer.cpp
 #    platform/graphics/texmap/TextureMapperImageBuffer.cpp
 
     platform/graphics/qt/ColorQt.cpp
+    platform/graphics/qt/DrawGlyphsRecorderQt.cpp
     platform/graphics/qt/FloatPointQt.cpp
     platform/graphics/qt/FloatRectQt.cpp
     platform/graphics/qt/FloatSizeQt.cpp
@@ -173,6 +175,7 @@ list(APPEND WebCore_SOURCES
     platform/network/qt/SocketStreamHandleImplQt.cpp
     platform/network/qt/SynchronousLoaderClientQt.cpp
 
+    platform/qt/ApplicationQt.cpp
     platform/qt/CursorQt.cpp
     platform/qt/DataTransferItemListQt.cpp
     platform/qt/DataTransferItemQt.cpp
@@ -380,6 +383,9 @@ if (USE_GLIB)
         ${GLIB_GIO_LIBRARIES}
         ${GLIB_GOBJECT_LIBRARIES}
         ${GLIB_LIBRARIES}
+    )
+    list(APPEND WebCore_SOURCES
+        platform/network/glib/DNSResolveQueueGLib.cpp
     )
 endif ()
 

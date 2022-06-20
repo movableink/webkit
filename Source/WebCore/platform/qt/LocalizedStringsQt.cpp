@@ -849,7 +849,6 @@ String validationMessageBadInputForNumberText()
     return validationMessageTypeMismatchText();
 }
 
-#if ENABLE(VIDEO_TRACK)
 String textTrackSubtitlesText()
 {
     notImplemented();
@@ -874,12 +873,17 @@ String textTrackNoLabelText()
     return String();
 }
 
+String trackNoLabelText()
+{
+    notImplemented();
+    return String();
+}
+
 String audioTrackNoLabelText()
 {
     notImplemented();
     return String();
 }
-#endif
 
 String snapshottedPlugInLabelTitle()
 {

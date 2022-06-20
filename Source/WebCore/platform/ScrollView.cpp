@@ -1601,6 +1601,10 @@ void ScrollView::platformRemoveChild(Widget*)
 {
 }
 
+#endif
+
+#if !PLATFORM(COCOA)
+
 void ScrollView::platformSetScrollbarsSuppressed(bool)
 {
 }

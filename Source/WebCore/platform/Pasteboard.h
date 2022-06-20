@@ -211,7 +211,7 @@ public:
 #endif
 
 #if PLATFORM(QT)
-    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const QMimeData* , bool);
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const QMimeData*, bool);
 #endif
 
     WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForCopyAndPaste(std::unique_ptr<PasteboardContext>&&);

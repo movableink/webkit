@@ -83,6 +83,7 @@ endif ()
 if (USE_GLIB)
     list(APPEND WTF_SOURCES
         glib/GRefPtr.cpp
+        glib/Sandbox.cpp
     )
     list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
         ${GLIB_INCLUDE_DIRS}

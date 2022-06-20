@@ -109,6 +109,14 @@ Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context, const QMime
 {
 }
 
+Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context)
+    : m_selectionMode(false)
+    , m_context(WTFMove(context))
+    , m_readableData(0)
+    , m_writableData(0)
+{
+}
+
 Pasteboard::~Pasteboard()
 {
     if (m_writableData && isForCopyAndPaste())

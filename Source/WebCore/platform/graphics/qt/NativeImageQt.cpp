@@ -78,7 +78,7 @@ DestinationColorSpace NativeImage::colorSpace() const
 }
 
 
-void clearNativeImageSubimages(NativeImage&)
+void NativeImage::clearSubimages()
 {
 }
 

@@ -35,6 +35,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QCoreApplication>
 
 namespace WTF {
 
@@ -43,6 +44,16 @@ namespace FileSystemImpl {
 String homeDirectoryPath()
 {
     return QDir::homePath();
+}
+
+CString currentExecutablePath()
+{
+    return CString(QCoreApplication::applicationDirPath().toUtf8());
+}
+
+CString currentExecutableName()
+{
+    return CString(QCoreApplication::applicationName().toUtf8());
 }
 
 } // namespace FileSystemImpl

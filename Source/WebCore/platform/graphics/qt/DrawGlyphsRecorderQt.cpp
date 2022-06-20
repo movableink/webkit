@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,43 +24,22 @@
  */
 
 #include "config.h"
-#include "SourceProvider.h"
+#include "DrawGlyphsRecorder.h"
 
-namespace JSC {
+#include "FloatPoint.h"
+#include "Font.h"
+#include "GlyphBuffer.h"
 
-DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
+namespace WebCore {
 
-SourceProvider::SourceProvider(const SourceOrigin& sourceOrigin, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
-    : m_sourceType(sourceType)
-    , m_sourceOrigin(sourceOrigin)
-    , m_sourceURL(WTFMove(sourceURL))
-    , m_startPosition(startPosition)
+DrawGlyphsRecorder::DrawGlyphsRecorder(GraphicsContext& owner, DeconstructDrawGlyphs, DeriveFontFromContext)
+    : m_owner(owner)
 {
 }
 
-SourceProvider::~SourceProvider()
+void DrawGlyphsRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& startPoint, FontSmoothingMode smoothingMode)
 {
+    m_owner.drawGlyphsAndCacheFont(font, glyphs, advances, numGlyphs, startPoint, smoothingMode);
 }
 
-void SourceProvider::getID()
-{
-    if (!m_id) {
-        static std::atomic<SourceID> nextProviderID = nullID;
-        m_id = ++nextProviderID;
-        RELEASE_ASSERT(m_id);
-    }
-}
-
-#if PLATFORM(QT)
-StringSourceProvider::~StringSourceProvider() = default;
-#endif
-
-#if ENABLE(WEBASSEMBLY)
-BaseWebAssemblySourceProvider::BaseWebAssemblySourceProvider(const SourceOrigin& sourceOrigin, String&& sourceURL)
-    : SourceProvider(sourceOrigin, WTFMove(sourceURL), TextPosition(), SourceProviderSourceType::WebAssembly)
-{
-}
-#endif
-
-} // namespace JSC
-
+} // namespace WebCore
