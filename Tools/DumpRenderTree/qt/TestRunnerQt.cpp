@@ -27,6 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
+#include "TestRunner.h"
 #include "TestRunnerQt.h"
 
 #include "DumpRenderTreeQt.h"
@@ -518,14 +519,14 @@ void TestRunnerQt::clearAllDatabases()
     QWebDatabase::removeAllDatabases();
 }
 
-void TestRunnerQt::addOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
+void TestRunnerQt::addOriginAccessAllowlistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
 {
-    DumpRenderTreeSupportQt::whiteListAccessFromOrigin(sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains);
+    DumpRenderTreeSupportQt::allowListAccessFromOrigin(sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains);
 }
 
-void TestRunnerQt::removeOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
+void TestRunnerQt::removeOriginAccessAllowlistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains)
 {
-    DumpRenderTreeSupportQt::removeWhiteListAccessFromOrigin(sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains);
+    DumpRenderTreeSupportQt::removeAllowListAccessFromOrigin(sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains);
 }
 
 void TestRunnerQt::setCustomPolicyDelegate(bool enabled, bool permissive)
@@ -556,8 +557,6 @@ void TestRunnerQt::overridePreference(const QString& name, const QVariant& value
         QWebSettings::setMaximumPagesInCache(value.toInt());
     else if (name == "WebKitEnableCaretBrowsing")
         setCaretBrowsingEnabled(value.toBool());
-    else if (name == "WebKitPluginsEnabled")
-        settings->setAttribute(QWebSettings::PluginsEnabled, value.toBool());
     else if (name == "WebKitWebGLEnabled")
         settings->setAttribute(QWebSettings::WebGLEnabled, value.toBool());
     else if (name == "WebKitCSSRegionsEnabled")
@@ -809,11 +808,7 @@ void TestRunner::setAlwaysAcceptCookies(bool)
 {
 }
 
-void TestRunner::addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
-{
-}
-
-void TestRunner::setWebViewEditable(bool)
+void TestRunner::addOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
 {
 }
 
@@ -1025,19 +1020,7 @@ void TestRunner::setStorageDatabaseIdleInterval(double)
 {
 }
 
-void TestRunner::setXSSAuditorEnabled(bool flag)
-{
-}
-
-void TestRunner::setSpatialNavigationEnabled(bool)
-{
-}
-
 void TestRunner::setScrollbarPolicy(JSStringRef orientation, JSStringRef policy)
-{
-}
-
-void TestRunner::setJavaScriptCanAccessClipboard(bool flag)
 {
 }
 
@@ -1058,14 +1041,6 @@ void TestRunner::setTabKeyCyclesThroughElements(bool)
 }
 
 void TestRunner::setPrivateBrowsingEnabled(bool)
-{
-}
-
-void TestRunner::setPluginsEnabled(bool)
-{
-}
-
-void TestRunner::setPopupBlockingEnabled(bool)
 {
 }
 
@@ -1106,19 +1081,7 @@ void TestRunner::setCacheModel(int)
 {
 }
 
-void TestRunner::setAuthorAndUserStylesEnabled(bool)
-{
-}
-
-void TestRunner::setAllowFileAccessFromFileURLs(bool)
-{
-}
-
 void TestRunner::setAppCacheMaximumSize(unsigned long long quota)
-{
-}
-
-void TestRunner::setAllowUniversalAccessFromFileURLs(bool)
 {
 }
 
@@ -1134,7 +1097,7 @@ void TestRunner::setValueForUser(JSContextRef, JSValueRef nodeObject, JSStringRe
 {
 }
 
-void TestRunner::removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+void TestRunner::removeOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
 {
 }
 
@@ -1175,10 +1138,6 @@ JSRetainPtr<JSStringRef> TestRunner::inspectorTestStubURL()
     return JSStringCreateWithUTF8CString("qrc:/webkit/inspector/UserInterface/TestStub.html");
 }
 
-void TestRunner::setNeedsStorageAccessFromFileURLsQuirk(bool needsQuirk)
-{
-}
-
 void TestRunner::setOnlyAcceptFirstPartyCookies(bool onlyAcceptFirstPartyCookies)
 {
 }
@@ -1196,10 +1155,6 @@ void TestRunner::setSpellCheckerLoggingEnabled(bool enabled)
 {
 }
 
-void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)
-{
-}
-
 void TestRunner::forceImmediateCompletion()
 {
 }
@@ -1209,6 +1164,11 @@ JSContextRef TestRunner::mainFrameJSContext()
     // QTFIXME
     return nullptr;
     //return DumpRenderTree::instance()->mainFrameAdapter()->frame->globalContext();
+}
+
+void TestRunner::stopLoading()
+{
+    // QTFIXME
 }
 
 #include "moc_DumpRenderTreeQt.cpp"

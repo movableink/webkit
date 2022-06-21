@@ -1,5 +1,7 @@
 remove_definitions(-DQT_ASCII_CAST_WARNINGS)
 
+add_subdirectory(TestRunnerShared)
+
 if (ENABLE_WEBKIT_LEGACY)
     add_subdirectory(QtTestBrowser)
 endif ()

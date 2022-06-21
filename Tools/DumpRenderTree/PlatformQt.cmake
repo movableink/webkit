@@ -2,6 +2,7 @@ list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
     "${QtWebKit_FRAMEWORK_HEADERS_DIR}"
     "${QtWebKitWidgets_FRAMEWORK_HEADERS_DIR}"
     "${WEBKITLEGACY_DIR}/qt/WidgetSupport"
+    "${DumpRenderTree_DIR}/qt"
 )
 
 list(REMOVE_ITEM DumpRenderTree_SOURCES
@@ -18,7 +19,7 @@ list(APPEND DumpRenderTree_SOURCES
     qt/TestRunnerQt.cpp
     qt/TextInputControllerQt.cpp
     qt/WorkQueueItemQt.cpp
-    qt/testplugin.cpp
+    qt/UIScriptControllerQt.cpp
 )
 
 qt5_add_resources(DumpRenderTree_SOURCES
@@ -50,9 +51,4 @@ endif ()
 if (WIN32)
     add_definitions(-DWEBCORE_EXPORT=)
     add_definitions(-DSTATICALLY_LINKED_WITH_WTF -DSTATICALLY_LINKED_WITH_JavaScriptCore)
-endif ()
-
-if (ENABLE_X11_TARGET AND ENABLE_NETSCAPE_PLUGIN_API)
-    add_definitions(-DXP_UNIX)
-    link_libraries(${X11_X11_LIB})
 endif ()

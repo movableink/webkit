@@ -1061,7 +1061,6 @@ void LauncherWindow::toggleAutoLoadImages(bool enable)
 
 void LauncherWindow::togglePlugins(bool enable)
 {
-    page()->settings()->setAttribute(QWebSettings::PluginsEnabled, !enable);
 }
 
 #ifndef QT_NO_OPENGL

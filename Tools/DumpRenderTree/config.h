@@ -24,7 +24,7 @@
 
 #include <JavaScriptCore/JSExportMacros.h>
 #include <WebCore/PlatformExportMacros.h>
-#include <WebCore/PAL/pal/ExportMacros.h>
+#include <pal/ExportMacros.h>
 
 #ifdef __cplusplus
 #undef new

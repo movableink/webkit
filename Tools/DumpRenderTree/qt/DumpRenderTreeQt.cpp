@@ -39,10 +39,10 @@
 #include "InitWebCoreQt.h"
 #include "InitWebKitQt.h"
 #include "QtTestSupport.h"
+#include "TestCommand.h"
 #include "TestRunner.h"
 #include "TestRunnerQt.h"
 #include "TextInputControllerQt.h"
-#include "testplugin.h"
 #include "WorkQueue.h"
 
 #include <JavaScriptCore/JSStringRefQt.h>
@@ -142,7 +142,6 @@ WebPage::WebPage(QObject* parent, DumpRenderTree* drt)
     globalSettings->setAttribute(QWebSettings::JavascriptCanOpenWindows, true);
     globalSettings->setAttribute(QWebSettings::JavascriptCanAccessClipboard, true);
     globalSettings->setAttribute(QWebSettings::LinksIncludedInFocusChain, false);
-    globalSettings->setAttribute(QWebSettings::PluginsEnabled, true);
     globalSettings->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
     globalSettings->setAttribute(QWebSettings::JavascriptEnabled, true);
     globalSettings->setAttribute(QWebSettings::PrivateBrowsingEnabled, false);
@@ -152,7 +151,6 @@ WebPage::WebPage(QObject* parent, DumpRenderTree* drt)
             this, SLOT(setViewGeometry(const QRect & )));
 
     setNetworkAccessManager(m_drt->networkAccessManager());
-    setPluginFactory(new TestPlugin(this));
 
     connect(this, SIGNAL(featurePermissionRequested(QWebFrame*, QWebPage::Feature)), this, SLOT(requestPermission(QWebFrame*, QWebPage::Feature)));
     connect(this, SIGNAL(featurePermissionRequestCanceled(QWebFrame*, QWebPage::Feature)), this, SLOT(cancelPermission(QWebFrame*, QWebPage::Feature)));
@@ -187,7 +185,6 @@ void WebPage::resetSettings()
     settings()->resetAttribute(QWebSettings::OfflineWebApplicationCacheEnabled);
     settings()->resetAttribute(QWebSettings::LocalContentCanAccessRemoteUrls);
     settings()->resetAttribute(QWebSettings::LocalContentCanAccessFileUrls);
-    settings()->resetAttribute(QWebSettings::PluginsEnabled);
     settings()->resetAttribute(QWebSettings::JavascriptCanAccessClipboard);
     settings()->resetAttribute(QWebSettings::AutoLoadImages);
     settings()->resetAttribute(QWebSettings::ZoomTextOnly);
@@ -414,7 +411,6 @@ DumpRenderTree::DumpRenderTree()
 
     // Set running in DRT mode for qwebpage to create testable objects.
     DumpRenderTreeSupportQt::setDumpRenderTreeModeEnabled(true);
-    DumpRenderTreeSupportQt::overwritePluginDirectories();
     QWebSettings::enablePersistentStorage(m_persistentStoragePath);
 
     m_networkAccessManager = new NetworkAccessManager(this);
@@ -578,7 +574,7 @@ void DumpRenderTree::resetToConsistentStateBeforeTesting(const QUrl& url)
     DRT::WorkQueue::singleton().clear();
     DRT::WorkQueue::singleton().setFrozen(false);
 
-    DumpRenderTreeSupportQt::resetOriginAccessWhiteLists();
+    DumpRenderTreeSupportQt::resetOriginAccessAllowLists();
 
     DumpRenderTreeSupportQt::setWindowsBehaviorAsEditingBehavior(pageAdapter());
 
@@ -709,7 +705,7 @@ void DumpRenderTree::loadNextTestInStandAloneMode()
 
 void DumpRenderTree::processLine(const QString &input)
 {
-    TestCommand command = parseInputLine(std::string(input.toLatin1().constData()));
+    WTR::TestCommand command = WTR::parseInputLine(std::string(input.toLatin1().constData()));
     QString pathOrURL = QLatin1String(command.pathOrURL.c_str());
     m_dumpPixelsForCurrentTest = command.shouldDumpPixels || m_dumpPixelsForAllTests;
     m_expectedHash = QLatin1String(command.expectedPixelHash.c_str());
@@ -740,8 +736,8 @@ void DumpRenderTree::processLine(const QString &input)
         open(QUrl::fromLocalFile(fi.absoluteFilePath()));
     }
 
-    if (command.timeout > 0)
-        setTimeout(command.timeout);
+    if (command.timeout.seconds() > 0)
+        setTimeout(command.timeout.seconds());
     fflush(stdout);
 }
 
@@ -765,11 +761,11 @@ void DumpRenderTree::initJSObjects()
     frame->addToJavaScriptWindowObject(QLatin1String("testRunner"), m_controller);
     frame->addToJavaScriptWindowObject(QLatin1String("eventSender"), m_eventSender);
     frame->addToJavaScriptWindowObject(QLatin1String("textInputController"), m_textInputController);
-    m_gcController->makeWindowObject(context, window, 0);
+    m_gcController->makeWindowObject(context);
 
     if (m_jscController) {
         JSObjectRef dummyWindow = JSObjectMake(context, 0, 0);
-        m_jscController->makeWindowObject(context, dummyWindow, 0);
+        m_jscController->makeWindowObject(context);
         JSRetainPtr<JSStringRef> testRunnerName(Adopt, JSStringCreateWithUTF8CString("testRunner"));
         JSValueRef wrappedTestRunner = JSObjectGetProperty(context, dummyWindow, testRunnerName.get(), 0);
         JSRetainPtr<JSStringRef> helperScript(Adopt, JSStringCreateWithUTF8CString("(function() {\n"

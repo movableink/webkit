@@ -147,8 +147,8 @@ public Q_SLOTS:
     void execCommand(const QString& name, const QString& value = QString());
     bool isCommandEnabled(const QString& name) const;
 
-    void addOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
-    void removeOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
+    void addOriginAccessAllowlistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
+    void removeOriginAccessAllowlistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
 
     void clearAllApplicationCaches();
     void setApplicationCacheOriginQuota(unsigned long long);
