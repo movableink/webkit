@@ -1405,7 +1405,7 @@ float FontCascade::getGlyphsAndAdvancesForSimpleText(const TextRun& run, unsigne
     return initialAdvance;
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 float FontCascade::getGlyphsAndAdvancesForComplexText(const TextRun& run, unsigned from, unsigned to, GlyphBuffer& glyphBuffer, ForTextEmphasisOrNot forTextEmphasis) const
 {
     float initialAdvance;
@@ -1553,7 +1553,7 @@ float FontCascade::floatWidthForSimpleText(const TextRun& run, HashSet<const Fon
     return it.m_runWidthSoFar;
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 float FontCascade::floatWidthForComplexText(const TextRun& run, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
     ComplexTextController controller(*this, run, true, fallbackFonts);
@@ -1586,7 +1586,7 @@ void FontCascade::adjustSelectionRectForSimpleText(const TextRun& run, LayoutRec
     selectionRect.setWidth(LayoutUnit::fromFloatCeil(afterWidth - beforeWidth));
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, unsigned from, unsigned to) const
 {
     ComplexTextController controller(*this, run);
@@ -1646,7 +1646,7 @@ int FontCascade::offsetForPositionForSimpleText(const TextRun& run, float x, boo
     return offset;
 }
 
-#if !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(WIN)
 int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bool includePartialGlyphs) const
 {
     ComplexTextController controller(*this, run);
@@ -1654,20 +1654,20 @@ int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bo
 }
 #endif
 
-#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
-// FIXME: Unify this with the macOS and iOS implementation.
-const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
-{
-    UChar32 baseCharacter;
-    size_t baseCharacterLength = 0;
-    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
-    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
-
-    if (!baseCharacterGlyphData.glyph)
-        return nullptr;
-    return baseCharacterGlyphData.font;
-}
-#endif
+//#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
+//// FIXME: Unify this with the macOS and iOS implementation.
+//const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
+//{
+//    UChar32 baseCharacter;
+//    size_t baseCharacterLength = 0;
+//    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
+//    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
+//
+//    if (!baseCharacterGlyphData.glyph)
+//        return nullptr;
+//    return baseCharacterGlyphData.font;
+//}
+//#endif
 
 void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext& context, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, unsigned to) const
 {
