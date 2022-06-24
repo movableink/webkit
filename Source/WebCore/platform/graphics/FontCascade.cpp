@@ -1654,20 +1654,20 @@ int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bo
 }
 #endif
 
-//#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
-//// FIXME: Unify this with the macOS and iOS implementation.
-//const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
-//{
-//    UChar32 baseCharacter;
-//    size_t baseCharacterLength = 0;
-//    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
-//    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
-//
-//    if (!baseCharacterGlyphData.glyph)
-//        return nullptr;
-//    return baseCharacterGlyphData.font;
-//}
-//#endif
+#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
+// FIXME: Unify this with the macOS and iOS implementation.
+const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
+{
+    UChar32 baseCharacter;
+    size_t baseCharacterLength = 0;
+    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
+    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
+
+    if (!baseCharacterGlyphData.glyph)
+        return nullptr;
+    return baseCharacterGlyphData.font;
+}
+#endif
 
 void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext& context, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, unsigned to) const
 {
