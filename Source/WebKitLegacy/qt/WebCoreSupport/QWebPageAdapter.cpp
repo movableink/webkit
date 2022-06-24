@@ -32,6 +32,7 @@
 #include "InspectorServerQt.h"
 #include <WebCore/MediaRecorderProvider.h>
 #include "NotificationPresenterClientQt.h"
+#include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageStorageSessionProvider.h"
@@ -291,6 +292,7 @@ void QWebPageAdapter::initializeWebCorePage()
     pageConfiguration.dragClient = std::make_unique<DragClientQt>(pageConfiguration.chromeClient);
     pageConfiguration.inspectorClient = new InspectorClientQt(this);
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
+    pageConfiguration.pluginInfoProvider = &PluginInfoProviderQt::singleton();
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
         QWebSettings::globalSettings()->localStoragePath());
     pageConfiguration.visitedLinkStore = &VisitedLinkStoreQt::singleton();
