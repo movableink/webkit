@@ -183,11 +183,9 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(hb_buffer_t* buffer, const
 
     // HarfBuzz returns the shaping result in visual order. We don't need to flip for RTL.
     for (unsigned i = 0; i < m_glyphCount; ++i) {
-        // qDebug() << Q_FUNC_INFO << __LINE__ << i;
         m_coreTextIndices[i] = glyphInfos[i].cluster;
 
         uint16_t glyph = glyphInfos[i].codepoint;
-        // qDebug() << Q_FUNC_INFO << __LINE__ << m_font.isZeroWidthSpaceGlyph(glyph) << m_font.platformData().size();
         if (m_font.isZeroWidthSpaceGlyph(glyph) || !m_font.platformData().size()) {
             m_glyphs[i] = glyph;
             m_baseAdvances[i] = { };
@@ -199,7 +197,6 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(hb_buffer_t* buffer, const
         float offsetY = -harfBuzzPositionToFloat(glyphPositions[i].y_offset);
         float advanceX = harfBuzzPositionToFloat(glyphPositions[i].x_advance);
         float advanceY = harfBuzzPositionToFloat(glyphPositions[i].y_advance);
-        // qDebug() << i << offsetX << offsetY << advanceX << advanceY;
 
         if (!i)
             m_initialAdvance = { offsetX, -offsetY };
@@ -379,20 +376,10 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
 #elif PLATFORM(QT)
     const QRawFont& rawFont = fontPlatformData.rawFont();
     QFontEngine* fe = QRawFontPrivate::get(rawFont)->fontEngine;
-    //qDebug() << Q_FUNC_INFO << __LINE__ << fe << fe->type();
     hb_font_t* fnt = hb_qt_font_get_for_engine(fe);
-    //qDebug() << Q_FUNC_INFO << __LINE__ << "hb_qt_font_get_for_engine" << fnt;
-    //qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(fnt);
 
-//    qDebug() << Q_FUNC_INFO << __LINE__ << fe->harfbuzzFace();
-    //qDebug() << Q_FUNC_INFO << __LINE__ << "hb_qt_face_get_for_engine" << hb_qt_face_get_for_engine(fe);
-//    qDebug() << Q_FUNC_INFO << __LINE__ << hb_qt_font_get_for_engine(fe);
-//    qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(hb_qt_font_get_for_engine(fe));
     NakedPtr<hb_face_t> face(hb_qt_face_get_for_engine(fe));
     NakedPtr<hb_font_t> harfBuzzFont(hb_qt_font_get_for_engine(fe));
-//    qDebug() << Q_FUNC_INFO << __LINE__ << face.get();
-//    qDebug() << Q_FUNC_INFO << __LINE__ << harfBuzzFont.get();
-//    qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(harfBuzzFont.get());
 #endif
 
     auto features = fontFeatures(m_font, fontPlatformData.orientation());
