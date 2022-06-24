@@ -68,6 +68,8 @@ void WebContextMenuClient::searchWithGoogle(const WebCore::Frame* frame)
     page->mainFrame().loader().changeLocation(searchURL, { }, nullptr, WebCore::ReferrerPolicy::EmptyString, WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow);
 }
 
+#if !PLATFORM(QT)
+
 void WebContextMenuClient::lookUpInDictionary(WebCore::Frame*)
 {
     notImplemented();
@@ -88,6 +90,8 @@ void WebContextMenuClient::stopSpeaking()
 {
     notImplemented();
 }
+
+#endif
 
 #endif
 

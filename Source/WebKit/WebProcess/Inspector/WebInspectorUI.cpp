@@ -488,7 +488,7 @@ WebCore::Page* WebInspectorUI::frontendPage()
 }
 
 
-#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
 bool WebInspectorUI::canSave()
 {
     notImplemented();

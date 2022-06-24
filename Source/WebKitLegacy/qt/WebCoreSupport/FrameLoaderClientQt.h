@@ -70,7 +70,6 @@ Q_SIGNALS:
 public:
     FrameLoaderClientQt();
     ~FrameLoaderClientQt();
-    void frameLoaderDestroyed() override;
 
     void setFrame(QWebFrameAdapter*, Frame*);
 

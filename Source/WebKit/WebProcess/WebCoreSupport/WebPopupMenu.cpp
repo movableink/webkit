@@ -136,7 +136,7 @@ void WebPopupMenu::updateFromElement()
 {
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(WIN)
+#if !PLATFORM(COCOA) && !PLATFORM(WIN) && !PLATFORM(QT)
 void WebPopupMenu::setUpPlatformData(const WebCore::IntRect&, PlatformPopupMenuData&)
 {
     notImplemented();

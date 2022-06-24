@@ -278,6 +278,8 @@ FloatPoint Path::currentPoint() const
     return currentPointSlowCase();
 }
 
+#endif // !PLATFORM(QT)
+
 bool Path::isClosed() const
 {
     bool lastElementIsClosed = false;
@@ -297,8 +299,6 @@ bool Path::isClosed() const
 
     return lastElementIsClosed;
 }
-
-#endif // !PLATFORM(QT)
 
 size_t Path::elementCount() const
 {

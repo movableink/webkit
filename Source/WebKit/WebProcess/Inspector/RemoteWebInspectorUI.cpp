@@ -329,7 +329,7 @@ WebCore::Page* RemoteWebInspectorUI::frontendPage()
 }
 
 
-#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(QT)
 String RemoteWebInspectorUI::localizedStringsURL() const
 {
     notImplemented();

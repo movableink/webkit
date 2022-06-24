@@ -975,6 +975,11 @@ public:
     void cancelComposition(const String& compositionString);
     void deleteSurrounding(int64_t offset, unsigned characterCount);
 
+#if PLATFORM(QT)
+    // QTFIXME: this was deprecated in other ports
+    void setComposition(const String&, const Vector<WebCore::CompositionUnderline>&, const EditingRange& selectionRange);
+#endif
+
     void setInputMethodState(std::optional<InputMethodState>&&);
 #endif
         
