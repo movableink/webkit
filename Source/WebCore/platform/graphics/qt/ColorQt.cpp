@@ -33,7 +33,7 @@
 namespace WebCore {
 
 Color::Color(const QColor& color)
-    : Color(convertColor<SRGBA<uint8_t>>(SRGBA<float> { static_cast<float>(color.red()), static_cast<float>(color.green()), static_cast<float>(color.blue()), static_cast<float>(color.alpha()) }))
+    : Color(convertColor<SRGBA<uint8_t>>(SRGBA<float> { static_cast<float>(color.redF()), static_cast<float>(color.greenF()), static_cast<float>(color.blueF()), static_cast<float>(color.alphaF()) }))
 {
 }
 
